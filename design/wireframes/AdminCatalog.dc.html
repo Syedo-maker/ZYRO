@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; background: oklch(98% 0.005 260); color: oklch(19% 0.02 265); }
+    h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+    a { color: oklch(58% 0.16 265); text-decoration: none; }
+    a:hover { color: oklch(50% 0.17 265); }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; color: oklch(70% 0.01 260); }
+    .nav-item.active { background: oklch(30% 0.02 265); color: white; font-weight: 600; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; height: 38px; padding: 0 16px; }
+    .field-label { font-size: 12px; font-weight: 600; color: oklch(46% 0.02 265); margin-bottom: 6px; }
+    .field { background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 10px; height: 40px; padding: 0 14px; display: flex; align-items: center; font-size: 13px; color: oklch(19% 0.02 265); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1000px; background: oklch(98% 0.005 260); display: flex;">
+
+  <div style="width: 220px; flex-shrink: 0; background: oklch(19% 0.02 265); display: flex; flex-direction: column; padding: 24px 16px; gap: 4px;">
+    <div style="font-size: 19px; font-weight: 700; color: white; padding: 0 8px 24px 8px;">ZYRO</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
+    <div class="nav-item active"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7l-8-4-8 4v10l8 4 8-4V7z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>Products</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Orders</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.6 13.4L12 22l-8.6-8.6a5 5 0 1 1 7-7l1.6 1.6 1.6-1.6a5 5 0 1 1 7 7z"/></svg>Marketing</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</div>
+  </div>
+
+  <div style="flex: 1; display: flex; flex-direction: column;">
+    <div style="height: 72px; background: white; border-bottom: 1px solid oklch(91% 0.006 260); display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
+      <div style="font-size: 17px; font-weight: 700;">Products</div>
+      <div class="btn" style="background: oklch(58% 0.16 265); color: white;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add product
+      </div>
+    </div>
+
+    <div style="flex: 1; display: flex;">
+
+      <!-- Product list -->
+      <div style="flex: 1; padding: 28px 32px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 0.6fr 2fr 1fr 1fr 1fr; gap: 12px; font-size: 11px; font-weight: 700; color: oklch(63% 0.015 265); padding-bottom: 10px; border-bottom: 1px solid oklch(91% 0.006 260);">
+          <div></div><div>PRODUCT</div><div>PRICE</div><div>STOCK</div><div>AI CONTENT</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 0.6fr 2fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid oklch(94% 0.004 260); background: oklch(94% 0.03 265); border-radius: 10px; padding: 12px;">
+          <div style="width: 42px; height: 42px; background: white; border-radius: 8px;"></div>
+          <div style="font-size: 13px; font-weight: 600;">Wireless Earbuds Pro</div>
+          <div style="font-size: 13px;">$49.00</div>
+          <div style="font-size: 13px;">42</div>
+          <div><span style="background: oklch(94% 0.03 150); color: oklch(58% 0.13 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;">PUBLISHED</span></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 0.6fr 2fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 12px; border-bottom: 1px solid oklch(94% 0.004 260);">
+          <div style="width: 42px; height: 42px; background: oklch(95% 0.004 260); border-radius: 8px;"></div>
+          <div style="font-size: 13px; font-weight: 600;">Ceramic Pour-Over Set</div>
+          <div style="font-size: 13px;">$38.00</div>
+          <div style="font-size: 13px;">18</div>
+          <div><span style="background: oklch(95% 0.04 80); color: oklch(72% 0.15 80); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;">DRAFT</span></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 0.6fr 2fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 12px; border-bottom: 1px solid oklch(94% 0.004 260);">
+          <div style="width: 42px; height: 42px; background: oklch(95% 0.004 260); border-radius: 8px;"></div>
+          <div style="font-size: 13px; font-weight: 600;">Merino Wool Scarf</div>
+          <div style="font-size: 13px;">$29.00</div>
+          <div style="font-size: 13px;">0</div>
+          <div><span style="background: oklch(94% 0.004 260); color: oklch(63% 0.015 265); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;">NONE</span></div>
+        </div>
+      </div>
+
+      <!-- Edit product panel -->
+      <div style="width: 460px; flex-shrink: 0; background: white; border-left: 1px solid oklch(91% 0.006 260); padding: 28px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="font-size: 15px; font-weight: 700;">Edit product — Ceramic Pour-Over Set</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div><div class="field-label">Price</div><div class="field">$38.00</div></div>
+          <div><div class="field-label">Stock</div><div class="field">18</div></div>
+          <div style="grid-column: span 2;"><div class="field-label">Category</div><div class="field">Home &amp; Living</div></div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <div style="width: 64px; height: 64px; background: oklch(95% 0.004 260); border-radius: 8px;"></div>
+          <div style="width: 64px; height: 64px; background: oklch(95% 0.004 260); border-radius: 8px; border: 1px dashed oklch(80% 0.006 260); display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="oklch(63% 0.015 265)" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+        </div>
+
+        <div style="background: oklch(94% 0.03 200); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: oklch(58% 0.14 200);">
+              <svg width="13" height="13" fill="oklch(58% 0.14 200)" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.9-6.2 3.9 1.6-7L2 9.2l7.1-.6z"/></svg>
+              AI DESCRIPTION — DRAFT
+            </div>
+            <span style="font-size: 11px; color: oklch(58% 0.14 200);">62/100 used this month</span>
+          </div>
+          <div style="background: white; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.6;">Hand-glazed stoneware dripper and carafe for a slower, richer morning brew — pairs with any grind size and cleans up in seconds.</div>
+          <div style="display: flex; gap: 8px;">
+            <div class="btn" style="background: white; border: 1px solid oklch(58% 0.14 200); color: oklch(58% 0.14 200); flex: 1;">Regenerate</div>
+            <div class="btn" style="background: oklch(58% 0.14 200); color: white; flex: 1;">Publish</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: auto;">
+          <div class="btn" style="background: white; border: 1px solid oklch(91% 0.006 260); flex: 1;">Cancel</div>
+          <div class="btn" style="background: oklch(58% 0.16 265); color: white; flex: 1;">Save changes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

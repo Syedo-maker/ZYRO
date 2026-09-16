@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; background: oklch(98% 0.005 260); color: oklch(19% 0.02 265); }
+    h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+    a { color: oklch(58% 0.16 265); text-decoration: none; }
+    a:hover { color: oklch(50% 0.17 265); }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; color: oklch(70% 0.01 260); }
+    .nav-item.active { background: oklch(30% 0.02 265); color: white; font-weight: 600; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; height: 38px; padding: 0 16px; }
+    .field-label { font-size: 12px; font-weight: 600; color: oklch(46% 0.02 265); margin-bottom: 6px; }
+    .field { background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 10px; height: 40px; padding: 0 14px; display: flex; align-items: center; font-size: 13px; color: oklch(19% 0.02 265); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1080px; background: oklch(98% 0.005 260); display: flex;">
+
+  <div style="width: 220px; flex-shrink: 0; background: oklch(19% 0.02 265); display: flex; flex-direction: column; padding: 24px 16px; gap: 4px;">
+    <div style="font-size: 19px; font-weight: 700; color: white; padding: 0 8px 24px 8px;">ZYRO</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7l-8-4-8 4v10l8 4 8-4V7z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>Products</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Orders</div>
+    <div class="nav-item active"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.6 13.4L12 22l-8.6-8.6a5 5 0 1 1 7-7l1.6 1.6 1.6-1.6a5 5 0 1 1 7 7z"/></svg>Marketing</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</div>
+  </div>
+
+  <div style="flex: 1; display: flex; flex-direction: column;">
+    <div style="height: 72px; background: white; border-bottom: 1px solid oklch(91% 0.006 260); display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
+      <div style="font-size: 17px; font-weight: 700;">Marketing &amp; Analytics</div>
+      <div class="btn" style="background: oklch(58% 0.16 265); color: white;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New discount code
+      </div>
+    </div>
+
+    <div style="padding: 28px 32px; display: flex; flex-direction: column; gap: 24px;">
+
+      <div style="display: flex; gap: 20px;">
+        <!-- Discount codes -->
+        <div style="flex: 1.3; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; padding: 22px;">
+          <div style="font-size: 14px; font-weight: 700; margin-bottom: 16px;">Discount codes</div>
+          <div style="display: grid; grid-template-columns: 1fr 0.8fr 0.8fr 1fr 0.8fr; gap: 10px; font-size: 11px; font-weight: 700; color: oklch(63% 0.015 265); padding-bottom: 8px; border-bottom: 1px solid oklch(91% 0.006 260);">
+            <div>CODE</div><div>TYPE</div><div>VALUE</div><div>USAGE</div><div>STATUS</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 0.8fr 0.8fr 1fr 0.8fr; gap: 10px; font-size: 13px; padding: 12px 0; border-bottom: 1px solid oklch(94% 0.004 260); align-items: center;">
+            <div style="font-weight: 700;">SAVE10</div><div>Percentage</div><div>10%</div><div style="color: oklch(63% 0.015 265);">86 / 200</div><div><span style="background: oklch(94% 0.03 150); color: oklch(58% 0.13 150); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;">ACTIVE</span></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 0.8fr 0.8fr 1fr 0.8fr; gap: 10px; font-size: 13px; padding: 12px 0; border-bottom: 1px solid oklch(94% 0.004 260); align-items: center;">
+            <div style="font-weight: 700;">WELCOME5</div><div>Fixed</div><div>$5.00</div><div style="color: oklch(63% 0.015 265);">214 / ∞</div><div><span style="background: oklch(94% 0.03 150); color: oklch(58% 0.13 150); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;">ACTIVE</span></div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 0.8fr 0.8fr 1fr 0.8fr; gap: 10px; font-size: 13px; padding: 12px 0; align-items: center;">
+            <div style="font-weight: 700; color: oklch(63% 0.015 265);">SPRING22</div><div style="color: oklch(63% 0.015 265);">Percentage</div><div style="color: oklch(63% 0.015 265);">15%</div><div style="color: oklch(63% 0.015 265);">140 / 140</div><div><span style="background: oklch(94% 0.004 260); color: oklch(63% 0.015 265); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;">EXPIRED</span></div>
+          </div>
+        </div>
+
+        <!-- New code form -->
+        <div style="width: 320px; flex-shrink: 0; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="font-size: 14px; font-weight: 700;">New discount code</div>
+          <div><div class="field-label">Code</div><div class="field">SUMMER25</div></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div><div class="field-label">Type</div><div class="field">Percentage</div></div>
+            <div><div class="field-label">Value</div><div class="field">25%</div></div>
+          </div>
+          <div><div class="field-label">Usage limit</div><div class="field">100</div></div>
+          <div class="btn" style="background: oklch(58% 0.16 265); color: white; margin-top: 4px;">Create code</div>
+        </div>
+      </div>
+
+      <!-- Abandoned cart recovery -->
+      <div style="background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; padding: 22px;">
+        <div style="font-size: 14px; font-weight: 700; margin-bottom: 16px;">Abandoned-cart recovery performance</div>
+        <div style="display: flex; gap: 16px;">
+          <div style="flex: 1; background: oklch(96% 0.004 260); border-radius: 10px; padding: 16px;">
+            <div style="font-size: 11px; font-weight: 700; color: oklch(63% 0.015 265);">SENT</div>
+            <div style="font-size: 22px; font-weight: 700; margin-top: 4px;">86</div>
+          </div>
+          <div style="flex: 1; background: oklch(96% 0.004 260); border-radius: 10px; padding: 16px;">
+            <div style="font-size: 11px; font-weight: 700; color: oklch(63% 0.015 265);">OPENED</div>
+            <div style="font-size: 22px; font-weight: 700; margin-top: 4px;">54 <span style="font-size: 12px; color: oklch(63% 0.015 265); font-weight: 500;">(63%)</span></div>
+          </div>
+          <div style="flex: 1; background: oklch(96% 0.004 260); border-radius: 10px; padding: 16px;">
+            <div style="font-size: 11px; font-weight: 700; color: oklch(63% 0.015 265);">CLICKED</div>
+            <div style="font-size: 22px; font-weight: 700; margin-top: 4px;">31 <span style="font-size: 12px; color: oklch(63% 0.015 265); font-weight: 500;">(36%)</span></div>
+          </div>
+          <div style="flex: 1; background: oklch(94% 0.03 150); border-radius: 10px; padding: 16px;">
+            <div style="font-size: 11px; font-weight: 700; color: oklch(58% 0.13 150);">CONVERTED</div>
+            <div style="font-size: 22px; font-weight: 700; margin-top: 4px; color: oklch(58% 0.13 150);">14 <span style="font-size: 12px; font-weight: 500;">(16%)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sales analytics -->
+      <div style="background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; padding: 22px;">
+        <div style="font-size: 14px; font-weight: 700; margin-bottom: 20px;">Sales by category</div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px;"><div style="width: 110px; font-size: 12px; color: oklch(46% 0.02 265);">Electronics</div><div style="flex: 1; height: 10px; background: oklch(91% 0.006 260); border-radius: 999px;"><div style="width: 72%; height: 100%; background: oklch(58% 0.16 265); border-radius: 999px;"></div></div><div style="width: 60px; text-align: right; font-size: 12px; font-weight: 600;">$4,120</div></div>
+          <div style="display: flex; align-items: center; gap: 12px;"><div style="width: 110px; font-size: 12px; color: oklch(46% 0.02 265);">Home &amp; Living</div><div style="flex: 1; height: 10px; background: oklch(91% 0.006 260); border-radius: 999px;"><div style="width: 48%; height: 100%; background: oklch(58% 0.16 265); border-radius: 999px;"></div></div><div style="width: 60px; text-align: right; font-size: 12px; font-weight: 600;">$2,760</div></div>
+          <div style="display: flex; align-items: center; gap: 12px;"><div style="width: 110px; font-size: 12px; color: oklch(46% 0.02 265);">Apparel</div><div style="flex: 1; height: 10px; background: oklch(91% 0.006 260); border-radius: 999px;"><div style="width: 26%; height: 100%; background: oklch(58% 0.16 265); border-radius: 999px;"></div></div><div style="width: 60px; text-align: right; font-size: 12px; font-weight: 600;">$1,540</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

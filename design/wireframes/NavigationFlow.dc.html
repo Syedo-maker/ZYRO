@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; background: white; color: oklch(19% 0.02 265); }
+    h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+    a { color: oklch(58% 0.16 265); text-decoration: none; }
+    a:hover { color: oklch(50% 0.17 265); }
+    .node { position: absolute; background: white; border: 1.5px solid oklch(19% 0.02 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3; }
+    .node.widget { border-style: dashed; color: oklch(58% 0.14 200); border-color: oklch(58% 0.14 200); }
+    .node.hub { background: oklch(19% 0.02 265); color: white; }
+  </style>
+</helmet>
+
+<div style="width: 1500px; height: 800px; background: white; padding: 32px; position: relative;">
+
+  <div style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">ZYRO — Navigation Flow</div>
+  <div style="font-size: 12px; color: oklch(63% 0.015 265); margin-bottom: 12px;">Solid arrows: primary flow. Dashed box: floating widget, not a full page.</div>
+
+  <div style="position: relative; width: 1450px; height: 700px;">
+
+    <svg width="1450" height="700" style="position: absolute; top: 0; left: 0;">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="oklch(19% 0.02 265)"/></marker>
+        <marker id="arrowAi" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="oklch(58% 0.14 200)"/></marker>
+      </defs>
+      <!-- customer flow -->
+      <line x1="210" y1="95" x2="260" y2="95" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <line x1="430" y1="95" x2="480" y2="95" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <line x1="650" y1="95" x2="700" y2="95" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <line x1="850" y1="95" x2="900" y2="95" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <line x1="1050" y1="95" x2="1100" y2="95" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <!-- branch to AI assistant -->
+      <line x1="565" y1="130" x2="565" y2="228" stroke="oklch(58% 0.14 200)" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#arrowAi)"/>
+
+      <!-- merchant flow -->
+      <line x1="230" y1="515" x2="330" y2="415" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <line x1="230" y1="515" x2="330" y2="515" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <line x1="230" y1="515" x2="330" y2="615" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#arrow)"/>
+    </svg>
+
+    <div style="position: absolute; top: 30px; left: 40px; font-size: 11px; font-weight: 700; color: oklch(58% 0.16 265); letter-spacing: 0.04em;">CUSTOMER FLOW</div>
+
+    <div class="node" style="left: 40px; top: 60px; width: 170px; height: 70px;">Storefront<br/>Home</div>
+    <div class="node" style="left: 260px; top: 60px; width: 170px; height: 70px;">Category /<br/>Search Results</div>
+    <div class="node" style="left: 480px; top: 60px; width: 170px; height: 70px;">Product Detail</div>
+    <div class="node" style="left: 700px; top: 60px; width: 150px; height: 70px;">Cart</div>
+    <div class="node" style="left: 900px; top: 60px; width: 150px; height: 70px;">Checkout</div>
+    <div class="node" style="left: 1100px; top: 60px; width: 190px; height: 70px;">Order<br/>Confirmation</div>
+    <div class="node widget" style="left: 480px; top: 230px; width: 170px; height: 70px;">AI Assistant<br/>(chat widget)</div>
+
+    <div style="position: absolute; top: 385px; left: 40px; font-size: 11px; font-weight: 700; color: oklch(58% 0.16 265); letter-spacing: 0.04em;">MERCHANT FLOW</div>
+
+    <div class="node hub" style="left: 40px; top: 480px; width: 190px; height: 70px;">Admin<br/>Dashboard</div>
+    <div class="node" style="left: 330px; top: 380px; width: 210px; height: 70px;">Product Catalog<br/><span style="font-weight: 400; color: oklch(63% 0.015 265);">+ AI content tools</span></div>
+    <div class="node" style="left: 330px; top: 480px; width: 210px; height: 70px;">Orders &amp; Shipping</div>
+    <div class="node" style="left: 330px; top: 580px; width: 210px; height: 70px;">Marketing &amp;<br/>Analytics</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

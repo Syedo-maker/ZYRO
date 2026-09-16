@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; background: oklch(98% 0.005 260); color: oklch(19% 0.02 265); }
+    h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+    a { color: oklch(58% 0.16 265); text-decoration: none; }
+    a:hover { color: oklch(50% 0.17 265); }
+  </style>
+</helmet>
+
+<div style="width: 420px; height: 640px; background: oklch(98% 0.005 260); display: flex; align-items: flex-end; justify-content: flex-end; padding: 24px;">
+  <div style="width: 372px; height: 560px; background: white; border-radius: 18px; box-shadow: 0 12px 32px oklch(19% 0.02 265 / 0.14); display: flex; flex-direction: column; overflow: hidden; border: 1px solid oklch(91% 0.006 260);">
+
+    <!-- Header -->
+    <div style="display: flex; align-items: center; gap: 10px; padding: 16px 18px; background: oklch(58% 0.14 200); color: white;">
+      <div style="width: 34px; height: 34px; border-radius: 50%; background: oklch(100% 0 0 / 0.2); display: flex; align-items: center; justify-content: center;">
+        <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.9-6.2 3.9 1.6-7L2 9.2l7.1-.6z"/></svg>
+      </div>
+      <div>
+        <div style="font-size: 14px; font-weight: 700;">ZYRO Assistant</div>
+        <div style="font-size: 11px; opacity: 0.85;">Usually replies in seconds</div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div style="flex: 1; padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; background: oklch(98% 0.005 260);">
+
+      <div style="align-self: flex-end; max-width: 82%; background: oklch(58% 0.16 265); color: white; font-size: 13px; line-height: 1.5; padding: 10px 14px; border-radius: 14px 14px 4px 14px;">
+        Does the earbuds case support wireless charging?
+      </div>
+
+      <div style="align-self: flex-start; max-width: 85%; display: flex; flex-direction: column; gap: 8px;">
+        <div style="background: white; border: 1px solid oklch(91% 0.006 260); font-size: 13px; line-height: 1.5; padding: 10px 14px; border-radius: 14px 14px 14px 4px;">
+          Yes — the Wireless Earbuds Pro case supports Qi wireless charging, plus USB-C for a wired top-up. A full case charge gives you about 32 hours of total listening time.
+        </div>
+
+        <div style="font-size: 11px; font-weight: 700; color: oklch(63% 0.015 265); margin-top: 4px;">YOU MIGHT ALSO LIKE</div>
+        <div style="display: flex; gap: 10px;">
+          <div style="width: 128px; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 10px; overflow: hidden;">
+            <div style="height: 76px; background: oklch(95% 0.004 260); display: flex; align-items: center; justify-content: center;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(80% 0.006 260)" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div style="padding: 8px;">
+              <div style="font-size: 11px; font-weight: 600; line-height: 1.3;">Qi Charging Pad</div>
+              <div style="font-size: 11px; font-weight: 700; margin-top: 2px;">$19.00</div>
+            </div>
+          </div>
+          <div style="width: 128px; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 10px; overflow: hidden;">
+            <div style="height: 76px; background: oklch(95% 0.004 260); display: flex; align-items: center; justify-content: center;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(80% 0.006 260)" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div style="padding: 8px;">
+              <div style="font-size: 11px; font-weight: 600; line-height: 1.3;">USB-C Cable 2m</div>
+              <div style="font-size: 11px; font-weight: 700; margin-top: 2px;">$9.00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div style="padding: 14px 16px; border-top: 1px solid oklch(91% 0.006 260); display: flex; align-items: center; gap: 10px;">
+      <div style="flex: 1; background: oklch(96% 0.004 260); border-radius: 999px; padding: 10px 16px; font-size: 13px; color: oklch(63% 0.015 265);">Ask about this product…</div>
+      <div style="width: 38px; height: 38px; border-radius: 50%; background: oklch(58% 0.14 200); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Customer Flow" },
+    { "id": "page-2", "name": "Merchant Admin" },
+    { "id": "page-3", "name": "Flow & Components" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 1100, "page": "page-1" },
+    { "file": "CategoryListing.dc.html", "x": 1360, "y": 0, "w": 1280, "h": 1080, "page": "page-1" },
+    { "file": "ProductDetail.dc.html", "x": 2720, "y": 0, "w": 1280, "h": 1200, "page": "page-1" },
+    { "file": "Cart.dc.html", "x": 4080, "y": 0, "w": 1040, "h": 900, "page": "page-1" },
+    { "file": "Checkout.dc.html", "x": 5200, "y": 0, "w": 1120, "h": 980, "page": "page-1" },
+    { "file": "OrderConfirmation.dc.html", "x": 6400, "y": 0, "w": 900, "h": 820, "page": "page-1" },
+    { "file": "AIAssistant.dc.html", "x": 0, "y": 1180, "w": 420, "h": 640, "page": "page-1" },
+
+    { "file": "AdminDashboard.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1000, "page": "page-2" },
+    { "file": "AdminCatalog.dc.html", "x": 1520, "y": 0, "w": 1440, "h": 1000, "page": "page-2" },
+    { "file": "AdminOrders.dc.html", "x": 3040, "y": 0, "w": 1440, "h": 1050, "page": "page-2" },
+    { "file": "AdminMarketing.dc.html", "x": 4560, "y": 0, "w": 1440, "h": 1080, "page": "page-2" },
+
+    { "file": "NavigationFlow.dc.html", "x": 0, "y": 0, "w": 1500, "h": 800, "page": "page-3" },
+    { "file": "ComponentInventory.dc.html", "x": 1580, "y": 0, "w": 1360, "h": 1500, "page": "page-3" }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

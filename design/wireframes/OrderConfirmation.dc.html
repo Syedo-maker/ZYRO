@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; background: oklch(98% 0.005 260); color: oklch(19% 0.02 265); }
+    h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+    a { color: oklch(58% 0.16 265); text-decoration: none; }
+    a:hover { color: oklch(50% 0.17 265); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; height: 46px; padding: 0 22px; }
+  </style>
+</helmet>
+
+<div style="width: 900px; min-height: 820px; background: oklch(98% 0.005 260); display: flex; flex-direction: column;">
+  <div style="display: flex; align-items: center; padding: 0 40px; height: 72px; background: white; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 22px; font-weight: 700;">ZYRO</div>
+
+  <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px;">
+    <div style="width: 560px; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 16px; padding: 40px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;">
+
+      <div style="width: 64px; height: 64px; border-radius: 50%; background: oklch(94% 0.03 150); display: flex; align-items: center; justify-content: center;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="oklch(58% 0.13 150)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+
+      <h1 style="font-size: 22px; font-weight: 700;">Order confirmed</h1>
+      <div style="font-size: 13px; color: oklch(46% 0.02 265); line-height: 1.6;">Thanks, Jordan — your order has been placed. A confirmation has been sent to jordan.parker@example.com.</div>
+
+      <div style="width: 100%; background: oklch(96% 0.004 260); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+        <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: oklch(63% 0.015 265);">Order number</span><span style="font-weight: 700;">#ZY-48213</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: oklch(63% 0.015 265);">Total paid</span><span style="font-weight: 700;">$118.50</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: oklch(63% 0.015 265);">Estimated delivery</span><span style="font-weight: 700;">Sep 22 – Sep 24</span></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;"><span style="color: oklch(63% 0.015 265);">Status</span><span style="background: oklch(95% 0.04 80); color: oklch(72% 0.15 80); font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 999px;">PROCESSING</span></div>
+      </div>
+
+      <div class="btn" style="background: oklch(58% 0.16 265); color: white; margin-top: 8px;">Track my order</div>
+      <div style="font-size: 13px; color: oklch(58% 0.16 265); font-weight: 600; cursor: pointer;">Continue shopping</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

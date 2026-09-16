@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; background: oklch(98% 0.005 260); color: oklch(19% 0.02 265); }
+    h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+    a { color: oklch(58% 0.16 265); text-decoration: none; }
+    a:hover { color: oklch(50% 0.17 265); }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; color: oklch(70% 0.01 260); }
+    .nav-item.active { background: oklch(30% 0.02 265); color: white; font-weight: 600; }
+    .stat-card { flex: 1; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1000px; background: oklch(98% 0.005 260); display: flex;">
+
+  <!-- Sidebar -->
+  <div style="width: 220px; flex-shrink: 0; background: oklch(19% 0.02 265); display: flex; flex-direction: column; padding: 24px 16px; gap: 4px;">
+    <div style="font-size: 19px; font-weight: 700; color: white; padding: 0 8px 24px 8px;">ZYRO</div>
+    <div class="nav-item active"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7l-8-4-8 4v10l8 4 8-4V7z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>Products</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Orders</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.6 13.4L12 22l-8.6-8.6a5 5 0 1 1 7-7l1.6 1.6 1.6-1.6a5 5 0 1 1 7 7z"/></svg>Marketing</div>
+    <div class="nav-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</div>
+  </div>
+
+  <div style="flex: 1; display: flex; flex-direction: column;">
+    <!-- Topbar -->
+    <div style="height: 72px; background: white; border-bottom: 1px solid oklch(91% 0.006 260); display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
+      <div style="font-size: 17px; font-weight: 700;">Aurora Home Goods</div>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; background: oklch(94% 0.03 200); padding: 8px 14px; border-radius: 999px;">
+          <svg width="13" height="13" fill="oklch(58% 0.14 200)" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.9-6.2 3.9 1.6-7L2 9.2l7.1-.6z"/></svg>
+          <span style="font-size: 12px; font-weight: 700; color: oklch(58% 0.14 200);">AI usage: 62 / 100 this month</span>
+        </div>
+        <div style="width: 36px; height: 36px; border-radius: 50%; background: oklch(94% 0.03 265); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: oklch(58% 0.16 265);">SM</div>
+      </div>
+    </div>
+
+    <div style="padding: 28px 32px; display: flex; flex-direction: column; gap: 24px;">
+
+      <!-- Stat tiles -->
+      <div style="display: flex; gap: 20px;">
+        <div class="stat-card">
+          <div style="font-size: 12px; color: oklch(63% 0.015 265); font-weight: 600;">SALES (30 DAYS)</div>
+          <div style="font-size: 26px; font-weight: 700;">$8,420</div>
+          <div style="font-size: 12px; color: oklch(58% 0.13 150); font-weight: 600;">↑ 12.4% vs last month</div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size: 12px; color: oklch(63% 0.015 265); font-weight: 600;">ORDERS</div>
+          <div style="font-size: 26px; font-weight: 700;">142</div>
+          <div style="font-size: 12px; color: oklch(58% 0.13 150); font-weight: 600;">↑ 6 today</div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size: 12px; color: oklch(63% 0.015 265); font-weight: 600;">AVG. ORDER VALUE</div>
+          <div style="font-size: 26px; font-weight: 700;">$59.30</div>
+          <div style="font-size: 12px; color: oklch(63% 0.015 265); font-weight: 600;">— steady</div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size: 12px; color: oklch(63% 0.015 265); font-weight: 600;">AI GENERATIONS USED</div>
+          <div style="font-size: 26px; font-weight: 700;">62 / 100</div>
+          <div style="height: 6px; border-radius: 999px; background: oklch(91% 0.006 260); margin-top: 2px;"><div style="width: 62%; height: 100%; background: oklch(58% 0.14 200); border-radius: 999px;"></div></div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 20px;">
+        <!-- Chart -->
+        <div style="flex: 1.4; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; padding: 24px;">
+          <div style="font-size: 14px; font-weight: 700; margin-bottom: 20px;">Sales, last 7 days</div>
+          <div style="display: flex; align-items: flex-end; gap: 16px; height: 180px;">
+            <div style="flex: 1; background: oklch(94% 0.03 265); border-radius: 6px 6px 0 0; height: 60%;"></div>
+            <div style="flex: 1; background: oklch(94% 0.03 265); border-radius: 6px 6px 0 0; height: 75%;"></div>
+            <div style="flex: 1; background: oklch(94% 0.03 265); border-radius: 6px 6px 0 0; height: 45%;"></div>
+            <div style="flex: 1; background: oklch(94% 0.03 265); border-radius: 6px 6px 0 0; height: 90%;"></div>
+            <div style="flex: 1; background: oklch(58% 0.16 265); border-radius: 6px 6px 0 0; height: 100%;"></div>
+            <div style="flex: 1; background: oklch(94% 0.03 265); border-radius: 6px 6px 0 0; height: 70%;"></div>
+            <div style="flex: 1; background: oklch(94% 0.03 265); border-radius: 6px 6px 0 0; height: 55%;"></div>
+          </div>
+          <div style="display: flex; gap: 16px; margin-top: 10px;">
+            <div style="flex: 1; text-align: center; font-size: 11px; color: oklch(63% 0.015 265);">Mon</div>
+            <div style="flex: 1; text-align: center; font-size: 11px; color: oklch(63% 0.015 265);">Tue</div>
+            <div style="flex: 1; text-align: center; font-size: 11px; color: oklch(63% 0.015 265);">Wed</div>
+            <div style="flex: 1; text-align: center; font-size: 11px; color: oklch(63% 0.015 265);">Thu</div>
+            <div style="flex: 1; text-align: center; font-size: 11px; font-weight: 700;">Fri</div>
+            <div style="flex: 1; text-align: center; font-size: 11px; color: oklch(63% 0.015 265);">Sat</div>
+            <div style="flex: 1; text-align: center; font-size: 11px; color: oklch(63% 0.015 265);">Sun</div>
+          </div>
+        </div>
+
+        <!-- Top products -->
+        <div style="flex: 1; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="font-size: 14px; font-weight: 700;">Top products</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;"><span>Wireless Earbuds Pro</span><span style="font-weight: 700;">38 sold</span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;"><span>Ceramic Pour-Over Set</span><span style="font-weight: 700;">29 sold</span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;"><span>Merino Wool Scarf</span><span style="font-weight: 700;">21 sold</span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;"><span>Desk Plant — Pothos</span><span style="font-weight: 700;">17 sold</span></div>
+        </div>
+      </div>
+
+      <!-- Recent orders -->
+      <div style="background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; padding: 24px;">
+        <div style="font-size: 14px; font-weight: 700; margin-bottom: 16px;">Recent orders</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.7fr; gap: 12px; font-size: 11px; font-weight: 700; color: oklch(63% 0.015 265); padding-bottom: 10px; border-bottom: 1px solid oklch(91% 0.006 260);">
+          <div>ORDER</div><div>CUSTOMER</div><div>DATE</div><div>TOTAL</div><div>STATUS</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.7fr; gap: 12px; font-size: 13px; padding: 12px 0; border-bottom: 1px solid oklch(94% 0.004 260); align-items: center;">
+          <div style="font-weight: 600;">#ZY-48213</div><div>Jordan Parker</div><div style="color: oklch(63% 0.015 265);">Sep 16</div><div style="font-weight: 600;">$118.50</div><div><span style="background: oklch(95% 0.04 80); color: oklch(72% 0.15 80); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;">PROCESSING</span></div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.7fr; gap: 12px; font-size: 13px; padding: 12px 0; border-bottom: 1px solid oklch(94% 0.004 260); align-items: center;">
+          <div style="font-weight: 600;">#ZY-48212</div><div>Riley Chen</div><div style="color: oklch(63% 0.015 265);">Sep 16</div><div style="font-weight: 600;">$34.00</div><div><span style="background: oklch(94% 0.03 150); color: oklch(58% 0.13 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;">FULFILLED</span></div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.7fr; gap: 12px; font-size: 13px; padding: 12px 0; align-items: center;">
+          <div style="font-weight: 600;">#ZY-48211</div><div>Sam Okafor</div><div style="color: oklch(63% 0.015 265);">Sep 15</div><div style="font-weight: 600;">$76.00</div><div><span style="background: oklch(94% 0.03 25); color: oklch(58% 0.19 25); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;">CANCELLED</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
