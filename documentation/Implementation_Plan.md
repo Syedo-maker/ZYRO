@@ -14,7 +14,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 **Phase 0 — Analysis & Design**
 - [x] Database schema design (Prisma schema + Mongoose schemas) — see `documentation/Phase0_Module1_Database_Schema_Design.md`
 - [x] UI/UX wireframes (full navigation flow + component inventory) — built as a Claude Design canvas rather than Figma, see `design/wireframes/`
-- [ ] API contract draft (per-module endpoint list)
+- [x] API contract draft (per-module endpoint list) — see `backend/openapi.yaml` and `documentation/Phase0_Module3_API_Contract.md`
 
 **Phase 1 — Foundation**
 - [ ] Module: Authentication & Multi-Tenancy

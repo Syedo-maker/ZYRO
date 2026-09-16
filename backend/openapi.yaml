@@ -1,0 +1,1350 @@
+openapi: 3.1.0
+info:
+  title: ZYRO API
+  summary: Multi-tenant e-commerce platform with built-in AI content generation and shopping assistant.
+  description: |
+    This is the API contract draft for Phase 0, Module 3 of the ZYRO (ShopMind AI) implementation
+    plan. It consolidates the endpoints sketched per-phase in `documentation/Implementation_Plan.md`
+    into one consistent, code-gen-friendly contract so frontend and backend work (owned by different
+    students per the scope document's Section 12 module split) can proceed in parallel without
+    integration surprises.
+
+    ## Multi-tenancy
+
+    Every tenant-scoped resource is nested under `/stores/{storeId}/...`. `storeId` must always be
+    supplied explicitly — this mirrors the tenant-scoping design from Phase 0 Module 1 (Prisma
+    middleware and the Mongoose `tenantScopePlugin` both refuse a query with no tenant filter), so the
+    API surface makes the same requirement visible to callers rather than inferring it silently.
+
+    ## Auth model
+
+    - `bearerAuth` — JWT access token. Required for all merchant/staff actions and any action tied to
+      a logged-in customer account.
+    - `guestSession` — an opaque guest session id (issued on first cart interaction, carried in the
+      `X-Guest-Session-Id` header). Storefront browsing, cart, and checkout endpoints accept either
+      `bearerAuth` OR `guestSession`, since Section 6 of the scope document requires guest checkout to
+      work without an account.
+  version: "0.1.0-draft"
+
+servers:
+  - url: /api/v1
+    description: Single backend, path-versioned; hostname/subdomain routing per store is handled
+      upstream of this contract.
+
+tags:
+  - name: auth
+    description: Merchant and customer authentication.
+  - name: stores
+    description: Store profile, branding, and staff management.
+  - name: catalog
+    description: Product catalog browsing and management.
+  - name: reviews
+    description: Customer product reviews.
+  - name: ai-content
+    description: AI-generated product description tooling.
+  - name: cart
+    description: Shopping cart.
+  - name: checkout
+    description: Checkout and payment.
+  - name: orders
+    description: Order and shipment management.
+  - name: shipping
+    description: Shipping zone configuration.
+  - name: discounts
+    description: Discount code management and validation.
+  - name: ai-assistant
+    description: AI shopping assistant chat.
+  - name: analytics
+    description: Sales and marketing analytics.
+  - name: webhooks
+    description: Inbound webhooks from third-party providers.
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ── AUTH ──────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [auth]
+      operationId: auth_register
+      summary: Register a merchant and create their first store
+      description: |
+        Creates a new `User` (role: merchant owner) and their first `Tenant` in a single
+        transaction, per Implementation_Plan.md Phase 1. Returns access and refresh tokens
+        so the merchant is immediately signed in.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, storeName, storeSlug]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                storeName: { type: string, maxLength: 120 }
+                storeSlug: { type: string, pattern: "^[a-z0-9-]{3,50}$" }
+            examples:
+              new_merchant:
+                value:
+                  email: sam@auroragoods.example
+                  password: correct-horse-battery-staple
+                  storeName: Aurora Home Goods
+                  storeSlug: aurora-home-goods
+      responses:
+        "201":
+          description: Merchant and store created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "409":
+          description: Email or store slug already taken
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: auth_login
+      summary: Log in with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSession" }
+        "401":
+          description: Invalid credentials
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: auth_refresh
+      summary: Exchange a refresh token for a new access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken]
+                properties:
+                  accessToken: { type: string }
+        "401":
+          description: Refresh token invalid or expired
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: auth_logout
+      summary: Invalidate the current refresh token
+      responses:
+        "204":
+          description: Logged out
+
+  # ── STORES ────────────────────────────────────────────────────────────
+  /stores/{storeId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [stores]
+      operationId: stores_get
+      summary: Get a store's public profile
+      description: Public — used by the storefront to render branding before any auth check.
+      security: []
+      responses:
+        "200":
+          description: Store profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Store" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stores/{storeId}/branding:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    patch:
+      tags: [stores]
+      operationId: store_branding_update
+      summary: Update store name, logo, and theme color
+      description: Owner-only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                logoUrl: { type: string, format: uri }
+                themeColor: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Store" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/staff:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [stores]
+      operationId: store_staff_list
+      summary: List staff accounts for a store
+      description: Owner-only.
+      responses:
+        "200":
+          description: Staff list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/StaffMember" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [stores]
+      operationId: store_staff_create
+      summary: Invite a staff account with scoped permissions
+      description: Owner-only. Permissions gate access to specific routes (Section 6/7.2 role-based access).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, permissions]
+              properties:
+                email: { type: string, format: email }
+                permissions:
+                  type: array
+                  items: { $ref: "#/components/schemas/StaffPermission" }
+            examples:
+              catalog_staff:
+                value:
+                  email: jordan@auroragoods.example
+                  permissions: [products_write]
+      responses:
+        "201":
+          description: Staff account created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StaffMember" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/staff/{staffId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: staffId
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      tags: [stores]
+      operationId: store_staff_delete
+      summary: Remove a staff account
+      description: Owner-only.
+      responses:
+        "204": { description: Removed }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── CATALOG ───────────────────────────────────────────────────────────
+  /stores/{storeId}/products:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [catalog]
+      operationId: products_list
+      summary: Browse or search a store's product catalog
+      description: |
+        Public. Supports plain browsing (category filter, pagination) and keyword search via
+        the `q` parameter against the MongoDB text index on title/description
+        (Implementation_Plan.md Phase 3) — folded into this collection endpoint rather than a
+        separate `/search` path, since a search is just a filtered list, not a distinct resource.
+      security: []
+      parameters:
+        - name: q
+          in: query
+          description: Keyword search across product title and description.
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Product page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Product" }
+                  pagination: { $ref: "#/components/schemas/PaginationInfo" }
+    post:
+      tags: [catalog]
+      operationId: products_create
+      summary: Create a product
+      description: Requires the `products_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/products/{productId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      tags: [catalog]
+      operationId: products_get
+      summary: Get a single product
+      security: []
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [catalog]
+      operationId: products_update
+      summary: Replace a product's editable fields
+      description: Requires the `products_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [catalog]
+      operationId: products_delete
+      summary: Delete a product
+      description: Requires the `products_write` staff permission (or owner).
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── REVIEWS ───────────────────────────────────────────────────────────
+  /stores/{storeId}/products/{productId}/reviews:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      tags: [reviews]
+      operationId: reviews_list
+      summary: List reviews for a product
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Review page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination, averageRating]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ProductReview" }
+                  pagination: { $ref: "#/components/schemas/PaginationInfo" }
+                  averageRating:
+                    type: number
+                    description: Computed on read via aggregation, not stored on the product (Implementation_Plan.md Phase 3).
+    post:
+      tags: [reviews]
+      operationId: reviews_create
+      summary: Leave a review for a product
+      description: Requires a logged-in customer account (one review per customer per product).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, maxLength: 2000 }
+      responses:
+        "201":
+          description: Review created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductReview" }
+        "409":
+          description: Customer has already reviewed this product
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ── AI CONTENT ────────────────────────────────────────────────────────
+  /stores/{storeId}/products/{productId}/ai-description/generate:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    post:
+      tags: [ai-content]
+      operationId: ai_content_generate
+      summary: Generate a draft AI product description
+      description: |
+        Enqueues an AI orchestrator job (Implementation_Plan.md Phase 4). Checked against
+        `AiUsageQuota` before enqueueing; quota is only decremented on success. Requires the
+        `products_write` staff permission (or owner).
+      responses:
+        "202":
+          description: Generation queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiGeneratedContent" }
+        "402":
+          description: Monthly AI usage quota exhausted
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/products/{productId}/ai-description:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    patch:
+      tags: [ai-content]
+      operationId: ai_content_update
+      summary: Edit the draft AI description before publishing
+      responses:
+        "200":
+          description: Draft updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiGeneratedContent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/products/{productId}/ai-description/regenerate:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    post:
+      tags: [ai-content]
+      operationId: ai_content_regenerate
+      summary: Re-run generation, replacing the current draft
+      description: Consumes one AI generation from the monthly quota, same as `ai_content_generate`.
+      responses:
+        "202":
+          description: Regeneration queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiGeneratedContent" }
+        "402":
+          description: Monthly AI usage quota exhausted
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/products/{productId}/ai-description/publish:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    post:
+      tags: [ai-content]
+      operationId: ai_content_publish
+      summary: Publish the current draft as the product's live description
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/ai-usage:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [ai-content]
+      operationId: ai_usage_get
+      summary: Get this store's AI usage for the current month
+      responses:
+        "200":
+          description: Usage quota
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiUsageQuota" }
+
+  # ── CART ──────────────────────────────────────────────────────────────
+  /stores/{storeId}/cart:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [cart]
+      operationId: cart_get
+      summary: Get the current cart
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      responses:
+        "200":
+          description: Cart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+
+  /stores/{storeId}/cart/items:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [cart]
+      operationId: cart_items_add
+      summary: Add an item to the cart
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, quantity]
+              properties:
+                productId: { type: string }
+                quantity: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+        "409":
+          description: Requested quantity exceeds available stock
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/cart/items/{itemId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: itemId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [cart]
+      operationId: cart_items_update
+      summary: Change an item's quantity
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+    delete:
+      tags: [cart]
+      operationId: cart_items_remove
+      summary: Remove an item from the cart
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+
+  # ── CHECKOUT ──────────────────────────────────────────────────────────
+  /stores/{storeId}/checkout/session:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [checkout]
+      operationId: checkout_session_create
+      summary: Create a Stripe Checkout Session for the current cart
+      description: |
+        Returns a Stripe-hosted checkout URL (Implementation_Plan.md Phase 2 — Stripe Checkout
+        Session, not raw PaymentIntents). The resulting `Order` is only created once
+        `webhooks_stripe_handle` receives `checkout.session.completed`; this endpoint does not
+        itself create an order.
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                discountCode: { type: string }
+                shippingZoneId: { type: string }
+      responses:
+        "201":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [checkoutUrl]
+                properties:
+                  checkoutUrl: { type: string, format: uri }
+        "400":
+          description: Invalid or expired discount code
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ── ORDERS ────────────────────────────────────────────────────────────
+  /stores/{storeId}/orders:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [orders]
+      operationId: orders_list
+      summary: List orders for a store
+      description: Requires the `orders_write` staff permission (or owner) for the merchant order queue.
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/OrderStatus" }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Order page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, pagination]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Order" }
+                  pagination: { $ref: "#/components/schemas/PaginationInfo" }
+
+  /stores/{storeId}/orders/{orderId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [orders]
+      operationId: orders_get
+      summary: Get a single order
+      description: Available to the merchant, and to the customer who placed it.
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stores/{storeId}/orders/{orderId}/status:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [orders]
+      operationId: orders_status_update
+      summary: Update an order's fulfillment status
+      description: Requires the `orders_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: "#/components/schemas/OrderStatus" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/orders/{orderId}/refund:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [orders]
+      operationId: orders_refund
+      summary: Refund an order via Stripe
+      description: Requires the `orders_write` staff permission (or owner).
+      responses:
+        "200":
+          description: Refund initiated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Order already refunded or not eligible
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ── SHIPPING ──────────────────────────────────────────────────────────
+  /stores/{storeId}/shipping-zones:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [shipping]
+      operationId: shipping_zones_list
+      summary: List a store's shipping zones
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      responses:
+        "200":
+          description: Shipping zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ShippingZone" }
+    post:
+      tags: [shipping]
+      operationId: shipping_zones_create
+      summary: Create a shipping zone
+      description: Requires the `orders_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShippingZoneInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShippingZone" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/shipping-zones/{zoneId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: zoneId
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      tags: [shipping]
+      operationId: shipping_zones_update
+      summary: Update a shipping zone
+      description: Requires the `orders_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShippingZoneInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShippingZone" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [shipping]
+      operationId: shipping_zones_delete
+      summary: Delete a shipping zone
+      description: Requires the `orders_write` staff permission (or owner).
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ── DISCOUNTS ─────────────────────────────────────────────────────────
+  /stores/{storeId}/discount-codes:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [discounts]
+      operationId: discount_codes_list
+      summary: List a store's discount codes
+      description: Requires the `discounts_write` staff permission (or owner).
+      responses:
+        "200":
+          description: Discount codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DiscountCode" }
+    post:
+      tags: [discounts]
+      operationId: discount_codes_create
+      summary: Create a discount code
+      description: Requires the `discounts_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiscountCodeInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiscountCode" }
+        "409":
+          description: Code already exists for this store
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/discount-codes/{codeId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: codeId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [discounts]
+      operationId: discount_codes_update
+      summary: Activate, deactivate, or adjust a discount code
+      description: Requires the `discounts_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                active: { type: boolean }
+                usageLimit: { type: integer, minimum: 1 }
+                expiresAt: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiscountCode" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/discount-codes/validate:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [discounts]
+      operationId: discount_codes_validate
+      summary: Validate a discount code against the current cart total
+      description: Called from checkout before `checkout_session_create`, per Implementation_Plan.md Phase 2/3.
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, cartTotal]
+              properties:
+                code: { type: string }
+                cartTotal: { type: number }
+      responses:
+        "200":
+          description: Valid — discount amount returned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid, discountAmount]
+                properties:
+                  valid: { type: boolean, enum: [true] }
+                  discountAmount: { type: number }
+        "400":
+          description: Code invalid, expired, or usage limit reached
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ── AI ASSISTANT ──────────────────────────────────────────────────────
+  /stores/{storeId}/assistant/chat:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [ai-assistant]
+      operationId: assistant_chat_send
+      summary: Send a message to the AI shopping assistant
+      description: |
+        Routed through the same AI orchestrator and quota system as `ai_content_generate`
+        (Implementation_Plan.md Phase 5), so a store's chat volume and content-generation
+        volume draw from the same monthly quota.
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversationId, message]
+              properties:
+                conversationId: { type: string }
+                message: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: Assistant reply
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reply, conversationId]
+                properties:
+                  reply: { type: string }
+                  conversationId: { type: string }
+                  suggestedProducts:
+                    type: array
+                    items: { $ref: "#/components/schemas/Product" }
+        "402":
+          description: Monthly AI usage quota exhausted
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ── ANALYTICS ─────────────────────────────────────────────────────────
+  /stores/{storeId}/analytics/summary:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [analytics]
+      operationId: analytics_summary_get
+      summary: Sales, order count, and top-selling products
+      description: |
+        Computed via Postgres aggregate queries and cached for 5 minutes
+        (Implementation_Plan.md Phase 3) rather than served from a data warehouse.
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnalyticsSummary" }
+
+  /stores/{storeId}/analytics/cart-recovery:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [analytics]
+      operationId: analytics_cart_recovery_get
+      summary: Abandoned-cart recovery funnel (sent / opened / clicked / converted)
+      responses:
+        "200":
+          description: Funnel counts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CartRecoveryFunnel" }
+
+  # ── WEBHOOKS ──────────────────────────────────────────────────────────
+  /webhooks/stripe:
+    post:
+      tags: [webhooks]
+      operationId: webhooks_stripe_handle
+      summary: Stripe webhook receiver
+      description: |
+        Not tenant-scoped by path — the tenant is resolved from Stripe metadata attached at
+        `checkout_session_create` time. This is the single source of truth for order creation
+        (Implementation_Plan.md Phase 2); the client-side checkout redirect never creates an order.
+      security: []
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw Stripe event payload — verified against `Stripe-Signature` before processing.
+      responses:
+        "200": { description: Event processed }
+        "400":
+          description: Signature verification failed
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    guestSession:
+      type: apiKey
+      in: header
+      name: X-Guest-Session-Id
+
+  parameters:
+    StoreId:
+      name: storeId
+      in: path
+      required: true
+      description: Tenant identifier. Every operation on a tenant-scoped resource must supply this explicitly.
+      schema: { type: string }
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 20, maximum: 100 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, default: 0, minimum: 0 }
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Caller lacks the required staff permission
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      description: RFC 7807 problem details.
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: Stable identifier for this error category.
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+      examples:
+        quota_exhausted:
+          value:
+            type: https://zyro.dev/errors/ai-quota-exhausted
+            title: Monthly AI usage quota exhausted
+            status: 402
+            detail: This store has used all 100 AI generations included this month.
+
+    PaginationInfo:
+      type: object
+      required: [total, limit, offset]
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    AuthSession:
+      type: object
+      required: [accessToken, refreshToken, user]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        user: { $ref: "#/components/schemas/User" }
+
+    User:
+      type: object
+      required: [id, email]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        name: { type: string }
+
+    Store:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        logoUrl: { type: string, format: uri }
+        themeColor: { type: string }
+
+    StaffPermission:
+      type: string
+      enum: [products_write, orders_write, discounts_write, analytics_read]
+
+    StaffMember:
+      type: object
+      required: [id, userId, permissions]
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        email: { type: string, format: email }
+        permissions:
+          type: array
+          items: { $ref: "#/components/schemas/StaffPermission" }
+
+    ProductInput:
+      type: object
+      required: [title, price, stock, category]
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        price: { type: number, minimum: 0 }
+        stock: { type: integer, minimum: 0 }
+        category: { type: string }
+        images:
+          type: array
+          items: { type: string, format: uri }
+          maxItems: 10
+
+    Product:
+      allOf:
+        - $ref: "#/components/schemas/ProductInput"
+        - type: object
+          required: [id, storeId]
+          properties:
+            id: { type: string }
+            storeId: { type: string }
+            aiDescriptionStatus:
+              type: [string, "null"]
+              enum: [draft, published, null]
+      examples:
+        earbuds:
+          value:
+            id: prod_01HXYZ
+            storeId: store_01ABCD
+            title: Wireless Earbuds Pro
+            description: Crisp sound, all-day battery, and a snug fit for workouts or commutes.
+            price: 49.00
+            stock: 42
+            category: Electronics
+            images: ["https://cdn.zyro.dev/products/earbuds-1.jpg"]
+            aiDescriptionStatus: published
+
+    ProductReview:
+      type: object
+      required: [id, productId, customerId, rating]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        customerId: { type: string }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    AiGeneratedContent:
+      type: object
+      required: [id, productId, status, content]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        status: { type: string, enum: [draft, published] }
+        content: { type: string }
+        model: { type: string }
+        editedByMerchant: { type: boolean }
+
+    AiUsageQuota:
+      type: object
+      required: [month, generationsUsed, generationsLimit, chatMessagesUsed, chatMessagesLimit]
+      properties:
+        month: { type: string, description: "YYYY-MM" }
+        generationsUsed: { type: integer }
+        generationsLimit: { type: integer }
+        chatMessagesUsed: { type: integer }
+        chatMessagesLimit: { type: integer }
+
+    CartItem:
+      type: object
+      required: [id, productId, quantity, unitPrice]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPrice: { type: number }
+
+    Cart:
+      type: object
+      required: [items, subtotal]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CartItem" }
+        subtotal: { type: number }
+
+    OrderStatus:
+      type: string
+      enum: [pending, paid, fulfilled, cancelled, refunded]
+
+    OrderItem:
+      type: object
+      required: [productId, productTitleSnapshot, unitPrice, quantity, lineTotal]
+      properties:
+        productId: { type: string }
+        productTitleSnapshot: { type: string }
+        unitPrice: { type: number }
+        quantity: { type: integer }
+        lineTotal: { type: number }
+
+    Order:
+      type: object
+      required: [id, storeId, status, total, items]
+      properties:
+        id: { type: string }
+        storeId: { type: string }
+        customerId: { type: [string, "null"] }
+        guestEmail: { type: [string, "null"] }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        subtotal: { type: number }
+        discountAmount: { type: number }
+        shippingAmount: { type: number }
+        total: { type: number }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrderItem" }
+        createdAt: { type: string, format: date-time }
+
+    ShippingZoneInput:
+      type: object
+      required: [name, region, rateAmount]
+      properties:
+        name: { type: string }
+        region: { type: string }
+        rateAmount: { type: number, minimum: 0 }
+
+    ShippingZone:
+      allOf:
+        - $ref: "#/components/schemas/ShippingZoneInput"
+        - type: object
+          required: [id]
+          properties:
+            id: { type: string }
+
+    DiscountType:
+      type: string
+      enum: [percentage, fixed]
+
+    DiscountCodeInput:
+      type: object
+      required: [code, type, value]
+      properties:
+        code: { type: string, minLength: 3, maxLength: 30 }
+        type: { $ref: "#/components/schemas/DiscountType" }
+        value: { type: number, minimum: 0 }
+        usageLimit: { type: integer, minimum: 1 }
+        expiresAt: { type: string, format: date-time }
+
+    DiscountCode:
+      allOf:
+        - $ref: "#/components/schemas/DiscountCodeInput"
+        - type: object
+          required: [id, usageCount, active]
+          properties:
+            id: { type: string }
+            usageCount: { type: integer }
+            active: { type: boolean }
+
+    AnalyticsSummary:
+      type: object
+      required: [salesLast30Days, orderCount, topProducts]
+      properties:
+        salesLast30Days: { type: number }
+        orderCount: { type: integer }
+        topProducts:
+          type: array
+          items:
+            type: object
+            properties:
+              productId: { type: string }
+              title: { type: string }
+              unitsSold: { type: integer }
+
+    CartRecoveryFunnel:
+      type: object
+      required: [sent, opened, clicked, converted]
+      properties:
+        sent: { type: integer }
+        opened: { type: integer }
+        clicked: { type: integer }
+        converted: { type: integer }
