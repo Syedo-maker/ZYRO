@@ -1,0 +1,287 @@
+// ShopMind AI — PostgreSQL schema (Prisma)
+// Phase 0, Module 1 — Database schema design
+// Entities per Implementation_Plan.md Section 1 (Relational store) and Phase 1/2/3/4/5 module specs.
+//
+// Multi-tenancy model: shared database, shared schema. Every tenant-scoped table carries
+// a `tenantId` column. Isolation is enforced in two layers (see documentation/Phase0_Module1_Database_Schema_Design.md):
+//   1. Prisma middleware (application layer) — auto-injects tenantId on every query.
+//   2. PostgreSQL Row-Level Security (database layer) — see prisma/migrations/manual/001_enable_rls.sql.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ──────────────────────────────────────────────────────────────────────────
+
+enum StaffPermission {
+  PRODUCTS_WRITE
+  ORDERS_WRITE
+  DISCOUNTS_WRITE
+  ANALYTICS_READ
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum ShipmentStatus {
+  PENDING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum CartRecoveryStatus {
+  SENT
+  OPENED
+  CLICKED
+  CONVERTED
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// IDENTITY & TENANCY
+// ──────────────────────────────────────────────────────────────────────────
+
+/// A single login-capable account. Covers both merchant owners/staff and customers —
+/// a customer is simply a User with no Tenant ownership and no StaffMember rows.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedTenants  Tenant[]       @relation("TenantOwner")
+  staffMemberOf StaffMember[]
+  orders        Order[]
+
+  @@index([email])
+}
+
+/// A merchant's store. The tenant-isolation boundary for every scoped table below.
+model Tenant {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  logoUrl    String?
+  themeColor String?
+  ownerId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  owner            User               @relation("TenantOwner", fields: [ownerId], references: [id])
+  staffMembers     StaffMember[]
+  orders           Order[]
+  payments         Payment[]
+  shipments        Shipment[]
+  shippingZones    ShippingZone[]
+  discountCodes    DiscountCode[]
+  aiUsageQuotas    AiUsageQuota[]
+  cartRecoveryLogs CartRecoveryEvent[]
+
+  @@index([ownerId])
+}
+
+/// Staff account with restricted permissions, per Section 6/7.2 role-based access.
+/// The tenant owner is NOT a StaffMember row — ownership is Tenant.ownerId.
+model StaffMember {
+  id          String            @id @default(cuid())
+  tenantId    String
+  userId      String
+  permissions StaffPermission[]
+  createdAt   DateTime          @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// ORDERS, PAYMENTS, SHIPPING
+// ──────────────────────────────────────────────────────────────────────────
+
+/// Order line items reference the MongoDB Product by id (string), not a Postgres FK —
+/// the catalog lives in a different database. Title/price are snapshotted at order time
+/// so historical orders stay accurate even if the product is later edited or deleted.
+model Order {
+  id                     String      @id @default(cuid())
+  tenantId               String
+  customerId             String?
+  guestEmail             String?
+  status                 OrderStatus @default(PENDING)
+  subtotal               Decimal     @db.Decimal(10, 2)
+  discountAmount         Decimal     @default(0) @db.Decimal(10, 2)
+  shippingAmount         Decimal     @default(0) @db.Decimal(10, 2)
+  total                  Decimal     @db.Decimal(10, 2)
+  currency               String      @default("USD")
+  discountCodeId         String?
+  stripeCheckoutSessionId String?    @unique
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer     User?          @relation(fields: [customerId], references: [id])
+  discountCode DiscountCode?  @relation(fields: [discountCodeId], references: [id])
+  items        OrderItem[]
+  payments     Payment[]
+  shipment     Shipment?
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id                  String  @id @default(cuid())
+  orderId             String
+  productId           String // Mongo ObjectId string — catalog lives in MongoDB
+  productTitleSnapshot String
+  unitPrice           Decimal @db.Decimal(10, 2)
+  quantity            Int
+  lineTotal           Decimal @db.Decimal(10, 2)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+/// Source of truth for "did payment succeed" — written from the Stripe webhook handler,
+/// never from the client redirect (Implementation_Plan.md, Phase 2, Module 2).
+model Payment {
+  id                    String        @id @default(cuid())
+  tenantId              String
+  orderId               String
+  stripePaymentIntentId String        @unique
+  amount                Decimal       @db.Decimal(10, 2)
+  currency              String        @default("USD")
+  status                PaymentStatus @default(PENDING)
+  createdAt             DateTime      @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([orderId])
+}
+
+model Shipment {
+  id             String         @id @default(cuid())
+  tenantId       String
+  orderId        String         @unique
+  carrier        String?
+  trackingNumber String?
+  status         ShipmentStatus @default(PENDING)
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+/// Flat-rate shipping cost per region, per Section 6 ("configuring shipping rates").
+/// No live carrier API integration — out of scope per Section 8 (LI-4 context).
+model ShippingZone {
+  id         String   @id @default(cuid())
+  tenantId   String
+  name       String
+  region     String
+  rateAmount Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// MARKETING
+// ──────────────────────────────────────────────────────────────────────────
+
+/// Codes are unique per store, not globally — two different merchants can both run "SALE20".
+model DiscountCode {
+  id           String       @id @default(cuid())
+  tenantId     String
+  code         String
+  type         DiscountType
+  value        Decimal      @db.Decimal(10, 2)
+  expiresAt    DateTime?
+  usageLimit   Int?
+  usageCount   Int          @default(0)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// AI USAGE
+// ──────────────────────────────────────────────────────────────────────────
+
+/// One row per tenant per calendar month. Checked before enqueueing any AI job
+/// (Implementation_Plan.md, Phase 4) — incremented only on a successful generation/chat call.
+model AiUsageQuota {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  month              String   // "YYYY-MM"
+  generationsUsed    Int      @default(0)
+  chatMessagesUsed   Int      @default(0)
+  generationsLimit   Int
+  chatMessagesLimit  Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, month])
+  @@index([tenantId])
+}
+
+/// Outcome tracking for AI-personalized abandoned-cart messages (Phase 5, Module 7 remainder).
+/// cartId refers to the Redis cart key at send time — carts themselves are not persisted here.
+model CartRecoveryEvent {
+  id             String              @id @default(cuid())
+  tenantId       String
+  cartId         String
+  customerEmail  String
+  status         CartRecoveryStatus  @default(SENT)
+  discountCodeId String?
+  sentAt         DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
