@@ -58,7 +58,16 @@ export const authService = {
     return issueSession(user.id, user.email, user.name);
   },
 
-  /** Rotates the refresh token: the old one is deleted so it can't be replayed. */
+  /**
+   * Rotates the refresh token: the old one is deleted so it can't be replayed.
+   *
+   * Uses deleteMany (reports a count) rather than delete (throws if the row is already
+   * gone) — two concurrent refresh calls racing on the same token is a real scenario, not
+   * a hypothetical: React 18/19 StrictMode double-invokes effects in development, so a
+   * naive silent-refresh-on-mount fires this exact race on every page load. Whichever
+   * request's delete actually removes the row wins the rotation; the loser sees count 0
+   * and fails cleanly with 401 instead of crashing on an unhandled "record not found".
+   */
   async refresh(rawRefreshToken: string): Promise<Session> {
     const tokenHash = refreshTokenLib.hash(rawRefreshToken);
     const existing = await prisma.refreshToken.findUnique({
@@ -70,7 +79,11 @@ export const authService = {
       throw Errors.invalidRefreshToken();
     }
 
-    await prisma.refreshToken.delete({ where: { id: existing.id } });
+    const { count } = await prisma.refreshToken.deleteMany({ where: { id: existing.id } });
+    if (count === 0) {
+      throw Errors.invalidRefreshToken();
+    }
+
     return issueSession(existing.user.id, existing.user.email, existing.user.name);
   },
 

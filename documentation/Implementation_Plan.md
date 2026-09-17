@@ -23,7 +23,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 **Phase 1 — Foundation**
 - [x] Module: Authentication & Multi-Tenancy (backend) — running end-to-end against local Postgres, see `documentation/Phase1_Module1_Auth_MultiTenancy.md`
 - [x] Module 4: Store & Catalog Management (backend, CRUD baseline) — running end-to-end against local Postgres + MongoDB, see `documentation/Phase1_Module4_Store_Catalog_Management.md`
-- [ ] **Frontend (owed retroactively):** React project scaffold (Vite + TS + Tailwind, wired to the backend API) + auth screens (register/login — not wireframed, excluded "per guideline" per `design/wireframes/`'s own intro note, but still functionally required) + Admin Catalog Management UI (`AdminCatalog.dc.html`)
+- [x] **Frontend (owed retroactively):** React project scaffold (Vite + TS + Tailwind, wired to the backend API) + auth screens (register/login) + Admin Catalog Management UI (`AdminCatalog.dc.html`) — verified with an automated headless-browser test against the real backend, see `documentation/Phase1_Frontend_Auth_And_Admin_Catalog.md`
 
 **Phase 2 — Core Commerce**
 - [ ] Module 2: Cart & Checkout (backend)

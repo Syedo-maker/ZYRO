@@ -8,6 +8,7 @@ import { staffRouter } from "./modules/stores/staff.routes";
 import { storeRouter } from "./modules/stores/store.routes";
 import { productRouter } from "./modules/products/product.routes";
 import { uploadsRouter } from "./modules/uploads/uploads.routes";
+import { meRouter } from "./modules/users/me.routes";
 
 export const app = express();
 
@@ -23,6 +24,7 @@ app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
 
 const v1 = express.Router();
 v1.use("/auth", authRouter);
+v1.use("/users/me", meRouter);
 v1.use("/stores/:storeId/staff", staffRouter);
 v1.use("/stores/:storeId/products", productRouter);
 v1.use("/stores/:storeId/uploads", uploadsRouter);

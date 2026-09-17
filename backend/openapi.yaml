@@ -34,6 +34,8 @@ servers:
 tags:
   - name: auth
     description: Merchant and customer authentication.
+  - name: users
+    description: The authenticated caller's own account data.
   - name: stores
     description: Store profile, branding, and staff management.
   - name: catalog
@@ -177,6 +179,52 @@ paths:
       responses:
         "204":
           description: Logged out
+
+  # ── USERS ─────────────────────────────────────────────────────────────
+  /users/me:
+    get:
+      tags: [users]
+      operationId: users_me_get
+      summary: Get the authenticated caller's own profile
+      description: |
+        Added alongside `users_me_stores_list` — after a page reload, the frontend only
+        has a fresh access token from `auth_refresh` (which returns no user data), so it
+        needs somewhere to fetch "who am I" from.
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+
+  /users/me/stores:
+    get:
+      tags: [users]
+      operationId: users_me_stores_list
+      summary: List the stores the authenticated caller owns or is staff at
+      description: |
+        Added during Phase 1's frontend module: without this, a frontend has no way to
+        discover which storeId(s) to operate on after login — auth_register/auth_login
+        return the User but never a Tenant. Inherently cross-tenant (a caller's own
+        memberships span stores by definition), so it's implemented against an
+        intentionally unscoped Prisma client, always filtered by the caller's own user id
+        — see backend/src/lib/prisma.ts's `prismaUnscoped` export.
+      responses:
+        "200":
+          description: Stores this user can access
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: "#/components/schemas/Store"
+                    - type: object
+                      required: [role]
+                      properties:
+                        role:
+                          type: string
+                          enum: [owner, staff]
 
   # ── STORES ────────────────────────────────────────────────────────────
   /stores/{storeId}:

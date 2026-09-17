@@ -23,6 +23,18 @@ const DATA_OPERATIONS = new Set(["create"]);
 
 const basePrisma = new PrismaClient();
 
+/**
+ * Deliberate escape hatch: the raw, unscoped client. The tenant-scoping extension below
+ * assumes every StaffMember/Order/etc. query is about ONE tenant — but "which stores does
+ * this user belong to" (added in Phase 1's frontend module, see users/me.service.ts) is a
+ * legitimate cross-tenant query about the caller's OWN memberships, which the scoped client
+ * can't express at all (it would throw, demanding a tenantId that doesn't apply here).
+ *
+ * Use this only for that narrow class of self-lookup queries, always filtered by the
+ * authenticated caller's own userId — never to browse another tenant's business data.
+ */
+export const prismaUnscoped = basePrisma;
+
 export const prisma = basePrisma.$extends({
   query: {
     $allModels: {
