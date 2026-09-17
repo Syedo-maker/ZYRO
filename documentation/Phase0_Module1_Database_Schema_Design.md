@@ -1,7 +1,7 @@
 # Phase 0 — Module 1: Database Schema Design
 
 **Status:** Complete
-**Deliverables:** `backend/prisma/schema.prisma`, `backend/prisma/migrations/manual/001_enable_rls.sql`, `backend/src/models/*.model.ts`, `backend/src/models/plugins/tenantScope.plugin.ts`
+**Deliverables:** `backend/prisma/schema.prisma`, `backend/prisma/manual-sql/001_enable_rls.sql` (moved out of `prisma/migrations/` during Phase 1 Module 1 — Prisma's migrate engine treats every subfolder there as a real migration and errors on anything else), `backend/src/models/*.model.ts`, `backend/src/models/plugins/tenantScope.plugin.ts`
 **Built with:** `database-schema-designer` skill (relational side) + `mongodb-schema-design` skill (document side), per Implementation_Plan.md Section 0 checklist.
 
 This satisfies Phase 0's exit criteria: "Prisma schema + Mongoose schemas committed." It does not scaffold a runnable backend yet — no `package.json`/build tooling exists under `backend/` yet, since that belongs to Phase 1 (Foundation). This module's job was the schema design itself.

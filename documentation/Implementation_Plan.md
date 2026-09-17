@@ -17,7 +17,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] API contract draft (per-module endpoint list) — see `backend/openapi.yaml` and `documentation/Phase0_Module3_API_Contract.md`
 
 **Phase 1 — Foundation**
-- [ ] Module: Authentication & Multi-Tenancy
+- [x] Module: Authentication & Multi-Tenancy — running end-to-end against local Postgres, see `documentation/Phase1_Module1_Auth_MultiTenancy.md`
 - [ ] Module 4: Store & Catalog Management (CRUD baseline)
 
 **Phase 2 — Core Commerce**

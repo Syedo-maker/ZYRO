@@ -71,8 +71,9 @@ paths:
       summary: Register a merchant and create their first store
       description: |
         Creates a new `User` (role: merchant owner) and their first `Tenant` in a single
-        transaction, per Implementation_Plan.md Phase 1. Returns access and refresh tokens
-        so the merchant is immediately signed in.
+        transaction, per Implementation_Plan.md Phase 1. Returns an access token and sets
+        the refresh token as an httpOnly cookie (`refreshToken`, path `/api/v1/auth`) —
+        never in the JSON body, so it isn't reachable from JavaScript/XSS.
       security: []
       requestBody:
         required: true
@@ -95,7 +96,7 @@ paths:
                   storeSlug: aurora-home-goods
       responses:
         "201":
-          description: Merchant and store created
+          description: Merchant and store created. A `Set-Cookie` header carries the httpOnly refresh token.
           content:
             application/json:
               schema:
@@ -111,6 +112,7 @@ paths:
       tags: [auth]
       operationId: auth_login
       summary: Log in with email and password
+      description: Returns an access token; the refresh token is set as an httpOnly cookie (see `auth_register`).
       security: []
       requestBody:
         required: true
@@ -124,7 +126,7 @@ paths:
                 password: { type: string }
       responses:
         "200":
-          description: Authenticated
+          description: Authenticated. A `Set-Cookie` header carries the httpOnly refresh token.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AuthSession" }
@@ -138,20 +140,16 @@ paths:
     post:
       tags: [auth]
       operationId: auth_refresh
-      summary: Exchange a refresh token for a new access token
+      summary: Exchange the refresh token cookie for a new access token
+      description: |
+        Reads the `refreshToken` httpOnly cookie set by `auth_register`/`auth_login` —
+        takes no request body. The refresh token is rotated on every use (the old one is
+        deleted and a new one issued via `Set-Cookie`) so a stolen, already-used token
+        cannot be replayed.
       security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken: { type: string }
       responses:
         "200":
-          description: New access token issued
+          description: New access token issued; refresh token cookie rotated.
           content:
             application/json:
               schema:
@@ -160,7 +158,7 @@ paths:
                 properties:
                   accessToken: { type: string }
         "401":
-          description: Refresh token invalid or expired
+          description: Refresh token cookie missing, invalid, or expired
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -169,7 +167,11 @@ paths:
     post:
       tags: [auth]
       operationId: auth_logout
-      summary: Invalidate the current refresh token
+      summary: Revoke the current refresh token
+      description: |
+        Deletes the server-side record backing the `refreshToken` cookie (so it can no
+        longer be exchanged via `auth_refresh`) and clears the cookie. Idempotent — calling
+        this with no cookie or an already-revoked token still returns 204.
       responses:
         "204":
           description: Logged out
@@ -1125,11 +1127,14 @@ components:
         offset: { type: integer }
 
     AuthSession:
+      description: |
+        The refresh token is never in this body — it's delivered exclusively via an
+        httpOnly `Set-Cookie` header (see `auth_register`), so it can't be read by
+        JavaScript on the frontend.
       type: object
-      required: [accessToken, refreshToken, user]
+      required: [accessToken, user]
       properties:
         accessToken: { type: string }
-        refreshToken: { type: string }
         user: { $ref: "#/components/schemas/User" }
 
     User:

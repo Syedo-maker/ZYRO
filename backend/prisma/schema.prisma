@@ -5,7 +5,9 @@
 // Multi-tenancy model: shared database, shared schema. Every tenant-scoped table carries
 // a `tenantId` column. Isolation is enforced in two layers (see documentation/Phase0_Module1_Database_Schema_Design.md):
 //   1. Prisma middleware (application layer) — auto-injects tenantId on every query.
-//   2. PostgreSQL Row-Level Security (database layer) — see prisma/migrations/manual/001_enable_rls.sql.
+//   2. PostgreSQL Row-Level Security (database layer) — see prisma/manual-sql/001_enable_rls.sql.
+//      (Kept outside prisma/migrations/ — Prisma's migrate engine treats every subfolder
+//      there as a real migration and errors on anything that isn't one.)
 
 generator client {
   provider = "prisma-client-js"
@@ -78,8 +80,25 @@ model User {
   ownedTenants  Tenant[]       @relation("TenantOwner")
   staffMemberOf StaffMember[]
   orders        Order[]
+  refreshTokens RefreshToken[]
 
   @@index([email])
+}
+
+/// Server-side record of issued refresh tokens, keyed by a hash (never the raw token).
+/// Without this, logout cannot actually revoke a token before its natural expiry — a
+/// stateless JWT alone has no way to be invalidated early. Added during Phase 1 Module 1
+/// implementation; not present in the original Module 1 schema pass.
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /// A merchant's store. The tenant-isolation boundary for every scoped table below.

@@ -1,4 +1,4 @@
-import { Schema } from "mongoose";
+import { Schema, Query, CallbackWithoutResultAndOptionalError } from "mongoose";
 
 /**
  * Mongoose equivalent of the Prisma tenant-scoping middleware (Implementation_Plan.md,
@@ -9,12 +9,15 @@ import { Schema } from "mongoose";
  * enforces that storeId cannot be silently omitted.
  */
 export function tenantScopePlugin(schema: Schema): void {
-  schema.pre(["find", "findOne", "countDocuments", "updateMany", "deleteMany"], function (next) {
-    const filter = this.getFilter();
-    if (!("storeId" in filter)) {
-      next(new Error("Tenant-scoped query is missing a required storeId filter."));
-      return;
+  schema.pre(
+    ["find", "findOne", "countDocuments", "updateMany", "deleteMany"],
+    function (this: Query<unknown, unknown>, next: CallbackWithoutResultAndOptionalError) {
+      const filter = this.getFilter();
+      if (!("storeId" in filter)) {
+        next(new Error("Tenant-scoped query is missing a required storeId filter."));
+        return;
+      }
+      next();
     }
-    next();
-  });
+  );
 }
