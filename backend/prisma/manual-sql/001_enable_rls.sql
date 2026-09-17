@@ -1,9 +1,9 @@
--- ShopMind AI — Row-Level Security (defense-in-depth for multi-tenancy)
--- Phase 0, Module 1 — Database schema design
+-- ShopMind AI: Row-Level Security (defense-in-depth for multi-tenancy)
+-- Phase 0, Module 1: Database schema design
 --
 -- Prisma does not manage RLS policies natively, so this file is applied manually
 -- (via `psql` or a migration hook) after `prisma migrate deploy`. It is the second
--- of two isolation layers described in Implementation_Plan.md Section 1 — the first
+-- of two isolation layers described in Implementation_Plan.md Section 1, the first
 -- being Prisma middleware that auto-scopes every query by tenantId at the app layer.
 -- RLS ensures that even a bug in the app-layer middleware cannot leak cross-tenant rows.
 

@@ -6,7 +6,7 @@ import type { CreateStaffInput } from "./staff.validation";
 export const staffService = {
   /**
    * Adds an existing User as staff on a store. There is no invitation-email flow in this
-   * module's scope — the person must already have a ZYRO account (as a customer or
+   * module's scope: the person must already have a ZYRO account (as a customer or
    * merchant elsewhere) before they can be added as staff.
    */
   async create(input: CreateStaffInput) {
@@ -14,7 +14,7 @@ export const staffService = {
     if (!user) throw Errors.notFound("User with that email");
 
     // The tenant-scoping middleware (lib/prisma.ts) also merges tenantId into every
-    // where/data object at runtime — but Prisma's generated types can't see that, so
+    // where/data object at runtime, but Prisma's generated types can't see that, so
     // tenantId is passed explicitly here too. The middleware then becomes a harmless,
     // defense-in-depth backstop rather than the only thing enforcing it.
     const tenantId = tenantContext.getTenantId()!;

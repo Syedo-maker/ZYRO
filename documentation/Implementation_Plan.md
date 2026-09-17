@@ -1,13 +1,13 @@
-# ShopMind AI — Implementation Plan
+# ShopMind AI: Implementation Plan
 
 **Companion to:** ShopMind_AI_Scope_Document.docx
-**Purpose:** Translate the approved scope into a phase-by-phase build plan, mapping every module from Section 7 (Modules) to a concrete technical solution — data model, APIs, libraries, and sequencing — so development can proceed without re-deriving design decisions later.
+**Purpose:** Translate the approved scope into a phase-by-phase build plan, mapping every module from Section 7 (Modules) to a concrete technical solution (data model, APIs, libraries, and sequencing) so development can proceed without re-deriving design decisions later.
 
-This document is a working plan, not a submission deliverable. It intentionally does **not** follow the scope document's structure (no abstract, vision statement, or literature review) — it starts from the architecture and moves straight into build order.
+This document is a working plan, not a submission deliverable. It intentionally does **not** follow the scope document's structure (no abstract, vision statement, or literature review); it starts from the architecture and moves straight into build order.
 
-> **Scope amendment (post-Phase 1):** the AI feature set was expanded beyond the original scope document during implementation — four AI capabilities (recommendations, review summarization, auto-tagging, SEO metadata) were promoted from "stretch goal"/absent to core scope, and a new Python microservice was added to the architecture, at the student team's request. Two items considered (an agentic-storefront/ChatGPT-commerce integration, and a general workflow-automation builder) were declined as unrealistic for the remaining timeline and are **not** part of scope. This amendment has not been reflected in the original submitted scope document (`ShopMind_AI_Scope_Document.docx`) — get supervisor sign-off on it before final submission if that document needs to match.
+> **Scope amendment (post-Phase 1):** the AI feature set was expanded beyond the original scope document during implementation: four AI capabilities (recommendations, review summarization, auto-tagging, SEO metadata) were promoted from "stretch goal"/absent to core scope, and a new Python microservice was added to the architecture, at the student team's request. Two items considered (an agentic-storefront/ChatGPT-commerce integration, and a general workflow-automation builder) were declined as unrealistic for the remaining timeline and are **not** part of scope. This amendment has not been reflected in the original submitted scope document (`ShopMind_AI_Scope_Document.docx`); get supervisor sign-off on it before final submission if that document needs to match.
 >
-> **Frontend scheduling amendment (also post-Phase 1):** this plan originally described backend work only in every phase — no phase scheduled turning the Phase 0 wireframes into actual React screens. Fixed by adding a Frontend module to every phase below, paired with that phase's backend module(s) against the wireframes in `design/wireframes/`, so each phase is demoable end-to-end (not just API-testable) once complete. Phase 1's frontend module is now owed retroactively, since that phase's backend was already built and marked done before this gap was caught — it's listed as the next outstanding item, ahead of Phase 2.
+> **Frontend scheduling amendment (also post-Phase 1):** this plan originally described backend work only in every phase; no phase scheduled turning the Phase 0 wireframes into actual React screens. Fixed by adding a Frontend module to every phase below, paired with that phase's backend module(s) against the wireframes in `design/wireframes/`, so each phase is demoable end-to-end (not just API-testable) once complete. Phase 1's frontend module is now owed retroactively, since that phase's backend was already built and marked done before this gap was caught, so it's listed as the next outstanding item, ahead of Phase 2.
 
 ---
 
@@ -15,28 +15,28 @@ This document is a working plan, not a submission deliverable. It intentionally 
 
 Tracks build progress. One item is completed per session, in order, only when explicitly assigned. Check an item off only once its phase's exit criteria (or, for Testing/Deployment, its own bullet) is fully met.
 
-**Phase 0 — Analysis & Design**
-- [x] Database schema design (Prisma schema + Mongoose schemas) — see `documentation/Phase0_Module1_Database_Schema_Design.md`
-- [x] UI/UX wireframes (full navigation flow + component inventory) — built as a Claude Design canvas rather than Figma, see `design/wireframes/`
-- [x] API contract draft (per-module endpoint list) — see `backend/openapi.yaml` and `documentation/Phase0_Module3_API_Contract.md`
+**Phase 0: Analysis & Design**
+- [x] Database schema design (Prisma schema + Mongoose schemas); see `documentation/Phase0_Module1_Database_Schema_Design.md`
+- [x] UI/UX wireframes (full navigation flow + component inventory), built as a Claude Design canvas rather than Figma, see `design/wireframes/`
+- [x] API contract draft (per-module endpoint list); see `backend/openapi.yaml` and `documentation/Phase0_Module3_API_Contract.md`
 
-**Phase 1 — Foundation**
-- [x] Module: Authentication & Multi-Tenancy (backend) — running end-to-end against local Postgres, see `documentation/Phase1_Module1_Auth_MultiTenancy.md`
-- [x] Module 4: Store & Catalog Management (backend, CRUD baseline) — running end-to-end against local Postgres + MongoDB, see `documentation/Phase1_Module4_Store_Catalog_Management.md`
-- [x] **Frontend (owed retroactively):** React project scaffold (Vite + TS + Tailwind, wired to the backend API) + auth screens (register/login) + Admin Catalog Management UI (`AdminCatalog.dc.html`) — verified with an automated headless-browser test against the real backend, see `documentation/Phase1_Frontend_Auth_And_Admin_Catalog.md`
+**Phase 1: Foundation**
+- [x] Module: Authentication & Multi-Tenancy (backend), running end-to-end against local Postgres, see `documentation/Phase1_Module1_Auth_MultiTenancy.md`
+- [x] Module 4: Store & Catalog Management (backend, CRUD baseline), running end-to-end against local Postgres + MongoDB, see `documentation/Phase1_Module4_Store_Catalog_Management.md`
+- [x] **Frontend (owed retroactively):** React project scaffold (Vite + TS + Tailwind, wired to the backend API) + auth screens (register/login) + Admin Catalog Management UI (`AdminCatalog.dc.html`), verified with an automated headless-browser test against the real backend, see `documentation/Phase1_Frontend_Auth_And_Admin_Catalog.md`
 
-**Phase 2 — Core Commerce**
+**Phase 2: Core Commerce**
 - [ ] Module 2: Cart & Checkout (backend)
 - [ ] Module 5: Order & Shipping Management (backend)
 - [ ] Frontend: Storefront Cart, Checkout, Order Confirmation (`Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`) + Admin Orders & Shipping UI (`AdminOrders.dc.html`)
 
-**Phase 3 — Commerce Completeness**
+**Phase 3: Commerce Completeness**
 - [ ] Module 7 (partial): Discount Codes (backend)
 - [ ] Module 1 (remaining): Search & Reviews (backend)
 - [ ] Module 7 (partial): Analytics Dashboard (backend, baseline)
 - [ ] Frontend: Storefront Home, Category/Search, Product Detail + reviews (`Main.dc.html`, `CategoryListing.dc.html`, `ProductDetail.dc.html`) + Admin Dashboard home + Marketing/Analytics UI (`AdminDashboard.dc.html`, `AdminMarketing.dc.html`)
 
-**Phase 4 — AI Feature 1**
+**Phase 4: AI Feature 1**
 - [ ] AI Orchestrator (provider adapter + BullMQ job queue + quota system)
 - [ ] Module 6: AI Content Tools (product descriptions)
 - [ ] Module 6 (added): AI review summarization
@@ -44,25 +44,25 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [ ] Module 6 (added): AI SEO metadata generation
 - [ ] Frontend: wire the AI generate/regenerate/publish flow + quota display into the Admin Catalog UI (scaffolded in Phase 1, made functional here) + UI touches for summarization/auto-tag/SEO metadata
 
-**Phase 5 — AI Feature 2**
+**Phase 5: AI Feature 2**
 - [ ] Module 3: AI Shopping Assistant (backend)
 - [ ] Module 7 (remaining): Abandoned-Cart Recovery (backend)
 - [ ] Frontend: AI Assistant chat widget (`AIAssistant.dc.html`) wired to the real endpoint
 
-**Phase 6 — AI Recommendation Service (Python)** *(new phase, added post-Phase 1 scope amendment)*
+**Phase 6: AI Recommendation Service (Python)** *(new phase, added post-Phase 1 scope amendment)*
 - [ ] Python/FastAPI microservice scaffold + embedding pipeline
 - [ ] `GET /stores/:storeId/products/:productId/recommendations` (Node-proxied)
 - [ ] Wire into AI Shopping Assistant's "suggested related products" (upgrade from Phase 5's keyword matching)
 - [ ] Frontend: display recommended products on Product Detail + Storefront Home
 
-**Phase 7 — Testing**
+**Phase 7: Testing**
 - [ ] Unit tests (Jest)
 - [ ] Integration tests incl. tenant-isolation (Jest + Supertest)
 - [ ] End-to-end golden-path test (Playwright)
 - [ ] AI quota enforcement check (load/manual)
 - [ ] Python recommendation service tests (pytest)
 
-**Phase 8 — Deployment & Documentation**
+**Phase 8: Deployment & Documentation**
 - [ ] Docker Compose stack (postgres, mongo, redis, api, web, recommendation-service)
 - [ ] Environment/secrets setup (`.env.example`)
 - [ ] Final documentation pass (README, exit-criteria updates, demo script)
@@ -76,11 +76,11 @@ Tracks build progress. One item is completed per session, in order, only when ex
 |---|---|---|
 | Frontend | React 18 + TypeScript + Tailwind CSS | Storefront (customer) + Admin dashboard (merchant), single codebase, route-split by role |
 | Backend API | Node.js 20 + Express + TypeScript | REST API, tenant-aware middleware, auth, business logic |
-| Relational store | PostgreSQL 16 + Prisma | Tenants, users, orders, payments, discounts — anything needing transactional consistency |
-| Document store | MongoDB 7 + Mongoose | Product catalog, AI-generated content, chat transcripts — flexible/variable schema data |
+| Relational store | PostgreSQL 16 + Prisma | Tenants, users, orders, payments, discounts (anything needing transactional consistency) |
+| Document store | MongoDB 7 + Mongoose | Product catalog, AI-generated content, chat transcripts (flexible/variable schema data) |
 | Queue / cache | Redis + BullMQ | AI job queueing, rate limiting, cart/session cache, scheduled jobs (abandoned-cart recovery) |
 | AI layer | OpenAI / Anthropic API (adapter pattern) | Content generation, shopping assistant, personalized messages, review summarization, auto-tagging, SEO metadata |
-| Recommendation service | Python 3.11 + FastAPI | Product-embedding-based recommendations — a separate microservice, added post-Phase 1 scope amendment (see note above); the only Python component in the stack |
+| Recommendation service | Python 3.11 + FastAPI | Product-embedding-based recommendations, a separate microservice, added post-Phase 1 scope amendment (see note above); the only Python component in the stack |
 | Payments | Stripe API | Checkout, payment confirmation via webhooks |
 | Auth | JWT (access + refresh tokens) | Merchant, staff, and customer sessions |
 | Infra | Docker + Docker Compose | Local dev parity; single-command spin-up of Postgres, Mongo, Redis, API, frontend, recommendation-service |
@@ -98,26 +98,26 @@ This avoids schema-per-tenant complexity while still giving hard isolation guara
 Phases mirror Section 13 (WBS) of the scope document. Each phase below lists its modules (from Section 7) and the specific technical solution for building them, not just the feature description already stated in scope.
 
 ```
-Phase 0  Analysis & Design            (weeks 1–4)
-Phase 1  Foundation                   (weeks 5–8)   — Auth, Multi-tenancy, Catalog CRUD
-Phase 2  Core Commerce                (weeks 9–12)  — Cart, Checkout, Orders, Shipping
-Phase 3  Commerce Completeness        (weeks 13–16) — Discounts, Reviews, Search
-Phase 4  AI Feature 1                 (weeks 17–20) — Orchestrator, Content Tools, Summarization, Tagging, SEO
-Phase 5  AI Feature 2                 (weeks 21–24) — Shopping Assistant, Cart Recovery
-Phase 6  AI Recommendation Service    (weeks 25–27) — Python/FastAPI microservice (NEW — post-Phase 1 amendment)
-Phase 7  Testing                      (weeks 28–29)
-Phase 8  Deployment & Docs            (weeks 30–31)
+Phase 0  Analysis & Design            (weeks 1-4)
+Phase 1  Foundation                   (weeks 5-8)   : Auth, Multi-tenancy, Catalog CRUD
+Phase 2  Core Commerce                (weeks 9-12)  : Cart, Checkout, Orders, Shipping
+Phase 3  Commerce Completeness        (weeks 13-16) : Discounts, Reviews, Search
+Phase 4  AI Feature 1                 (weeks 17-20) : Orchestrator, Content Tools, Summarization, Tagging, SEO
+Phase 5  AI Feature 2                 (weeks 21-24) : Shopping Assistant, Cart Recovery
+Phase 6  AI Recommendation Service    (weeks 25-27) : Python/FastAPI microservice (NEW, post-Phase 1 amendment)
+Phase 7  Testing                      (weeks 28-29)
+Phase 8  Deployment & Docs            (weeks 30-31)
 ```
 
-Adding Phase 6 pushes the total timeline from the original 28 weeks to 31 — a real cost of the scope amendment, not a free addition. Flag this to your supervisor alongside the amendment note above.
+Adding Phase 6 pushes the total timeline from the original 28 weeks to 31, a real cost of the scope amendment, not a free addition. Flag this to your supervisor alongside the amendment note above.
 
 Module ownership stays as defined in Section 12 of the scope document, with the new Phase 6 assigned to Sikander as an extension of his existing AI-module ownership:
-- **Muhammad Ibrahim (BSAI-23F-0048):** Modules 1, 2, 4, 5 — Storefront, Cart/Checkout, Catalog Management, Order/Shipping Management
-- **Syed Sikander Gillani (BSAI-23F-0062):** Modules 3, 6, 7 — AI Shopping Assistant, AI Content Tools, Marketing/Analytics — plus the new Phase 6 AI Recommendation Service
+- **Muhammad Ibrahim (BSAI-23F-0048):** Modules 1, 2, 4, 5: Storefront, Cart/Checkout, Catalog Management, Order/Shipping Management
+- **Syed Sikander Gillani (BSAI-23F-0062):** Modules 3, 6, 7: AI Shopping Assistant, AI Content Tools, Marketing/Analytics, plus the new Phase 6 AI Recommendation Service
 
 ---
 
-## Phase 0 — Analysis & Design (Weeks 1–4)
+## Phase 0: Analysis & Design (Weeks 1-4)
 
 No module code yet; this phase produces the artifacts every later phase depends on.
 
@@ -125,16 +125,16 @@ No module code yet; this phase produces the artifacts every later phase depends 
    - PostgreSQL (Prisma schema): `Tenant`, `User`, `StaffMember`, `Order`, `OrderItem`, `Payment`, `Shipment`, `DiscountCode`, `AiUsageQuota`.
    - MongoDB (Mongoose schemas): `Product`, `ProductReview`, `AiGeneratedContent`, `ChatTranscript`.
    - Decide relational vs document split per entity **now**, since retrofitting later touches every module.
-2. **UI/UX wireframes (Figma)** — already partially done for the scope document's mockups (Section 14); extend into full navigation flow and component inventory (design system: buttons, cards, forms) so frontend work in later phases doesn't block on design.
-3. **API contract draft** — write OpenAPI-style endpoint list per module (see phase sections below) so both students can build frontend/backend for different modules in parallel without integration surprises.
+2. **UI/UX wireframes (Figma):** already partially done for the scope document's mockups (Section 14); extend into full navigation flow and component inventory (design system: buttons, cards, forms) so frontend work in later phases doesn't block on design.
+3. **API contract draft:** write OpenAPI-style endpoint list per module (see phase sections below) so both students can build frontend/backend for different modules in parallel without integration surprises.
 
 **Exit criteria:** Prisma schema + Mongoose schemas committed; wireframes approved by supervisor; endpoint list agreed between both students.
 
 ---
 
-## Phase 1 — Foundation (Weeks 5–8)
+## Phase 1: Foundation (Weeks 5-8)
 
-### Module: Authentication & Multi-Tenancy *(supporting infrastructure, not numbered in Section 7, but required before Modules 1–7 can function)*
+### Module: Authentication & Multi-Tenancy *(supporting infrastructure, not numbered in Section 7, but required before Modules 1-7 can function)*
 - **Solution:** JWT access token (15 min expiry) + refresh token (7 days, httpOnly cookie). Token payload carries `userId`, `tenantId`, `role` (`owner` | `staff` | `customer`).
 - Passwords hashed with `bcrypt` (cost factor 12).
 - Prisma middleware scopes every tenant-owned query automatically by `tenantId` from the request context (set via Express middleware reading the JWT).
@@ -143,25 +143,25 @@ No module code yet; this phase produces the artifacts every later phase depends 
 
 ### Module 4: Store & Catalog Management (CRUD baseline)
 - **Solution:** Products live in MongoDB (`Product` collection: `storeId`, `title`, `description`, `aiDescriptionId` ref, `price`, `images[]`, `stock`, `category`).
-- Image upload: multipart upload to object storage (S3-compatible bucket, or local disk volume for prototype) — store the resulting URL only, never the binary, in Mongo.
+- Image upload: multipart upload to object storage (S3-compatible bucket, or local disk volume for prototype); store the resulting URL only, never the binary, in Mongo.
 - Store branding (name, logo, theme colors) stored on the `Tenant` record in Postgres since it's low-volume, config-like data.
 - **Endpoints:** `POST/GET/PUT/DELETE /stores/:storeId/products`, `PATCH /stores/:storeId/branding`.
 
-**Exit criteria:** A merchant can register, log in, create a store, and CRUD products with images through the admin dashboard. This is the first vertical slice — do not proceed to Phase 2 until this works end-to-end.
+**Exit criteria:** A merchant can register, log in, create a store, and CRUD products with images through the admin dashboard. This is the first vertical slice; do not proceed to Phase 2 until this works end-to-end.
 
 ---
 
-## Phase 2 — Core Commerce (Weeks 9–12)
+## Phase 2: Core Commerce (Weeks 9-12)
 
 ### Module 2: Cart & Checkout
 - **Solution:** Cart state kept server-side in Redis, keyed by `sessionId` (guest) or `userId` (logged-in customer), TTL 7 days. Avoids a Postgres table for something this ephemeral.
-- Checkout uses **Stripe Checkout Session** (hosted payment page) rather than raw PaymentIntents — less PCI surface area for a student project, still satisfies "secure checkout integrated with a payment gateway" from Section 6.
-- Stripe webhook (`checkout.session.completed`) triggers order creation in Postgres — this is the single source of truth for "did payment succeed," not the client redirect.
-- Discount code validation happens server-side at checkout initiation (Module 7 dependency — see Phase 3).
+- Checkout uses **Stripe Checkout Session** (hosted payment page) rather than raw PaymentIntents: less PCI surface area for a student project, still satisfies "secure checkout integrated with a payment gateway" from Section 6.
+- Stripe webhook (`checkout.session.completed`) triggers order creation in Postgres; this is the single source of truth for "did payment succeed," not the client redirect.
+- Discount code validation happens server-side at checkout initiation (Module 7 dependency; see Phase 3).
 - **Endpoints:** `POST /cart/items`, `PATCH /cart/items/:id`, `DELETE /cart/items/:id`, `POST /checkout/session`, `POST /webhooks/stripe`.
 
 ### Module 5: Order & Shipping Management
-- **Solution:** `Order` + `OrderItem` (Postgres, transactional integrity matters for financial records per Section 6). `Shipment` record holds carrier/status, updated manually by merchant for this scope (no live carrier API integration — out of scope per Section 8).
+- **Solution:** `Order` + `OrderItem` (Postgres, transactional integrity matters for financial records per Section 6). `Shipment` record holds carrier/status, updated manually by merchant for this scope (no live carrier API integration, out of scope per Section 8).
 - Shipping rates: a `ShippingZone` table per store (flat-rate or per-region) referenced at checkout to compute shipping cost.
 - Refunds/cancellations call the Stripe Refunds API and update `Order.status`.
 - **Endpoints:** `GET /stores/:id/orders`, `PATCH /orders/:id/status`, `POST /orders/:id/refund`, `POST/GET/PUT /stores/:id/shipping-zones`.
@@ -170,54 +170,54 @@ No module code yet; this phase produces the artifacts every later phase depends 
 
 ---
 
-## Phase 3 — Commerce Completeness (Weeks 13–16)
+## Phase 3: Commerce Completeness (Weeks 13-16)
 
 ### Module 7 (partial): Discount Codes
-- **Solution:** `DiscountCode` table in Postgres (`code`, `type: percentage|fixed`, `value`, `expiresAt`, `usageLimit`, `usageCount`). Validation is a pure function so it can be unit-tested in isolation (no partial discounts, no stacking — keeps it inside the timeline).
+- **Solution:** `DiscountCode` table in Postgres (`code`, `type: percentage|fixed`, `value`, `expiresAt`, `usageLimit`, `usageCount`). Validation is a pure function so it can be unit-tested in isolation (no partial discounts, no stacking, which keeps it inside the timeline).
 
 ### Module 1 (remaining): Search & Reviews
-- **Solution:** Product search uses MongoDB's text index (`db.products.createIndex({ title: "text", description: "text" })`) — sufficient for the scope, avoids standing up a separate search service (e.g. Elasticsearch) that the timeline doesn't allow for.
+- **Solution:** Product search uses MongoDB's text index (`db.products.createIndex({ title: "text", description: "text" })`): sufficient for the scope, avoids standing up a separate search service (e.g. Elasticsearch) that the timeline doesn't allow for.
 - Reviews: `ProductReview` collection (`productId`, `customerId`, `rating`, `comment`), average rating computed on read via aggregation pipeline (not stored redundantly, to avoid sync bugs).
 - **Endpoints:** `GET /stores/:id/products/search?q=`, `POST /products/:id/reviews`, `GET /products/:id/reviews`.
 
 ### Module 7 (partial): Analytics Dashboard (baseline)
-- **Solution:** No separate analytics service — compute sales/order-count/top-products via Postgres aggregate queries (`GROUP BY`, `SUM`) run on demand, cached in Redis for 5 minutes to keep the dashboard responsive without a data-warehouse layer.
+- **Solution:** No separate analytics service: compute sales/order-count/top-products via Postgres aggregate queries (`GROUP BY`, `SUM`) run on demand, cached in Redis for 5 minutes to keep the dashboard responsive without a data-warehouse layer.
 - **Endpoints:** `GET /stores/:id/analytics/summary`.
 
 **Exit criteria:** Discounts apply at checkout, customers can search/filter and leave reviews, merchant dashboard shows real sales numbers.
 
 ---
 
-## Phase 4 — AI Feature 1: Orchestrator, Quota, Content Generation (Weeks 17–20)
+## Phase 4: AI Feature 1: Orchestrator, Quota, Content Generation (Weeks 17-20)
 
-This is the phase that differentiates ShopMind AI from a plain e-commerce clone — treat it as the most architecturally important phase.
+This is the phase that differentiates ShopMind AI from a plain e-commerce clone; treat it as the most architecturally important phase.
 
 ### AI Orchestrator (supporting infrastructure for Modules 3 and 6)
-- **Solution:** A single internal service (`ai-orchestrator`) wraps all LLM calls behind one interface (`generate(promptType, context)`), with a provider adapter (`OpenAIAdapter` / `AnthropicAdapter`) selected by config — satisfies "OpenAI / Anthropic API" being listed together in Section 10 without hardcoding to one vendor.
-- All AI calls are enqueued as **BullMQ jobs**, not called synchronously in the request handler — protects the API from slow LLM latency and gives a single choke point for rate limiting.
+- **Solution:** A single internal service (`ai-orchestrator`) wraps all LLM calls behind one interface (`generate(promptType, context)`), with a provider adapter (`OpenAIAdapter` / `AnthropicAdapter`) selected by config: satisfies "OpenAI / Anthropic API" being listed together in Section 10 without hardcoding to one vendor.
+- All AI calls are enqueued as **BullMQ jobs**, not called synchronously in the request handler; this protects the API from slow LLM latency and gives a single choke point for rate limiting.
 - **Quota system:** `AiUsageQuota` table (Postgres): `tenantId`, `month`, `generationsUsed`, `chatMessagesUsed`, `limit`. Middleware checks remaining quota *before* enqueueing a job; job increments the counter only on success (a failed generation shouldn't cost the merchant their quota).
 
 ### Module 6: AI Content Tools
-- **Solution:** `POST /stores/:id/products/:productId/generate-description` — takes the product's existing basic fields (title, category, price, key attributes) as the prompt context, returns a draft stored in Mongo (`AiGeneratedContent`, status: `draft`).
+- **Solution:** `POST /stores/:id/products/:productId/generate-description`: takes the product's existing basic fields (title, category, price, key attributes) as the prompt context, returns a draft stored in Mongo (`AiGeneratedContent`, status: `draft`).
 - Merchant can `PATCH` to edit the draft, or `POST /regenerate` to re-run generation, before `POST /publish` copies it into the live `Product.description`.
 - Quota remaining surfaced via `GET /stores/:id/ai-usage`.
 
 ### Module 6 (added post-Phase 1): AI Review Summarization, Auto-Tagging, SEO Metadata
-Added as part of the post-Phase 1 scope amendment (see the note near the top of this document). All three reuse the orchestrator and quota system above as new `promptType`s — no new infrastructure, just new prompt templates and thin endpoints, which is why these were accepted into core scope where heavier asks (agentic storefronts, a workflow-automation builder) were not.
-- **Review summarization:** `POST /stores/:id/products/:productId/reviews/summarize` — pulls recent `ProductReview` documents, asks the orchestrator for a short merchant-facing summary (common praise/complaints), cached rather than recomputed on every request (invalidated when new reviews arrive past a small threshold, to control cost).
-- **Auto-categorization/tagging:** `POST /stores/:id/products/:productId/auto-tag` — given title + description, suggests a `category` and a small tag list; merchant accepts/edits before it's saved, same pattern as AI descriptions (never silently overwrites merchant data).
-- **SEO metadata generation:** `POST /stores/:id/products/:productId/seo-metadata/generate` — generates a meta title + meta description; requires adding `seoTitle`/`seoDescription` fields to the `Product` schema (a small addition when this module is actually built, not done yet).
+Added as part of the post-Phase 1 scope amendment (see the note near the top of this document). All three reuse the orchestrator and quota system above as new `promptType`s: no new infrastructure, just new prompt templates and thin endpoints, which is why these were accepted into core scope where heavier asks (agentic storefronts, a workflow-automation builder) were not.
+- **Review summarization:** `POST /stores/:id/products/:productId/reviews/summarize`: pulls recent `ProductReview` documents, asks the orchestrator for a short merchant-facing summary (common praise/complaints), cached rather than recomputed on every request (invalidated when new reviews arrive past a small threshold, to control cost).
+- **Auto-categorization/tagging:** `POST /stores/:id/products/:productId/auto-tag`: given title + description, suggests a `category` and a small tag list; merchant accepts/edits before it's saved, same pattern as AI descriptions (never silently overwrites merchant data).
+- **SEO metadata generation:** `POST /stores/:id/products/:productId/seo-metadata/generate`: generates a meta title + meta description; requires adding `seoTitle`/`seoDescription` fields to the `Product` schema (a small addition when this module is actually built, not done yet).
 
 **Exit criteria:** A merchant can generate, edit, and publish an AI product description, and see their remaining monthly quota update accordingly. The orchestrator and quota system built here are reused as-is in Phase 5 and by every capability added in this section.
 
 ---
 
-## Phase 5 — AI Feature 2: Shopping Assistant & Abandoned-Cart Recovery (Weeks 21–24)
+## Phase 5: AI Feature 2: Shopping Assistant & Abandoned-Cart Recovery (Weeks 21-24)
 
 ### Module 3: AI Shopping Assistant
-- **Solution:** `POST /stores/:id/assistant/chat` — request includes the customer's message + `conversationId`. Backend builds context from:
+- **Solution:** `POST /stores/:id/assistant/chat`: request includes the customer's message + `conversationId`. Backend builds context from:
   1. Short conversation history (last ~6 messages, cached in Redis, not persisted long-term for the prototype).
-  2. Relevant product data — for the prototype, keyword-matched against the Mongo text index (the same one built in Phase 3) rather than a full vector-embedding pipeline, which keeps scope realistic while still supporting "AI-suggested related products."
+  2. Relevant product data: for the prototype, keyword-matched against the Mongo text index (the same one built in Phase 3) rather than a full vector-embedding pipeline, which keeps scope realistic while still supporting "AI-suggested related products."
 - Response returned through the same AI orchestrator (`generate('chat', context)`) built in Phase 4, so quota accounting applies uniformly to chat and content generation.
 - Chat transcripts stored in Mongo (`ChatTranscript`) for later review/debugging, not shown to other merchants (tenant-scoped).
 
@@ -230,41 +230,41 @@ Added as part of the post-Phase 1 scope amendment (see the note near the top of 
 
 ---
 
-## Phase 6 — AI Recommendation Service: Python (Weeks 25–27)
+## Phase 6: AI Recommendation Service: Python (Weeks 25-27)
 
-*New phase, added in the post-Phase 1 scope amendment (see note near the top of this document) — not in the original scope document. This is the one Python component in an otherwise all-TypeScript stack, added specifically to bring genuine applied-ML work into the project rather than only LLM-API orchestration.*
+*New phase, added in the post-Phase 1 scope amendment (see note near the top of this document); not in the original scope document. This is the one Python component in an otherwise all-TypeScript stack, added specifically to bring genuine applied-ML work into the project rather than only LLM-API orchestration.*
 
 ### AI Recommendation Service
-- **Solution:** A standalone Python 3.11 + FastAPI microservice (`recommendation-service/`), sitting alongside `backend/` and `frontend/` — not a Node module. Node keeps owning the storefront/admin API and all writes; this service is read-mostly and called internally over HTTP.
-- **Embeddings, not a trained model:** rather than training a collaborative-filtering model from scratch (which needs volumes of interaction data this prototype won't have), product embeddings are computed from each product's title + description. Consistent with the cross-cutting rule that every LLM/AI-provider call goes through the Phase 4 orchestrator with no bypass path, the **Python service does not call OpenAI/Anthropic directly** — it calls back into Node's orchestrator (a small internal `POST /internal/ai/embed` endpoint, not part of the public `openapi.yaml` contract) so embedding calls are quota-accounted the same way content generation and chat are. This is genuine applied-ML work (vector similarity, ranking) without requiring a training pipeline or GPU infrastructure a two-person FYP can't realistically stand up.
-- **Storage:** the embedding vector is written back onto the `Product` document itself (a new `embedding: number[]` field) via the Python service connecting directly to the same MongoDB database Node uses (`motor`, the async Mongo driver for Python) — one source of truth for product data, not a duplicated store.
-- **Similarity search:** brute-force cosine similarity computed in Python at request time over a store's product set. A dedicated vector database (pgvector, Pinecone, etc.) is the correct answer at real-world scale, but is unjustified infrastructure for the catalog sizes this prototype will actually hold — a deliberate, defensible scope call, not an oversight.
-- **Trigger:** Node's existing `products_create`/`products_update` endpoints (already built in Phase 1 Module 4) call the recommendation service after a successful write to (re)compute that product's embedding — fire-and-forget, not on the request's critical path.
-- **Endpoints:** `GET /stores/:storeId/products/:productId/recommendations` — exposed from **Node** (not the Python service directly), which proxies to the Python service internally. This keeps one consistent public API surface/auth model rather than exposing two different API styles to the frontend.
-- **Upgrade path for the shopping assistant:** Phase 5's "AI-suggested related products" used simple keyword matching against the Mongo text index. Once this service exists, that can be swapped for a real call to the recommendation endpoint — noted here as a follow-up, not required to re-open Phase 5's own exit criteria.
+- **Solution:** A standalone Python 3.11 + FastAPI microservice (`recommendation-service/`), sitting alongside `backend/` and `frontend/`, not a Node module. Node keeps owning the storefront/admin API and all writes; this service is read-mostly and called internally over HTTP.
+- **Embeddings, not a trained model:** rather than training a collaborative-filtering model from scratch (which needs volumes of interaction data this prototype won't have), product embeddings are computed from each product's title + description. Consistent with the cross-cutting rule that every LLM/AI-provider call goes through the Phase 4 orchestrator with no bypass path, the **Python service does not call OpenAI/Anthropic directly**: it calls back into Node's orchestrator (a small internal `POST /internal/ai/embed` endpoint, not part of the public `openapi.yaml` contract) so embedding calls are quota-accounted the same way content generation and chat are. This is genuine applied-ML work (vector similarity, ranking) without requiring a training pipeline or GPU infrastructure a two-person FYP can't realistically stand up.
+- **Storage:** the embedding vector is written back onto the `Product` document itself (a new `embedding: number[]` field) via the Python service connecting directly to the same MongoDB database Node uses (`motor`, the async Mongo driver for Python), one source of truth for product data, not a duplicated store.
+- **Similarity search:** brute-force cosine similarity computed in Python at request time over a store's product set. A dedicated vector database (pgvector, Pinecone, etc.) is the correct answer at real-world scale, but is unjustified infrastructure for the catalog sizes this prototype will actually hold: a deliberate, defensible scope call, not an oversight.
+- **Trigger:** Node's existing `products_create`/`products_update` endpoints (already built in Phase 1 Module 4) call the recommendation service after a successful write to (re)compute that product's embedding, fire-and-forget, not on the request's critical path.
+- **Endpoints:** `GET /stores/:storeId/products/:productId/recommendations`: exposed from **Node** (not the Python service directly), which proxies to the Python service internally. This keeps one consistent public API surface/auth model rather than exposing two different API styles to the frontend.
+- **Upgrade path for the shopping assistant:** Phase 5's "AI-suggested related products" used simple keyword matching against the Mongo text index. Once this service exists, that can be swapped for a real call to the recommendation endpoint; noted here as a follow-up, not required to re-open Phase 5's own exit criteria.
 
 **Exit criteria:** Given a product, the recommendation endpoint returns a ranked list of similar products from the same store, computed from real embeddings rather than keyword matching; a new/updated product gets an embedding within a few seconds of being saved.
 
 ---
 
-## Phase 7 — Testing (Weeks 28–29)
+## Phase 7: Testing (Weeks 28-29)
 
 | Test type | Tool | Focus |
 |---|---|---|
-| Unit | Jest | Business logic — discount validation, quota checks, price calculations |
-| Integration | Jest + Supertest | API endpoints, especially tenant-isolation (assert tenant A's token cannot read/write tenant B's data — this is the single highest-priority test given Section 6's data-isolation requirement) |
+| Unit | Jest | Business logic: discount validation, quota checks, price calculations |
+| Integration | Jest + Supertest | API endpoints, especially tenant-isolation (assert tenant A's token cannot read/write tenant B's data; this is the single highest-priority test given Section 6's data-isolation requirement) |
 | End-to-end | Playwright | Golden path: register → create store → add product → generate AI description → customer checkout → order appears in admin |
-| Load/manual | — | Verify AI quota correctly blocks generation once a tenant's monthly limit is hit |
+| Load/manual | n/a | Verify AI quota correctly blocks generation once a tenant's monthly limit is hit |
 | Unit (Python) | pytest | Embedding pipeline and cosine-similarity ranking logic in the recommendation service |
 
 **Exit criteria:** Tenant-isolation tests pass with zero cross-tenant leakage; golden-path E2E test green; no P0/P1 bugs open.
 
 ---
 
-## Phase 8 — Deployment & Documentation (Weeks 30–31)
+## Phase 8: Deployment & Documentation (Weeks 30-31)
 
-- **Docker Compose** bundles: `postgres`, `mongo`, `redis`, `api`, `web`, `recommendation-service` — one command (`docker compose up`) reproduces the full stack for evaluators/supervisor.
-- Environment variables (`.env`) hold all secrets (Stripe keys, AI API keys, JWT secret) — never committed; `.env.example` committed instead.
+- **Docker Compose** bundles: `postgres`, `mongo`, `redis`, `api`, `web`, `recommendation-service`: one command (`docker compose up`) reproduces the full stack for evaluators/supervisor.
+- Environment variables (`.env`) hold all secrets (Stripe keys, AI API keys, JWT secret): never committed; `.env.example` committed instead.
 - Final documentation pass: update this implementation plan's "Exit criteria" checkboxes, write a short `README.md` (setup steps, seed data script for demo stores/products), and prepare the demo script for evaluation day.
 - Generate the Gantt chart (MS Project, per Section 13 of the scope document) from the phase table in Section 2 of this plan.
 
@@ -272,15 +272,15 @@ Added as part of the post-Phase 1 scope amendment (see the note near the top of 
 
 ## 3. Cross-Cutting Concerns (apply across every phase, not phase-specific)
 
-- **Tenant isolation** is a correctness requirement, not a feature — every new table/collection added in any phase must include `tenantId`/`storeId` and be covered by the isolation tests from Phase 7, added incrementally as each module lands (don't wait until Phase 7 to write the first isolation test).
-- **AI cost control** — every LLM call, in any module, must go through the Phase 4 orchestrator so quota accounting has no bypass path. The Phase 6 recommendation service's embedding calls go through the same orchestrator/quota system for the same reason.
-- **Secrets** — Stripe and AI provider keys are test/sandbox keys throughout development; production keys are only ever added at Phase 8, and only in the deployment environment's secret store, never in the repo.
+- **Tenant isolation** is a correctness requirement, not a feature: every new table/collection added in any phase must include `tenantId`/`storeId` and be covered by the isolation tests from Phase 7, added incrementally as each module lands (don't wait until Phase 7 to write the first isolation test).
+- **AI cost control:** every LLM call, in any module, must go through the Phase 4 orchestrator so quota accounting has no bypass path. The Phase 6 recommendation service's embedding calls go through the same orchestrator/quota system for the same reason.
+- **Secrets:** Stripe and AI provider keys are test/sandbox keys throughout development; production keys are only ever added at Phase 8, and only in the deployment environment's secret store, never in the repo.
 
 ---
 
 ## 4. Open Decisions to Confirm With Supervisor Before Phase 1
 
-1. Object storage choice for product images (S3-compatible bucket vs. local disk for the prototype) — affects Phase 1 setup.
-2. Email provider for cart-recovery messages (Phase 5) — needs an account created in advance since free-tier signup can take time to verify.
-3. Confirm AI provider (OpenAI vs. Anthropic) for the primary adapter — the orchestrator supports both, but one should be the default to avoid holding two paid API keys during development.
+1. Object storage choice for product images (S3-compatible bucket vs. local disk for the prototype); affects Phase 1 setup.
+2. Email provider for cart-recovery messages (Phase 5): needs an account created in advance since free-tier signup can take time to verify.
+3. Confirm AI provider (OpenAI vs. Anthropic) for the primary adapter: the orchestrator supports both, but one should be the default to avoid holding two paid API keys during development.
 4. **(Added post-Phase 1)** Get explicit supervisor sign-off on the AI scope amendment (Phase 4 additions + new Phase 6) and the resulting timeline shift from 28 to 31 weeks, and confirm whether the original scope document needs a formal addendum.

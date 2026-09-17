@@ -12,15 +12,15 @@ info:
     ## Multi-tenancy
 
     Every tenant-scoped resource is nested under `/stores/{storeId}/...`. `storeId` must always be
-    supplied explicitly — this mirrors the tenant-scoping design from Phase 0 Module 1 (Prisma
+    supplied explicitly, this mirrors the tenant-scoping design from Phase 0 Module 1 (Prisma
     middleware and the Mongoose `tenantScopePlugin` both refuse a query with no tenant filter), so the
     API surface makes the same requirement visible to callers rather than inferring it silently.
 
     ## Auth model
 
-    - `bearerAuth` — JWT access token. Required for all merchant/staff actions and any action tied to
+    - `bearerAuth`: JWT access token. Required for all merchant/staff actions and any action tied to
       a logged-in customer account.
-    - `guestSession` — an opaque guest session id (issued on first cart interaction, carried in the
+    - `guestSession`: an opaque guest session id (issued on first cart interaction, carried in the
       `X-Guest-Session-Id` header). Storefront browsing, cart, and checkout endpoints accept either
       `bearerAuth` OR `guestSession`, since Section 6 of the scope document requires guest checkout to
       work without an account.
@@ -76,7 +76,7 @@ paths:
       description: |
         Creates a new `User` (role: merchant owner) and their first `Tenant` in a single
         transaction, per Implementation_Plan.md Phase 1. Returns an access token and sets
-        the refresh token as an httpOnly cookie (`refreshToken`, path `/api/v1/auth`) —
+        the refresh token as an httpOnly cookie (`refreshToken`, path `/api/v1/auth`),
         never in the JSON body, so it isn't reachable from JavaScript/XSS.
       security: []
       requestBody:
@@ -146,7 +146,7 @@ paths:
       operationId: auth_refresh
       summary: Exchange the refresh token cookie for a new access token
       description: |
-        Reads the `refreshToken` httpOnly cookie set by `auth_register`/`auth_login` —
+        Reads the `refreshToken` httpOnly cookie set by `auth_register`/`auth_login`;
         takes no request body. The refresh token is rotated on every use (the old one is
         deleted and a new one issued via `Set-Cookie`) so a stolen, already-used token
         cannot be replayed.
@@ -174,7 +174,7 @@ paths:
       summary: Revoke the current refresh token
       description: |
         Deletes the server-side record backing the `refreshToken` cookie (so it can no
-        longer be exchanged via `auth_refresh`) and clears the cookie. Idempotent — calling
+        longer be exchanged via `auth_refresh`) and clears the cookie. Idempotent: calling
         this with no cookie or an already-revoked token still returns 204.
       responses:
         "204":
@@ -187,7 +187,7 @@ paths:
       operationId: users_me_get
       summary: Get the authenticated caller's own profile
       description: |
-        Added alongside `users_me_stores_list` — after a page reload, the frontend only
+        Added alongside `users_me_stores_list`: after a page reload, the frontend only
         has a fresh access token from `auth_refresh` (which returns no user data), so it
         needs somewhere to fetch "who am I" from.
       responses:
@@ -204,11 +204,11 @@ paths:
       summary: List the stores the authenticated caller owns or is staff at
       description: |
         Added during Phase 1's frontend module: without this, a frontend has no way to
-        discover which storeId(s) to operate on after login — auth_register/auth_login
+        discover which storeId(s) to operate on after login: auth_register/auth_login
         return the User but never a Tenant. Inherently cross-tenant (a caller's own
         memberships span stores by definition), so it's implemented against an
-        intentionally unscoped Prisma client, always filtered by the caller's own user id
-        — see backend/src/lib/prisma.ts's `prismaUnscoped` export.
+        intentionally unscoped Prisma client, always filtered by the caller's own user id;
+        see backend/src/lib/prisma.ts's `prismaUnscoped` export.
       responses:
         "200":
           description: Stores this user can access
@@ -234,7 +234,7 @@ paths:
       tags: [stores]
       operationId: stores_get
       summary: Get a store's public profile
-      description: Public — used by the storefront to render branding before any auth check.
+      description: Public; used by the storefront to render branding before any auth check.
       security: []
       responses:
         "200":
@@ -345,7 +345,7 @@ paths:
       description: |
         Public. Supports plain browsing (category filter, pagination) and keyword search via
         the `q` parameter against the MongoDB text index on title/description
-        (Implementation_Plan.md Phase 3) — folded into this collection endpoint rather than a
+        (Implementation_Plan.md Phase 3), folded into this collection endpoint rather than a
         separate `/search` path, since a search is just a filtered list, not a distinct resource.
       security: []
       parameters:
@@ -443,14 +443,14 @@ paths:
       summary: Upload a single image and get back its URL
       description: |
         `ProductInput.images` and `store_branding_update`'s `logoUrl` both take
-        already-hosted URLs, not raw file data — this endpoint is what produces one.
+        already-hosted URLs, not raw file data; this endpoint is what produces one.
         Added during Phase 1 Module 4 implementation: the original contract modeled
         product/branding images as pre-existing URLs without ever specifying how a URL
         comes to exist, which is a real gap once you try to build the upload flow.
         Requires the `products_write` staff permission (or owner). Stores the file to
         local disk for this prototype (Implementation_Plan.md Phase 1 names this as the
         deferred choice between S3-compatible object storage and local disk) and returns
-        its served URL — never the binary itself, which is never persisted to a database.
+        its served URL, never the binary itself, which is never persisted to a database.
       requestBody:
         required: true
         content:
@@ -731,7 +731,7 @@ paths:
       operationId: checkout_session_create
       summary: Create a Stripe Checkout Session for the current cart
       description: |
-        Returns a Stripe-hosted checkout URL (Implementation_Plan.md Phase 2 — Stripe Checkout
+        Returns a Stripe-hosted checkout URL (Implementation_Plan.md Phase 2: Stripe Checkout
         Session, not raw PaymentIntents). The resulting `Order` is only created once
         `webhooks_stripe_handle` receives `checkout.session.completed`; this endpoint does not
         itself create an order.
@@ -1027,7 +1027,7 @@ paths:
                 cartTotal: { type: number }
       responses:
         "200":
-          description: Valid — discount amount returned
+          description: Valid: discount amount returned
           content:
             application/json:
               schema:
@@ -1126,7 +1126,7 @@ paths:
       operationId: webhooks_stripe_handle
       summary: Stripe webhook receiver
       description: |
-        Not tenant-scoped by path — the tenant is resolved from Stripe metadata attached at
+        Not tenant-scoped by path; the tenant is resolved from Stripe metadata attached at
         `checkout_session_create` time. This is the single source of truth for order creation
         (Implementation_Plan.md Phase 2); the client-side checkout redirect never creates an order.
       security: []
@@ -1141,7 +1141,7 @@ paths:
           application/json:
             schema:
               type: object
-              description: Raw Stripe event payload — verified against `Stripe-Signature` before processing.
+              description: Raw Stripe event payload, verified against `Stripe-Signature` before processing.
       responses:
         "200": { description: Event processed }
         "400":
@@ -1225,7 +1225,7 @@ components:
 
     AuthSession:
       description: |
-        The refresh token is never in this body — it's delivered exclusively via an
+        The refresh token is never in this body; it's delivered exclusively via an
         httpOnly `Set-Cookie` header (see `auth_register`), so it can't be read by
         JavaScript on the frontend.
       type: object

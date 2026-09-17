@@ -17,7 +17,7 @@ export const meService = {
   },
 
   /**
-   * Cross-tenant by nature — "which stores do I belong to" can't be scoped to a single
+   * Cross-tenant by nature: "which stores do I belong to" can't be scoped to a single
    * tenantId, so this deliberately uses the unscoped client (see lib/prisma.ts), always
    * filtered by the caller's own userId.
    */

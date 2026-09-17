@@ -2,12 +2,12 @@ import { Schema, model } from "mongoose";
 import { tenantScopePlugin } from "./plugins/tenantScope.plugin";
 
 /**
- * AI shopping assistant conversation log — for later review/debugging only
+ * AI shopping assistant conversation log, for later review/debugging only
  * (Implementation_Plan.md Phase 5, Module 3), not the live chat state. Live/short-term
  * conversation context during an active chat lives in Redis (Implementation_Plan.md
  * Phase 5); this collection is the durable-but-temporary record written after each turn.
  *
- * Messages are embedded (1:few, always accessed together as a transcript) but capped —
+ * Messages are embedded (1:few, always accessed together as a transcript) but capped:
  * per fundamental-document-size guidance, an unbounded embedded array risks the 16MB
  * document limit and degrades read performance long before that. A capped array plus a
  * TTL index keeps this collection small without needing a separate messages collection.
@@ -21,7 +21,7 @@ interface ChatMessage {
 }
 
 export interface ChatTranscriptDocument {
-  // storeId/customerId are Postgres cuid strings (Tenant.id / User.id) — fixed during
+  // storeId/customerId are Postgres cuid strings (Tenant.id / User.id); fixed during
   // Phase 1 Module 4, see Product.model.ts.
   storeId: string;
   customerId?: string; // absent for guest sessions
@@ -30,7 +30,7 @@ export interface ChatTranscriptDocument {
   messages: ChatMessage[];
   createdAt: Date;
   updatedAt: Date;
-  expiresAt: Date; // TTL — transcripts are debugging aids, not permanent records
+  expiresAt: Date; // TTL: transcripts are debugging aids, not permanent records
 }
 
 const chatMessageSchema = new Schema<ChatMessage>(
@@ -64,7 +64,7 @@ const chatTranscriptSchema = new Schema<ChatTranscriptDocument>(
 chatTranscriptSchema.index({ storeId: 1, conversationId: 1 }, { unique: true });
 chatTranscriptSchema.index({ storeId: 1, customerId: 1 });
 
-// TTL index — MongoDB deletes the document once expiresAt has passed
+// TTL index: MongoDB deletes the document once expiresAt has passed
 chatTranscriptSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 chatTranscriptSchema.plugin(tenantScopePlugin);

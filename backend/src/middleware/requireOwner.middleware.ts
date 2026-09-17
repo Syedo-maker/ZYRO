@@ -4,7 +4,7 @@ import { Errors } from "../errors/AppError";
 
 /**
  * Restricts a route to the store's owner. `Tenant` itself isn't in the tenant-scoped
- * model set (it IS the tenant record), so a plain findUnique here is fine — it isn't
+ * model set (it IS the tenant record), so a plain findUnique here is fine; it isn't
  * subject to the tenant-scoping middleware's findUnique restriction.
  */
 export const requireOwner: RequestHandler = async (req, _res, next) => {

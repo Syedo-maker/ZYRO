@@ -1,12 +1,12 @@
-// ShopMind AI — PostgreSQL schema (Prisma)
-// Phase 0, Module 1 — Database schema design
+// ShopMind AI: PostgreSQL schema (Prisma)
+// Phase 0, Module 1: Database schema design
 // Entities per Implementation_Plan.md Section 1 (Relational store) and Phase 1/2/3/4/5 module specs.
 //
 // Multi-tenancy model: shared database, shared schema. Every tenant-scoped table carries
 // a `tenantId` column. Isolation is enforced in two layers (see documentation/Phase0_Module1_Database_Schema_Design.md):
-//   1. Prisma middleware (application layer) — auto-injects tenantId on every query.
-//   2. PostgreSQL Row-Level Security (database layer) — see prisma/manual-sql/001_enable_rls.sql.
-//      (Kept outside prisma/migrations/ — Prisma's migrate engine treats every subfolder
+//   1. Prisma middleware (application layer): auto-injects tenantId on every query.
+//   2. PostgreSQL Row-Level Security (database layer): see prisma/manual-sql/001_enable_rls.sql.
+//      (Kept outside prisma/migrations/, since Prisma's migrate engine treats every subfolder
 //      there as a real migration and errors on anything that isn't one.)
 
 generator client {
@@ -67,7 +67,7 @@ enum CartRecoveryStatus {
 // IDENTITY & TENANCY
 // ──────────────────────────────────────────────────────────────────────────
 
-/// A single login-capable account. Covers both merchant owners/staff and customers —
+/// A single login-capable account. Covers both merchant owners/staff and customers:
 /// a customer is simply a User with no Tenant ownership and no StaffMember rows.
 model User {
   id           String   @id @default(cuid())
@@ -86,7 +86,7 @@ model User {
 }
 
 /// Server-side record of issued refresh tokens, keyed by a hash (never the raw token).
-/// Without this, logout cannot actually revoke a token before its natural expiry — a
+/// Without this, logout cannot actually revoke a token before its natural expiry; a
 /// stateless JWT alone has no way to be invalidated early. Added during Phase 1 Module 1
 /// implementation; not present in the original Module 1 schema pass.
 model RefreshToken {
@@ -126,7 +126,7 @@ model Tenant {
 }
 
 /// Staff account with restricted permissions, per Section 6/7.2 role-based access.
-/// The tenant owner is NOT a StaffMember row — ownership is Tenant.ownerId.
+/// The tenant owner is NOT a StaffMember row; ownership is Tenant.ownerId.
 model StaffMember {
   id          String            @id @default(cuid())
   tenantId    String
@@ -145,8 +145,8 @@ model StaffMember {
 // ORDERS, PAYMENTS, SHIPPING
 // ──────────────────────────────────────────────────────────────────────────
 
-/// Order line items reference the MongoDB Product by id (string), not a Postgres FK —
-/// the catalog lives in a different database. Title/price are snapshotted at order time
+/// Order line items reference the MongoDB Product by id (string), not a Postgres FK,
+/// since the catalog lives in a different database. Title/price are snapshotted at order time
 /// so historical orders stay accurate even if the product is later edited or deleted.
 model Order {
   id                     String      @id @default(cuid())
@@ -179,7 +179,7 @@ model Order {
 model OrderItem {
   id                  String  @id @default(cuid())
   orderId             String
-  productId           String // Mongo ObjectId string — catalog lives in MongoDB
+  productId           String // Mongo ObjectId string: catalog lives in MongoDB
   productTitleSnapshot String
   unitPrice           Decimal @db.Decimal(10, 2)
   quantity            Int
@@ -190,7 +190,7 @@ model OrderItem {
   @@index([orderId])
 }
 
-/// Source of truth for "did payment succeed" — written from the Stripe webhook handler,
+/// Source of truth for "did payment succeed", written from the Stripe webhook handler,
 /// never from the client redirect (Implementation_Plan.md, Phase 2, Module 2).
 model Payment {
   id                    String        @id @default(cuid())
@@ -226,7 +226,7 @@ model Shipment {
 }
 
 /// Flat-rate shipping cost per region, per Section 6 ("configuring shipping rates").
-/// No live carrier API integration — out of scope per Section 8 (LI-4 context).
+/// No live carrier API integration: out of scope per Section 8 (LI-4 context).
 model ShippingZone {
   id         String   @id @default(cuid())
   tenantId   String
@@ -244,7 +244,7 @@ model ShippingZone {
 // MARKETING
 // ──────────────────────────────────────────────────────────────────────────
 
-/// Codes are unique per store, not globally — two different merchants can both run "SALE20".
+/// Codes are unique per store, not globally; two different merchants can both run "SALE20".
 model DiscountCode {
   id           String       @id @default(cuid())
   tenantId     String
@@ -269,7 +269,7 @@ model DiscountCode {
 // ──────────────────────────────────────────────────────────────────────────
 
 /// One row per tenant per calendar month. Checked before enqueueing any AI job
-/// (Implementation_Plan.md, Phase 4) — incremented only on a successful generation/chat call.
+/// (Implementation_Plan.md, Phase 4); incremented only on a successful generation/chat call.
 model AiUsageQuota {
   id                 String   @id @default(cuid())
   tenantId           String
@@ -288,7 +288,7 @@ model AiUsageQuota {
 }
 
 /// Outcome tracking for AI-personalized abandoned-cart messages (Phase 5, Module 7 remainder).
-/// cartId refers to the Redis cart key at send time — carts themselves are not persisted here.
+/// cartId refers to the Redis cart key at send time; carts themselves are not persisted here.
 model CartRecoveryEvent {
   id             String              @id @default(cuid())
   tenantId       String

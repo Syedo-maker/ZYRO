@@ -5,7 +5,7 @@ import { tenantScopePlugin } from "./plugins/tenantScope.plugin";
  * Kept as its own collection rather than embedded in Product, even though the
  * relationship is 1:1 and usually co-accessed (which would normally argue for
  * embedding). Two reasons override that here:
- *   1. Module ownership split (Implementation_Plan.md Section 2 / scope doc Section 12) —
+ *   1. Module ownership split (Implementation_Plan.md Section 2 / scope doc Section 12):
  *      catalog CRUD (Module 4) and AI content tools (Module 6) are built independently
  *      by different students against the same Product _id, without one module's writes
  *      touching the other's collection.
@@ -14,7 +14,7 @@ import { tenantScopePlugin } from "./plugins/tenantScope.plugin";
  *      contention with catalog edits.
  *
  * `history` is a small bounded array (capped at 5) for cheap "compare with previous
- * generation" / undo — this is NOT the compliance-grade document-versioning pattern
+ * generation" / undo; this is NOT the compliance-grade document-versioning pattern
  * (full snapshot audit trail); it's a UX convenience, so a short capped embed is enough.
  */
 export type AiContentStatus = "draft" | "published";
@@ -25,11 +25,11 @@ interface AiContentHistoryEntry {
 }
 
 export interface AiGeneratedContentDocument {
-  storeId: string; // Tenant.id from Postgres — fixed during Phase 1 Module 4, see Product.model.ts
+  storeId: string; // Tenant.id from Postgres: fixed during Phase 1 Module 4, see Product.model.ts
   productId: Types.ObjectId;
   status: AiContentStatus;
   content: string;
-  model: string; // e.g. "gpt-4o-mini" or "claude-haiku-4-5" — which provider adapter produced this
+  model: string; // e.g. "gpt-4o-mini" or "claude-haiku-4-5": which provider adapter produced this
   promptVersion: string;
   editedByMerchant: boolean;
   history: AiContentHistoryEntry[];

@@ -1,11 +1,11 @@
 // Talks to the backend per backend/openapi.yaml. Defaults to a relative path so requests
-// go through Vite's dev-server proxy (vite.config.ts) and stay same-origin — needed for
+// go through Vite's dev-server proxy (vite.config.ts) and stay same-origin: needed for
 // the httpOnly refresh-token cookie to be sent reliably. Override via VITE_API_URL for a
 // deployment where the frontend and backend aren't proxied together.
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
 
 // Access token lives in memory only (not localStorage) so it isn't reachable by an
-// XSS payload reading browser storage — matches the backend's own httpOnly-cookie
+// XSS payload reading browser storage; matches the backend's own httpOnly-cookie
 // choice for the refresh token (see documentation/Phase1_Module1_Auth_MultiTenancy.md).
 let accessToken: string | null = null
 
@@ -37,7 +37,7 @@ async function parseErrorBody(res: Response): Promise<ApiError> {
 
 interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
-  /** Internal — prevents infinite refresh loops. */
+  /** Internal: prevents infinite refresh loops. */
   _isRetry?: boolean
 }
 
@@ -55,7 +55,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
-    credentials: 'include', // always sent — the httpOnly refresh cookie rides along even on requests that don't need it
+    credentials: 'include', // always sent: the httpOnly refresh cookie rides along even on requests that don't need it
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),

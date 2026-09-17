@@ -2,15 +2,15 @@ import { Schema, model, Types } from "mongoose";
 import { tenantScopePlugin } from "./plugins/tenantScope.plugin";
 
 /**
- * Product catalog entry. Bounded fields (images, basic attributes) are embedded directly
- * — per the embed/reference framework, a product's own images/attributes are 1:1 or
+ * Product catalog entry. Bounded fields (images, basic attributes) are embedded directly,
+ * per the embed/reference framework: a product's own images/attributes are 1:1 or
  * 1:few and always accessed together with the product, so embedding avoids an extra
  * round trip. Reviews are NOT embedded here (see ProductReview.model.ts) because review
  * counts per product are unbounded and queried/paginated independently of the product
  * page (Implementation_Plan.md Phase 3).
  */
 export interface ProductDocument {
-  // Tenant.id from Postgres (a Prisma cuid string) — NOT a Mongo ObjectId. Fixed during
+  // Tenant.id from Postgres (a Prisma cuid string), NOT a Mongo ObjectId. Fixed during
   // Phase 1 Module 4: this field was originally typed as ObjectId, which would have
   // broken the moment a real cuid was stored in it.
   storeId: string;

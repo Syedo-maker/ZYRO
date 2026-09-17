@@ -51,7 +51,7 @@ export function RegisterPage() {
           <div className="font-display text-2xl font-bold">ZYRO</div>
           <h1 className="font-display text-lg font-semibold mt-4">Create your store</h1>
           <p className="text-sm text-text-secondary mt-1">
-            Free to start — your store and account are created together.
+            Free to start; your store and account are created together.
           </p>
         </div>
 

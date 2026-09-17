@@ -49,7 +49,7 @@ export const productService = {
   async update(storeId: string, productId: string, input: ProductInput) {
     if (!Types.ObjectId.isValid(productId)) throw Errors.notFound("Product");
     // findOneAndUpdate (not findByIdAndUpdate/findUnique-style) so storeId is part of the
-    // filter, not assumed — the same discipline as the Prisma tenant-scoping middleware.
+    // filter, not assumed; the same discipline as the Prisma tenant-scoping middleware.
     const doc = await Product.findOneAndUpdate({ _id: productId, storeId }, input, { new: true });
     if (!doc) throw Errors.notFound("Product");
     return toPublicProduct(doc);

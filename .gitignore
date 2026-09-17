@@ -30,6 +30,6 @@ backend/uploads/
 # Test coverage
 coverage/
 
-# Design canvas — generated/seeded output (regenerate from design/wireframes/*.dc.html + canvas.json);
+# Design canvas: generated/seeded output (regenerate from design/wireframes/*.dc.html + canvas.json);
 # the .dc.html source files and canvas.json themselves ARE tracked.
 design/wireframes/zyro-wireframes.html

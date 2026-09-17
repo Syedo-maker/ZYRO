@@ -21,7 +21,7 @@ const handleImageUpload: RequestHandler = (req, res, next) => {
   });
 };
 
-// Mounted at /stores/:storeId/uploads — see app.ts.
+// Mounted at /stores/:storeId/uploads; see app.ts.
 export const uploadsRouter = Router({ mergeParams: true });
 
 uploadsRouter.post(

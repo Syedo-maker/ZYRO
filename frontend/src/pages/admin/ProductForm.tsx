@@ -33,7 +33,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
       const url = await uploadsApi.uploadImage(storeId, file)
       setImages((prev) => [...prev, url])
     } catch {
-      setError('Image upload failed — only JPEG/PNG/WebP up to 5MB are accepted.')
+      setError('Image upload failed: only JPEG/PNG/WebP up to 5MB are accepted.')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''

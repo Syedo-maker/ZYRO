@@ -11,7 +11,7 @@ import { Errors } from "../errors/AppError";
  *
  * Not yet used by any Module 1 route (staff creation is owner-only via requireOwner),
  * but is the authorization primitive Modules 4/5/6/7 build their permission checks on
- * (products_write, orders_write, discounts_write, analytics_read) — built now because
+ * (products_write, orders_write, discounts_write, analytics_read); built now because
  * it's the "per-route authorization middleware" this module's own plan entry calls for.
  */
 export function requirePermission(permission: StaffPermission): RequestHandler {

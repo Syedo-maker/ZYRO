@@ -16,7 +16,7 @@ app.use(cors({ origin: env.corsOrigin, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Served images from uploads_image_create — binary lives on disk, only the URL is
+// Served images from uploads_image_create: binary lives on disk, only the URL is
 // ever persisted to a database (Implementation_Plan.md Phase 1).
 app.use("/uploads", express.static(env.uploadsDir));
 

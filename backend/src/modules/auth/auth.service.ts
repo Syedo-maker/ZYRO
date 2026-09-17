@@ -62,7 +62,7 @@ export const authService = {
    * Rotates the refresh token: the old one is deleted so it can't be replayed.
    *
    * Uses deleteMany (reports a count) rather than delete (throws if the row is already
-   * gone) — two concurrent refresh calls racing on the same token is a real scenario, not
+   * gone); two concurrent refresh calls racing on the same token is a real scenario, not
    * a hypothetical: React 18/19 StrictMode double-invokes effects in development, so a
    * naive silent-refresh-on-mount fires this exact race on every page load. Whichever
    * request's delete actually removes the row wins the rotation; the loser sees count 0
@@ -89,7 +89,7 @@ export const authService = {
 
   async logout(rawRefreshToken: string): Promise<void> {
     const tokenHash = refreshTokenLib.hash(rawRefreshToken);
-    // Deletes silently if already gone (e.g. double logout) — logout is idempotent.
+    // Deletes silently if already gone (e.g. double logout): logout is idempotent.
     await prisma.refreshToken.deleteMany({ where: { tokenHash } });
   },
 };

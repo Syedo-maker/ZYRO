@@ -18,7 +18,7 @@ interface LoginInput {
 interface AuthContextValue {
   user: User | null
   stores: MyStore[]
-  /** The store the admin UI currently operates on — defaults to the first store the user has. */
+  /** The store the admin UI currently operates on: defaults to the first store the user has. */
   activeStore: MyStore | null
   isLoading: boolean
   isAuthenticated: boolean
@@ -43,12 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   // On first load, a returning user has no in-memory access token but may still have a
-  // valid httpOnly refresh cookie — try to restore the session silently before rendering
+  // valid httpOnly refresh cookie; try to restore the session silently before rendering
   // protected routes, so a page reload doesn't force a re-login.
   //
   // hasAttemptedRestore guards against React 18/19 StrictMode double-invoking this effect
   // in development: refresh rotates the token (deletes the old one, issues a new one), so
-  // firing it twice concurrently is a real race, not just a wasted duplicate request — the
+  // firing it twice concurrently is a real race, not just a wasted duplicate request; the
   // backend now handles that race safely (auth.service.ts), but there's no reason to fire
   // it twice on every single mount regardless.
   const hasAttemptedRestore = useRef(false)
