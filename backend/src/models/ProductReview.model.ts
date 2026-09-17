@@ -13,9 +13,11 @@ import { tenantScopePlugin } from "./plugins/tenantScope.plugin";
  * Phase 3 computes it on read via aggregation to avoid a sync-bug surface.
  */
 export interface ProductReviewDocument {
-  storeId: Types.ObjectId;
-  productId: Types.ObjectId;
-  customerId: Types.ObjectId;
+  // storeId/customerId are Postgres cuid strings (Tenant.id / User.id), not Mongo
+  // ObjectIds — fixed during Phase 1 Module 4, same issue as Product.model.ts.
+  storeId: string;
+  productId: Types.ObjectId; // Product._id — a genuine Mongo document, ObjectId is correct here
+  customerId: string;
   rating: number;
   comment?: string;
   createdAt: Date;
@@ -24,9 +26,9 @@ export interface ProductReviewDocument {
 
 const productReviewSchema = new Schema<ProductReviewDocument>(
   {
-    storeId: { type: Schema.Types.ObjectId, required: true },
+    storeId: { type: String, required: true },
     productId: { type: Schema.Types.ObjectId, required: true, ref: "Product" },
-    customerId: { type: Schema.Types.ObjectId, required: true },
+    customerId: { type: String, required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, maxlength: 2000 },
   },

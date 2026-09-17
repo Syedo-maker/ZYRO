@@ -1,4 +1,4 @@
-import { Schema, model, Types } from "mongoose";
+import { Schema, model } from "mongoose";
 import { tenantScopePlugin } from "./plugins/tenantScope.plugin";
 
 /**
@@ -21,8 +21,10 @@ interface ChatMessage {
 }
 
 export interface ChatTranscriptDocument {
-  storeId: Types.ObjectId;
-  customerId?: Types.ObjectId; // absent for guest sessions
+  // storeId/customerId are Postgres cuid strings (Tenant.id / User.id) — fixed during
+  // Phase 1 Module 4, see Product.model.ts.
+  storeId: string;
+  customerId?: string; // absent for guest sessions
   guestSessionId?: string;
   conversationId: string;
   messages: ChatMessage[];
@@ -42,8 +44,8 @@ const chatMessageSchema = new Schema<ChatMessage>(
 
 const chatTranscriptSchema = new Schema<ChatTranscriptDocument>(
   {
-    storeId: { type: Schema.Types.ObjectId, required: true },
-    customerId: { type: Schema.Types.ObjectId },
+    storeId: { type: String, required: true },
+    customerId: { type: String },
     guestSessionId: { type: String },
     conversationId: { type: String, required: true },
     messages: {

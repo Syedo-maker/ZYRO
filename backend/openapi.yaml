@@ -40,6 +40,8 @@ tags:
     description: Product catalog browsing and management.
   - name: reviews
     description: Customer product reviews.
+  - name: uploads
+    description: Media uploads (product images, store logos).
   - name: ai-content
     description: AI-generated product description tooling.
   - name: cart
@@ -382,6 +384,53 @@ paths:
         "204": { description: Deleted }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── UPLOADS ───────────────────────────────────────────────────────────
+  /stores/{storeId}/uploads/images:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [uploads]
+      operationId: uploads_image_create
+      summary: Upload a single image and get back its URL
+      description: |
+        `ProductInput.images` and `store_branding_update`'s `logoUrl` both take
+        already-hosted URLs, not raw file data — this endpoint is what produces one.
+        Added during Phase 1 Module 4 implementation: the original contract modeled
+        product/branding images as pre-existing URLs without ever specifying how a URL
+        comes to exist, which is a real gap once you try to build the upload flow.
+        Requires the `products_write` staff permission (or owner). Stores the file to
+        local disk for this prototype (Implementation_Plan.md Phase 1 names this as the
+        deferred choice between S3-compatible object storage and local disk) and returns
+        its served URL — never the binary itself, which is never persisted to a database.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG, or WebP, up to 5 MB.
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url: { type: string, format: uri }
+        "400":
+          description: Missing file, or an unsupported type/size
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── REVIEWS ───────────────────────────────────────────────────────────
   /stores/{storeId}/products/{productId}/reviews:

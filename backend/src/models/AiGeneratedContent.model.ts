@@ -25,7 +25,7 @@ interface AiContentHistoryEntry {
 }
 
 export interface AiGeneratedContentDocument {
-  storeId: Types.ObjectId;
+  storeId: string; // Tenant.id from Postgres — fixed during Phase 1 Module 4, see Product.model.ts
   productId: Types.ObjectId;
   status: AiContentStatus;
   content: string;
@@ -49,7 +49,7 @@ const aiContentHistorySchema = new Schema<AiContentHistoryEntry>(
 
 const aiGeneratedContentSchema = new Schema<AiGeneratedContentDocument>(
   {
-    storeId: { type: Schema.Types.ObjectId, required: true },
+    storeId: { type: String, required: true },
     productId: { type: Schema.Types.ObjectId, required: true, ref: "Product", unique: true },
     status: { type: String, enum: ["draft", "published"], default: "draft", required: true },
     content: { type: String, required: true, maxlength: 5000 },

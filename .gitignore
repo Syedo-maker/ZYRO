@@ -24,6 +24,9 @@ Thumbs.db
 # Prisma
 backend/prisma/*.db
 
+# User-uploaded files (local disk storage for this prototype)
+backend/uploads/
+
 # Test coverage
 coverage/
 

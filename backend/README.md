@@ -1,11 +1,12 @@
 # ZYRO backend
 
-Node.js 20+ / Express / TypeScript / Prisma (PostgreSQL) / Mongoose (MongoDB, from Phase 4 onward).
+Node.js 20+ / Express / TypeScript / Prisma (PostgreSQL) / Mongoose (MongoDB).
 
 ## Prerequisites
 
 - Node.js and npm
 - A running PostgreSQL instance with a database + role matching `DATABASE_URL`
+- A running MongoDB instance matching `MONGODB_URI`
 
 ## First-time setup
 
@@ -39,8 +40,9 @@ Then visit `http://localhost:5000/health` (or whatever `PORT` you set) — you s
 `{"status":"ok"}`. The full API is under `http://localhost:5000/api/v1/...`, matching
 `openapi.yaml`.
 
-## Notes on what's implemented so far (Phase 1, Module 1: Authentication & Multi-Tenancy)
+## Notes on what's implemented so far
 
+**Phase 1, Module 1: Authentication & Multi-Tenancy**
 - `POST /api/v1/auth/register`, `/login`, `/refresh`, `/logout`
 - `POST /api/v1/stores/:storeId/staff` (owner-only)
 - Refresh tokens are **opaque random strings, not JWTs**, hashed and stored in the
@@ -52,3 +54,13 @@ Then visit `http://localhost:5000/health` (or whatever `PORT` you set) — you s
   in the URL, and authorization middleware checks per-request whether the caller has rights
   to that specific store.
 - See `documentation/Phase1_Module1_Auth_MultiTenancy.md` for the full design writeup.
+
+**Phase 1, Module 4: Store & Catalog Management**
+- `GET/POST /api/v1/stores/:storeId/products`, `GET/PUT/DELETE /:productId` — Mongoose-backed,
+  `GET`s are public, writes require the `PRODUCTS_WRITE` staff permission (or owner).
+- `POST /api/v1/stores/:storeId/uploads/images` — multipart upload, saved to local disk
+  (`UPLOADS_DIR`), served back at `/uploads/<filename>`; returns `{ url }`.
+- `GET /api/v1/stores/:storeId` (public), `PATCH /api/v1/stores/:storeId/branding` (owner-only).
+- See `documentation/Phase1_Module4_Store_Catalog_Management.md` — includes two real bugs
+  this module's implementation surfaced in the Phase 0 Mongoose schemas (ObjectId vs. string
+  ID fields, and a gap in the tenant-scoping plugin's hook coverage).

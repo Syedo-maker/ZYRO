@@ -10,7 +10,10 @@ import { tenantScopePlugin } from "./plugins/tenantScope.plugin";
  * page (Implementation_Plan.md Phase 3).
  */
 export interface ProductDocument {
-  storeId: Types.ObjectId;
+  // Tenant.id from Postgres (a Prisma cuid string) — NOT a Mongo ObjectId. Fixed during
+  // Phase 1 Module 4: this field was originally typed as ObjectId, which would have
+  // broken the moment a real cuid was stored in it.
+  storeId: string;
   title: string;
   description: string;
   aiDescriptionId?: Types.ObjectId; // ref -> AiGeneratedContent, set once a draft/published description exists
@@ -24,7 +27,7 @@ export interface ProductDocument {
 
 const productSchema = new Schema<ProductDocument>(
   {
-    storeId: { type: Schema.Types.ObjectId, required: true },
+    storeId: { type: String, required: true },
     title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, default: "", maxlength: 5000 },
     aiDescriptionId: { type: Schema.Types.ObjectId, ref: "AiGeneratedContent" },

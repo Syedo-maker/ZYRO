@@ -18,7 +18,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 
 **Phase 1 — Foundation**
 - [x] Module: Authentication & Multi-Tenancy — running end-to-end against local Postgres, see `documentation/Phase1_Module1_Auth_MultiTenancy.md`
-- [ ] Module 4: Store & Catalog Management (CRUD baseline)
+- [x] Module 4: Store & Catalog Management (CRUD baseline) — running end-to-end against local Postgres + MongoDB, see `documentation/Phase1_Module4_Store_Catalog_Management.md`
 
 **Phase 2 — Core Commerce**
 - [ ] Module 2: Cart & Checkout

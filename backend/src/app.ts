@@ -5,6 +5,9 @@ import { env } from "./config/env";
 import { AppError } from "./errors/AppError";
 import { authRouter } from "./modules/auth/auth.routes";
 import { staffRouter } from "./modules/stores/staff.routes";
+import { storeRouter } from "./modules/stores/store.routes";
+import { productRouter } from "./modules/products/product.routes";
+import { uploadsRouter } from "./modules/uploads/uploads.routes";
 
 export const app = express();
 
@@ -12,11 +15,18 @@ app.use(cors({ origin: env.corsOrigin, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// Served images from uploads_image_create — binary lives on disk, only the URL is
+// ever persisted to a database (Implementation_Plan.md Phase 1).
+app.use("/uploads", express.static(env.uploadsDir));
+
 app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
 
 const v1 = express.Router();
 v1.use("/auth", authRouter);
 v1.use("/stores/:storeId/staff", staffRouter);
+v1.use("/stores/:storeId/products", productRouter);
+v1.use("/stores/:storeId/uploads", uploadsRouter);
+v1.use("/stores/:storeId", storeRouter);
 app.use("/api/v1", v1);
 
 app.use((req, res) => {

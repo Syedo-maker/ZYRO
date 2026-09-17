@@ -6,6 +6,12 @@
 
 This satisfies Phase 0's exit criteria: "Prisma schema + Mongoose schemas committed." It does not scaffold a runnable backend yet — no `package.json`/build tooling exists under `backend/` yet, since that belongs to Phase 1 (Foundation). This module's job was the schema design itself.
 
+> **Correction (Phase 1 Module 4):** `storeId`/`customerId` fields across all four Mongoose
+> models were originally typed as Mongo `ObjectId`. They actually hold `Tenant.id`/`User.id`
+> values from Postgres, which are Prisma `cuid()` strings — a real bug that only surfaced
+> once Postgres and MongoDB data had to reference each other for the first time. Fixed to
+> plain `string`; see `documentation/Phase1_Module4_Store_Catalog_Management.md`.
+
 ---
 
 ## 1. Assumptions made (flagging per "Clarify First")
