@@ -6,6 +6,8 @@
 This document is a working plan, not a submission deliverable. It intentionally does **not** follow the scope document's structure (no abstract, vision statement, or literature review) — it starts from the architecture and moves straight into build order.
 
 > **Scope amendment (post-Phase 1):** the AI feature set was expanded beyond the original scope document during implementation — four AI capabilities (recommendations, review summarization, auto-tagging, SEO metadata) were promoted from "stretch goal"/absent to core scope, and a new Python microservice was added to the architecture, at the student team's request. Two items considered (an agentic-storefront/ChatGPT-commerce integration, and a general workflow-automation builder) were declined as unrealistic for the remaining timeline and are **not** part of scope. This amendment has not been reflected in the original submitted scope document (`ShopMind_AI_Scope_Document.docx`) — get supervisor sign-off on it before final submission if that document needs to match.
+>
+> **Frontend scheduling amendment (also post-Phase 1):** this plan originally described backend work only in every phase — no phase scheduled turning the Phase 0 wireframes into actual React screens. Fixed by adding a Frontend module to every phase below, paired with that phase's backend module(s) against the wireframes in `design/wireframes/`, so each phase is demoable end-to-end (not just API-testable) once complete. Phase 1's frontend module is now owed retroactively, since that phase's backend was already built and marked done before this gap was caught — it's listed as the next outstanding item, ahead of Phase 2.
 
 ---
 
@@ -19,17 +21,20 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] API contract draft (per-module endpoint list) — see `backend/openapi.yaml` and `documentation/Phase0_Module3_API_Contract.md`
 
 **Phase 1 — Foundation**
-- [x] Module: Authentication & Multi-Tenancy — running end-to-end against local Postgres, see `documentation/Phase1_Module1_Auth_MultiTenancy.md`
-- [x] Module 4: Store & Catalog Management (CRUD baseline) — running end-to-end against local Postgres + MongoDB, see `documentation/Phase1_Module4_Store_Catalog_Management.md`
+- [x] Module: Authentication & Multi-Tenancy (backend) — running end-to-end against local Postgres, see `documentation/Phase1_Module1_Auth_MultiTenancy.md`
+- [x] Module 4: Store & Catalog Management (backend, CRUD baseline) — running end-to-end against local Postgres + MongoDB, see `documentation/Phase1_Module4_Store_Catalog_Management.md`
+- [ ] **Frontend (owed retroactively):** React project scaffold (Vite + TS + Tailwind, wired to the backend API) + auth screens (register/login — not wireframed, excluded "per guideline" per `design/wireframes/`'s own intro note, but still functionally required) + Admin Catalog Management UI (`AdminCatalog.dc.html`)
 
 **Phase 2 — Core Commerce**
-- [ ] Module 2: Cart & Checkout
-- [ ] Module 5: Order & Shipping Management
+- [ ] Module 2: Cart & Checkout (backend)
+- [ ] Module 5: Order & Shipping Management (backend)
+- [ ] Frontend: Storefront Cart, Checkout, Order Confirmation (`Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`) + Admin Orders & Shipping UI (`AdminOrders.dc.html`)
 
 **Phase 3 — Commerce Completeness**
-- [ ] Module 7 (partial): Discount Codes
-- [ ] Module 1 (remaining): Search & Reviews
-- [ ] Module 7 (partial): Analytics Dashboard (baseline)
+- [ ] Module 7 (partial): Discount Codes (backend)
+- [ ] Module 1 (remaining): Search & Reviews (backend)
+- [ ] Module 7 (partial): Analytics Dashboard (backend, baseline)
+- [ ] Frontend: Storefront Home, Category/Search, Product Detail + reviews (`Main.dc.html`, `CategoryListing.dc.html`, `ProductDetail.dc.html`) + Admin Dashboard home + Marketing/Analytics UI (`AdminDashboard.dc.html`, `AdminMarketing.dc.html`)
 
 **Phase 4 — AI Feature 1**
 - [ ] AI Orchestrator (provider adapter + BullMQ job queue + quota system)
@@ -37,15 +42,18 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [ ] Module 6 (added): AI review summarization
 - [ ] Module 6 (added): AI auto-categorization/tagging
 - [ ] Module 6 (added): AI SEO metadata generation
+- [ ] Frontend: wire the AI generate/regenerate/publish flow + quota display into the Admin Catalog UI (scaffolded in Phase 1, made functional here) + UI touches for summarization/auto-tag/SEO metadata
 
 **Phase 5 — AI Feature 2**
-- [ ] Module 3: AI Shopping Assistant
-- [ ] Module 7 (remaining): Abandoned-Cart Recovery
+- [ ] Module 3: AI Shopping Assistant (backend)
+- [ ] Module 7 (remaining): Abandoned-Cart Recovery (backend)
+- [ ] Frontend: AI Assistant chat widget (`AIAssistant.dc.html`) wired to the real endpoint
 
 **Phase 6 — AI Recommendation Service (Python)** *(new phase, added post-Phase 1 scope amendment)*
 - [ ] Python/FastAPI microservice scaffold + embedding pipeline
 - [ ] `GET /stores/:storeId/products/:productId/recommendations` (Node-proxied)
 - [ ] Wire into AI Shopping Assistant's "suggested related products" (upgrade from Phase 5's keyword matching)
+- [ ] Frontend: display recommended products on Product Detail + Storefront Home
 
 **Phase 7 — Testing**
 - [ ] Unit tests (Jest)
