@@ -25,7 +25,7 @@ Sample data is consistent across screens: subtotal 125.00, 10% discount 12.50, 8
 
 The screens use only what the commerce core already has: Order.channel POS, Payment.method (cash, card, other), Customer, Location, shared pricing and createOrder, Refund, and the single inventory ledger. Nothing on the register needs a second stock or order model.
 
-## Assumptions and deferrals (please confirm before Module 8)
+## Assumptions and deferrals (all eight were accepted; what was built is in Phase2_5_Module8_POS_Backend.md)
 
 1. Cash drawer open and close (float, counted cash, variance) is not designed. The daily summary only reports totals.
 2. One register per store location. Multiple registers or terminals are not modelled.
@@ -42,4 +42,4 @@ The POS design uses darker text and accent colors than the shipped tokens becaus
 
 ## Next
 
-Module 8 (POS backend) starts only when named. Phase 3 has not been started.
+The POS backend, register screens and returns were built next; see Phase2_5_Module8_POS_Backend.md and Phase2_5_POS_Frontend.md. Phase 3 has not been started.

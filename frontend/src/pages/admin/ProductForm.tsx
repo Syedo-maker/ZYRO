@@ -18,6 +18,9 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
   const [price, setPrice] = useState(initial?.price.toString() ?? '')
   const [stock, setStock] = useState(initial?.stock.toString() ?? '')
   const [category, setCategory] = useState(initial?.category ?? '')
+  const [sku, setSku] = useState(initial?.sku ?? '')
+  const [barcode, setBarcode] = useState(initial?.barcode ?? '')
+  const [taxable, setTaxable] = useState(initial?.taxable ?? true)
   const [images, setImages] = useState<string[]>(initial?.images ?? [])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,11 +53,18 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         description,
         price: Number(price),
         stock: Number(stock),
+        sku: sku.trim() || undefined,
+        barcode: barcode.trim() || undefined,
+        taxable,
         category,
         images,
       })
-    } catch {
-      setError('Could not save this product. Please check the fields and try again.')
+    } catch (err) {
+      setError(
+        err instanceof Error && /SKU or barcode/.test((err as { detail?: string }).detail ?? '')
+          ? 'That SKU or barcode is already used by another product.'
+          : 'Could not save this product. Please check the fields and try again.'
+      )
     } finally {
       setSubmitting(false)
     }
@@ -102,6 +112,15 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
       </div>
 
       <Input id="category" label="Category" required value={category} onChange={(e) => setCategory(e.target.value)} />
+
+      <div className="grid grid-cols-2 gap-3">
+        <Input id="sku" label="SKU (optional)" maxLength={100} value={sku} onChange={(e) => setSku(e.target.value)} />
+        <Input id="barcode" label="Barcode (optional)" maxLength={100} value={barcode} onChange={(e) => setBarcode(e.target.value)} />
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={taxable} onChange={(e) => setTaxable(e.target.checked)} className="h-4 w-4" />
+        Charge sales tax on this product
+      </label>
 
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-semibold text-text-secondary">Images</span>

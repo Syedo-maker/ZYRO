@@ -35,9 +35,9 @@ Tracks build progress. One item is completed per session, in order, only when ex
 
 **Phase 2.5: Point of Sale (POS)** *(new phase, added by the Commerce + POS amendment; numbered 2.5 so existing phase numbers stay stable)*
 - [x] Wireframes: POS screen, receipt, daily summary (design/wireframes/pos, 11 screens; see Phase2_5_POS_Wireframes.md)
-- [ ] Module 8: POS backend (cashier login, product/barcode lookup, POS checkout with cash and card payments, receipt data, transaction history, daily sales summary)
-- [ ] Frontend: POS register screen, receipt view, transaction history
-- [ ] Returns/refunds for POS orders (stock returns to inventory)
+- [x] Module 8: POS backend (cashier accounts, product/barcode lookup, POS checkout with split cash/card payments and change, shifts and cash drawer, discount limit, held sales, receipt data, transaction history, daily sales summary; see Phase2_5_Module8_POS_Backend.md)
+- [x] Frontend: POS register screen, receipt view (printable), transaction history, daily summary, team page (see Phase2_5_POS_Frontend.md)
+- [x] Returns/refunds for POS orders (item-level, stock returns to inventory, cash comes out of the drawer)
 
 **Phase 3: Commerce Completeness**
 - [ ] Module 7 (partial): Discount Codes (backend)

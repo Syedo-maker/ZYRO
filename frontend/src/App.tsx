@@ -10,6 +10,12 @@ import { StorefrontHome } from './pages/storefront/StorefrontHome'
 import { CartPage } from './pages/storefront/CartPage'
 import { CheckoutPage } from './pages/storefront/CheckoutPage'
 import { OrderConfirmationPage } from './pages/storefront/OrderConfirmationPage'
+import { TeamPage } from './pages/admin/TeamPage'
+import { PosEntry, PosLayout } from './pages/pos/PosLayout'
+import { PosLoginPage } from './pages/pos/PosLoginPage'
+import { RegisterPage as PosRegisterPage } from './pages/pos/RegisterPage'
+import { HistoryPage } from './pages/pos/HistoryPage'
+import { DailySummaryPage } from './pages/pos/DailySummaryPage'
 
 export default function App() {
   return (
@@ -23,6 +29,15 @@ export default function App() {
             <Route index element={<Navigate to="products" replace />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="orders" element={<OrdersPage />} />
+            <Route path="team" element={<TeamPage />} />
+          </Route>
+
+          <Route path="/pos" element={<PosEntry />} />
+          <Route path="/pos/login" element={<PosLoginPage />} />
+          <Route path="/pos/:storeId" element={<PosLayout />}>
+            <Route index element={<PosRegisterPage />} />
+            <Route path="history" element={<HistoryPage />} />
+            <Route path="summary" element={<DailySummaryPage />} />
           </Route>
 
           <Route path="/store/:storeId" element={<StorefrontLayout />}>

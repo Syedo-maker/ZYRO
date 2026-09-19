@@ -26,6 +26,9 @@ export interface Product {
   description: string
   price: number
   stock: number
+  sku?: string | null
+  barcode?: string | null
+  taxable?: boolean
   category: string
   images: string[]
   aiDescriptionStatus: 'draft' | 'published' | null
@@ -36,6 +39,10 @@ export interface ProductInput {
   description?: string
   price: number
   stock: number
+  /** Scanned at the register; unique per store. */
+  sku?: string
+  barcode?: string
+  taxable?: boolean
   category: string
   images?: string[]
 }

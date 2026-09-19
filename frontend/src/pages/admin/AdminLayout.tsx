@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/admin/dashboard', enabled: false },
   { label: 'Products', to: '/admin/products', enabled: true },
   { label: 'Orders', to: '/admin/orders', enabled: true },
+  { label: 'Team & register', to: '/admin/team', enabled: true },
   { label: 'Marketing', to: '/admin/marketing', enabled: false },
   { label: 'Settings', to: '/admin/settings', enabled: false },
 ]
@@ -57,6 +58,11 @@ export function AdminLayout() {
         <header className="h-[72px] bg-white border-b border-border flex items-center justify-between px-8">
           <div className="text-[17px] font-semibold">{activeStore?.name ?? 'No store yet'}</div>
           <div className="flex items-center gap-4">
+            {activeStore && (
+              <a href={`/pos/${activeStore.id}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-brand hover:text-brand-hover">
+                Open register
+              </a>
+            )}
             {activeStore && (
               <a
                 href={`/store/${activeStore.id}`}

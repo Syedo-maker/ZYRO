@@ -42,3 +42,22 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
 }
+
+/* Receipts print from a hidden copy placed in <body> (pages/pos/Receipt.tsx): while
+   printing, everything else is hidden and only that copy shows, sized for an 80mm roll. */
+.print-only {
+  display: none;
+}
+@media print {
+  body:has(> .print-only) > *:not(.print-only) {
+    display: none !important;
+  }
+  .print-only {
+    display: block;
+    width: 80mm;
+    margin: 0;
+  }
+  body {
+    background: white;
+  }
+}
