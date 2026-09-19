@@ -28,13 +28,21 @@ export const inventoryService = {
     return location.id;
   },
 
-  /** Total on-hand per product across all of the tenant's locations. Missing = 0. */
-  async getTotals(db: Db, tenantId: string, productIds: string[]): Promise<Map<string, number>> {
+  /**
+   * On-hand per product across all of the tenant's locations, or at one location when
+   * `locationId` is given (what an online order can actually be fulfilled from). Missing = 0.
+   */
+  async getTotals(
+    db: Db,
+    tenantId: string,
+    productIds: string[],
+    locationId?: string
+  ): Promise<Map<string, number>> {
     const totals = new Map<string, number>(productIds.map((id) => [id, 0]));
     if (productIds.length === 0) return totals;
     const rows = await db.inventoryLevel.groupBy({
       by: ["productId"],
-      where: { tenantId, productId: { in: productIds } },
+      where: { tenantId, productId: { in: productIds }, ...(locationId ? { locationId } : {}) },
       _sum: { quantity: true },
     });
     for (const row of rows) totals.set(row.productId, row._sum.quantity ?? 0);

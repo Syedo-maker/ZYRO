@@ -59,6 +59,14 @@ enum StockMovementType {
   RESTOCK
 }
 
+enum CheckoutSessionStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+  REFUNDED
+  FAILED
+}
+
 /// PAID: online order paid, awaiting fulfilment. COMPLETED: in-store sale, paid and handed over.
 enum OrderStatus {
   PENDING
@@ -157,6 +165,7 @@ model Tenant {
   inventoryLevels  InventoryLevel[]
   stockMovements   StockMovement[]
   customers        Customer[]
+  checkoutSessions CheckoutSession[]
   orders           Order[]
   payments         Payment[]
   shipments        Shipment[]
@@ -271,6 +280,34 @@ model Customer {
   @@unique([tenantId, email])
   @@unique([tenantId, userId])
   @@index([tenantId])
+}
+
+/// The priced cart, frozen at the moment a Stripe Checkout Session is created. The webhook
+/// builds the order from this snapshot, so the order always matches what the shopper was
+/// actually charged even if catalog prices or tax settings change in the meantime. It also
+/// makes the webhook idempotent: only a PENDING record can be fulfilled, exactly once.
+model CheckoutSession {
+  id              String                @id @default(cuid())
+  tenantId        String
+  stripeSessionId String?               @unique
+  status          CheckoutSessionStatus @default(PENDING)
+  /// userId of a logged-in shopper; null for guests.
+  userId          String?
+  /// Redis cart key to clear once the order exists.
+  cartKey         String
+  /// Lines, totals, shipping and currency exactly as sent to Stripe.
+  snapshot        Json
+  totalCents      Int
+  currency        String
+  orderId         String?
+  failureReason   String?
+  expiresAt       DateTime
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
 }
 
 // ──────────────────────────────────────────────────────────────────────────

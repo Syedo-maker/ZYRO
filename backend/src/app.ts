@@ -9,10 +9,18 @@ import { storeRouter } from "./modules/stores/store.routes";
 import { productRouter } from "./modules/products/product.routes";
 import { uploadsRouter } from "./modules/uploads/uploads.routes";
 import { meRouter } from "./modules/users/me.routes";
+import { cartRouter } from "./modules/cart/cart.routes";
+import { checkoutRouter } from "./modules/checkout/checkout.routes";
+import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 
 export const app = express();
 
 app.use(cors({ origin: env.corsOrigin, credentials: true }));
+
+// Registered before express.json(): Stripe signs the exact bytes it sends, so this route
+// needs the raw body. Server-to-server, so CORS does not apply to it.
+app.post("/api/v1/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookController);
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -28,6 +36,8 @@ v1.use("/users/me", meRouter);
 v1.use("/stores/:storeId/staff", staffRouter);
 v1.use("/stores/:storeId/products", productRouter);
 v1.use("/stores/:storeId/uploads", uploadsRouter);
+v1.use("/stores/:storeId/cart", cartRouter);
+v1.use("/stores/:storeId/checkout", checkoutRouter);
 v1.use("/stores/:storeId", storeRouter);
 app.use("/api/v1", v1);
 

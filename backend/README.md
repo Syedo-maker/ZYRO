@@ -28,6 +28,13 @@ psql -h localhost -U <superuser> -d <database> -f prisma/manual-sql/001_enable_r
 psql -h localhost -U <superuser> -d <database> -f prisma/manual-sql/002_enable_rls_commerce_core.sql
 ```
 
+Carts need Redis (`REDIS_URL`, default `redis://127.0.0.1:6379`). Checkout needs Stripe
+test keys (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; see `.env.example`); without them
+everything else runs and the checkout and webhook endpoints answer 503. Locally, forward
+webhooks with the Stripe CLI: `stripe listen --forward-to localhost:5000/api/v1/webhooks/stripe`.
+`npx tsx scripts/verify-checkout.ts` checks carts, checkout and the webhook end to end
+(Stripe's network calls are faked, so no keys are needed).
+
 If you have products from before the Commerce Core Foundation module, move their legacy
 `stock` values into inventory once with `npx tsx scripts/backfill-inventory.ts`. To check the
 inventory, order and tenant-isolation logic against your local databases, run

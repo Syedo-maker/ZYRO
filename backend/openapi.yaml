@@ -733,8 +733,11 @@ paths:
       description: |
         Returns a Stripe-hosted checkout URL (Implementation_Plan.md Phase 2: Stripe Checkout
         Session, not raw PaymentIntents). The resulting `Order` is only created once
-        `webhooks_stripe_handle` receives `checkout.session.completed`; this endpoint does not
-        itself create an order.
+        `webhooks_stripe_handle` receives a paid session; this endpoint does not itself create
+        an order. The priced cart (lines, tax, shipping, total) is frozen as a checkout record
+        first, and the order is later written from that snapshot, so it always matches what
+        the shopper was charged. `discountCode` is accepted by the schema but refused with 400
+        until the Discounts module (Phase 3) exists. Answers 503 when Stripe is not configured.
       security:
         - bearerAuth: []
         - guestSession: []
@@ -757,7 +760,17 @@ paths:
                 properties:
                   checkoutUrl: { type: string, format: uri }
         "400":
-          description: Invalid or expired discount code
+          description: Empty cart, an item no longer available, or a discount code (not supported yet)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: An item in the cart is no longer in stock in the requested quantity
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: Stripe is not configured on this server
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -1129,6 +1142,11 @@ paths:
         Not tenant-scoped by path; the tenant is resolved from Stripe metadata attached at
         `checkout_session_create` time. This is the single source of truth for order creation
         (Implementation_Plan.md Phase 2); the client-side checkout redirect never creates an order.
+        The signature is verified over the raw request body before anything is processed. Handles
+        `checkout.session.completed` and `checkout.session.async_payment_succeeded` (an order is
+        created only when `payment_status` is not `unpaid`), plus `async_payment_failed` and
+        `expired`. Safe to deliver more than once: each session becomes at most one order. If the
+        last units sold out between checkout and payment, the payment is refunded automatically.
       security: []
       parameters:
         - name: Stripe-Signature
@@ -1143,9 +1161,14 @@ paths:
               type: object
               description: Raw Stripe event payload, verified against `Stripe-Signature` before processing.
       responses:
-        "200": { description: Event processed }
+        "200": { description: Event processed (or intentionally ignored) }
+        "503":
+          description: Stripe is not configured on this server
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
         "400":
-          description: Signature verification failed
+          description: Signature missing or verification failed
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -1362,11 +1385,20 @@ components:
     CartItem:
       type: object
       required: [id, productId, quantity, unitPrice]
+      description: |
+        Carts store only product ids and quantities (in Redis, 7-day expiry). Title, image,
+        price and stock are looked up fresh on every read, so a cart never holds a stale price.
       properties:
-        id: { type: string }
+        id: { type: string, description: Same as productId; use it as `itemId` in the item routes. }
         productId: { type: string }
+        title: { type: string }
+        imageUrl: { type: [string, "null"] }
         quantity: { type: integer, minimum: 1 }
         unitPrice: { type: number }
+        lineTotal: { type: number }
+        availableStock:
+          type: integer
+          description: Units the store can currently ship online; warn the shopper when quantity exceeds it.
 
     Cart:
       type: object

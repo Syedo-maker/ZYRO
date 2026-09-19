@@ -29,7 +29,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 
 **Phase 2: Core Commerce**
 - [x] Module: Commerce Core Foundation (backend, *new, added by the Commerce + POS amendment*): inventory in Postgres, locations, customers, channel-aware orders and payments, shared pricing and `createOrder` services; see `documentation/Phase2_Commerce_Core_Foundation.md`
-- [ ] Module 2: Cart & Checkout (backend, online channel)
+- [x] Module 2: Cart & Checkout (backend, online channel), verified against real Postgres, MongoDB and Redis with Stripe's network calls faked; see `documentation/Phase2_Module2_Cart_And_Checkout.md`
 - [ ] Module 5: Order & Shipping Management (backend, all channels)
 - [ ] Frontend: Storefront Cart, Checkout, Order Confirmation (`Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`) + Admin Orders & Shipping UI (`AdminOrders.dc.html`)
 
@@ -176,7 +176,7 @@ ZYRO is now defined as a multi-tenant Commerce + POS SaaS (see the amendment not
 ### Module 2: Cart & Checkout
 - **Solution:** Cart state kept server-side in Redis, keyed by `sessionId` (guest) or `userId` (logged-in customer), TTL 7 days. Avoids a Postgres table for something this ephemeral.
 - Checkout uses **Stripe Checkout Session** (hosted payment page) rather than raw PaymentIntents: less PCI surface area for a student project, still satisfies "secure checkout integrated with a payment gateway" from Section 6.
-- Stripe webhook (`checkout.session.completed`) calls the shared `createOrder` service with channel ONLINE; this is the single source of truth for "did payment succeed," not the client redirect. Stock is checked when checkout starts and deducted on payment confirmation (reservation with a timeout can be added later).
+- Stripe webhook (`checkout.session.completed` and `async_payment_succeeded`, gated on `payment_status`) calls the shared `createOrder` service with channel ONLINE; this is the single source of truth for "did payment succeed," not the client redirect. The priced cart is frozen as a `CheckoutSession` snapshot before the Stripe call and the order is written from it. Stock is checked when checkout starts and deducted on payment confirmation; if it ran out in between, the payment is refunded automatically (timed reservation can be added later).
 - Discount code validation happens server-side at checkout initiation (Module 7 dependency; see Phase 3).
 - **Endpoints:** `POST /cart/items`, `PATCH /cart/items/:id`, `DELETE /cart/items/:id`, `POST /checkout/session`, `POST /webhooks/stripe`.
 

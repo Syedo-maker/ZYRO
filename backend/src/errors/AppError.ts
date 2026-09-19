@@ -40,6 +40,8 @@ export const Errors = {
     new AppError(404, "https://zyro.dev/errors/not-found", `${what} not found`),
   invalidRefreshToken: () =>
     new AppError(401, "https://zyro.dev/errors/invalid-refresh-token", "Refresh token is invalid or expired"),
+  serviceUnavailable: (detail: string) =>
+    new AppError(503, "https://zyro.dev/errors/service-unavailable", "Service unavailable", detail),
   insufficientStock: (detail: string) =>
     new AppError(409, "https://zyro.dev/errors/insufficient-stock", "Insufficient stock", detail),
   validation: (detail: string) =>

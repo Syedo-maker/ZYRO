@@ -25,7 +25,7 @@
 - **`scripts/backfill-inventory.ts`** moved legacy Mongo `stock` values into inventory (4 products locally). **`scripts/verify-commerce-core.ts`** is the verification below.
 - **`openapi.yaml`** updated: product fields, staff permissions, `completed` status, `SalesChannel`, order fields.
 
-## Verification (real databases, 24 checks, all passing)
+## Verification (real databases, 21 checks, all passing)
 
 `npx tsx scripts/verify-commerce-core.ts` covers:
 
