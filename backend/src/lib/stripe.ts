@@ -46,6 +46,10 @@ function createRealGateway(): StripeGateway {
         metadata: { checkoutSessionId: p.checkoutSessionId, tenantId: p.tenantId },
         integration_identifier: `zyro-online-checkout-${randomSuffix()}`,
         customer_email: p.customerEmail,
+        // Always charge in the store's currency. With Adaptive Pricing on, Stripe's page
+        // offers the shopper a converted local currency, but ZYRO prices, taxes and records
+        // orders in the store currency and refuses an order whose charged amount differs.
+        adaptive_pricing: { enabled: false },
         // Stripe's page collects the address; the webhook copies it onto the order.
         shipping_address_collection: {
           allowed_countries: p.shippingCountries as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[],

@@ -1,6 +1,6 @@
 # Phase 2: Frontend (storefront cart, checkout, confirmation, admin orders and shipping)
 
-**Status:** complete and verified in real Chromium against the real frontend, backend, PostgreSQL, MongoDB and Redis. Stripe's hosted payment page was replaced by a stand-in, so the real Stripe page has **not** been exercised (see "What is not verified").
+**Status:** complete and verified in real Chromium against the real frontend, backend, PostgreSQL, MongoDB and Redis. The module's own browser test uses a stand-in for Stripe's page; the real Stripe hosted page was verified afterwards (see `Stripe_Setup_And_Verification.md`).
 **Wireframes implemented:** `Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`, `AdminOrders.dc.html`.
 
 **Skill search:** `find-skill` was run first. One candidate was installed after confirmation: `frontend-ui-engineering` (addyosmani/agent-skills), a stack-agnostic quality checklist (keyboard access, loading, empty and error states, responsive checks, no "AI look"). The stack-specific candidates (shadcn, Next.js) would have conflicted with the design tokens already in place, so they were skipped. Its checklist drove the accessibility and responsive work below.
@@ -40,7 +40,7 @@ The three backend suites still pass: 62 checkout checks (extended for the addres
 
 ## What is not verified
 
-- **The real Stripe hosted page and real Stripe address collection.** The page was a stand-in and webhooks were signed with a test secret. Once a Stripe sandbox and keys exist, do one real purchase with card `4242 4242 4242 4242` and confirm the address arrives on the order.
+- **The real Stripe hosted page and address collection: now verified.** A real purchase on Stripe's page with card `4242 4242 4242 4242` created the order and the address entered on Stripe arrived on it. The real page also showed a currency switch that this stand-in never had, which was fixed (see `Stripe_Setup_And_Verification.md`).
 - **Real email.** Stripe sends receipts only if that is enabled in the Stripe Dashboard; ZYRO sends no emails yet.
 
 ## Decisions and known limits

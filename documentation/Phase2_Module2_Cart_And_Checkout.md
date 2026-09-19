@@ -1,6 +1,6 @@
 # Phase 2, Module 2: Cart & Checkout (online channel)
 
-**Status:** backend complete and verified end to end against real PostgreSQL, MongoDB and Redis. Stripe's network calls were replaced by a recording fake, so the real Stripe API has **not** been exercised yet (see "What is not verified").
+**Status:** backend complete and verified end to end against real PostgreSQL, MongoDB and Redis. Stripe's network calls were replaced by a recording fake in the module's own tests; the real Stripe API was verified afterwards (see `Stripe_Setup_And_Verification.md`).
 **Builds on:** Commerce Core Foundation (`Phase2_Commerce_Core_Foundation.md`). Online checkout is a thin layer over the shared `createOrder`, pricing and inventory services, so the POS phase reuses the same core.
 
 **Skill search:** `find-skill` was run first. Three candidates were reviewed (Stripe's official `stripe-best-practices`, Hookdeck's `stripe-webhooks`, Redis's `redis-core`). Only `stripe/ai` `stripe-best-practices` was installed, after a full read of `SKILL.md` and its references found nothing suspicious. Its rules shaped this module: fulfil on both `completed` and `async_payment_succeeded` gated on `payment_status`, verify signatures before anything else, use a client instance rather than a global key, and never pass `payment_method_types`.
@@ -44,7 +44,7 @@ One real bug was found by these checks and fixed: `expired` and `failed` events 
 
 ## What is not verified
 
-- **The real Stripe API.** No Stripe keys exist yet, so session creation and refunds were exercised only against a fake. Signature verification did use the real SDK path. Before relying on this, create a Stripe sandbox (`stripe sandbox create`), set `STRIPE_SECRET_KEY` (a restricted key is preferred) and `STRIPE_WEBHOOK_SECRET`, run `stripe listen --forward-to localhost:5000/api/v1/webhooks/stripe`, and do one test purchase with card `4242 4242 4242 4242`.
+- **The real Stripe API: now verified** with a Stripe test sandbox: a real Checkout Session, a real payment on Stripe's page, the real webhook, a real refund, and the real automatic refund when stock runs out. See `Stripe_Setup_And_Verification.md`, which also records the one defect only the real Stripe exposed (a currency switch that could have charged a shopper without creating their order).
 - **Redis** was tested on an unofficial portable Windows build (Redis 5.0.14) kept outside the repo at `D:\FYP\tools\redis`. Production will use real Redis via Docker in Phase 8.
 
 ## Decisions and known limits

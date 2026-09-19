@@ -4,7 +4,7 @@ A full re-check that everything built so far runs correctly, done layer by layer
 
 ## Result
 
-Phases 0, 1 and 2 are complete and working. The audit found and fixed **8 problems**, two of them serious enough that they would have affected real users. One item (real Stripe) cannot be verified until Stripe keys exist.
+Phases 0, 1 and 2 are complete and working. The audit found and fixed **8 problems**, two of them serious enough that they would have affected real users. The one item the audit could not verify, real Stripe, was completed afterwards (see `Stripe_Setup_And_Verification.md`).
 
 | Layer | Check | Result |
 |---|---|---|
@@ -63,7 +63,7 @@ The Phase 1 browser test failed now and then (about 1 run in 6), always stuck on
 
 - **(Fixed afterwards, see "Password and abuse protection" below.)** The audit originally left login without rate limiting or security headers.
 - **Row-level security is defined but not enforced.** The database policies exist, but the API connects as the owning role, which bypasses them, and never sets the tenant variable. Isolation is enforced in application code (and tested). Wiring the database layer is planned for the Phase 7 tenant-isolation work.
-- **Real Stripe has still not been exercised.** No keys exist. Payment creation, refunds and address collection were tested against a stand-in; signature verification used the real code.
+- **(Done afterwards.)** Real Stripe was exercised end to end with a test sandbox; see `Stripe_Setup_And_Verification.md`.
 - **Cosmetic contract warnings remain** (no license field, and 4XX responses not declared on some operations). They do not affect correctness.
 - **Every anonymous visit logs one harmless 401** in the browser network panel (the silent login restore finds no cookie).
 - **The published Claude Design canvas** was not republished after the em-dash edits to the wireframe source files, so it may still show the old dashes.

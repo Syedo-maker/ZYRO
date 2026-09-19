@@ -31,9 +31,12 @@ psql -h localhost -U <superuser> -d <database> -f prisma/manual-sql/002_enable_r
 Carts need Redis (`REDIS_URL`, default `redis://127.0.0.1:6379`). Checkout needs Stripe
 test keys (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; see `.env.example`); without them
 everything else runs and the checkout and webhook endpoints answer 503. Locally, forward
-webhooks with the Stripe CLI: `stripe listen --forward-to localhost:5000/api/v1/webhooks/stripe`.
+webhooks with the Stripe CLI: `npx --yes @stripe/cli listen --forward-to localhost:5000/api/v1/webhooks/stripe`
+(it must be running for a payment to become an order). Full setup, and what was verified against real
+Stripe, is in `documentation/Stripe_Setup_And_Verification.md`.
 `npx tsx scripts/verify-checkout.ts` checks carts, checkout and the webhook end to end
-(Stripe's network calls are faked, so no keys are needed).
+(Stripe's network calls are faked, so no keys are needed). `frontend/e2e/stripe-real.e2e.mjs` is the
+real thing: a genuine payment on Stripe's own page.
 
 `npx tsx scripts/verify-orders.ts` does the same for order management, refunds, shipments and
 shipping zones, and `npx tsx scripts/verify-phase1.ts` for authentication, staff, the catalog and

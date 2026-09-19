@@ -1,6 +1,6 @@
 # Phase 2, Module 5: Order & Shipping Management (all channels)
 
-**Status:** backend complete and verified end to end against real PostgreSQL and MongoDB through the real HTTP API. Stripe's refund call was replaced by a recording fake, so a real Stripe refund has **not** been exercised yet (see "What is not verified").
+**Status:** backend complete and verified end to end against real PostgreSQL and MongoDB through the real HTTP API. Stripe's refund call was replaced by a recording fake in the module's own tests; it was later verified against real Stripe (see `Stripe_Setup_And_Verification.md`: a real refund of a real payment, and the real automatic refund).
 **Builds on:** Commerce Core Foundation and Cart & Checkout. Orders from the online store and (later) the POS are managed through the same endpoints.
 
 **Skill search:** `find-skill` was run first. Nothing installed. The results were either wrapped around specific platforms (Spree, NextCommerce, Shopify-style admin APIs) or generic: a REST design guide, and Prisma's official skills, which target a newer Prisma major version than this project pins. No candidate covered order state rules, refunds or shipping zones, so none was force-installed. The already-installed `stripe-best-practices` skill covered the refund guidance.
@@ -49,9 +49,9 @@ Schema addition: `Refund` (migration `20260919020000_refunds`, RLS in `manual-sq
 
 `npx tsx scripts/verify-orders.ts` drives the real HTTP API. It covers: zone CRUD with permissions and a public list; order list filters, search by number and by customer email, date range, paging, lowercase enums; detail visibility for merchant, own shopper, other shopper, other store; the manual status rules; cancelling a paid order (permission, Stripe key, restock, cancelling twice); refunds of a POS cash sale, a split card-plus-cash sale, and a shipped online order; **two simultaneous refunds of one order (exactly one wins, one refund record, stock restored once)**; a Stripe failure leaving the order untouched and a later retry succeeding; the full shipment flow including forbidden transitions; the stock ledger still summing to the current stock; and tenant isolation. The 49-check checkout suite and 21-check foundation suite were re-run and still pass.
 
-## What is not verified
+## Stripe verification
 
-- **A real Stripe refund.** Still no Stripe keys, so refunds were exercised against a fake that records the call and idempotency key. Do one test refund after the Stripe sandbox is set up (see the checkout module doc).
+- **Real Stripe refunds: verified.** After a Stripe test sandbox was set up, a real payment was refunded through this module's endpoint and Stripe showed exactly one succeeded refund for the full amount; a second refund attempt was refused. Details in `documentation/Stripe_Setup_And_Verification.md`.
 
 ## Decisions and known limits
 
