@@ -69,8 +69,8 @@ async function main() {
     const staffRefunds = await register("sr");
     const outsider = await register("out");
     const shopper = await register("shop");
-    await api("POST", `/stores/${A.storeId}/staff`, { token: A.token, body: { email: staffOrders.email, permissions: ["ORDERS_WRITE"] } });
-    await api("POST", `/stores/${A.storeId}/staff`, { token: A.token, body: { email: staffRefunds.email, permissions: ["ORDERS_WRITE", "REFUNDS"] } });
+    await api("POST", `/stores/${A.storeId}/staff`, { token: A.token, body: { email: staffOrders.email, permissions: ["orders_write"] } });
+    await api("POST", `/stores/${A.storeId}/staff`, { token: A.token, body: { email: staffRefunds.email, permissions: ["orders_write", "refunds"] } });
 
     const p1 = (await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Widget", price: 20, stock: 30, category: "t" } })).json.id as string;
     const stockOf = async () => (await api("GET", `/stores/${A.storeId}/products/${p1}`)).json.stock as number;

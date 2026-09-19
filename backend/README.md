@@ -36,7 +36,10 @@ webhooks with the Stripe CLI: `stripe listen --forward-to localhost:5000/api/v1/
 (Stripe's network calls are faked, so no keys are needed).
 
 `npx tsx scripts/verify-orders.ts` does the same for order management, refunds, shipments and
-shipping zones.
+shipping zones, and `npx tsx scripts/verify-phase1.ts` for authentication, staff, the catalog and
+image uploads. `scripts/e2e-server.ts` runs the API with Stripe faked, for the browser tests, and
+`npx tsx scripts/cleanup-test-data.ts` removes the throwaway stores those tests leave behind.
+See `documentation/Audit_Phase0_to_Phase2.md` for the latest full check.
 
 If you have products from before the Commerce Core Foundation module, move their legacy
 `stock` values into inventory once with `npx tsx scripts/backfill-inventory.ts`. To check the

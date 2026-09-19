@@ -57,6 +57,16 @@ export function AdminLayout() {
         <header className="h-[72px] bg-white border-b border-border flex items-center justify-between px-8">
           <div className="text-[17px] font-semibold">{activeStore?.name ?? 'No store yet'}</div>
           <div className="flex items-center gap-4">
+            {activeStore && (
+              <a
+                href={`/store/${activeStore.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-semibold text-brand hover:text-brand-hover"
+              >
+                View storefront
+              </a>
+            )}
             <span className="text-sm text-text-secondary">{user?.email}</span>
             <button onClick={() => void logout()} className="text-sm font-semibold text-brand hover:text-brand-hover">
               Log out

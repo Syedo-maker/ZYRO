@@ -315,7 +315,22 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/StaffMember" }
+        "400":
+          description: Invalid email, or empty or unknown permissions (names are lowercase)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: No ZYRO account exists for that email
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: Already staff at this store, or the person is the store owner (who already has full access)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /stores/{storeId}/staff/{staffId}:
     parameters:
@@ -1233,7 +1248,7 @@ paths:
                 cartTotal: { type: number }
       responses:
         "200":
-          description: Valid: discount amount returned
+          description: "Valid, discount amount returned"
           content:
             application/json:
               schema:
@@ -1424,12 +1439,10 @@ components:
         status: { type: integer }
         detail: { type: string }
       examples:
-        quota_exhausted:
-          value:
-            type: https://zyro.dev/errors/ai-quota-exhausted
-            title: Monthly AI usage quota exhausted
-            status: 402
-            detail: This store has used all 100 AI generations included this month.
+        - type: https://zyro.dev/errors/ai-quota-exhausted
+          title: Monthly AI usage quota exhausted
+          status: 402
+          detail: This store has used all 100 AI generations included this month.
 
     PaginationInfo:
       type: object
@@ -1467,7 +1480,7 @@ components:
         slug: { type: string }
         logoUrl: { type: string, format: uri }
         themeColor: { type: string }
-        currency: { type: string, description: The store's currency (ISO code), used to format prices. }
+        currency: { type: string, description: "The store's currency (ISO code), used to format prices." }
 
     StaffPermission:
       type: string
@@ -1532,17 +1545,15 @@ components:
               type: [string, "null"]
               enum: [draft, published, null]
       examples:
-        earbuds:
-          value:
-            id: prod_01HXYZ
-            storeId: store_01ABCD
-            title: Wireless Earbuds Pro
-            description: Crisp sound, all-day battery, and a snug fit for workouts or commutes.
-            price: 49.00
-            stock: 42
-            category: Electronics
-            images: ["https://cdn.zyro.dev/products/earbuds-1.jpg"]
-            aiDescriptionStatus: published
+        - id: prod_01HXYZ
+          storeId: store_01ABCD
+          title: Wireless Earbuds Pro
+          description: Crisp sound, all-day battery, and a snug fit for workouts or commutes.
+          price: 49.00
+          stock: 42
+          category: Electronics
+          images: ["https://cdn.zyro.dev/products/earbuds-1.jpg"]
+          aiDescriptionStatus: published
 
     ProductReview:
       type: object
@@ -1602,7 +1613,7 @@ components:
           type: array
           items: { $ref: "#/components/schemas/CartItem" }
         subtotal: { type: number }
-        currency: { type: string, description: The store's currency, for formatting. }
+        currency: { type: string, description: "The store's currency, for formatting." }
 
     OrderStatus:
       type: string
@@ -1632,7 +1643,7 @@ components:
       properties:
         id: { type: string }
         storeId: { type: string }
-        orderNumber: { type: integer, description: Human-readable number, unique per store. }
+        orderNumber: { type: integer, description: "Human-readable number, unique per store." }
         channel: { $ref: "#/components/schemas/SalesChannel" }
         locationId: { type: [string, "null"] }
         cashierUserId: { type: [string, "null"], description: The user who rang up a POS sale. }

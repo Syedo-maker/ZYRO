@@ -33,7 +33,9 @@ Then visit `http://localhost:5173`.
   `design/wireframes/ComponentInventory.dc.html`, since Tailwind v4 uses CSS-based theme
   config, not `tailwind.config.js`.
 
-Browser test for Phase 2: see the header of `e2e/phase2-checkout.e2e.mjs` for how to run it.
+Browser tests: `e2e/phase1-auth-catalog.e2e.mjs` and `e2e/phase2-checkout.e2e.mjs`; the header of
+the second explains how to run them. They register test stores through the UI, so afterwards run
+`npx tsx scripts/cleanup-test-data.ts` in `backend/`.
 Write-up: `documentation/Phase2_Frontend_Storefront_And_Admin_Orders.md`.
 
 See `documentation/Phase1_Frontend_Auth_And_Admin_Catalog.md` for the full write-up,

@@ -111,6 +111,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
               <img src={url} alt="" className="w-full h-full object-cover" />
               <button
                 type="button"
+                aria-label="Remove image"
                 onClick={() => setImages((prev) => prev.filter((u) => u !== url))}
                 className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 text-white text-[10px] leading-4"
               >
@@ -120,17 +121,25 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
           ))}
           <button
             type="button"
+            aria-label={uploading ? 'Uploading image' : 'Add image'}
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || images.length >= 10}
             className="w-16 h-16 rounded-lg border border-dashed border-border flex items-center justify-center text-text-muted text-xs disabled:opacity-50"
           >
             {uploading ? '…' : '+'}
           </button>
-          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => void handleFileSelected(e)} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            aria-label="Product image file"
+            accept="image/jpeg,image/png,image/webp"
+            hidden
+            onChange={(e) => void handleFileSelected(e)}
+          />
         </div>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
       <div className="flex gap-3 mt-2">
         <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
