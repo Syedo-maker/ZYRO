@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>POS flow</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: oklch(19% 0.02 265); }
+h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+button, input, select { font-family: inherit; }
+a { color: oklch(52% 0.17 265); text-decoration: none; }
+a:hover { color: oklch(46% 0.17 265); }
+</style>
+</helmet>
+<div style="width: 1400px; height: 760px; background: white; color: oklch(19% 0.02 265); font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+<div style="padding: 32px; position: relative; height: 100%;">
+<h1 style="font-size: 20px; font-weight: 700;">ZYRO POS: Flow</h1>
+<div style="font-size: 12px; color: oklch(40% 0.02 265); margin-top: 4px;">Solid boxes are full screens. Dashed boxes are panels that open over the register. The register is the hub: every task returns to it.</div>
+<div style="position: relative; width: 1340px; height: 640px; margin-top: 12px;">
+<svg width="1340" height="640" style="position: absolute; left: 0; top: 0;">
+<defs>
+<marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="oklch(19% 0.02 265)"/></marker>
+<marker id="ab" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="oklch(52% 0.17 265)"/></marker>
+</defs>
+<line x1="190" y1="130" x2="280" y2="130" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="470" y1="130" x2="560" y2="130" stroke="oklch(52% 0.17 265)" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#ab)"/>
+<line x1="750" y1="130" x2="840" y2="130" stroke="oklch(52% 0.17 265)" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#ab)"/>
+<line x1="1030" y1="130" x2="1110" y2="130" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="375" y1="90" x2="375" y2="60" stroke="oklch(52% 0.17 265)" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#ab)"/>
+<line x1="375" y1="170" x2="375" y2="300" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="375" y1="340" x2="375" y2="470" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="470" y1="330" x2="560" y2="330" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="750" y1="330" x2="840" y2="330" stroke="oklch(52% 0.17 265)" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#ab)"/>
+<line x1="470" y1="500" x2="560" y2="500" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="1205" y1="170" x2="1205" y2="200" stroke="oklch(19% 0.02 265)" stroke-width="1.6" marker-end="url(#a)"/>
+</svg>
+<div style="position: absolute; left: 0; top: 0; font-size: 11px; font-weight: 700; color: oklch(52% 0.17 265); letter-spacing: 0.05em;">SELLING</div>
+<div style="position: absolute; left: 0px; top: 100px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px solid oklch(19% 0.02 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">POS sign in</div>
+<div style="position: absolute; left: 280px; top: 100px; width: 190px; height: 60px; background: oklch(19% 0.02 265); color: white; border: 1.5px solid oklch(19% 0.02 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Register<br><span style="font-weight: 400;">scan, search, build the sale</span></div>
+<div style="position: absolute; left: 560px; top: 100px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px dashed oklch(52% 0.17 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Customer picker<br><span style="font-weight: 400;">optional</span></div>
+<div style="position: absolute; left: 840px; top: 100px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px dashed oklch(52% 0.17 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Payment<br><span style="font-weight: 400;">cash, card, other, split</span></div>
+<div style="position: absolute; left: 1110px; top: 100px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px solid oklch(19% 0.02 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Sale complete<br><span style="font-weight: 400;">change due, receipt</span></div>
+<div style="position: absolute; left: 1110px; top: 200px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px dashed oklch(52% 0.17 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Receipt<br><span style="font-weight: 400;">print or email</span></div>
+<div style="position: absolute; left: 280px; top: 20px; width: 190px; height: 40px; background: white; color: oklch(19% 0.02 265); border: 1.5px dashed oklch(52% 0.17 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Held sales</div>
+<div style="position: absolute; left: 0; top: 290px; font-size: 11px; font-weight: 700; color: oklch(52% 0.17 265); letter-spacing: 0.05em;">REVIEWING</div>
+<div style="position: absolute; left: 280px; top: 300px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px solid oklch(19% 0.02 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Sales history</div>
+<div style="position: absolute; left: 560px; top: 300px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px solid oklch(19% 0.02 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Sale details<br><span style="font-weight: 400;">reprint receipt</span></div>
+<div style="position: absolute; left: 840px; top: 300px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px dashed oklch(52% 0.17 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Return items<br><span style="font-weight: 400;">needs Refunds permission</span></div>
+<div style="position: absolute; left: 280px; top: 470px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px solid oklch(19% 0.02 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Daily summary</div>
+<div style="position: absolute; left: 560px; top: 470px; width: 190px; height: 60px; background: white; color: oklch(19% 0.02 265); border: 1.5px dashed oklch(52% 0.17 265); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; line-height: 1.3;">Print summary</div>
+<div style="position: absolute; left: 0; top: 590px; width: 1300px; font-size: 12px; color: oklch(40% 0.02 265); line-height: 1.5;">Not in this version, on purpose: counting the cash drawer and closing the register, several registers at once, a hardware receipt printer and barcode scanner beyond keyboard-style scanners, and working without an internet connection.</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

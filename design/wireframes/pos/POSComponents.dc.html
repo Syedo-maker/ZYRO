@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>POS components</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: oklch(19% 0.02 265); }
+h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+button, input, select { font-family: inherit; }
+a { color: oklch(52% 0.17 265); text-decoration: none; }
+a:hover { color: oklch(46% 0.17 265); }
+</style>
+</helmet>
+<div style="width: 1200px; height: 1040px; background: white; color: oklch(19% 0.02 265); font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+<div style="padding: 36px; display: flex; flex-direction: column; gap: 30px; height: 100%; background: white;">
+<div><h1 style="font-size: 22px; font-weight: 700;">ZYRO POS: New components</h1><div style="font-size: 13px; color: oklch(40% 0.02 265); margin-top: 4px; line-height: 1.5; max-width: 900px;">Everything else reuses the ZYRO component inventory. POS is used on a tablet at a bright counter with quick, glancing taps, so touch targets are at least 44 px and the register's key controls are 56 to 72 px. Small text and filled-button colors here are a little darker than the storefront's tokens to reach 4.5:1 contrast; when the POS is built, the shared muted-text and brand tokens should be darkened app-wide.</div></div>
+<div><div style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: oklch(49% 0.015 265); margin-bottom: 12px;">PRODUCT TILES</div><div style="display: flex; gap: 14px;">
+<div style="width: 190px;"><button type="button" style="display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden; border-radius: 14px; background: white; border: 1px solid oklch(91% 0.006 260); cursor: pointer; font-family: inherit; color: oklch(19% 0.02 265);">
+<span style="display: flex; align-items: center; justify-content: center; height: 64px; background: oklch(95% 0.004 260); color: oklch(72% 0.006 260);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+<span style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px;">
+<span style="font-size: 13px; font-weight: 600; line-height: 1.3; min-height: 34px;">Wireless Earbuds Pro</span>
+<span style="font-size: 15px; font-weight: 700;">$49.00</span>
+<span><span style="font-size: 12px; color: oklch(49% 0.015 265);">41 in stock</span></span>
+</span>
+</button></div><div style="width: 190px;"><button type="button" style="display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden; border-radius: 14px; background: white; border: 2px solid oklch(52% 0.17 265); cursor: pointer; font-family: inherit; color: oklch(19% 0.02 265);">
+<span style="display: flex; align-items: center; justify-content: center; height: 64px; background: oklch(95% 0.004 260); color: oklch(72% 0.006 260);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+<span style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px;">
+<span style="font-size: 13px; font-weight: 600; line-height: 1.3; min-height: 34px;">Ceramic Pour-Over Set</span>
+<span style="font-size: 15px; font-weight: 700;">$38.00</span>
+<span><span style="font-size: 12px; color: oklch(49% 0.015 265);">18 in stock</span></span>
+</span>
+</button></div><div style="width: 190px;"><button type="button" style="display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden; border-radius: 14px; background: white; border: 1px solid oklch(91% 0.006 260); cursor: pointer; font-family: inherit; color: oklch(19% 0.02 265);">
+<span style="display: flex; align-items: center; justify-content: center; height: 64px; background: oklch(95% 0.004 260); color: oklch(72% 0.006 260);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+<span style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px;">
+<span style="font-size: 13px; font-weight: 600; line-height: 1.3; min-height: 34px;">Desk Plant, Pothos</span>
+<span style="font-size: 15px; font-weight: 700;">$19.00</span>
+<span><span style="display: inline-block; background: oklch(95% 0.05 85); color: oklch(42% 0.1 70); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">3 LEFT</span></span>
+</span>
+</button></div><div style="width: 190px;"><button type="button" disabled style="display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden; border-radius: 14px; background: white; border: 1px solid oklch(91% 0.006 260); opacity: 0.6; font-family: inherit; color: oklch(19% 0.02 265);">
+<span style="display: flex; align-items: center; justify-content: center; height: 64px; background: oklch(95% 0.004 260); color: oklch(72% 0.006 260);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+<span style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px;">
+<span style="font-size: 13px; font-weight: 600; line-height: 1.3; min-height: 34px;">Canvas Tote Bag</span>
+<span style="font-size: 15px; font-weight: 700;">$22.00</span>
+<span><span style="display: inline-block; background: oklch(94% 0.004 260); color: oklch(40% 0.02 265); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">SOLD OUT</span></span>
+</span>
+</button></div>
+</div><div style="font-size: 12px; color: oklch(49% 0.015 265); margin-top: 8px;">Normal, just scanned or tapped, low stock, sold out (cannot be added)</div></div>
+<div style="display: flex; gap: 40px;">
+<div style="width: 400px;"><div style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: oklch(49% 0.015 265); margin-bottom: 12px;">SALE LINE</div><ul style="list-style: none; margin: 0; padding: 0; border: 1px solid oklch(91% 0.006 260); border-radius: 12px;"><li style="display: flex; gap: 12px; padding: 12px 20px; border-bottom: 1px solid oklch(91% 0.006 260);">
+<div style="flex-grow: 1; min-width: 0;">
+<div style="font-size: 14px; font-weight: 600;">Wireless Earbuds Pro</div>
+<div style="font-size: 12px; color: oklch(49% 0.015 265); margin-top: 2px;">$49.00 each</div>
+<div style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
+<div role="group" aria-label="Quantity of Wireless Earbuds Pro" style="display: flex; align-items: center; height: 40px; border: 1px solid oklch(82% 0.008 260); border-radius: 10px;">
+<button type="button" aria-label="Decrease quantity of Wireless Earbuds Pro" style="width: 40px; height: 100%; background: white; border: none; border-radius: 10px 0 0 10px; display: flex; align-items: center; justify-content: center; color: oklch(19% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+<span style="width: 40px; text-align: center; font-weight: 600; font-size: 14px; border-left: 1px solid oklch(91% 0.006 260); border-right: 1px solid oklch(91% 0.006 260); height: 100%; display: flex; align-items: center; justify-content: center;">1</span>
+<button type="button" aria-label="Increase quantity of Wireless Earbuds Pro" style="width: 40px; height: 100%; background: white; border: none; border-radius: 0 10px 10px 0; display: flex; align-items: center; justify-content: center; color: oklch(19% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;">
+<span style="font-size: 15px; font-weight: 700;">$49.00</span>
+<button type="button" aria-label="Remove Wireless Earbuds Pro from sale" style="width: 40px; height: 40px; background: white; border: none; color: oklch(49% 0.015 265); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+</div>
+</li></ul></div>
+<div><div style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: oklch(49% 0.015 265); margin-bottom: 12px;">PAYMENT METHOD TABS AND QUICK-CASH CHIPS</div>
+<div style="display: flex; gap: 8px; width: 360px;"><button type="button" style="flex: 1; height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-size: 15px; font-weight: 600; background: oklch(94% 0.03 265); color: oklch(52% 0.17 265); border: 2px solid oklch(52% 0.17 265);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Cash</button><button type="button" style="flex: 1; height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-size: 15px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>Card</button><button type="button" style="flex: 1; height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-size: 15px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4L12 22l-8.6-8.6V3h10.4z"/><circle cx="8" cy="8" r="1.5"/></svg>Other</button></div>
+<div style="display: flex; gap: 8px; margin-top: 12px;"><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">Exact $61.50</button><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">$65</button><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; background: oklch(94% 0.03 265); color: oklch(52% 0.17 265); border: 1px solid oklch(52% 0.17 265);">$70</button><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">$80</button></div>
+<div style="margin-top: 22px;"><div style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: oklch(49% 0.015 265); margin-bottom: 12px;">NUMBER KEYPAD</div><div style="display: grid; grid-template-columns: repeat(3, 84px); gap: 8px;"><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260);">1</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260);">2</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260);">3</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260);">4</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260);">5</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260);">6</button></div></div>
+</div>
+<div><div style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: oklch(49% 0.015 265); margin-bottom: 12px;">STATUS PILLS AND CASH FIGURES</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap; width: 300px;"><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span><span style="display: inline-block; background: oklch(94% 0.004 260); color: oklch(40% 0.02 265); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">REFUNDED</span><span style="display: inline-block; background: oklch(95% 0.05 85); color: oklch(42% 0.1 70); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">HELD</span><span style="display: inline-block; background: oklch(95% 0.05 85); color: oklch(42% 0.1 70); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">3 LEFT</span><span style="display: inline-block; background: oklch(94% 0.004 260); color: oklch(40% 0.02 265); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">SOLD OUT</span></div>
+<div style="display: flex; gap: 10px; margin-top: 16px; width: 320px;">
+<div style="flex: 1; background: oklch(94% 0.03 150); border-radius: 12px; padding: 12px 14px;"><div style="font-size: 12px; font-weight: 600; color: oklch(42% 0.12 150);">Change due</div><div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 24px; font-weight: 700; color: oklch(42% 0.12 150);">$8.50</div></div>
+<div style="flex: 1; background: oklch(95% 0.05 85); border-radius: 12px; padding: 12px 14px;"><div style="font-size: 12px; font-weight: 600; color: oklch(42% 0.1 70);">Remaining</div><div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 24px; font-weight: 700; color: oklch(42% 0.1 70);">$61.50</div></div>
+</div></div>
+</div>
+<div><div style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: oklch(49% 0.015 265); margin-bottom: 12px;">SCAN FEEDBACK (SHOWN OVER THE REGISTER FOR 3 SECONDS)</div><div style="display: flex; gap: 14px;">
+<div role="status" style="display: flex; align-items: center; gap: 10px; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); border-radius: 12px; padding: 12px 16px; font-size: 14px; font-weight: 600; width: 380px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Added Ceramic Pour-Over Set</div>
+<div role="alert" style="display: flex; align-items: center; gap: 10px; background: oklch(94% 0.04 25); color: oklch(50% 0.19 25); border-radius: 12px; padding: 12px 16px; font-size: 14px; font-weight: 600; width: 380px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>No product with barcode 4006381333931</div>
+<div role="alert" style="display: flex; align-items: center; gap: 10px; background: oklch(95% 0.05 85); color: oklch(42% 0.1 70); border-radius: 12px; padding: 12px 16px; font-size: 14px; font-weight: 600; width: 340px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4L12 22l-8.6-8.6V3h10.4z"/><circle cx="8" cy="8" r="1.5"/></svg>Only 3 Desk Plant left in stock</div>
+</div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

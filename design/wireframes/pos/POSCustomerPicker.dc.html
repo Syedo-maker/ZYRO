@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Choose customer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: oklch(19% 0.02 265); }
+h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+button, input, select { font-family: inherit; }
+a { color: oklch(52% 0.17 265); text-decoration: none; }
+a:hover { color: oklch(46% 0.17 265); }
+</style>
+</helmet>
+<div style="width: 520px; height: 680px; background: white; color: oklch(19% 0.02 265); font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+<div style="padding: 24px; display: flex; flex-direction: column; gap: 16px; height: 100%; background: white;">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<h2 style="font-size: 18px; font-weight: 700;">Customer for this sale</h2>
+<button type="button" aria-label="Close" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: transparent; color: oklch(52% 0.17 265); border: none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+</div>
+<div style="flex-grow: 1;">
+<label for="cs" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Search customers</label>
+<div style="position: relative; display: flex; align-items: center;">
+<span style="position: absolute; left: 14px; color: oklch(49% 0.015 265); display: flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+<input id="cs" type="text" value="" placeholder="Name, email or phone" readonly style="width: 100%; height: 44px; padding: 0 14px 0 42px; border-radius: 10px; font-size: 14px; color: oklch(19% 0.02 265); background: white; border: 2px solid oklch(52% 0.17 265);">
+</div>
+</div>
+<ul style="list-style: none; margin: 0; padding: 0; border: 1px solid oklch(91% 0.006 260); border-radius: 12px; overflow: hidden;">
+<li style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: oklch(94% 0.03 265); border-bottom: 1px solid oklch(91% 0.006 260);">
+<span style="color: oklch(52% 0.17 265); display: flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+<div style="flex-grow: 1;"><div style="font-size: 14px; font-weight: 600;">Walk-in customer</div><div style="font-size: 12px; color: oklch(40% 0.02 265);">No customer record. Fastest option.</div></div>
+</li>
+<li style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid oklch(91% 0.006 260);"><span style="width: 32px; height: 32px; border-radius: 50%; background: oklch(95% 0.004 260); display: flex; align-items: center; justify-content: center; color: oklch(40% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><div style="flex-grow: 1;"><div style="font-size: 14px; font-weight: 600;">Jordan Parker</div><div style="font-size: 12px; color: oklch(40% 0.02 265);">jordan.parker@example.com</div></div><span style="font-size: 12px; color: oklch(49% 0.015 265);">4 orders</span></li><li style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid oklch(91% 0.006 260);"><span style="width: 32px; height: 32px; border-radius: 50%; background: oklch(95% 0.004 260); display: flex; align-items: center; justify-content: center; color: oklch(40% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><div style="flex-grow: 1;"><div style="font-size: 14px; font-weight: 600;">Riley Okafor</div><div style="font-size: 12px; color: oklch(40% 0.02 265);">+1 555 0142</div></div><span style="font-size: 12px; color: oklch(49% 0.015 265);">2 orders</span></li><li style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid oklch(91% 0.006 260);"><span style="width: 32px; height: 32px; border-radius: 50%; background: oklch(95% 0.004 260); display: flex; align-items: center; justify-content: center; color: oklch(40% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><div style="flex-grow: 1;"><div style="font-size: 14px; font-weight: 600;">Sam Nakamura</div><div style="font-size: 12px; color: oklch(40% 0.02 265);">sam.n@example.com</div></div><span style="font-size: 12px; color: oklch(49% 0.015 265);">1 order</span></li>
+</ul>
+<div style="border-top: 1px solid oklch(91% 0.006 260); padding-top: 14px;">
+<div style="font-size: 12px; font-weight: 700; color: oklch(40% 0.02 265); letter-spacing: 0.05em; margin-bottom: 10px;">ADD A NEW CUSTOMER</div>
+<div style="display: flex; gap: 10px;"><div style="flex-grow: 1;">
+<label for="cn" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Name</label>
+<div style="position: relative; display: flex; align-items: center;">
+
+<input id="cn" type="text" value="" placeholder="Full name" readonly style="width: 100%; height: 44px; padding: 0 14px 0 14px; border-radius: 10px; font-size: 14px; color: oklch(19% 0.02 265); background: white; border: 1px solid oklch(82% 0.008 260);">
+</div>
+</div><div style="flex-grow: 1;">
+<label for="cp" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Phone or email</label>
+<div style="position: relative; display: flex; align-items: center;">
+
+<input id="cp" type="text" value="" placeholder="Optional" readonly style="width: 100%; height: 44px; padding: 0 14px 0 14px; border-radius: 10px; font-size: 14px; color: oklch(19% 0.02 265); background: white; border: 1px solid oklch(82% 0.008 260);">
+</div>
+</div></div>
+</div>
+<div style="flex-grow: 1;"></div>
+<div style="display: flex; gap: 10px;"><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; flex-grow: 1; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">Cancel</button><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; flex-grow: 1; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: oklch(52% 0.17 265); color: white; border: none;">Use this customer</button></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":520,"height":680}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

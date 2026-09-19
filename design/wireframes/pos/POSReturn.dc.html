@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Return items</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: oklch(19% 0.02 265); }
+h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+button, input, select { font-family: inherit; }
+a { color: oklch(52% 0.17 265); text-decoration: none; }
+a:hover { color: oklch(46% 0.17 265); }
+</style>
+</helmet>
+<div style="width: 600px; height: 780px; background: white; color: oklch(19% 0.02 265); font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+<div style="padding: 24px; display: flex; flex-direction: column; gap: 14px; height: 100%; background: white;">
+<div style="display: flex; align-items: center; justify-content: space-between;"><h2 style="font-size: 18px; font-weight: 700;">Return items from sale #1043</h2><button type="button" aria-label="Close" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: transparent; color: oklch(52% 0.17 265); border: none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+<fieldset style="border: 1px solid oklch(91% 0.006 260); border-radius: 12px; padding: 4px 16px; margin: 0;">
+<legend style="font-size: 12px; font-weight: 700; color: oklch(40% 0.02 265); padding: 0 6px; letter-spacing: 0.05em;">WHAT IS COMING BACK</legend>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid oklch(91% 0.006 260);">
+<input id="r0" type="checkbox"  style="width: 22px; height: 22px; accent-color: oklch(52% 0.17 265);">
+<label for="r0" style="flex-grow: 1; font-size: 14px; font-weight: 600;">Wireless Earbuds Pro<span style="display: block; font-size: 12px; font-weight: 400; color: oklch(49% 0.015 265);">Sold 1</span></label>
+<div style="display: flex; align-items: center; height: 40px; border: 1px solid oklch(82% 0.008 260); border-radius: 10px; opacity: 0.45;"><span style="width: 36px; text-align: center; color: oklch(19% 0.02 265);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg></span><span style="width: 36px; text-align: center; font-weight: 600; border-left: 1px solid oklch(91% 0.006 260); border-right: 1px solid oklch(91% 0.006 260); height: 100%; display: flex; align-items: center; justify-content: center;">0</span><span style="width: 36px; text-align: center; color: oklch(19% 0.02 265);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span></div>
+</div><div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid oklch(91% 0.006 260);">
+<input id="r1" type="checkbox" checked style="width: 22px; height: 22px; accent-color: oklch(52% 0.17 265);">
+<label for="r1" style="flex-grow: 1; font-size: 14px; font-weight: 600;">Ceramic Pour-Over Set<span style="display: block; font-size: 12px; font-weight: 400; color: oklch(49% 0.015 265);">Sold 1</span></label>
+<div style="display: flex; align-items: center; height: 40px; border: 1px solid oklch(82% 0.008 260); border-radius: 10px; "><span style="width: 36px; text-align: center; color: oklch(19% 0.02 265);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg></span><span style="width: 36px; text-align: center; font-weight: 600; border-left: 1px solid oklch(91% 0.006 260); border-right: 1px solid oklch(91% 0.006 260); height: 100%; display: flex; align-items: center; justify-content: center;">1</span><span style="width: 36px; text-align: center; color: oklch(19% 0.02 265);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span></div>
+</div><div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; ">
+<input id="r2" type="checkbox"  style="width: 22px; height: 22px; accent-color: oklch(52% 0.17 265);">
+<label for="r2" style="flex-grow: 1; font-size: 14px; font-weight: 600;">Desk Plant, Pothos<span style="display: block; font-size: 12px; font-weight: 400; color: oklch(49% 0.015 265);">Sold 2</span></label>
+<div style="display: flex; align-items: center; height: 40px; border: 1px solid oklch(82% 0.008 260); border-radius: 10px; opacity: 0.45;"><span style="width: 36px; text-align: center; color: oklch(19% 0.02 265);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg></span><span style="width: 36px; text-align: center; font-weight: 600; border-left: 1px solid oklch(91% 0.006 260); border-right: 1px solid oklch(91% 0.006 260); height: 100%; display: flex; align-items: center; justify-content: center;">0</span><span style="width: 36px; text-align: center; color: oklch(19% 0.02 265);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span></div>
+</div>
+</fieldset>
+<div style="width: 552px;">
+<label for="rr" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Reason</label>
+<div style="position: relative; display: flex; align-items: center;">
+<select id="rr" style="width: 100%; height: 44px; padding: 0 36px 0 14px; border-radius: 10px; font-size: 14px; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260); appearance: none;"><option>Customer changed their mind</option></select>
+<span style="position: absolute; right: 12px; display: flex; color: oklch(40% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+</div>
+</div>
+<label style="display: flex; align-items: center; gap: 10px; font-size: 14px;"><input type="checkbox" checked style="width: 22px; height: 22px; accent-color: oklch(52% 0.17 265);"> Put the returned items back in stock</label>
+<div style="background: oklch(95% 0.004 260); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: oklch(40% 0.02 265);"><span>Item</span><span style="font-weight: 600; color: oklch(19% 0.02 265);">$38.00</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: oklch(40% 0.02 265);"><span>Discount share (10%)</span><span style="font-weight: 600; color: oklch(42% 0.12 150);">−$3.80</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: oklch(40% 0.02 265);"><span>Tax returned</span><span style="font-weight: 600; color: oklch(19% 0.02 265);">$2.74</span></div>
+<div style="height: 1px; background: oklch(82% 0.008 260); margin: 4px 0;"></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 22px; font-weight: 700;"><span>Refund total</span><span style="">$36.94</span></div>
+</div>
+<div style="font-size: 13px; color: oklch(40% 0.02 265); line-height: 1.5;">Refunded to the original payment: $36.94 to Card. Cash refunds are recorded here; hand the cash to the customer.</div>
+<div style="flex-grow: 1;"></div>
+<div style="display: flex; gap: 10px;"><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; flex-grow: 1; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">Cancel</button><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; flex-grow: 1; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer; background: oklch(50% 0.19 25); color: white; border: none;">Refund $36.94</button></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":600,"height":780}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

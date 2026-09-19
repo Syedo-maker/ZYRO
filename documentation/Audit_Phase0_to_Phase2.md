@@ -67,3 +67,7 @@ The Phase 1 browser test failed now and then (about 1 run in 6), always stuck on
 - **Cosmetic contract warnings remain** (no license field, and 4XX responses not declared on some operations). They do not affect correctness.
 - **Every anonymous visit logs one harmless 401** in the browser network panel (the silent login restore finds no cookie).
 - **The published Claude Design canvas** was not republished after the em-dash edits to the wireframe source files, so it may still show the old dashes.
+
+## Color contrast (found while designing the POS screens)
+
+The wireframe colors, carried into the built app, fail the 4.5:1 minimum for small text. Measured: muted grey text 3.5:1 on white, white text on the brand blue 4.4:1, the amber "Processing" badge text 2.2:1, and success and danger badge text also below 4.5:1. The tokens in frontend/src/index.css were darkened (same hues) and every value now passes 4.5:1 on the surface it is used on. Colors are used only through tokens as text or border colors, so this one edit corrects all usages. The Phase 0 wireframe canvas was not changed. Browser suites (phase 1, phase 1 security, phase 2 checkout) still pass.

@@ -1,0 +1,128 @@
+{
+  "v": 3,
+  "attachments": {},
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-09-19T09:22:16.658Z"
+  },
+  "title": "ZYRO POS Wireframes",
+  "launch": {
+    "view": "canvas",
+    "page": "pos-screens"
+  },
+  "pages": [
+    {
+      "id": "pos-screens",
+      "name": "POS Screens"
+    },
+    {
+      "id": "pos-flow",
+      "name": "Flow & Components"
+    }
+  ],
+  "boards": {
+    "Main.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Register",
+      "page": "pos-screens"
+    },
+    "POSLogin.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Sign in",
+      "page": "pos-screens"
+    },
+    "POSHistory.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Sales history",
+      "page": "pos-screens"
+    },
+    "POSDailySummary.dc.html": {
+      "x": 4080,
+      "y": 0,
+      "w": 1280,
+      "h": 840,
+      "title": "Daily summary",
+      "page": "pos-screens"
+    },
+    "POSCustomerPicker.dc.html": {
+      "x": 0,
+      "y": 960,
+      "w": 520,
+      "h": 680,
+      "title": "Customer picker (opens over the register)",
+      "page": "pos-screens"
+    },
+    "POSPayment.dc.html": {
+      "x": 600,
+      "y": 960,
+      "w": 720,
+      "h": 780,
+      "title": "Payment (opens over the register)",
+      "page": "pos-screens"
+    },
+    "POSSaleComplete.dc.html": {
+      "x": 1400,
+      "y": 960,
+      "w": 720,
+      "h": 780,
+      "title": "Sale complete",
+      "page": "pos-screens"
+    },
+    "POSReceipt.dc.html": {
+      "x": 2200,
+      "y": 960,
+      "w": 420,
+      "h": 820,
+      "title": "Receipt",
+      "page": "pos-screens"
+    },
+    "POSReturn.dc.html": {
+      "x": 2700,
+      "y": 960,
+      "w": 600,
+      "h": 780,
+      "title": "Return items (opens over sales history)",
+      "page": "pos-screens"
+    },
+    "POSFlow.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1400,
+      "h": 760,
+      "title": "POS flow",
+      "page": "pos-flow"
+    },
+    "POSComponents.dc.html": {
+      "x": 1480,
+      "y": 0,
+      "w": 1200,
+      "h": 1040,
+      "title": "POS components",
+      "page": "pos-flow"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "POSLogin.dc.html",
+    "POSHistory.dc.html",
+    "POSDailySummary.dc.html",
+    "POSCustomerPicker.dc.html",
+    "POSPayment.dc.html",
+    "POSSaleComplete.dc.html",
+    "POSReceipt.dc.html",
+    "POSReturn.dc.html",
+    "POSFlow.dc.html",
+    "POSComponents.dc.html"
+  ],
+  "notes": {},
+  "designSystems": []
+}

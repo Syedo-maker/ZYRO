@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>POS sign in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: oklch(19% 0.02 265); }
+h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+button, input, select { font-family: inherit; }
+a { color: oklch(52% 0.17 265); text-decoration: none; }
+a:hover { color: oklch(46% 0.17 265); }
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; background: oklch(98% 0.005 260); color: oklch(19% 0.02 265); font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+<div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">
+<main style="width: 440px; background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 16px; padding: 36px; display: flex; flex-direction: column; gap: 22px;">
+<div>
+<div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 26px; font-weight: 700;">ZYRO <span style="color: oklch(52% 0.17 265);">POS</span></div>
+<h1 style="font-size: 18px; font-weight: 600; margin-top: 18px;">Sign in to start selling</h1>
+<p style="margin: 6px 0 0; font-size: 14px; color: oklch(40% 0.02 265); line-height: 1.5;">Use your ZYRO staff account. Only staff with the POS permission can open the register.</p>
+</div>
+<div style="width: 368px;">
+<label for="loc" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Location</label>
+<div style="position: relative; display: flex; align-items: center;">
+<select id="loc" style="width: 100%; height: 44px; padding: 0 36px 0 14px; border-radius: 10px; font-size: 14px; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260); appearance: none;"><option>Main Store</option></select>
+<span style="position: absolute; right: 12px; display: flex; color: oklch(40% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+</div>
+</div>
+<div style="flex-grow: 1;">
+<label for="email" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Email</label>
+<div style="position: relative; display: flex; align-items: center;">
+
+<input id="email" type="text" value="riley@auroragoods.example" placeholder="" readonly style="width: 100%; height: 44px; padding: 0 14px 0 14px; border-radius: 10px; font-size: 14px; color: oklch(19% 0.02 265); background: white; border: 2px solid oklch(52% 0.17 265);">
+</div>
+</div>
+<div style="flex-grow: 1;">
+<label for="pw" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Password</label>
+<div style="position: relative; display: flex; align-items: center;">
+
+<input id="pw" type="password" value="••••••••••" placeholder="" readonly style="width: 100%; height: 44px; padding: 0 14px 0 14px; border-radius: 10px; font-size: 14px; color: oklch(19% 0.02 265); background: white; border: 1px solid oklch(82% 0.008 260);">
+</div>
+</div>
+<button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; background: oklch(52% 0.17 265); color: white; border: none;">Open register</button>
+<div style="background: oklch(95% 0.05 85); color: oklch(42% 0.1 70); border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.45; font-weight: 500;">Shown when a signed-in user lacks the POS permission: "This account cannot sell in store. Ask the store owner to give you the POS permission."</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

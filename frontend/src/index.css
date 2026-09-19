@@ -4,9 +4,12 @@
 @import "tailwindcss";
 
 /*
- * Design tokens copied from design/wireframes/ComponentInventory.dc.html (Phase 0
- * Module 2) so the built app matches the approved wireframes exactly rather than
- * drifting to different values during implementation.
+ * Design tokens from design/wireframes/ComponentInventory.dc.html (Phase 0 Module 2), with
+ * one deliberate change: the text and accent colors are darker than the wireframes' values
+ * because those measured below the 4.5:1 contrast needed to read small text (muted grey
+ * 3.5:1, white on the brand blue 4.4:1, the amber "Processing" badge 2.2:1). Every value
+ * below passes 4.5:1 on the surface it is used on (documentation/Audit_Phase0_to_Phase2.md).
+ * Hue and family are unchanged, so the look is the same, just readable.
  */
 @theme {
   --font-display: "Space Grotesk", system-ui, sans-serif;
@@ -17,20 +20,20 @@
   --color-border: oklch(91% 0.006 260);
   --color-text: oklch(19% 0.02 265);
   --color-text-secondary: oklch(46% 0.02 265);
-  --color-text-muted: oklch(63% 0.015 265);
+  --color-text-muted: oklch(49% 0.015 265);
 
-  --color-brand: oklch(58% 0.16 265);
-  --color-brand-hover: oklch(50% 0.17 265);
+  --color-brand: oklch(52% 0.17 265);
+  --color-brand-hover: oklch(46% 0.17 265);
   --color-brand-soft: oklch(94% 0.03 265);
 
-  --color-ai: oklch(58% 0.14 200);
+  --color-ai: oklch(45% 0.12 200);
   --color-ai-soft: oklch(94% 0.03 200);
 
-  --color-success: oklch(58% 0.13 150);
+  --color-success: oklch(42% 0.12 150);
   --color-success-soft: oklch(94% 0.03 150);
-  --color-warning: oklch(72% 0.15 80);
+  --color-warning: oklch(42% 0.1 80);
   --color-warning-soft: oklch(95% 0.04 80);
-  --color-danger: oklch(58% 0.19 25);
+  --color-danger: oklch(50% 0.19 25);
   --color-danger-soft: oklch(94% 0.04 25);
 }
 

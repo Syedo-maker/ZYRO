@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>POS sales history</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: oklch(19% 0.02 265); }
+h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+button, input, select { font-family: inherit; }
+a { color: oklch(52% 0.17 265); text-decoration: none; }
+a:hover { color: oklch(46% 0.17 265); }
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; background: oklch(98% 0.005 260); color: oklch(19% 0.02 265); font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+<header style="height: 68px; flex-shrink: 0; background: white; border-bottom: 1px solid oklch(91% 0.006 260); display: flex; align-items: center; gap: 16px; padding: 0 20px;">
+<div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 20px; font-weight: 700;">ZYRO <span style="color: oklch(52% 0.17 265);">POS</span></div>
+<span style="background: oklch(95% 0.004 260); color: oklch(40% 0.02 265); font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px;">Main Store</span>
+
+<div style="flex-grow: 1;"></div>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>Held sales (2)</button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: oklch(94% 0.03 265); color: oklch(52% 0.17 265); border: 1px solid oklch(52% 0.17 265);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Sales history</button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Daily summary</button>
+<div style="display: flex; align-items: center; gap: 10px; padding-left: 12px; border-left: 1px solid oklch(91% 0.006 260);">
+<span style="width: 36px; height: 36px; border-radius: 50%; background: oklch(94% 0.03 265); color: oklch(52% 0.17 265); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">RC</span>
+<div style="line-height: 1.25;"><div style="font-size: 13px; font-weight: 600;">Riley Chen</div><div style="font-size: 12px; color: oklch(49% 0.015 265);">Cashier</div></div>
+<button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 10px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: transparent; color: oklch(52% 0.17 265); border: none;">Sign out</button>
+</div>
+</header>
+<div style="flex-grow: 1; display: flex; min-height: 0;">
+<main style="flex-grow: 1; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+<div style="display: flex; align-items: flex-end; justify-content: space-between;"><h1 style="font-size: 22px; font-weight: 700;">Sales history</h1><div style="width: 320px;"><div style="flex-grow: 1;">
+<label for="hs" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Find a sale</label>
+<div style="position: relative; display: flex; align-items: center;">
+<span style="position: absolute; left: 14px; color: oklch(49% 0.015 265); display: flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+<input id="hs" type="text" value="" placeholder="Sale number or customer" readonly style="width: 100%; height: 44px; padding: 0 14px 0 42px; border-radius: 10px; font-size: 14px; color: oklch(19% 0.02 265); background: white; border: 1px solid oklch(82% 0.008 260);">
+</div>
+</div></div></div>
+<div style="display: flex; gap: 12px; align-items: flex-end;">
+<div style="width: 180px;">
+<label for="hd" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Date</label>
+<div style="position: relative; display: flex; align-items: center;">
+<select id="hd" style="width: 100%; height: 44px; padding: 0 36px 0 14px; border-radius: 10px; font-size: 14px; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260); appearance: none;"><option>Today, Sep 19</option></select>
+<span style="position: absolute; right: 12px; display: flex; color: oklch(40% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+</div>
+</div><div style="width: 180px;">
+<label for="hc" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Cashier</label>
+<div style="position: relative; display: flex; align-items: center;">
+<select id="hc" style="width: 100%; height: 44px; padding: 0 36px 0 14px; border-radius: 10px; font-size: 14px; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260); appearance: none;"><option>All cashiers</option></select>
+<span style="position: absolute; right: 12px; display: flex; color: oklch(40% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+</div>
+</div><div style="width: 180px;">
+<label for="hp" style="display: block; font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265); margin-bottom: 6px;">Payment</label>
+<div style="position: relative; display: flex; align-items: center;">
+<select id="hp" style="width: 100%; height: 44px; padding: 0 36px 0 14px; border-radius: 10px; font-size: 14px; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260); appearance: none;"><option>All payments</option></select>
+<span style="position: absolute; right: 12px; display: flex; color: oklch(40% 0.02 265);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+</div>
+</div>
+<div role="tablist" aria-label="Status" style="display: flex; gap: 6px; margin-left: auto;">
+<button type="button" role="tab" aria-selected="true" style="height: 44px; padding: 0 16px; border-radius: 10px; font-size: 13px; font-weight: 600; background: oklch(94% 0.03 265); color: oklch(52% 0.17 265); border: 1px solid oklch(52% 0.17 265);">All 18</button><button type="button" role="tab" aria-selected="false" style="height: 44px; padding: 0 16px; border-radius: 10px; font-size: 13px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">Completed 16</button><button type="button" role="tab" aria-selected="false" style="height: 44px; padding: 0 16px; border-radius: 10px; font-size: 13px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">Refunded 2</button>
+</div>
+</div>
+<div style="background: white; border: 1px solid oklch(91% 0.006 260); border-radius: 14px; overflow: hidden;">
+<div style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; padding: 12px 18px; font-size: 11px; font-weight: 700; color: oklch(49% 0.015 265); letter-spacing: 0.05em; border-bottom: 1px solid oklch(91% 0.006 260);"><span>SALE</span><span>TIME</span><span>CASHIER</span><span>CUSTOMER</span><span>ITEMS</span><span>TOTAL</span><span>PAID BY</span><span>STATUS</span></div>
+<button type="button" style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 0 18px; height: 52px; background: oklch(94% 0.03 265); border: none; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 13px; color: oklch(19% 0.02 265);"><span style="font-weight: 700; color: oklch(52% 0.17 265);">#1043</span><span style="color: oklch(40% 0.02 265);">2:41 PM</span><span>Riley Chen</span><span>Walk-in</span><span>3</span><span style="font-weight: 600;">$121.50</span><span style="color: oklch(40% 0.02 265);">Card + Cash</span><span><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span></span></button><button type="button" style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 0 18px; height: 52px; background: white; border: none; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 13px; color: oklch(19% 0.02 265);"><span style="font-weight: 700; color: oklch(52% 0.17 265);">#1042</span><span style="color: oklch(40% 0.02 265);">2:28 PM</span><span>Sam Okafor</span><span>Jordan Parker</span><span>1</span><span style="font-weight: 600;">$49.00</span><span style="color: oklch(40% 0.02 265);">Card</span><span><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span></span></button><button type="button" style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 0 18px; height: 52px; background: white; border: none; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 13px; color: oklch(19% 0.02 265);"><span style="font-weight: 700; color: oklch(52% 0.17 265);">#1041</span><span style="color: oklch(40% 0.02 265);">2:05 PM</span><span>Riley Chen</span><span>Walk-in</span><span>2</span><span style="font-weight: 600;">$28.50</span><span style="color: oklch(40% 0.02 265);">Cash</span><span><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span></span></button><button type="button" style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 0 18px; height: 52px; background: white; border: none; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 13px; color: oklch(19% 0.02 265);"><span style="font-weight: 700; color: oklch(52% 0.17 265);">#1040</span><span style="color: oklch(40% 0.02 265);">1:47 PM</span><span>Sam Okafor</span><span>Walk-in</span><span>4</span><span style="font-weight: 600;">$96.20</span><span style="color: oklch(40% 0.02 265);">Card</span><span><span style="display: inline-block; background: oklch(94% 0.004 260); color: oklch(40% 0.02 265); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">REFUNDED</span></span></button><button type="button" style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 0 18px; height: 52px; background: white; border: none; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 13px; color: oklch(19% 0.02 265);"><span style="font-weight: 700; color: oklch(52% 0.17 265);">#1039</span><span style="color: oklch(40% 0.02 265);">1:30 PM</span><span>Riley Chen</span><span>Riley Okafor</span><span>1</span><span style="font-weight: 600;">$58.00</span><span style="color: oklch(40% 0.02 265);">Cash</span><span><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span></span></button><button type="button" style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 0 18px; height: 52px; background: white; border: none; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 13px; color: oklch(19% 0.02 265);"><span style="font-weight: 700; color: oklch(52% 0.17 265);">#1038</span><span style="color: oklch(40% 0.02 265);">12:52 PM</span><span>Riley Chen</span><span>Walk-in</span><span>5</span><span style="font-weight: 600;">$143.80</span><span style="color: oklch(40% 0.02 265);">Card + Cash</span><span><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span></span></button><button type="button" style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 0 18px; height: 52px; background: white; border: none; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 13px; color: oklch(19% 0.02 265);"><span style="font-weight: 700; color: oklch(52% 0.17 265);">#1037</span><span style="color: oklch(40% 0.02 265);">12:20 PM</span><span>Sam Okafor</span><span>Walk-in</span><span>1</span><span style="font-weight: 600;">$12.00</span><span style="color: oklch(40% 0.02 265);">Cash</span><span><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span></span></button><button type="button" style="display: grid; grid-template-columns: 0.7fr 0.8fr 1fr 1.1fr 0.5fr 0.8fr 1fr 1fr; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 0 18px; height: 52px; background: white; border: none; border-bottom: 1px solid oklch(91% 0.006 260); font-size: 13px; color: oklch(19% 0.02 265);"><span style="font-weight: 700; color: oklch(52% 0.17 265);">#1036</span><span style="color: oklch(40% 0.02 265);">11:48 AM</span><span>Riley Chen</span><span>Sam Nakamura</span><span>2</span><span style="font-weight: 600;">$61.00</span><span style="color: oklch(40% 0.02 265);">Card</span><span><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span></span></button>
+</div>
+</main>
+<aside aria-label="Sale details" style="width: 400px; flex-shrink: 0; background: white; border-left: 1px solid oklch(91% 0.006 260); padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+<div style="display: flex; align-items: center; justify-content: space-between;"><h2 style="font-size: 17px; font-weight: 700;">Sale #1043</h2><span style="display: inline-block; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em;">COMPLETED</span></div>
+<div style="font-size: 12px; color: oklch(40% 0.02 265);">Sep 19, 2026 at 2:41 PM · Rung up by Riley Chen · Walk-in customer</div>
+<div style="height: 1px; background: oklch(91% 0.006 260);"></div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+<li style="display: flex; justify-content: space-between;"><span>Wireless Earbuds Pro <span style="color: oklch(49% 0.015 265);">× 1</span></span><span style="font-weight: 600;">$49.00</span></li><li style="display: flex; justify-content: space-between;"><span>Ceramic Pour-Over Set <span style="color: oklch(49% 0.015 265);">× 1</span></span><span style="font-weight: 600;">$38.00</span></li><li style="display: flex; justify-content: space-between;"><span>Desk Plant, Pothos <span style="color: oklch(49% 0.015 265);">× 2</span></span><span style="font-weight: 600;">$38.00</span></li>
+</ul>
+<div style="height: 1px; background: oklch(91% 0.006 260);"></div>
+<div style="display: flex; flex-direction: column; gap: 6px;"><div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: oklch(40% 0.02 265);"><span>Subtotal</span><span style="font-weight: 600; color: oklch(19% 0.02 265);">$125.00</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: oklch(40% 0.02 265);"><span>Discount (10%)</span><span style="font-weight: 600; color: oklch(42% 0.12 150);">−$12.50</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: oklch(40% 0.02 265);"><span>Tax (8%)</span><span style="font-weight: 600; color: oklch(19% 0.02 265);">$9.00</span></div><div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 22px; font-weight: 700;"><span>Total</span><span style="">$121.50</span></div></div>
+<div style="font-size: 13px; color: oklch(40% 0.02 265);">Paid by Card $60.00, Cash $61.50 (change $8.50)</div>
+<div style="flex-grow: 1;"></div>
+<button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/></svg>Reprint receipt</button>
+<button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: white; color: oklch(50% 0.19 25); border: 1px solid oklch(50% 0.19 25);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>Return items</button>
+<div style="font-size: 12px; color: oklch(49% 0.015 265); line-height: 1.45;">Returns need the Refunds permission. A sale can only be returned once per item; refunded sales show no return button.</div>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

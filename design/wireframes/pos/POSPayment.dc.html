@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>POS payment</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: oklch(19% 0.02 265); }
+h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+button, input, select { font-family: inherit; }
+a { color: oklch(52% 0.17 265); text-decoration: none; }
+a:hover { color: oklch(46% 0.17 265); }
+</style>
+</helmet>
+<div style="width: 720px; height: 780px; background: white; color: oklch(19% 0.02 265); font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+<div style="padding: 24px; display: flex; flex-direction: column; gap: 16px; height: 100%; background: white;">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<h2 style="font-size: 18px; font-weight: 700;">Payment for sale #1043</h2>
+<button type="button" aria-label="Close payment" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: transparent; color: oklch(52% 0.17 265); border: none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+</div>
+<div style="display: flex; gap: 12px;">
+<div style="flex: 1; background: oklch(95% 0.004 260); border-radius: 12px; padding: 14px 16px;"><div style="font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265);">Total due</div><div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 28px; font-weight: 700;">$121.50</div></div>
+<div style="flex: 1; background: oklch(94% 0.03 150); border-radius: 12px; padding: 14px 16px;"><div style="font-size: 12px; font-weight: 600; color: oklch(42% 0.12 150);">Paid so far</div><div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 28px; font-weight: 700; color: oklch(42% 0.12 150);">$60.00</div></div>
+<div style="flex: 1; background: oklch(95% 0.05 85); border-radius: 12px; padding: 14px 16px;"><div style="font-size: 12px; font-weight: 600; color: oklch(42% 0.1 70);">Remaining</div><div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 28px; font-weight: 700; color: oklch(42% 0.1 70);">$61.50</div></div>
+</div>
+<div style="border: 1px solid oklch(91% 0.006 260); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 14px;">
+<span style="color: oklch(42% 0.12 150); display: flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span><span style="font-weight: 600;">Card</span><span style="color: oklch(40% 0.02 265); flex-grow: 1;">Approved on the card terminal</span><span style="font-weight: 700;">$60.00</span><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 8px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: transparent; color: oklch(52% 0.17 265); border: none;">Remove</button>
+</div>
+<div role="tablist" aria-label="Payment method" style="display: flex; gap: 8px;">
+<button type="button" role="tab" aria-selected="true" style="flex: 1; height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-size: 15px; font-weight: 600; background: oklch(94% 0.03 265); color: oklch(52% 0.17 265); border: 2px solid oklch(52% 0.17 265);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Cash</button><button type="button" role="tab" aria-selected="false" style="flex: 1; height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-size: 15px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>Card</button><button type="button" role="tab" aria-selected="false" style="flex: 1; height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-size: 15px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4L12 22l-8.6-8.6V3h10.4z"/><circle cx="8" cy="8" r="1.5"/></svg>Other</button>
+</div>
+<div style="display: flex; gap: 16px; flex-grow: 1; min-height: 0;">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
+<div style="font-size: 12px; font-weight: 600; color: oklch(40% 0.02 265);">Cash received</div>
+<div style="height: 64px; border: 2px solid oklch(52% 0.17 265); border-radius: 12px; display: flex; align-items: center; justify-content: flex-end; padding: 0 16px; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 30px; font-weight: 700;">$70.00</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap;"><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">Exact $61.50</button><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">$65</button><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; background: oklch(94% 0.03 265); color: oklch(52% 0.17 265); border: 1px solid oklch(52% 0.17 265);">$70</button><button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 600; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">$80</button></div>
+<div style="background: oklch(94% 0.03 150); border-radius: 12px; padding: 12px 16px; margin-top: 4px;"><div style="font-size: 12px; font-weight: 600; color: oklch(42% 0.12 150);">Change due</div><div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 28px; font-weight: 700; color: oklch(42% 0.12 150);">$8.50</div></div>
+</div>
+<div style="width: 300px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-content: start;">
+<button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">1</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">2</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">3</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">4</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">5</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">6</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">7</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">8</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">9</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">0</button><button type="button" style="height: 60px; border-radius: 12px; font-size: 22px; font-weight: 600; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265);">00</button>
+<button type="button" aria-label="Delete last digit" style="height: 60px; border-radius: 12px; background: white; border: 1px solid oklch(82% 0.008 260); color: oklch(19% 0.02 265); display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M14 9l4 6M18 9l-4 6"/></svg></button>
+</div>
+</div>
+<button type="button" style="height: 64px; border-radius: 14px; background: oklch(52% 0.17 265); color: white; border: none; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 20px; font-weight: 700;">Complete sale</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":780}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -34,7 +34,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Frontend: Storefront Cart, Checkout, Order Confirmation (`Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`) + Admin Orders & Shipping UI (`AdminOrders.dc.html`), verified in real Chromium with Stripe's hosted page stood in; includes a minimal placeholder product grid replaced in Phase 3; see `documentation/Phase2_Frontend_Storefront_And_Admin_Orders.md`
 
 **Phase 2.5: Point of Sale (POS)** *(new phase, added by the Commerce + POS amendment; numbered 2.5 so existing phase numbers stay stable)*
-- [ ] Wireframes: POS screen, receipt, daily summary (none exist yet; Phase 0 wireframes are online-store only)
+- [x] Wireframes: POS screen, receipt, daily summary (design/wireframes/pos, 11 screens; see Phase2_5_POS_Wireframes.md)
 - [ ] Module 8: POS backend (cashier login, product/barcode lookup, POS checkout with cash and card payments, receipt data, transaction history, daily sales summary)
 - [ ] Frontend: POS register screen, receipt view, transaction history
 - [ ] Returns/refunds for POS orders (stock returns to inventory)

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sale complete</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: oklch(19% 0.02 265); }
+h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+button, input, select { font-family: inherit; }
+a { color: oklch(52% 0.17 265); text-decoration: none; }
+a:hover { color: oklch(46% 0.17 265); }
+</style>
+</helmet>
+<div style="width: 720px; height: 780px; background: white; color: oklch(19% 0.02 265); font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden;">
+
+<div style="height: 100%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 40px; text-align: center;">
+<div style="width: 72px; height: 72px; border-radius: 50%; background: oklch(94% 0.03 150); color: oklch(42% 0.12 150); display: flex; align-items: center; justify-content: center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></div>
+<h1 style="font-size: 26px; font-weight: 700;">Sale complete</h1>
+<div style="font-size: 14px; color: oklch(40% 0.02 265);">Sale #1043 · Sep 19, 2026 · 2:41 PM</div>
+<div style="background: oklch(94% 0.03 150); border-radius: 16px; padding: 18px 44px;"><div style="font-size: 13px; font-weight: 600; color: oklch(42% 0.12 150);">Give the customer this change</div><div style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 46px; font-weight: 700; color: oklch(42% 0.12 150);">$8.50</div></div>
+<dl style="width: 420px; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; text-align: left;">
+<div style="display: flex; justify-content: space-between;"><dt style="color: oklch(40% 0.02 265);">Total</dt><dd style="margin: 0; font-weight: 700;">$121.50</dd></div>
+<div style="display: flex; justify-content: space-between;"><dt style="color: oklch(40% 0.02 265);">Card</dt><dd style="margin: 0; font-weight: 600;">$60.00</dd></div>
+<div style="display: flex; justify-content: space-between;"><dt style="color: oklch(40% 0.02 265);">Cash (received $70.00)</dt><dd style="margin: 0; font-weight: 600;">$61.50</dd></div>
+</dl>
+<div style="display: flex; gap: 10px; width: 420px; margin-top: 8px;"><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; flex-grow: 1; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: oklch(52% 0.17 265); color: white; border: none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/></svg>Print receipt</button><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; flex-grow: 1; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Email receipt</button></div>
+<div style="width: 420px;"><button type="button" style="display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; height: 56px; flex-grow: 1; padding: 0 0px; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; background: white; color: oklch(19% 0.02 265); border: 1px solid oklch(82% 0.008 260);">New sale</button></div>
+<div style="font-size: 12px; color: oklch(49% 0.015 265);">Stock was updated as soon as the sale completed.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":780}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
