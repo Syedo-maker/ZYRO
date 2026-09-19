@@ -5,6 +5,7 @@
  * code path with a test secret. Creates throwaway stores and removes them after.
  * Usage: npx tsx scripts/verify-checkout.ts   (Redis must be running on REDIS_URL)
  */
+process.env.RATE_LIMIT_ENABLED = "false"; // these tests register many users quickly; verify-security.ts covers the limits
 process.env.STRIPE_SECRET_KEY = "sk_test_verifyonly";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_verifyonly";
 

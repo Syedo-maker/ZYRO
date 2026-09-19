@@ -1,7 +1,9 @@
 import express, { ErrorRequestHandler } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import { env } from "./config/env";
+import { apiLimiter } from "./middleware/rateLimit.middleware";
 import { AppError } from "./errors/AppError";
 import { authRouter } from "./modules/auth/auth.routes";
 import { staffRouter } from "./modules/stores/staff.routes";
@@ -16,6 +18,13 @@ import { shippingRouter } from "./modules/shipping/shipping.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 
 export const app = express();
+
+// Behind a reverse proxy, req.ip would be the proxy's; this makes rate limits see each visitor.
+if (env.trustProxy > 0) app.set("trust proxy", env.trustProxy);
+
+// Standard security headers (also removes X-Powered-By). Uploaded images are loaded by the
+// storefront from another origin in production, so allow cross-origin embedding.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
 app.use(cors({ origin: env.corsOrigin, credentials: true }));
 
@@ -33,6 +42,7 @@ app.use("/uploads", express.static(env.uploadsDir));
 app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
 
 const v1 = express.Router();
+v1.use(apiLimiter);
 v1.use("/auth", authRouter);
 v1.use("/users/me", meRouter);
 v1.use("/stores/:storeId/staff", staffRouter);
@@ -58,6 +68,20 @@ app.use((req, res) => {
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof AppError) {
     res.status(err.status).type("application/problem+json").json(err.toProblem());
+    return;
+  }
+
+  // Client mistakes raised by Express itself (malformed JSON, body too large) are the
+  // caller's error, not a server fault, so answer 4xx instead of 500.
+  const status = (err as { status?: number }).status;
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    const tooLarge = status === 413;
+    res.status(status).type("application/problem+json").json({
+      type: tooLarge ? "https://zyro.dev/errors/payload-too-large" : "https://zyro.dev/errors/validation-failed",
+      title: tooLarge ? "Request body is too large" : "Request could not be read",
+      status,
+      detail: tooLarge ? undefined : "The request body is not valid JSON",
+    });
     return;
   }
 

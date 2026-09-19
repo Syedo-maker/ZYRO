@@ -6,7 +6,23 @@ function required(name: string): string {
   return value;
 }
 
+const num = (name: string, fallback: number) => {
+  const value = Number(process.env[name] ?? fallback);
+  if (!Number.isFinite(value) || value < 1) throw new Error(`${name} must be a positive number`);
+  return value;
+};
+
+const isProduction = process.env.NODE_ENV === "production";
+
+const jwtAccessSecret = required("JWT_ACCESS_SECRET");
+// A weak or copied-from-the-example secret lets anyone forge a login token, so refuse to
+// start in production rather than run insecurely.
+if (isProduction && (jwtAccessSecret.length < 32 || /replace-with|dev-only|changeme/i.test(jwtAccessSecret))) {
+  throw new Error("JWT_ACCESS_SECRET must be a random string of at least 32 characters in production");
+}
+
 export const env = {
+  isProduction,
   port: Number(process.env.PORT ?? 5000),
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
   databaseUrl: required("DATABASE_URL"),
@@ -15,6 +31,25 @@ export const env = {
   publicUrl: process.env.PUBLIC_URL ?? "http://localhost:5000",
   redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   cartTtlSeconds: Number(process.env.CART_TTL_SECONDS ?? 7 * 24 * 60 * 60),
+  // How many reverse proxies sit in front of the API (0 = none). Needed so rate limits see
+  // each visitor's real IP instead of the proxy's; leave at 0 when clients connect directly.
+  trustProxy: Number(process.env.TRUST_PROXY ?? 0),
+  // Abuse protection, backed by Redis so limits survive restarts and are shared between servers.
+  rateLimit: {
+    enabled: process.env.RATE_LIMIT_ENABLED !== "false",
+    prefix: process.env.RATE_LIMIT_PREFIX ?? "rl:",
+    windowMinutes: num("RATE_LIMIT_WINDOW_MINUTES", 15),
+    /** Failed logins allowed per email and IP per window before that pair is blocked. */
+    loginMax: num("RATE_LIMIT_LOGIN_MAX", 5),
+    /** Failed logins allowed per IP across all emails per window (credential stuffing). */
+    loginIpMax: num("RATE_LIMIT_LOGIN_IP_MAX", 30),
+    /** Registrations allowed per IP per hour. */
+    registerMax: num("RATE_LIMIT_REGISTER_MAX", 20),
+    /** Silent-login refresh calls per IP per window (one per page load). */
+    refreshMax: num("RATE_LIMIT_REFRESH_MAX", 600),
+    /** All API requests per IP per minute. */
+    apiMax: num("RATE_LIMIT_API_MAX", 600),
+  },
   // Countries a shopper may ship to, as ISO codes. A single list for every store for now;
   // it belongs in per-store settings once those exist.
   shippingCountries: (process.env.SHIPPING_COUNTRIES ?? "US,CA,GB,AU,DE,FR,PK,AE")
@@ -30,7 +65,7 @@ export const env = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
   jwt: {
-    accessSecret: required("JWT_ACCESS_SECRET"),
+    accessSecret: jwtAccessSecret,
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? "15m",
     refreshExpiresInDays: Number(process.env.JWT_REFRESH_EXPIRES_IN_DAYS ?? 7),
   },

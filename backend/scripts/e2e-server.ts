@@ -9,6 +9,9 @@
  * These routes exist only in this script, never in the real app.
  * Usage: npx tsx scripts/e2e-server.ts   (listens on PORT, default 5000)
  */
+// Off by default because the browser tests register many users quickly; start with
+// RATE_LIMIT_ENABLED=true (and a private RATE_LIMIT_PREFIX) to test the limits in the UI.
+process.env.RATE_LIMIT_ENABLED ??= "false";
 process.env.STRIPE_SECRET_KEY = "sk_test_e2e";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_e2e_secret";
 

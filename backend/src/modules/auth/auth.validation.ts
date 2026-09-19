@@ -1,9 +1,15 @@
 import { z } from "zod";
+import { MAX_PASSWORD_BYTES } from "../../lib/password";
 
 // Mirrors the request bodies defined in backend/openapi.yaml under auth_register/auth_login.
 export const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().email().max(254),
+  password: z
+    .string()
+    .min(8)
+    .refine((p) => Buffer.byteLength(p, "utf8") <= MAX_PASSWORD_BYTES, {
+      message: `Password must be at most ${MAX_PASSWORD_BYTES} bytes (about ${MAX_PASSWORD_BYTES} characters)`,
+    }),
   storeName: z.string().min(1).max(120),
   storeSlug: z
     .string()
@@ -12,7 +18,7 @@ export const registerSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
+  email: z.string().email().max(254),
+  password: z.string().max(1000),
 });
 export type LoginInput = z.infer<typeof loginSchema>;

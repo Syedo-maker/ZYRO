@@ -40,6 +40,13 @@ export const Errors = {
     new AppError(404, "https://zyro.dev/errors/not-found", `${what} not found`),
   invalidRefreshToken: () =>
     new AppError(401, "https://zyro.dev/errors/invalid-refresh-token", "Refresh token is invalid or expired"),
+  tooManyRequests: (retryAfterSeconds: number) =>
+    new AppError(
+      429,
+      "https://zyro.dev/errors/too-many-requests",
+      "Too many attempts",
+      `Please wait ${Math.max(1, Math.ceil(retryAfterSeconds / 60))} minute(s) and try again.`
+    ),
   conflict: (detail: string) =>
     new AppError(409, "https://zyro.dev/errors/conflict", "Conflict with the current state", detail),
   serviceUnavailable: (detail: string) =>

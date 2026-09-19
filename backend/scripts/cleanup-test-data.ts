@@ -11,7 +11,7 @@ import { prismaUnscoped as p } from "../src/lib/prisma";
 import { getRedis, closeRedis } from "../src/lib/redis";
 
 const SLUG_PREFIXES = ["e2e-", "p1-", "vo-", "verify-", "smoke-", "aurora-"];
-const EMAIL_PREFIXES = ["e2e-", "p1e2e-", "p1-", "vo-", "verify-", "smoke-", "shopper-"];
+const EMAIL_PREFIXES = ["e2e-", "p1e2e-", "p1sec-", "p1-", "sec-", "vo-", "verify-", "smoke-", "shopper-"];
 
 async function main() {
   await connectMongo();

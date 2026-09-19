@@ -39,6 +39,8 @@ webhooks with the Stripe CLI: `stripe listen --forward-to localhost:5000/api/v1/
 shipping zones, and `npx tsx scripts/verify-phase1.ts` for authentication, staff, the catalog and
 image uploads. `scripts/e2e-server.ts` runs the API with Stripe faked, for the browser tests, and
 `npx tsx scripts/cleanup-test-data.ts` removes the throwaway stores those tests leave behind.
+`npx tsx scripts/verify-security.ts` checks the password and abuse protections (login lockout,
+registration cap, security headers, timing, password rules, production startup guard).
 See `documentation/Audit_Phase0_to_Phase2.md` for the latest full check.
 
 If you have products from before the Commerce Core Foundation module, move their legacy

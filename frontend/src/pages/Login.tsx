@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { ApiError } from '../lib/apiClient'
+import { authErrorMessage } from '../lib/apiClient'
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -21,7 +21,7 @@ export function LoginPage() {
       await login({ email, password })
       navigate('/admin/products')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+      setError(authErrorMessage(err))
     } finally {
       setSubmitting(false)
     }
@@ -55,7 +55,7 @@ export function LoginPage() {
             autoComplete="current-password"
           />
 
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Logging in…' : 'Log in'}

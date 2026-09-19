@@ -55,7 +55,10 @@ export const authService = {
 
   async login(input: LoginInput): Promise<Session> {
     const user = await prisma.user.findUnique({ where: { email: input.email } });
-    if (!user) throw Errors.invalidCredentials();
+    if (!user) {
+      await passwordLib.burnTime(input.password);
+      throw Errors.invalidCredentials();
+    }
 
     const valid = await passwordLib.verify(input.password, user.passwordHash);
     if (!valid) throw Errors.invalidCredentials();

@@ -4,6 +4,7 @@
  * recording fake. Creates throwaway stores and users and removes them after.
  * Usage: npx tsx scripts/verify-orders.ts
  */
+process.env.RATE_LIMIT_ENABLED = "false"; // these tests register many users quickly; verify-security.ts covers the limits
 import type { AddressInfo } from "node:net";
 
 let failures = 0;

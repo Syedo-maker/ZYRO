@@ -88,7 +88,14 @@ paths:
               required: [email, password, storeName, storeSlug]
               properties:
                 email: { type: string, format: email }
-                password: { type: string, minLength: 8 }
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+                  description: |
+                    At most 72 bytes (72 characters for plain text, fewer for accented or other
+                    multi-byte characters), because the hashing algorithm ignores anything
+                    beyond that and would silently accept a different password.
                 storeName: { type: string, maxLength: 120 }
                 storeSlug: { type: string, pattern: "^[a-z0-9-]{3,50}$" }
             examples:
@@ -110,13 +117,19 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /auth/login:
     post:
       tags: [auth]
       operationId: auth_login
       summary: Log in with email and password
-      description: Returns an access token; the refresh token is set as an httpOnly cookie (see `auth_register`).
+      description: |
+        Returns an access token; the refresh token is set as an httpOnly cookie (see `auth_register`).
+        Only failed attempts count toward the limit: five wrong passwords for one email from one
+        address blocks that pair for 15 minutes (429, even for the correct password), and 30 failures
+        from one address across any emails blocks the address. Unknown emails and wrong passwords
+        give the same answer in the same time, so a caller cannot tell which emails are registered.
       security: []
       requestBody:
         required: true
@@ -139,6 +152,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   /auth/refresh:
     post:
@@ -1421,6 +1435,18 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
     Forbidden:
       description: Caller lacks the required staff permission
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Error" }
+    TooManyRequests:
+      description: |
+        Too many attempts. Wait for the number of seconds in `Retry-After` before trying again.
+        Every API call is also capped per address (600 per minute); registration, login and
+        session refresh have tighter limits. Standard `RateLimit` headers describe the window.
+      headers:
+        Retry-After:
+          description: Seconds until the caller may try again.
+          schema: { type: integer }
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Error" }

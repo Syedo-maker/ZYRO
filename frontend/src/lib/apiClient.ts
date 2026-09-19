@@ -74,4 +74,12 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   return res.json() as Promise<T>
 }
 
+/** What to show on the login and register forms. Rate-limit answers say how long to wait. */
+export function authErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    return err.status === 429 && err.detail ? `${err.message}. ${err.detail}` : err.message
+  }
+  return 'Something went wrong. Please try again.'
+}
+
 export { refreshAccessToken }

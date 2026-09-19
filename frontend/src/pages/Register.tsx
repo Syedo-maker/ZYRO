@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { ApiError } from '../lib/apiClient'
+import { authErrorMessage } from '../lib/apiClient'
 
 function slugify(name: string): string {
   return name
@@ -38,7 +38,7 @@ export function RegisterPage() {
       await register({ email, password, storeName, storeSlug })
       navigate('/admin/products')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+      setError(authErrorMessage(err))
     } finally {
       setSubmitting(false)
     }
@@ -71,6 +71,7 @@ export function RegisterPage() {
             label="Password"
             required
             minLength={8}
+            maxLength={72}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
@@ -96,7 +97,7 @@ export function RegisterPage() {
             }}
           />
 
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Creating your store…' : 'Create store'}

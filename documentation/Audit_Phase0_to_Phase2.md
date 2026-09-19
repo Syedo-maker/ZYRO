@@ -17,7 +17,9 @@ Phases 0, 1 and 2 are complete and working. The audit found and fixed **8 proble
 | Phase 2 browser | `e2e/phase2-checkout.e2e.mjs`, 49 checks, 3 runs | pass |
 | Repository | no secrets, no generated or environment files tracked, no em dashes | pass |
 
-Total: 226 backend checks and 73 browser checks.
+| Security (added after) | `scripts/verify-security.ts` 27 checks, `e2e/phase1-security.e2e.mjs` 5 checks | pass |
+
+Total: 253 backend checks and 78 browser checks.
 
 ## Problems found and fixed
 
@@ -30,6 +32,25 @@ Total: 226 backend checks and 73 browser checks.
 7. **No way to find the storefront.** The admin never showed the shop's address. Added a "View storefront" link to the admin header.
 8. **Test debris.** Browser tests register through the UI and could not clean up, leaving 88 test stores. Added `scripts/cleanup-test-data.ts`, which only touches known test prefixes, and ran it. Your own account and store, and the sample accounts from earlier sessions, were left alone.
 
+## Password and abuse protection (added after the audit)
+
+The audit's biggest open gap was that anyone could guess passwords without limit. Reading the auth code also turned up four other weaknesses, confirmed against the live server before fixing:
+
+| Weakness found | Confirmed how | Fix |
+|---|---|---|
+| Unlimited login guessing | No limit existed | Failed logins only count: 5 wrong passwords for one email from one address blocks that pair for 15 minutes (even the correct password is refused), and 30 failures from one address across any emails blocks the address. Registration is capped at 20 per address per hour and every API call at 600 per minute. Counters live in Redis, so they survive restarts and work across servers. |
+| Timing reveals which emails have accounts | unknown email answered in 61 ms, a real one in 371 ms | An unknown email now runs a full password check too (measured 656 ms vs 341 ms). |
+| bcrypt silently ignores everything past 72 bytes | code reading | Passwords over 72 bytes are rejected (counted in bytes, so accented characters count double), and the form limits the field to 72. |
+| A malformed JSON body returned a 500 | live request returned HTTP 500 | Now a 400; an oversized body is a 413. |
+| No security headers, and the server announced "Express" | live response headers | Standard headers added (helmet): no `X-Powered-By`, nosniff, frame protection, HSTS, a content security policy. Uploaded images stay embeddable by the storefront. |
+| Production could start with the placeholder JWT secret | code reading | In production the server refuses to start unless the secret is random and at least 32 characters. |
+
+Design choices worth knowing: the limiter **fails open**, meaning if Redis is unreachable logins keep working (tested with Redis down: no crash, no unhandled error) rather than a cache outage locking everyone out. Behind a reverse proxy set `TRUST_PROXY` so limits apply per visitor instead of per proxy. The login page now shows "Too many attempts. Please wait 15 minute(s) and try again." instead of a bare error.
+
+Tests: `scripts/verify-security.ts` (27 checks, tight limits and a private Redis prefix so it never disturbs real counters) and `e2e/phase1-security.e2e.mjs` (5 browser checks, run against an API started with limiting on). All earlier suites still pass: 226 backend and 73 browser checks.
+
+Not done, on purpose: no per-account lockout that a stranger could use to lock a real user out (the limit is per email and address together), no CAPTCHA, no password-strength meter, no email verification or password reset, and no two-factor login. These are product decisions for later.
+
 ## Contract versus implementation
 
 Of 48 operations in `openapi.yaml`, 34 are implemented (32 before this audit, plus staff list and delete). The 14 still missing all belong to later phases: reviews (2), AI content and quota (5), discount codes (4), the shopping assistant (1) and analytics (2).
@@ -40,7 +61,7 @@ The Phase 1 browser test failed now and then (about 1 run in 6), always stuck on
 
 ## Not fixed on purpose, and recommendations
 
-- **No login rate limiting and no security headers.** An attacker could try passwords without limit. Before any real launch, add rate limiting on auth routes and standard security headers (helmet). This needs a new dependency, so I did not add it unasked.
+- **(Fixed afterwards, see "Password and abuse protection" below.)** The audit originally left login without rate limiting or security headers.
 - **Row-level security is defined but not enforced.** The database policies exist, but the API connects as the owning role, which bypasses them, and never sets the tenant variable. Isolation is enforced in application code (and tested). Wiring the database layer is planned for the Phase 7 tenant-isolation work.
 - **Real Stripe has still not been exercised.** No keys exist. Payment creation, refunds and address collection were tested against a stand-in; signature verification used the real code.
 - **Cosmetic contract warnings remain** (no license field, and 4XX responses not declared on some operations). They do not affect correctness.
