@@ -27,12 +27,44 @@ enum StaffPermission {
   ORDERS_WRITE
   DISCOUNTS_WRITE
   ANALYTICS_READ
+  POS_SELL
+  INVENTORY_WRITE
+  REFUNDS
 }
 
+enum PlatformRole {
+  USER
+  SUPER_ADMIN
+}
+
+/// Which sales channel created an order. Both channels share one order, inventory and
+/// payment model; only the workflow in front of it differs.
+enum SalesChannel {
+  ONLINE
+  POS
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  STRIPE
+  OTHER
+}
+
+enum StockMovementType {
+  INITIAL
+  SALE
+  RETURN
+  ADJUSTMENT
+  RESTOCK
+}
+
+/// PAID: online order paid, awaiting fulfilment. COMPLETED: in-store sale, paid and handed over.
 enum OrderStatus {
   PENDING
   PAID
   FULFILLED
+  COMPLETED
   CANCELLED
   REFUNDED
 }
@@ -74,13 +106,15 @@ model User {
   email        String   @unique
   passwordHash String
   name         String?
+  platformRole PlatformRole @default(USER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   ownedTenants  Tenant[]       @relation("TenantOwner")
   staffMemberOf StaffMember[]
-  orders        Order[]
   refreshTokens RefreshToken[]
+  customerProfiles Customer[]
+  cashierOrders    Order[]     @relation("OrderCashier")
 
   @@index([email])
 }
@@ -109,11 +143,20 @@ model Tenant {
   logoUrl    String?
   themeColor String?
   ownerId    String
+  currency   String   @default("USD")
+  /// Percentage, e.g. 8.25 for 8.25%. Prices are treated as tax-exclusive.
+  taxRate    Decimal  @default(0) @db.Decimal(5, 2)
+  /// Last order number issued for this tenant; incremented atomically inside createOrder.
+  orderCounter Int    @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   owner            User               @relation("TenantOwner", fields: [ownerId], references: [id])
   staffMembers     StaffMember[]
+  locations        Location[]
+  inventoryLevels  InventoryLevel[]
+  stockMovements   StockMovement[]
+  customers        Customer[]
   orders           Order[]
   payments         Payment[]
   shipments        Shipment[]
@@ -142,61 +185,167 @@ model StaffMember {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
+// COMMERCE CORE: LOCATIONS, INVENTORY, CUSTOMERS
+// Shared by both sales channels (ONLINE and POS). Inventory lives here, in
+// Postgres, so stock deduction is atomic with order creation.
+// ──────────────────────────────────────────────────────────────────────────
+
+/// A physical or logical place that holds stock and fulfils sales (a shop, a warehouse).
+/// Every tenant gets one default location at registration, so the model supports multiple
+/// stores/warehouses/terminals later without changing inventory or order keys.
+model Location {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inventoryLevels InventoryLevel[]
+  stockMovements  StockMovement[]
+  orders          Order[]
+
+  @@index([tenantId])
+}
+
+/// Current on-hand quantity of one product at one location. The single source of truth
+/// for stock, replacing the old Product.stock field in MongoDB. productId is a Mongo
+/// ObjectId string (catalog lives in MongoDB), so there is no Postgres FK for it.
+/// A CHECK (quantity >= 0) constraint is added in the migration SQL as a last line of
+/// defense against overselling.
+model InventoryLevel {
+  id                String   @id @default(cuid())
+  tenantId          String
+  locationId        String
+  productId         String
+  quantity          Int      @default(0)
+  lowStockThreshold Int?
+  updatedAt         DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, locationId, productId])
+  @@index([tenantId, productId])
+}
+
+/// Append-only ledger of every stock change. Makes audits, returns, and later AI demand
+/// forecasting possible; InventoryLevel.quantity is always the sum of these rows.
+model StockMovement {
+  id              String            @id @default(cuid())
+  tenantId        String
+  locationId      String
+  productId       String
+  type            StockMovementType
+  quantityChange  Int
+  quantityAfter   Int
+  orderId         String?
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime          @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, productId, createdAt])
+  @@index([orderId])
+}
+
+/// A buyer as known to one business. Tenant-scoped so each business sees only its own
+/// customers. POS walk-ins can exist without an account (userId null); an online shopper
+/// with a ZYRO account is linked through userId.
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String?
+  name      String?
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orders Order[]
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 // ORDERS, PAYMENTS, SHIPPING
 // ──────────────────────────────────────────────────────────────────────────
 
-/// Order line items reference the MongoDB Product by id (string), not a Postgres FK,
-/// since the catalog lives in a different database. Title/price are snapshotted at order time
-/// so historical orders stay accurate even if the product is later edited or deleted.
+/// One order model for both channels. Order line items reference the MongoDB Product by id
+/// (string), not a Postgres FK, since the catalog lives in a different database.
+/// Title/price are snapshotted at order time so historical orders stay accurate even if
+/// the product is later edited or deleted.
 model Order {
-  id                     String      @id @default(cuid())
-  tenantId               String
-  customerId             String?
-  guestEmail             String?
-  status                 OrderStatus @default(PENDING)
-  subtotal               Decimal     @db.Decimal(10, 2)
-  discountAmount         Decimal     @default(0) @db.Decimal(10, 2)
-  shippingAmount         Decimal     @default(0) @db.Decimal(10, 2)
-  total                  Decimal     @db.Decimal(10, 2)
-  currency               String      @default("USD")
-  discountCodeId         String?
-  stripeCheckoutSessionId String?    @unique
-  createdAt              DateTime    @default(now())
-  updatedAt              DateTime    @updatedAt
+  id                      String       @id @default(cuid())
+  tenantId                String
+  /// Human-readable per-tenant number shown on receipts and order lists.
+  orderNumber             Int
+  channel                 SalesChannel @default(ONLINE)
+  locationId              String?
+  /// The staff member (or owner) who rang up a POS sale; null for online orders.
+  cashierUserId           String?
+  customerId              String?
+  guestEmail              String?
+  status                  OrderStatus  @default(PENDING)
+  subtotal                Decimal      @db.Decimal(10, 2)
+  discountAmount          Decimal      @default(0) @db.Decimal(10, 2)
+  taxAmount               Decimal      @default(0) @db.Decimal(10, 2)
+  shippingAmount          Decimal      @default(0) @db.Decimal(10, 2)
+  total                   Decimal      @db.Decimal(10, 2)
+  currency                String       @default("USD")
+  discountCodeId          String?
+  stripeCheckoutSessionId String?      @unique
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 
   tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer     User?          @relation(fields: [customerId], references: [id])
+  location     Location?      @relation(fields: [locationId], references: [id])
+  cashier      User?          @relation("OrderCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
+  customer     Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
   discountCode DiscountCode?  @relation(fields: [discountCodeId], references: [id])
   items        OrderItem[]
   payments     Payment[]
   shipment     Shipment?
 
+  @@unique([tenantId, orderNumber])
   @@index([tenantId])
   @@index([tenantId, status])
+  @@index([tenantId, channel, createdAt])
   @@index([customerId])
 }
 
 model OrderItem {
-  id                  String  @id @default(cuid())
-  orderId             String
-  productId           String // Mongo ObjectId string: catalog lives in MongoDB
+  id                   String   @id @default(cuid())
+  orderId              String
+  productId            String // Mongo ObjectId string: catalog lives in MongoDB
   productTitleSnapshot String
-  unitPrice           Decimal @db.Decimal(10, 2)
-  quantity            Int
-  lineTotal           Decimal @db.Decimal(10, 2)
+  unitPrice            Decimal  @db.Decimal(10, 2)
+  /// Cost price at order time, when the merchant recorded one; enables margin analytics.
+  unitCostSnapshot     Decimal? @db.Decimal(10, 2)
+  quantity             Int
+  lineTotal            Decimal  @db.Decimal(10, 2)
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
 }
 
-/// Source of truth for "did payment succeed", written from the Stripe webhook handler,
-/// never from the client redirect (Implementation_Plan.md, Phase 2, Module 2).
+/// One row per payment taken against an order (an order can be paid by several methods).
+/// For Stripe payments this is the source of truth for "did payment succeed", written from
+/// the webhook handler, never from the client redirect. Cash and card-terminal payments
+/// at the POS are recorded directly with no Stripe id.
 model Payment {
   id                    String        @id @default(cuid())
   tenantId              String
   orderId               String
-  stripePaymentIntentId String        @unique
+  method                PaymentMethod @default(STRIPE)
+  stripePaymentIntentId String?       @unique
   amount                Decimal       @db.Decimal(10, 2)
   currency              String        @default("USD")
   status                PaymentStatus @default(PENDING)

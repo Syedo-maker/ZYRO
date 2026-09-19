@@ -3,6 +3,8 @@ import { password as passwordLib } from "../../lib/password";
 import { accessToken } from "../../lib/jwt";
 import { refreshToken as refreshTokenLib } from "../../lib/refreshToken";
 import { Errors } from "../../errors/AppError";
+import { tenantContext } from "../../lib/tenantContext";
+import { inventoryService } from "../inventory/inventory.service";
 import type { RegisterInput, LoginInput } from "./auth.validation";
 
 interface Session {
@@ -39,9 +41,12 @@ export const authService = {
       const createdUser = await tx.user.create({
         data: { email: input.email, passwordHash },
       });
-      await tx.tenant.create({
+      const tenant = await tx.tenant.create({
         data: { name: input.storeName, slug: input.storeSlug, ownerId: createdUser.id },
       });
+      // Location is tenant-scoped, and no request-level tenant context exists yet at
+      // registration, so open one for the store that was just created.
+      await tenantContext.run(tenant.id, () => inventoryService.createDefaultLocation(tx, tenant.id));
       return createdUser;
     });
 

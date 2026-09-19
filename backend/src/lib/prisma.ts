@@ -8,6 +8,10 @@ import { tenantContext } from "./tenantContext";
  */
 const TENANT_SCOPED_MODELS = new Set([
   "StaffMember",
+  "Location",
+  "InventoryLevel",
+  "StockMovement",
+  "Customer",
   "Order",
   "Payment",
   "Shipment",
@@ -34,6 +38,9 @@ const basePrisma = new PrismaClient();
  * authenticated caller's own userId, never to browse another tenant's business data.
  */
 export const prismaUnscoped = basePrisma;
+
+/** Interactive-transaction client from the tenant-scoped `prisma` below. */
+export type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export const prisma = basePrisma.$extends({
   query: {

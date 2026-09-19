@@ -8,6 +8,8 @@ This document is a working plan, not a submission deliverable. It intentionally 
 > **Scope amendment (post-Phase 1):** the AI feature set was expanded beyond the original scope document during implementation: four AI capabilities (recommendations, review summarization, auto-tagging, SEO metadata) were promoted from "stretch goal"/absent to core scope, and a new Python microservice was added to the architecture, at the student team's request. Two items considered (an agentic-storefront/ChatGPT-commerce integration, and a general workflow-automation builder) were declined as unrealistic for the remaining timeline and are **not** part of scope. This amendment has not been reflected in the original submitted scope document (`ShopMind_AI_Scope_Document.docx`); get supervisor sign-off on it before final submission if that document needs to match.
 >
 > **Frontend scheduling amendment (also post-Phase 1):** this plan originally described backend work only in every phase; no phase scheduled turning the Phase 0 wireframes into actual React screens. Fixed by adding a Frontend module to every phase below, paired with that phase's backend module(s) against the wireframes in `design/wireframes/`, so each phase is demoable end-to-end (not just API-testable) once complete. Phase 1's frontend module is now owed retroactively, since that phase's backend was already built and marked done before this gap was caught, so it's listed as the next outstanding item, ahead of Phase 2.
+>
+> **Commerce + POS amendment (2026-09-19):** ZYRO is now defined as a real, multi-tenant Commerce + POS SaaS, not only an online store. The POS is a second sales channel over one shared commerce core (catalog, inventory, customers, pricing, discounts, orders, analytics). An architecture review found the original schema was online-only (stock on the MongoDB product, no order channel, Stripe-only payments, no tenant-scoped customers), so a Commerce Core Foundation module was added at the start of Phase 2 and a POS phase (2.5) after it. Phase 3 analytics and Phase 4/5 AI features become channel-aware, and the AI layer gains business insights (sales trends, low-stock alerts, demand forecasting). The timeline grows from 31 to about 35 weeks.
 
 ---
 
@@ -26,14 +28,21 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] **Frontend (owed retroactively):** React project scaffold (Vite + TS + Tailwind, wired to the backend API) + auth screens (register/login) + Admin Catalog Management UI (`AdminCatalog.dc.html`), verified with an automated headless-browser test against the real backend, see `documentation/Phase1_Frontend_Auth_And_Admin_Catalog.md`
 
 **Phase 2: Core Commerce**
-- [ ] Module 2: Cart & Checkout (backend)
-- [ ] Module 5: Order & Shipping Management (backend)
+- [x] Module: Commerce Core Foundation (backend, *new, added by the Commerce + POS amendment*): inventory in Postgres, locations, customers, channel-aware orders and payments, shared pricing and `createOrder` services; see `documentation/Phase2_Commerce_Core_Foundation.md`
+- [ ] Module 2: Cart & Checkout (backend, online channel)
+- [ ] Module 5: Order & Shipping Management (backend, all channels)
 - [ ] Frontend: Storefront Cart, Checkout, Order Confirmation (`Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`) + Admin Orders & Shipping UI (`AdminOrders.dc.html`)
+
+**Phase 2.5: Point of Sale (POS)** *(new phase, added by the Commerce + POS amendment; numbered 2.5 so existing phase numbers stay stable)*
+- [ ] Wireframes: POS screen, receipt, daily summary (none exist yet; Phase 0 wireframes are online-store only)
+- [ ] Module 8: POS backend (cashier login, product/barcode lookup, POS checkout with cash and card payments, receipt data, transaction history, daily sales summary)
+- [ ] Frontend: POS register screen, receipt view, transaction history
+- [ ] Returns/refunds for POS orders (stock returns to inventory)
 
 **Phase 3: Commerce Completeness**
 - [ ] Module 7 (partial): Discount Codes (backend)
 - [ ] Module 1 (remaining): Search & Reviews (backend)
-- [ ] Module 7 (partial): Analytics Dashboard (backend, baseline)
+- [ ] Module 7 (partial): Analytics Dashboard (backend, baseline; sales split by channel, ONLINE vs POS)
 - [ ] Frontend: Storefront Home, Category/Search, Product Detail + reviews (`Main.dc.html`, `CategoryListing.dc.html`, `ProductDetail.dc.html`) + Admin Dashboard home + Marketing/Analytics UI (`AdminDashboard.dc.html`, `AdminMarketing.dc.html`)
 
 **Phase 4: AI Feature 1**
@@ -47,6 +56,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 **Phase 5: AI Feature 2**
 - [ ] Module 3: AI Shopping Assistant (backend)
 - [ ] Module 7 (remaining): Abandoned-Cart Recovery (backend)
+- [ ] AI business insights (added by the Commerce + POS amendment): sales trend analysis, best sellers, low-stock alerts and simple demand forecasting from the `StockMovement` ledger, using the Phase 4 orchestrator
 - [ ] Frontend: AI Assistant chat widget (`AIAssistant.dc.html`) wired to the real endpoint
 
 **Phase 6: AI Recommendation Service (Python)** *(new phase, added post-Phase 1 scope amendment)*
@@ -100,16 +110,17 @@ Phases mirror Section 13 (WBS) of the scope document. Each phase below lists its
 ```
 Phase 0  Analysis & Design            (weeks 1-4)
 Phase 1  Foundation                   (weeks 5-8)   : Auth, Multi-tenancy, Catalog CRUD
-Phase 2  Core Commerce                (weeks 9-12)  : Cart, Checkout, Orders, Shipping
-Phase 3  Commerce Completeness        (weeks 13-16) : Discounts, Reviews, Search
-Phase 4  AI Feature 1                 (weeks 17-20) : Orchestrator, Content Tools, Summarization, Tagging, SEO
-Phase 5  AI Feature 2                 (weeks 21-24) : Shopping Assistant, Cart Recovery
-Phase 6  AI Recommendation Service    (weeks 25-27) : Python/FastAPI microservice (NEW, post-Phase 1 amendment)
-Phase 7  Testing                      (weeks 28-29)
-Phase 8  Deployment & Docs            (weeks 30-31)
+Phase 2  Core Commerce                (weeks 9-13)  : Commerce core foundation, Cart, Checkout, Orders, Shipping
+Phase 2.5 Point of Sale               (weeks 14-16) : POS backend + frontend, returns (NEW, Commerce + POS amendment)
+Phase 3  Commerce Completeness        (weeks 17-20) : Discounts, Reviews, Search, channel-aware Analytics
+Phase 4  AI Feature 1                 (weeks 21-24) : Orchestrator, Content Tools, Summarization, Tagging, SEO
+Phase 5  AI Feature 2                 (weeks 25-28) : Shopping Assistant, Cart Recovery, business insights
+Phase 6  AI Recommendation Service    (weeks 29-31) : Python/FastAPI microservice (NEW, post-Phase 1 amendment)
+Phase 7  Testing                      (weeks 32-33)
+Phase 8  Deployment & Docs            (weeks 34-35)
 ```
 
-Adding Phase 6 pushes the total timeline from the original 28 weeks to 31, a real cost of the scope amendment, not a free addition. Flag this to your supervisor alongside the amendment note above.
+Adding Phase 6 pushed the total timeline from the original 28 weeks to 31, and the Commerce + POS amendment (foundation module plus Phase 2.5) pushes it to about 35. These are real costs of the scope changes, not free additions. Flag both to your supervisor alongside the amendment notes above.
 
 Module ownership stays as defined in Section 12 of the scope document, with the new Phase 6 assigned to Sikander as an extension of his existing AI-module ownership:
 - **Muhammad Ibrahim (BSAI-23F-0048):** Modules 1, 2, 4, 5: Storefront, Cart/Checkout, Catalog Management, Order/Shipping Management
@@ -153,10 +164,19 @@ No module code yet; this phase produces the artifacts every later phase depends 
 
 ## Phase 2: Core Commerce (Weeks 9-12)
 
+### Module: Commerce Core Foundation (added by the Commerce + POS amendment)
+ZYRO is now defined as a multi-tenant Commerce + POS SaaS (see the amendment note at the top). The original schema was online-only, so this module lands first and gives both sales channels one shared base:
+- **Inventory in Postgres:** `InventoryLevel` (per tenant, product and location) plus an append-only `StockMovement` ledger replace `Product.stock` in MongoDB. Deduction is a conditional `UPDATE ... WHERE quantity >= n` inside the same transaction that creates the order, so two channels cannot both sell the last unit.
+- **`Location`:** one default location per store, created at registration; multiple stores, warehouses and terminals fit later without changing keys.
+- **`Customer`:** tenant-scoped, optionally linked to a `User`, so POS walk-ins need no account.
+- **Orders and payments serve both channels:** `Order.channel` (ONLINE or POS), per-tenant `orderNumber`, cashier, location, tax; `Payment.method` (CASH, CARD, STRIPE, OTHER) with a nullable Stripe id and several payments per order.
+- **Shared services:** `pricing` (pure totals math in integer cents) and `createOrder` (the one transactional place orders, payments and stock changes are written). Online checkout and POS checkout are thin wrappers over these.
+- **Also:** tenant tax rate, new staff permissions (`POS_SELL`, `INVENTORY_WRITE`, `REFUNDS`), `User.platformRole` for a future Super Admin, SKU/barcode/taxable/cost fields on products.
+
 ### Module 2: Cart & Checkout
 - **Solution:** Cart state kept server-side in Redis, keyed by `sessionId` (guest) or `userId` (logged-in customer), TTL 7 days. Avoids a Postgres table for something this ephemeral.
 - Checkout uses **Stripe Checkout Session** (hosted payment page) rather than raw PaymentIntents: less PCI surface area for a student project, still satisfies "secure checkout integrated with a payment gateway" from Section 6.
-- Stripe webhook (`checkout.session.completed`) triggers order creation in Postgres; this is the single source of truth for "did payment succeed," not the client redirect.
+- Stripe webhook (`checkout.session.completed`) calls the shared `createOrder` service with channel ONLINE; this is the single source of truth for "did payment succeed," not the client redirect. Stock is checked when checkout starts and deducted on payment confirmation (reservation with a timeout can be added later).
 - Discount code validation happens server-side at checkout initiation (Module 7 dependency; see Phase 3).
 - **Endpoints:** `POST /cart/items`, `PATCH /cart/items/:id`, `DELETE /cart/items/:id`, `POST /checkout/session`, `POST /webhooks/stripe`.
 
@@ -164,9 +184,21 @@ No module code yet; this phase produces the artifacts every later phase depends 
 - **Solution:** `Order` + `OrderItem` (Postgres, transactional integrity matters for financial records per Section 6). `Shipment` record holds carrier/status, updated manually by merchant for this scope (no live carrier API integration, out of scope per Section 8).
 - Shipping rates: a `ShippingZone` table per store (flat-rate or per-region) referenced at checkout to compute shipping cost.
 - Refunds/cancellations call the Stripe Refunds API and update `Order.status`.
+- Order lists and detail views are channel-aware (filter by ONLINE or POS). Shipping applies to ONLINE orders; POS orders are fulfilled in store and have no `Shipment`.
 - **Endpoints:** `GET /stores/:id/orders`, `PATCH /orders/:id/status`, `POST /orders/:id/refund`, `POST/GET/PUT /stores/:id/shipping-zones`.
 
 **Exit criteria:** A customer can add items to cart, apply nothing yet (discounts land in Phase 3), pay via Stripe test mode, and the merchant sees the order appear with correct shipping cost.
+
+---
+
+## Phase 2.5: Point of Sale (POS)
+
+Added by the Commerce + POS amendment. The POS is a second sales channel over the same catalog, inventory, customers, discounts and orders as the online store, not a separate system. It calls the shared `createOrder` service with channel POS.
+
+- **Backend (Module 8):** cashier/staff login using the existing auth and the `POS_SELL` permission; product search and barcode lookup; POS checkout (cash and card-terminal payments recorded directly, split payments allowed); receipt data; transaction history; daily sales summary. Cashier sessions and cash-drawer reconciliation, multiple registers, receipt printers and barcode-scanner hardware are deferred but not blocked by the schema.
+- **Returns/refunds:** a POS return restocks inventory through a `RETURN` stock movement.
+- **Frontend:** POS register screen, receipt view, transaction history. Needs new wireframes first (Phase 0 covers only the online store).
+- **Exit criteria:** a cashier can ring up a sale by search or barcode, take cash or card, print or view a receipt, and the stock shown on the online store drops by the same amount.
 
 ---
 

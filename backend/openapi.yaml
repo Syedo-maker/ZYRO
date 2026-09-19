@@ -1254,7 +1254,7 @@ components:
 
     StaffPermission:
       type: string
-      enum: [products_write, orders_write, discounts_write, analytics_read]
+      enum: [products_write, orders_write, discounts_write, analytics_read, pos_sell, inventory_write, refunds]
 
     StaffMember:
       type: object
@@ -1274,7 +1274,29 @@ components:
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
         price: { type: number, minimum: 0 }
-        stock: { type: integer, minimum: 0 }
+        stock:
+          type: integer
+          minimum: 0
+          description: |
+            On-hand quantity at the store's default location. Stored in the Postgres inventory
+            tables (the single source of truth shared by the online store and the POS), not on
+            the product document. Writing a different value records a stock adjustment.
+        sku:
+          type: string
+          maxLength: 100
+          description: Unique per store when set.
+        barcode:
+          type: string
+          maxLength: 100
+          description: Unique per store when set. Used for barcode lookup at the POS.
+        taxable:
+          type: boolean
+          default: true
+          description: Whether the store's tax rate applies to this product.
+        costPrice:
+          type: number
+          minimum: 0
+          description: Merchant-only cost, used for margin analytics. Never shown to shoppers.
         category: { type: string }
         images:
           type: array
@@ -1357,7 +1379,15 @@ components:
 
     OrderStatus:
       type: string
-      enum: [pending, paid, fulfilled, cancelled, refunded]
+      description: |
+        `paid`: online order paid, awaiting fulfilment. `completed`: in-store (POS) sale,
+        paid and handed over.
+      enum: [pending, paid, fulfilled, completed, cancelled, refunded]
+
+    SalesChannel:
+      type: string
+      description: Which sales channel created the order. Both share one order, inventory and payment model.
+      enum: [online, pos]
 
     OrderItem:
       type: object
@@ -1375,13 +1405,19 @@ components:
       properties:
         id: { type: string }
         storeId: { type: string }
+        orderNumber: { type: integer, description: Human-readable number, unique per store. }
+        channel: { $ref: "#/components/schemas/SalesChannel" }
+        locationId: { type: [string, "null"] }
+        cashierUserId: { type: [string, "null"], description: The user who rang up a POS sale. }
         customerId: { type: [string, "null"] }
         guestEmail: { type: [string, "null"] }
         status: { $ref: "#/components/schemas/OrderStatus" }
         subtotal: { type: number }
         discountAmount: { type: number }
+        taxAmount: { type: number }
         shippingAmount: { type: number }
         total: { type: number }
+        currency: { type: string }
         items:
           type: array
           items: { $ref: "#/components/schemas/OrderItem" }

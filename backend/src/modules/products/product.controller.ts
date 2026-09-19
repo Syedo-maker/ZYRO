@@ -21,7 +21,7 @@ export const productController = {
     if (!parsed.success) return next(Errors.validation(parsed.error.message));
 
     try {
-      const product = await productService.create(req.params.storeId, parsed.data);
+      const product = await productService.create(req.params.storeId, parsed.data, req.userId);
       res.status(201).json(product);
     } catch (err) {
       next(err);
@@ -42,7 +42,7 @@ export const productController = {
     if (!parsed.success) return next(Errors.validation(parsed.error.message));
 
     try {
-      const product = await productService.update(req.params.storeId, req.params.productId, parsed.data);
+      const product = await productService.update(req.params.storeId, req.params.productId, parsed.data, req.userId);
       res.status(200).json(product);
     } catch (err) {
       next(err);

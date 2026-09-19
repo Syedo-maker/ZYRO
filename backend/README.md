@@ -25,7 +25,13 @@ the first migration:
 
 ```bash
 psql -h localhost -U <superuser> -d <database> -f prisma/manual-sql/001_enable_rls.sql
+psql -h localhost -U <superuser> -d <database> -f prisma/manual-sql/002_enable_rls_commerce_core.sql
 ```
+
+If you have products from before the Commerce Core Foundation module, move their legacy
+`stock` values into inventory once with `npx tsx scripts/backfill-inventory.ts`. To check the
+inventory, order and tenant-isolation logic against your local databases, run
+`npx tsx scripts/verify-commerce-core.ts` (it creates and removes its own throwaway stores).
 
 (This file deliberately lives outside `prisma/migrations/`, since Prisma's migrate engine treats
 every subfolder in that directory as a real migration and errors on anything that isn't one.)
