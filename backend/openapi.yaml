@@ -775,6 +775,101 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /stores/{storeId}/checkout/quote:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [checkout]
+      operationId: checkout_quote_create
+      summary: Preview the total for the current cart
+      description: |
+        Prices the cart exactly as `checkout_session_create` would (live prices, the store's tax
+        rate, the chosen shipping zone) but saves nothing. The checkout page uses it so the
+        browser never re-implements tax or shipping math.
+      security:
+        - bearerAuth: []
+        - guestSession: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shippingZoneId: { type: string }
+      responses:
+        "200":
+          description: Totals
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [currency, subtotal, taxAmount, shippingAmount, total]
+                properties:
+                  currency: { type: string }
+                  subtotal: { type: number }
+                  discountAmount: { type: number }
+                  taxAmount: { type: number }
+                  shippingAmount: { type: number }
+                  total: { type: number }
+        "400":
+          description: Empty cart or an item no longer available
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: An item is no longer in stock in the requested quantity
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/checkout/sessions/{sessionId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: sessionId
+        in: path
+        required: true
+        description: The Stripe Checkout Session id from the confirmation URL (`session_id`).
+        schema: { type: string }
+    get:
+      tags: [checkout]
+      operationId: checkout_session_get
+      summary: Where a checkout stands, for the confirmation page
+      description: |
+        The webhook, not the redirect, creates the order, so right after payment the order may
+        not exist yet: the page polls until `state` is `completed`. `refunded` means the last
+        units sold out between checkout and payment and the payment was returned automatically.
+        Public: the unguessable Stripe session id is the only credential, and only
+        order-confirmation details are returned (no ids, no payment data).
+      security: []
+      responses:
+        "200":
+          description: Checkout state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [state, order]
+                properties:
+                  state: { type: string, enum: [pending, completed, expired, refunded, failed] }
+                  order:
+                    type: [object, "null"]
+                    properties:
+                      orderNumber: { type: integer }
+                      status: { $ref: "#/components/schemas/OrderStatus" }
+                      total: { type: number }
+                      currency: { type: string }
+                      email: { type: [string, "null"] }
+                      shippingName: { type: [string, "null"] }
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            title: { type: string }
+                            quantity: { type: integer }
+                            lineTotal: { type: number }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   # ── ORDERS ────────────────────────────────────────────────────────────
   /stores/{storeId}/orders:
     parameters:
@@ -1372,6 +1467,7 @@ components:
         slug: { type: string }
         logoUrl: { type: string, format: uri }
         themeColor: { type: string }
+        currency: { type: string, description: The store's currency (ISO code), used to format prices. }
 
     StaffPermission:
       type: string
@@ -1506,6 +1602,7 @@ components:
           type: array
           items: { $ref: "#/components/schemas/CartItem" }
         subtotal: { type: number }
+        currency: { type: string, description: The store's currency, for formatting. }
 
     OrderStatus:
       type: string
@@ -1546,6 +1643,17 @@ components:
             name: { type: [string, "null"] }
             email: { type: [string, "null"] }
         guestEmail: { type: [string, "null"] }
+        shippingName: { type: [string, "null"], description: Collected by Stripe Checkout; null for POS orders. }
+        shippingAddress:
+          type: [object, "null"]
+          description: Where an online order ships, as collected by Stripe Checkout.
+          properties:
+            line1: { type: [string, "null"] }
+            line2: { type: [string, "null"] }
+            city: { type: [string, "null"] }
+            state: { type: [string, "null"] }
+            postalCode: { type: [string, "null"] }
+            country: { type: [string, "null"], description: ISO country code. }
         status: { $ref: "#/components/schemas/OrderStatus" }
         subtotal: { type: number }
         discountAmount: { type: number }

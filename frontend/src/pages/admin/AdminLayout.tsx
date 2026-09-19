@@ -8,12 +8,12 @@ interface NavItem {
 }
 
 // Matches the sidebar in design/wireframes/AdminDashboard.dc.html / AdminCatalog.dc.html.
-// Only Products is functional in Phase 1's frontend module; the rest light up in the
-// phases that build their backend (Orders: Phase 2, Marketing: Phase 3, per Implementation_Plan.md).
+// Products (Phase 1) and Orders (Phase 2) are functional; the rest light up in the phases
+// that build their backend (Dashboard and Marketing: Phase 3, per Implementation_Plan.md).
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/admin/dashboard', enabled: false },
   { label: 'Products', to: '/admin/products', enabled: true },
-  { label: 'Orders', to: '/admin/orders', enabled: false },
+  { label: 'Orders', to: '/admin/orders', enabled: true },
   { label: 'Marketing', to: '/admin/marketing', enabled: false },
   { label: 'Settings', to: '/admin/settings', enabled: false },
 ]

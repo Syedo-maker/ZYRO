@@ -152,6 +152,17 @@ async function main() {
     const rec1 = await prismaUnscoped.checkoutSession.findFirst({ where: { tenantId: A.storeId }, orderBy: { createdAt: "asc" } });
     check("checkout: snapshot saved as PENDING with the total", rec1?.status === "PENDING" && rec1.totalCents === 6000 && !!rec1.stripeSessionId);
     const sid1 = rec1!.stripeSessionId!;
+    check("checkout: Stripe is told which countries it may collect a shipping address for", Array.isArray(sent.shippingCountries) && sent.shippingCountries.includes("US"));
+    check("checkout: success URL points at the storefront confirmation route", sent.successUrl.includes(`/store/${A.storeId}/checkout/success?session_id={CHECKOUT_SESSION_ID}`) && sent.cancelUrl.endsWith(`/store/${A.storeId}/cart`));
+    const quote = await api("POST", `/stores/${A.storeId}/checkout/quote`, { guest, body: { shippingZoneId: zone.id } });
+    check("quote: same totals the session was priced with (subtotal 50, tax 5, shipping 5, total 60)", quote.status === 200 && quote.json.subtotal === 50 && quote.json.taxAmount === 5 && quote.json.shippingAmount === 5 && quote.json.total === 60 && quote.json.currency === "USD");
+    check("quote: saves nothing (still one checkout record)", (await prismaUnscoped.checkoutSession.count({ where: { tenantId: A.storeId } })) === 1);
+    check("quote: an empty cart is rejected", (await api("POST", `/stores/${A.storeId}/checkout/quote`, { guest: `other-${suffix}-abcdefghij`, body: {} })).status === 400);
+    check("cart: response carries the store currency", (await api("GET", `/stores/${A.storeId}/cart`, { guest })).json.currency === "USD");
+    check("store profile: public and includes the currency", (await api("GET", `/stores/${A.storeId}`)).json.currency === "USD");
+    const pendingStatus = await api("GET", `/stores/${A.storeId}/checkout/sessions/${sid1}`);
+    check("session status: pending before payment, no order yet", pendingStatus.status === 200 && pendingStatus.json.state === "pending" && pendingStatus.json.order === null);
+    check("session status: unknown session and another store's lookup are 404", (await api("GET", `/stores/${A.storeId}/checkout/sessions/cs_nope`)).status === 404 && (await api("GET", `/stores/${B.storeId}/checkout/sessions/${sid1}`)).status === 404);
 
     // ---- Webhook: signature ----
     check("webhook: missing signature is 400", (await sendEvent("checkout.session.completed", paidSession(sid1, 6000), { noSignature: true })).status === 400);
@@ -159,13 +170,28 @@ async function main() {
 
     // ---- Webhook: fulfilment uses the snapshot, not today's prices ----
     await Product.updateOne({ _id: p1, storeId: A.storeId }, { price: 99 });
-    const done = await sendEvent("checkout.session.completed", paidSession(sid1, 6000));
+    const done = await sendEvent(
+      "checkout.session.completed",
+      paidSession(sid1, 6000, {
+        collected_information: {
+          shipping_details: {
+            name: "Sam Shopper",
+            address: { line1: "240 Baker Street", line2: null, city: "Boston", state: "MA", postal_code: "02101", country: "US" },
+          },
+        },
+      })
+    );
     check("webhook: paid session is fulfilled", done.status === 200 && done.json.outcome === "fulfilled", JSON.stringify(done.json));
     const order = await prismaUnscoped.order.findFirst({ where: { tenantId: A.storeId }, include: { items: true, payments: true } });
     check("order: ONLINE, PAID, number 1, total 60.00 as charged", order?.channel === "ONLINE" && order.status === "PAID" && order.orderNumber === 1 && order.total.toString() === "60", `total=${order?.total}`);
     check("order: line price is the snapshot (20), not the later catalog price (99)", order?.items.find((i) => i.productId === p1)?.unitPrice.toString() === "20");
     check("order: subtotal 50, tax 5, shipping 5", order?.subtotal.toString() === "50" && order.taxAmount.toString() === "5" && order.shippingAmount.toString() === "5");
     check("order: one STRIPE payment with the payment intent id", order?.payments.length === 1 && order.payments[0].method === "STRIPE" && order.payments[0].stripePaymentIntentId === `pi_${sid1}`);
+    const addr = order?.shippingAddress as { line1?: string; city?: string; postalCode?: string; country?: string } | null;
+    check("order: the shipping address Stripe collected is saved on the order", order?.shippingName === "Sam Shopper" && addr?.line1 === "240 Baker Street" && addr?.city === "Boston" && addr?.postalCode === "02101" && addr?.country === "US");
+    const doneStatus = await api("GET", `/stores/${A.storeId}/checkout/sessions/${sid1}`);
+    check("session status: completed, with what the confirmation page shows", doneStatus.json.state === "completed" && doneStatus.json.order.orderNumber === 1 && doneStatus.json.order.total === 60 && doneStatus.json.order.email === "shopper@example.com" && doneStatus.json.order.items.length === 2);
+    check("session status: exposes no internal ids or payment details", !("id" in doneStatus.json.order) && !("payments" in doneStatus.json.order));
     check("stock: deducted (widget 5 to 3, gadget 3 to 2)", (await stockOf(A, p1)) === 3 && (await stockOf(A, p2)) === 2);
     check("customer: guest email became a tenant-scoped customer", (await prismaUnscoped.customer.count({ where: { tenantId: A.storeId, email: "shopper@example.com" } })) === 1 && order?.customerId !== null);
     check("cart: cleared after the order is created", (await api("GET", `/stores/${A.storeId}/cart`, { guest })).json.items.length === 0);
@@ -227,6 +253,8 @@ async function main() {
     const refunded = await sendEvent("checkout.session.completed", paidSession(sid6, rec6!.totalCents));
     check("webhook: stock gone after payment gives an automatic refund", refunded.json.outcome === "refunded-out-of-stock" && stripeCalls.refunds.length === 1 && stripeCalls.refunds[0].pi === `pi_${sid6}` && stripeCalls.refunds[0].key === `refund-${rec6!.id}`);
     check("webhook: no order was created and the record shows REFUNDED", (await prismaUnscoped.order.count({ where: { tenantId: A.storeId } })) === ordersBefore && (await prismaUnscoped.checkoutSession.findUnique({ where: { id: rec6!.id } }))?.status === "REFUNDED");
+    const refundedStatus = await api("GET", `/stores/${A.storeId}/checkout/sessions/${sid6}`);
+    check("session status: a refunded checkout tells the shopper so (no order)", refundedStatus.json.state === "refunded" && refundedStatus.json.order === null);
     const again = await sendEvent("checkout.session.completed", paidSession(sid6, rec6!.totalCents));
     check("webhook: a retry after the refund does not refund twice", again.json.outcome === "already-processed" && stripeCalls.refunds.length === 1);
 

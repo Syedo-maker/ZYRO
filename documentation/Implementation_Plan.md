@@ -31,7 +31,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Module: Commerce Core Foundation (backend, *new, added by the Commerce + POS amendment*): inventory in Postgres, locations, customers, channel-aware orders and payments, shared pricing and `createOrder` services; see `documentation/Phase2_Commerce_Core_Foundation.md`
 - [x] Module 2: Cart & Checkout (backend, online channel), verified against real Postgres, MongoDB and Redis with Stripe's network calls faked; see `documentation/Phase2_Module2_Cart_And_Checkout.md`
 - [x] Module 5: Order & Shipping Management (backend, all channels), verified against real Postgres and MongoDB with Stripe's refund call faked; see `documentation/Phase2_Module5_Order_And_Shipping_Management.md`
-- [ ] Frontend: Storefront Cart, Checkout, Order Confirmation (`Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`) + Admin Orders & Shipping UI (`AdminOrders.dc.html`)
+- [x] Frontend: Storefront Cart, Checkout, Order Confirmation (`Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`) + Admin Orders & Shipping UI (`AdminOrders.dc.html`), verified in real Chromium with Stripe's hosted page stood in; includes a minimal placeholder product grid replaced in Phase 3; see `documentation/Phase2_Frontend_Storefront_And_Admin_Orders.md`
 
 **Phase 2.5: Point of Sale (POS)** *(new phase, added by the Commerce + POS amendment; numbered 2.5 so existing phase numbers stay stable)*
 - [ ] Wireframes: POS screen, receipt, daily summary (none exist yet; Phase 0 wireframes are online-store only)

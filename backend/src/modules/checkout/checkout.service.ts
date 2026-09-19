@@ -9,72 +9,97 @@ import { inventoryService } from "../inventory/inventory.service";
 import { calculateTotals } from "../commerce/pricing.service";
 import type { OrderSnapshot, PricedLine } from "../commerce/order.service";
 import { cartKey, CartOwner } from "../cart/cart.service";
-import type { CreateSessionInput } from "./checkout.validation";
+import type { CreateSessionInput, QuoteInput } from "./checkout.validation";
 
 /** Stripe requires a Checkout Session to stay open for at least 30 minutes. */
 const SESSION_MINUTES = 31;
 
+/**
+ * Prices the shopper's cart from the live catalog and the store's settings. Used by both
+ * the quote (a preview) and the checkout session (which freezes the same numbers), so the
+ * total a shopper sees is by construction the total they are charged.
+ */
+async function priceCart(storeId: string, owner: CartOwner, input: QuoteInput) {
+  if ("discountCode" in input && input.discountCode) {
+    throw Errors.validation("Discount codes are not available yet");
+  }
+
+  const key = cartKey(storeId, owner);
+  const raw = await getRedis().hgetall(key);
+  const cartEntries = Object.entries(raw);
+  if (cartEntries.length === 0) throw Errors.validation("Your cart is empty");
+
+  const productIds = cartEntries.map(([id]) => id);
+  if (!productIds.every((id) => Types.ObjectId.isValid(id))) throw Errors.validation("Your cart has an invalid item");
+  const products = await Product.find({ storeId, _id: { $in: productIds } });
+  const byId = new Map(products.map((p) => [p._id.toString(), p]));
+  if (productIds.some((id) => !byId.has(id))) {
+    throw Errors.validation("Some items in your cart are no longer available; please review your cart");
+  }
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: storeId } });
+  if (!tenant) throw Errors.notFound("Store");
+
+  const locationId = await inventoryService.getDefaultLocationId(prisma, storeId);
+  const stock = await inventoryService.getTotals(prisma, storeId, productIds, locationId);
+  const lines: PricedLine[] = cartEntries.map(([id, qty]) => {
+    const product = byId.get(id)!;
+    const quantity = Number(qty);
+    if ((stock.get(id) ?? 0) < quantity) {
+      throw Errors.insufficientStock(`Not enough stock for "${product.title}"`);
+    }
+    return {
+      productId: id,
+      title: product.title,
+      unitPrice: Number(product.price.toString()),
+      unitCost: product.costPrice ? Number(product.costPrice.toString()) : null,
+      quantity,
+      taxable: product.taxable !== false,
+    };
+  });
+
+  let shipping: { name: string; amount: number } | undefined;
+  if (input.shippingZoneId) {
+    const zone = await prisma.shippingZone.findFirst({ where: { id: input.shippingZoneId, tenantId: storeId } });
+    if (!zone) throw Errors.notFound("Shipping zone");
+    shipping = { name: zone.name, amount: Number(zone.rateAmount.toString()) };
+  }
+
+  const totals = calculateTotals({
+    lines,
+    shippingAmount: shipping?.amount,
+    taxRatePercent: Number(tenant.taxRate.toString()),
+  });
+  const snapshot: OrderSnapshot = { lines, totals };
+  return { key, tenant, shipping, snapshot };
+}
+
 export const checkoutService = {
+  /** A price preview for the checkout page: same math as the real session, nothing saved. */
+  async quote(storeId: string, owner: CartOwner, input: QuoteInput) {
+    const { tenant, snapshot } = await priceCart(storeId, owner, input);
+    const t = snapshot.totals;
+    return {
+      currency: tenant.currency,
+      subtotal: Number(t.subtotal),
+      discountAmount: Number(t.discountAmount),
+      taxAmount: Number(t.taxAmount),
+      shippingAmount: Number(t.shippingAmount),
+      total: Number(t.total),
+    };
+  },
+
   /**
    * Prices the shopper's cart, freezes it as a CheckoutSession snapshot, and creates the
    * Stripe-hosted checkout page. No order exists yet: the webhook creates it once Stripe
    * confirms payment (webhook.service.ts).
    */
   async createSession(storeId: string, owner: CartOwner, input: CreateSessionInput) {
-    if (input.discountCode) {
-      throw Errors.validation("Discount codes are not available yet");
-    }
-
     // Fail early with a clear 503 if Stripe is not configured, before touching any data.
     const stripe = getStripeGateway();
 
-    const key = cartKey(storeId, owner);
-    const raw = await getRedis().hgetall(key);
-    const cartEntries = Object.entries(raw);
-    if (cartEntries.length === 0) throw Errors.validation("Your cart is empty");
-
-    const productIds = cartEntries.map(([id]) => id);
-    if (!productIds.every((id) => Types.ObjectId.isValid(id))) throw Errors.validation("Your cart has an invalid item");
-    const products = await Product.find({ storeId, _id: { $in: productIds } });
-    const byId = new Map(products.map((p) => [p._id.toString(), p]));
-    if (productIds.some((id) => !byId.has(id))) {
-      throw Errors.validation("Some items in your cart are no longer available; please review your cart");
-    }
-
-    const tenant = await prisma.tenant.findUnique({ where: { id: storeId } });
-    if (!tenant) throw Errors.notFound("Store");
-
-    const locationId = await inventoryService.getDefaultLocationId(prisma, storeId);
-    const stock = await inventoryService.getTotals(prisma, storeId, productIds, locationId);
-    const lines: PricedLine[] = cartEntries.map(([id, qty]) => {
-      const product = byId.get(id)!;
-      const quantity = Number(qty);
-      if ((stock.get(id) ?? 0) < quantity) {
-        throw Errors.insufficientStock(`Not enough stock for "${product.title}"`);
-      }
-      return {
-        productId: id,
-        title: product.title,
-        unitPrice: Number(product.price.toString()),
-        unitCost: product.costPrice ? Number(product.costPrice.toString()) : null,
-        quantity,
-        taxable: product.taxable !== false,
-      };
-    });
-
-    let shipping: { name: string; amount: number } | undefined;
-    if (input.shippingZoneId) {
-      const zone = await prisma.shippingZone.findFirst({ where: { id: input.shippingZoneId, tenantId: storeId } });
-      if (!zone) throw Errors.notFound("Shipping zone");
-      shipping = { name: zone.name, amount: Number(zone.rateAmount.toString()) };
-    }
-
-    const totals = calculateTotals({
-      lines,
-      shippingAmount: shipping?.amount,
-      taxRatePercent: Number(tenant.taxRate.toString()),
-    });
-    const snapshot: OrderSnapshot = { lines, totals };
+    const { key, tenant, shipping, snapshot } = await priceCart(storeId, owner, input);
+    const { lines, totals } = snapshot;
 
     const expiresAt = new Date(Date.now() + SESSION_MINUTES * 60 * 1000);
     const record = await prisma.checkoutSession.create({
@@ -110,8 +135,9 @@ export const checkoutService = {
           ...(taxCents > 0 ? [{ name: "Tax", unitAmountCents: taxCents, quantity: 1 }] : []),
         ],
         shipping: shipping ? { name: shipping.name, amountCents: Math.round(shipping.amount * 100) } : undefined,
-        successUrl: `${env.corsOrigin}/checkout/success?store=${storeId}&session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${env.corsOrigin}/cart?store=${storeId}`,
+        shippingCountries: env.shippingCountries,
+        successUrl: `${env.storefrontUrl}/store/${storeId}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${env.storefrontUrl}/store/${storeId}/cart`,
         expiresAt,
       });
 
@@ -127,5 +153,42 @@ export const checkoutService = {
       });
       throw err;
     }
+  },
+
+  /**
+   * What the confirmation page shows after Stripe redirects back. The webhook, not the
+   * redirect, creates the order, so it may not exist yet: the page polls until this
+   * answers "completed". The unguessable Stripe session id in the URL is the only
+   * credential, and only order-confirmation details are returned.
+   */
+  async getSessionStatus(storeId: string, stripeSessionId: string) {
+    const record = await prisma.checkoutSession.findFirst({ where: { tenantId: storeId, stripeSessionId } });
+    if (!record) throw Errors.notFound("Checkout session");
+
+    const state = record.status.toLowerCase() as "pending" | "completed" | "expired" | "refunded" | "failed";
+    if (record.status !== "COMPLETED" || !record.orderId) return { state, order: null };
+
+    const order = await prisma.order.findFirst({
+      where: { id: record.orderId, tenantId: storeId },
+      include: { items: true, customer: true },
+    });
+    if (!order) return { state, order: null };
+
+    return {
+      state,
+      order: {
+        orderNumber: order.orderNumber,
+        status: order.status.toLowerCase(),
+        total: Number(order.total.toString()),
+        currency: order.currency,
+        email: order.guestEmail ?? order.customer?.email ?? null,
+        shippingName: order.shippingName,
+        items: order.items.map((i) => ({
+          title: i.productTitleSnapshot,
+          quantity: i.quantity,
+          lineTotal: Number(i.lineTotal.toString()),
+        })),
+      },
+    };
   },
 };

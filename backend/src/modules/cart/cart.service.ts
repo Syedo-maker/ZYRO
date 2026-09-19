@@ -27,6 +27,7 @@ export interface CartItemView {
 export interface CartView {
   items: CartItemView[];
   subtotal: number;
+  currency: string;
 }
 
 /**
@@ -61,7 +62,9 @@ export const cartService = {
     const key = cartKey(storeId, owner);
     const raw = await getRedis().hgetall(key);
     const productIds = Object.keys(raw);
-    if (productIds.length === 0) return { items: [], subtotal: 0 };
+    const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { currency: true } });
+    if (!tenant) throw Errors.notFound("Store");
+    if (productIds.length === 0) return { items: [], subtotal: 0, currency: tenant.currency };
 
     const validIds = productIds.filter((id) => Types.ObjectId.isValid(id));
     const products = await Product.find({ storeId, _id: { $in: validIds } });
@@ -92,7 +95,7 @@ export const cartService = {
         availableStock: stock.get(id) ?? 0,
       });
     }
-    return { items, subtotal: subtotalCents / 100 };
+    return { items, subtotal: subtotalCents / 100, currency: tenant.currency };
   },
 
   /** Adds to the existing quantity. Rejects if the total would exceed available stock. */

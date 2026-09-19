@@ -55,6 +55,20 @@ async function fulfil(session: Stripe.Checkout.Session): Promise<WebhookOutcome>
     }
 
     const email = session.customer_details?.email ?? session.customer_email ?? undefined;
+    const collected = session.collected_information?.shipping_details;
+    const shipping = collected?.address
+      ? {
+          name: collected.name,
+          address: {
+            line1: collected.address.line1 ?? null,
+            line2: collected.address.line2 ?? null,
+            city: collected.address.city ?? null,
+            state: collected.address.state ?? null,
+            postalCode: collected.address.postal_code ?? null,
+            country: collected.address.country ?? null,
+          },
+        }
+      : undefined;
 
     try {
       const claimed = await prisma.$transaction(async (tx) => {
@@ -77,6 +91,7 @@ async function fulfil(session: Stripe.Checkout.Session): Promise<WebhookOutcome>
             channel: "ONLINE",
             customerId,
             guestEmail: record.userId ? undefined : email,
+            shipping,
             snapshot,
             payments: [{ method: "STRIPE", amount: record.totalCents / 100, stripePaymentIntentId: paymentIntentId }],
             stripeCheckoutSessionId: session.id,

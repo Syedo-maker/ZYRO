@@ -15,6 +15,14 @@ export const env = {
   publicUrl: process.env.PUBLIC_URL ?? "http://localhost:5000",
   redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   cartTtlSeconds: Number(process.env.CART_TTL_SECONDS ?? 7 * 24 * 60 * 60),
+  // Countries a shopper may ship to, as ISO codes. A single list for every store for now;
+  // it belongs in per-store settings once those exist.
+  shippingCountries: (process.env.SHIPPING_COUNTRIES ?? "US,CA,GB,AU,DE,FR,PK,AE")
+    .split(",")
+    .map((c) => c.trim().toUpperCase())
+    .filter(Boolean),
+  // Where shoppers land after Stripe Checkout. Defaults to the storefront's own origin.
+  storefrontUrl: process.env.STOREFRONT_URL ?? process.env.CORS_ORIGIN ?? "http://localhost:5173",
   // Stripe is optional at startup so the rest of the API runs without keys; the checkout
   // and webhook endpoints answer 503 until these are set.
   stripe: {

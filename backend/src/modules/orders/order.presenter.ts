@@ -26,6 +26,8 @@ export function toOrderView(o: OrderWithRelations) {
     customerId: o.customerId,
     customer: o.customer ? { name: o.customer.name, email: o.customer.email } : null,
     guestEmail: o.guestEmail,
+    shippingName: o.shippingName,
+    shippingAddress: o.shippingAddress,
     subtotal: num(o.subtotal),
     discountAmount: num(o.discountAmount),
     taxAmount: num(o.taxAmount),

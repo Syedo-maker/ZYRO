@@ -27,8 +27,9 @@ backend/prisma/*.db
 # User-uploaded files (local disk storage for this prototype)
 backend/uploads/
 
-# Test coverage
+# Test coverage and browser-test screenshots
 coverage/
+frontend/e2e/shots/
 
 # Design canvas: generated/seeded output (regenerate from design/wireframes/*.dc.html + canvas.json);
 # the .dc.html source files and canvas.json themselves ARE tracked.

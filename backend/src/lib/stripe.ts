@@ -9,6 +9,8 @@ export interface CheckoutSessionParams {
   customerEmail?: string;
   lineItems: { name: string; unitAmountCents: number; quantity: number }[];
   shipping?: { name: string; amountCents: number };
+  /** ISO country codes Stripe may collect a shipping address for. */
+  shippingCountries: string[];
   successUrl: string;
   cancelUrl: string;
   expiresAt: Date;
@@ -44,6 +46,10 @@ function createRealGateway(): StripeGateway {
         metadata: { checkoutSessionId: p.checkoutSessionId, tenantId: p.tenantId },
         integration_identifier: `zyro-online-checkout-${randomSuffix()}`,
         customer_email: p.customerEmail,
+        // Stripe's page collects the address; the webhook copies it onto the order.
+        shipping_address_collection: {
+          allowed_countries: p.shippingCountries as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[],
+        },
         line_items: p.lineItems.map((item) => ({
           quantity: item.quantity,
           price_data: {

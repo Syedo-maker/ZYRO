@@ -338,6 +338,10 @@ model Order {
   total                   Decimal      @db.Decimal(10, 2)
   currency                String       @default("USD")
   discountCodeId          String?
+  /// Where an online order ships, collected by Stripe Checkout: name and a normalized
+  /// { line1, line2, city, state, postalCode, country } object. Null for POS orders.
+  shippingName            String?
+  shippingAddress         Json?
   stripeCheckoutSessionId String?      @unique
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt

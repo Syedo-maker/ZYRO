@@ -23,6 +23,15 @@ export interface OrderSnapshot {
   totals: PricingResult;
 }
 
+export interface ShippingAddress {
+  line1: string | null;
+  line2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+}
+
 export interface CreateOrderInput {
   tenantId: string;
   channel: OrderChannel;
@@ -32,6 +41,8 @@ export interface CreateOrderInput {
   cashierUserId?: string;
   customerId?: string;
   guestEmail?: string;
+  /** Where an online order ships. */
+  shipping?: { name?: string | null; address: ShippingAddress };
   /** Product ids and quantities. Ignored when `snapshot` is given. */
   items?: { productId: string; quantity: number }[];
   /**
@@ -148,6 +159,8 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
         cashierUserId: input.cashierUserId,
         customerId: input.customerId,
         guestEmail: input.guestEmail,
+        shippingName: input.shipping?.name ?? undefined,
+        shippingAddress: input.shipping ? { ...input.shipping.address } : undefined,
         status: input.channel === "POS" ? "COMPLETED" : "PAID",
         subtotal: totals.subtotal,
         discountAmount: totals.discountAmount,
