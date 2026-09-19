@@ -108,6 +108,41 @@ export const inventoryService = {
     });
   },
 
+  /** Puts returned or cancelled quantities back on the shelf, recorded as RETURN movements. */
+  async restock(
+    tx: PrismaTx,
+    args: { tenantId: string; locationId: string; orderId: string; items: DeductItem[]; userId?: string }
+  ): Promise<void> {
+    const { tenantId, locationId, orderId } = args;
+    const merged = new Map<string, number>();
+    for (const item of args.items) {
+      merged.set(item.productId, (merged.get(item.productId) ?? 0) + item.quantity);
+    }
+
+    for (const [productId, quantity] of [...merged.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+      const { count } = await tx.inventoryLevel.updateMany({
+        where: { tenantId, locationId, productId },
+        data: { quantity: { increment: quantity } },
+      });
+      if (count === 0) {
+        await tx.inventoryLevel.create({ data: { tenantId, locationId, productId, quantity } });
+      }
+      const level = await tx.inventoryLevel.findFirst({ where: { tenantId, locationId, productId } });
+      await tx.stockMovement.create({
+        data: {
+          tenantId,
+          locationId,
+          productId,
+          type: "RETURN",
+          quantityChange: quantity,
+          quantityAfter: level?.quantity ?? quantity,
+          orderId,
+          createdByUserId: args.userId,
+        },
+      });
+    }
+  },
+
   /**
    * Deducts sold quantities. The decrement is a single conditional UPDATE
    * (`quantity >= n`), so two sales racing for the last unit cannot both succeed:

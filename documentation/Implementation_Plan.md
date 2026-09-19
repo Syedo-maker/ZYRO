@@ -30,7 +30,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 **Phase 2: Core Commerce**
 - [x] Module: Commerce Core Foundation (backend, *new, added by the Commerce + POS amendment*): inventory in Postgres, locations, customers, channel-aware orders and payments, shared pricing and `createOrder` services; see `documentation/Phase2_Commerce_Core_Foundation.md`
 - [x] Module 2: Cart & Checkout (backend, online channel), verified against real Postgres, MongoDB and Redis with Stripe's network calls faked; see `documentation/Phase2_Module2_Cart_And_Checkout.md`
-- [ ] Module 5: Order & Shipping Management (backend, all channels)
+- [x] Module 5: Order & Shipping Management (backend, all channels), verified against real Postgres and MongoDB with Stripe's refund call faked; see `documentation/Phase2_Module5_Order_And_Shipping_Management.md`
 - [ ] Frontend: Storefront Cart, Checkout, Order Confirmation (`Cart.dc.html`, `Checkout.dc.html`, `OrderConfirmation.dc.html`) + Admin Orders & Shipping UI (`AdminOrders.dc.html`)
 
 **Phase 2.5: Point of Sale (POS)** *(new phase, added by the Commerce + POS amendment; numbered 2.5 so existing phase numbers stay stable)*
@@ -183,9 +183,9 @@ ZYRO is now defined as a multi-tenant Commerce + POS SaaS (see the amendment not
 ### Module 5: Order & Shipping Management
 - **Solution:** `Order` + `OrderItem` (Postgres, transactional integrity matters for financial records per Section 6). `Shipment` record holds carrier/status, updated manually by merchant for this scope (no live carrier API integration, out of scope per Section 8).
 - Shipping rates: a `ShippingZone` table per store (flat-rate or per-region) referenced at checkout to compute shipping cost.
-- Refunds/cancellations call the Stripe Refunds API and update `Order.status`.
+- Refunds work for every payment method: Stripe payments call the Stripe Refunds API (idempotent), cash and card-terminal payments are recorded as returned, all through one `Refund` record per payment. Cancelling a paid order refunds it and restocks. Stock returns as `RETURN` movements.
 - Order lists and detail views are channel-aware (filter by ONLINE or POS). Shipping applies to ONLINE orders; POS orders are fulfilled in store and have no `Shipment`.
-- **Endpoints:** `GET /stores/:id/orders`, `PATCH /orders/:id/status`, `POST /orders/:id/refund`, `POST/GET/PUT /stores/:id/shipping-zones`.
+- **Endpoints:** `GET /stores/:id/orders`, `GET /stores/:id/orders/:orderId`, `PATCH /stores/:id/orders/:orderId/status`, `POST /stores/:id/orders/:orderId/refund`, `PUT /stores/:id/orders/:orderId/shipment`, `GET/POST/PUT/DELETE /stores/:id/shipping-zones`.
 
 **Exit criteria:** A customer can add items to cart, apply nothing yet (discounts land in Phase 3), pay via Stripe test mode, and the merchant sees the order appear with correct shipping cost.
 

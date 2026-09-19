@@ -783,11 +783,28 @@ paths:
       tags: [orders]
       operationId: orders_list
       summary: List orders for a store
-      description: Requires the `orders_write` staff permission (or owner) for the merchant order queue.
+      description: |
+        Requires the `orders_write` staff permission (or owner) for the merchant order queue.
+        Covers both sales channels; filter with `channel`. Newest first.
       parameters:
         - name: status
           in: query
           schema: { $ref: "#/components/schemas/OrderStatus" }
+        - name: channel
+          in: query
+          schema: { $ref: "#/components/schemas/SalesChannel" }
+        - name: q
+          in: query
+          description: An order number, or part of a customer email (case-insensitive).
+          schema: { type: string, maxLength: 100 }
+        - name: from
+          in: query
+          description: Only orders created at or after this time.
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          description: Only orders created at or before this time.
+          schema: { type: string, format: date-time }
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -815,7 +832,10 @@ paths:
       tags: [orders]
       operationId: orders_get
       summary: Get a single order
-      description: Available to the merchant, and to the customer who placed it.
+      description: |
+        Available to the merchant side (owner, or staff with `orders_write`) for any order, and
+        to a logged-in shopper for orders placed under their own customer record. Anyone else
+        gets 404 (not 403), so order ids cannot be probed.
       responses:
         "200":
           description: Order
@@ -835,7 +855,12 @@ paths:
       tags: [orders]
       operationId: orders_status_update
       summary: Update an order's fulfillment status
-      description: Requires the `orders_write` staff permission (or owner).
+      description: |
+        Requires the `orders_write` staff permission (or owner). Only `fulfilled` (from `paid`)
+        and `cancelled` can be set by hand; anything else is 400. `refunded` goes through
+        `orders_refund` because it moves money. Cancelling a `paid` order refunds it in full
+        and puts the items back in stock, and additionally requires the `refunds` permission.
+        An order that has been fulfilled or completed can only be refunded, not cancelled (409).
       requestBody:
         required: true
         content:
@@ -851,7 +876,62 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Order" }
+        "400":
+          description: Status is not one that can be set by hand
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: The order is not in a state that allows this change
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/orders/{orderId}/shipment:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      tags: [orders]
+      operationId: orders_shipment_upsert
+      summary: Create or update an online order's shipment
+      description: |
+        Requires the `orders_write` staff permission (or owner). Online orders only; POS
+        orders are handed over in store (409). A shipment moves forward only:
+        `pending` to `shipped` or `cancelled`, `shipped` to `delivered`. A new shipment may
+        start as `pending` or `shipped`. Marking it `shipped` or `delivered` also moves a
+        `paid` order to `fulfilled`. Send only the fields to change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                carrier: { type: string, maxLength: 100 }
+                trackingNumber: { type: string, maxLength: 100 }
+                status: { $ref: "#/components/schemas/ShipmentStatus" }
+      responses:
+        "200":
+          description: The order with its shipment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "400":
+          description: Empty body or invalid value
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Not allowed for this order or this shipment state
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /stores/{storeId}/orders/{orderId}/refund:
     parameters:
@@ -863,8 +943,27 @@ paths:
     post:
       tags: [orders]
       operationId: orders_refund
-      summary: Refund an order via Stripe
-      description: Requires the `orders_write` staff permission (or owner).
+      summary: Refund an order in full
+      description: |
+        Requires the `refunds` staff permission (or owner). Works for both channels: Stripe
+        payments are refunded through Stripe, cash and card-terminal payments are recorded
+        as returned. Every successful payment is refunded in full (one refund record per
+        payment); partial refunds arrive with line-item returns in the POS phase.
+        Safe to retry and to call twice at once: Stripe is called with an idempotency key,
+        exactly one caller records the refund, and the other gets 409. If Stripe fails, the
+        order is unchanged and the call can be repeated.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+                restock:
+                  type: boolean
+                  description: |
+                    Put the items back in stock. Defaults to true for an order that has not
+                    shipped (`paid`) and false for a `fulfilled` or `completed` one.
       responses:
         "200":
           description: Refund initiated
@@ -886,9 +985,8 @@ paths:
       tags: [shipping]
       operationId: shipping_zones_list
       summary: List a store's shipping zones
-      security:
-        - bearerAuth: []
-        - guestSession: []
+      description: Public, so the storefront can show shipping options (name and rate) before checkout.
+      security: []
       responses:
         "200":
           description: Shipping zones
@@ -1442,6 +1540,11 @@ components:
         locationId: { type: [string, "null"] }
         cashierUserId: { type: [string, "null"], description: The user who rang up a POS sale. }
         customerId: { type: [string, "null"] }
+        customer:
+          type: [object, "null"]
+          properties:
+            name: { type: [string, "null"] }
+            email: { type: [string, "null"] }
         guestEmail: { type: [string, "null"] }
         status: { $ref: "#/components/schemas/OrderStatus" }
         subtotal: { type: number }
@@ -1453,7 +1556,41 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/OrderItem" }
+        payments:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              method: { type: string, enum: [cash, card, stripe, other] }
+              amount: { type: number }
+              status: { type: string, enum: [pending, succeeded, failed, refunded] }
+        refunds:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              paymentId: { type: string }
+              amount: { type: number }
+              method: { type: string, enum: [cash, card, stripe, other] }
+              reason: { type: [string, "null"] }
+              restocked: { type: boolean }
+              createdAt: { type: string, format: date-time }
+        shipment:
+          type: [object, "null"]
+          description: Set once a shipment exists. Never present on POS orders.
+          properties:
+            carrier: { type: [string, "null"] }
+            trackingNumber: { type: [string, "null"] }
+            status: { $ref: "#/components/schemas/ShipmentStatus" }
+            shippedAt: { type: [string, "null"], format: date-time }
+            deliveredAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
+
+    ShipmentStatus:
+      type: string
+      enum: [pending, shipped, delivered, cancelled]
 
     ShippingZoneInput:
       type: object

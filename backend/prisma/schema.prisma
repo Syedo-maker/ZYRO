@@ -110,19 +110,19 @@ enum CartRecoveryStatus {
 /// A single login-capable account. Covers both merchant owners/staff and customers:
 /// a customer is simply a User with no Tenant ownership and no StaffMember rows.
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String       @id @default(cuid())
+  email        String       @unique
   passwordHash String
   name         String?
   platformRole PlatformRole @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  ownedTenants  Tenant[]       @relation("TenantOwner")
-  staffMemberOf StaffMember[]
-  refreshTokens RefreshToken[]
+  ownedTenants     Tenant[]       @relation("TenantOwner")
+  staffMemberOf    StaffMember[]
+  refreshTokens    RefreshToken[]
   customerProfiles Customer[]
-  cashierOrders    Order[]     @relation("OrderCashier")
+  cashierOrders    Order[]        @relation("OrderCashier")
 
   @@index([email])
 }
@@ -145,27 +145,28 @@ model RefreshToken {
 
 /// A merchant's store. The tenant-isolation boundary for every scoped table below.
 model Tenant {
-  id         String   @id @default(cuid())
-  name       String
-  slug       String   @unique
-  logoUrl    String?
-  themeColor String?
-  ownerId    String
-  currency   String   @default("USD")
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  logoUrl      String?
+  themeColor   String?
+  ownerId      String
+  currency     String   @default("USD")
   /// Percentage, e.g. 8.25 for 8.25%. Prices are treated as tax-exclusive.
-  taxRate    Decimal  @default(0) @db.Decimal(5, 2)
+  taxRate      Decimal  @default(0) @db.Decimal(5, 2)
   /// Last order number issued for this tenant; incremented atomically inside createOrder.
-  orderCounter Int    @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  orderCounter Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  owner            User               @relation("TenantOwner", fields: [ownerId], references: [id])
+  owner            User                @relation("TenantOwner", fields: [ownerId], references: [id])
   staffMembers     StaffMember[]
   locations        Location[]
   inventoryLevels  InventoryLevel[]
   stockMovements   StockMovement[]
   customers        Customer[]
   checkoutSessions CheckoutSession[]
+  refunds          Refund[]
   orders           Order[]
   payments         Payment[]
   shipments        Shipment[]
@@ -341,13 +342,14 @@ model Order {
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
 
-  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  location     Location?      @relation(fields: [locationId], references: [id])
-  cashier      User?          @relation("OrderCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
-  customer     Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  discountCode DiscountCode?  @relation(fields: [discountCodeId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location     Location?     @relation(fields: [locationId], references: [id])
+  cashier      User?         @relation("OrderCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  discountCode DiscountCode? @relation(fields: [discountCodeId], references: [id])
   items        OrderItem[]
   payments     Payment[]
+  refunds      Refund[]
   shipment     Shipment?
 
   @@unique([tenantId, orderNumber])
@@ -388,8 +390,36 @@ model Payment {
   status                PaymentStatus @default(PENDING)
   createdAt             DateTime      @default(now())
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refund Refund?
+
+  @@index([tenantId])
+  @@index([orderId])
+}
+
+/// Money returned for one payment, whatever its method. Stripe payments are refunded
+/// through the Stripe API; cash, card-terminal and other payments are recorded here when
+/// the merchant hands the money back. One refund per payment (unique), so a payment can
+/// never be refunded twice. Full-order refunds only for now; partial refunds arrive with
+/// line-item returns in the POS phase.
+model Refund {
+  id              String        @id @default(cuid())
+  tenantId        String
+  orderId         String
+  paymentId       String        @unique
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String
+  method          PaymentMethod
+  stripeRefundId  String?
+  reason          String?
+  restocked       Boolean       @default(false)
+  createdByUserId String?
+  createdAt       DateTime      @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([orderId])
@@ -432,16 +462,16 @@ model ShippingZone {
 
 /// Codes are unique per store, not globally; two different merchants can both run "SALE20".
 model DiscountCode {
-  id           String       @id @default(cuid())
-  tenantId     String
-  code         String
-  type         DiscountType
-  value        Decimal      @db.Decimal(10, 2)
-  expiresAt    DateTime?
-  usageLimit   Int?
-  usageCount   Int          @default(0)
-  active       Boolean      @default(true)
-  createdAt    DateTime     @default(now())
+  id         String       @id @default(cuid())
+  tenantId   String
+  code       String
+  type       DiscountType
+  value      Decimal      @db.Decimal(10, 2)
+  expiresAt  DateTime?
+  usageLimit Int?
+  usageCount Int          @default(0)
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
 
   tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   orders Order[]
@@ -457,15 +487,15 @@ model DiscountCode {
 /// One row per tenant per calendar month. Checked before enqueueing any AI job
 /// (Implementation_Plan.md, Phase 4); incremented only on a successful generation/chat call.
 model AiUsageQuota {
-  id                 String   @id @default(cuid())
-  tenantId           String
-  month              String   // "YYYY-MM"
-  generationsUsed    Int      @default(0)
-  chatMessagesUsed   Int      @default(0)
-  generationsLimit   Int
-  chatMessagesLimit  Int
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String   @id @default(cuid())
+  tenantId          String
+  month             String // "YYYY-MM"
+  generationsUsed   Int      @default(0)
+  chatMessagesUsed  Int      @default(0)
+  generationsLimit  Int
+  chatMessagesLimit Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -476,14 +506,14 @@ model AiUsageQuota {
 /// Outcome tracking for AI-personalized abandoned-cart messages (Phase 5, Module 7 remainder).
 /// cartId refers to the Redis cart key at send time; carts themselves are not persisted here.
 model CartRecoveryEvent {
-  id             String              @id @default(cuid())
+  id             String             @id @default(cuid())
   tenantId       String
   cartId         String
   customerEmail  String
-  status         CartRecoveryStatus  @default(SENT)
+  status         CartRecoveryStatus @default(SENT)
   discountCodeId String?
-  sentAt         DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  sentAt         DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

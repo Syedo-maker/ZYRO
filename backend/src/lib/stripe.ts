@@ -17,7 +17,8 @@ export interface CheckoutSessionParams {
 /** What the rest of the app needs from Stripe. Kept small so tests can substitute a fake. */
 export interface StripeGateway {
   createCheckoutSession(params: CheckoutSessionParams): Promise<{ id: string; url: string }>;
-  refundPaymentIntent(paymentIntentId: string, idempotencyKey: string): Promise<void>;
+  /** Refunds the full payment. The same idempotency key always yields the same refund. */
+  refundPaymentIntent(paymentIntentId: string, idempotencyKey: string): Promise<{ id: string }>;
   /** Verifies the Stripe-Signature header against the raw body. Throws if invalid. */
   constructEvent(rawBody: Buffer, signature: string): Stripe.Event;
 }
@@ -73,7 +74,8 @@ function createRealGateway(): StripeGateway {
     },
 
     async refundPaymentIntent(paymentIntentId, idempotencyKey) {
-      await stripe.refunds.create({ payment_intent: paymentIntentId }, { idempotencyKey });
+      const refund = await stripe.refunds.create({ payment_intent: paymentIntentId }, { idempotencyKey });
+      return { id: refund.id };
     },
 
     constructEvent(rawBody, signature) {

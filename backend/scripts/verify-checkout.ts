@@ -43,6 +43,7 @@ async function main() {
     },
     async refundPaymentIntent(pi, key) {
       stripeCalls.refunds.push({ pi, key });
+      return { id: `re_${key}` };
     },
   });
 

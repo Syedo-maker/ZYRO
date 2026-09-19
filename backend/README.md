@@ -35,6 +35,9 @@ webhooks with the Stripe CLI: `stripe listen --forward-to localhost:5000/api/v1/
 `npx tsx scripts/verify-checkout.ts` checks carts, checkout and the webhook end to end
 (Stripe's network calls are faked, so no keys are needed).
 
+`npx tsx scripts/verify-orders.ts` does the same for order management, refunds, shipments and
+shipping zones.
+
 If you have products from before the Commerce Core Foundation module, move their legacy
 `stock` values into inventory once with `npx tsx scripts/backfill-inventory.ts`. To check the
 inventory, order and tenant-isolation logic against your local databases, run
