@@ -52,6 +52,8 @@ tags:
     description: Checkout and payment.
   - name: orders
     description: Order and shipment management.
+  - name: pos
+    description: Point of sale, the in-store sales channel over the same orders, inventory and customers as the online store.
   - name: shipping
     description: Shipping zone configuration.
   - name: discounts
@@ -315,6 +317,17 @@ paths:
               required: [email, permissions]
               properties:
                 email: { type: string, format: email }
+                name:
+                  type: string
+                  maxLength: 120
+                  description: Only used when this call creates the account (a new cashier).
+                password:
+                  type: string
+                  minLength: 8
+                  description: |
+                    Give a starting password to create a new account for someone who has none
+                    (a new cashier). Rejected with 400 if the email already has an account, so
+                    an owner can never set another person's password.
                 permissions:
                   type: array
                   items: { $ref: "#/components/schemas/StaffPermission" }
@@ -323,6 +336,12 @@ paths:
                 value:
                   email: jordan@auroragoods.example
                   permissions: [products_write]
+              new_cashier:
+                value:
+                  email: riley@auroragoods.example
+                  name: Riley Chen
+                  password: a-starting-password
+                  permissions: [pos_sell]
       responses:
         "201":
           description: Staff account created
@@ -330,13 +349,13 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/StaffMember" }
         "400":
-          description: Invalid email, or empty or unknown permissions (names are lowercase)
+          description: Invalid email, empty or unknown permissions (names are lowercase), a too-short or too-long password, or a password sent for an email that already has an account
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404":
-          description: No ZYRO account exists for that email
+          description: No ZYRO account exists for that email and no password was given to create one
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -1072,7 +1091,8 @@ paths:
         Requires the `refunds` staff permission (or owner). Works for both channels: Stripe
         payments are refunded through Stripe, cash and card-terminal payments are recorded
         as returned. Every successful payment is refunded in full (one refund record per
-        payment); partial refunds arrive with line-item returns in the POS phase.
+        payment). For item-by-item returns of a POS sale use `pos_sale_return`; once part of a
+        sale has been returned this whole-order refund answers 409.
         Safe to retry and to call twice at once: Stripe is called with an idempotency key,
         exactly one caller records the refund, and the other gets 409. If Stripe fails, the
         order is unchanged and the call can be repeated.
@@ -1100,6 +1120,507 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
+
+  # ── POINT OF SALE ─────────────────────────────────────────────────────
+  # Every route needs a bearer token. The owner may do everything; staff need `pos_sell` to
+  # work the register, `refunds` to take items back, and `analytics_read` for the summary.
+  /stores/{storeId}/pos/session:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [pos]
+      operationId: pos_session
+      summary: Who is at the register and what they may do
+      description: Lets the register screen show only actions that will work. Requires `pos_sell`.
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PosSession" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/pos/settings:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    put:
+      tags: [pos]
+      operationId: pos_settings_update
+      summary: Set the largest manual discount a cashier may give
+      description: Owner only. A percentage of the sale's subtotal; owners and staff with `discounts_write` are not limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [maxCashierDiscountPercent]
+              properties:
+                maxCashierDiscountPercent: { type: number, minimum: 0, maximum: 100 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  maxCashierDiscountPercent: { type: number }
+        "400":
+          description: Out of range
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/pos/products:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [pos]
+      operationId: pos_products_search
+      summary: Find products by scanned code or by name
+      description: |
+        `code` matches a barcode or SKU exactly (what a scanner types). `q` matches part of a
+        title or SKU, ignoring case; characters such as `(` and `*` are plain text. Each result
+        carries on-hand stock at the store's location.
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: code, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: limit, in: query, schema: { type: integer, default: 30, maximum: 60 } }
+      responses:
+        "200":
+          description: Matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PosProduct" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/pos/customers:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [pos]
+      operationId: pos_customers_search
+      summary: Find customers by name, email or phone
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+      responses:
+        "200":
+          description: Up to 20 customers of this store, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PosCustomer" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [pos]
+      operationId: pos_customers_create
+      summary: Add a customer, or find the one with this email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PosCustomerInput" }
+      responses:
+        "201":
+          description: The customer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PosCustomer" }
+        "400":
+          description: Nothing to save, or an invalid email
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/pos/shift:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [pos]
+      operationId: pos_shift_current
+      summary: The open shift at this register, with live totals
+      responses:
+        "200":
+          description: The open shift, or null when none is open
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/PosShift" }
+                  - { type: "null" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/pos/shift/open:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [pos]
+      operationId: pos_shift_open
+      summary: Open the drawer with a starting float
+      description: One shift can be open per register at a time, even when two requests arrive together.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [openingFloat]
+              properties:
+                openingFloat: { type: number, minimum: 0 }
+      responses:
+        "201":
+          description: Shift opened
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PosShift" }
+        "400":
+          description: Invalid float
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: A shift is already open
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/pos/shift/close:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [pos]
+      operationId: pos_shift_close
+      summary: Count the drawer and close the shift
+      description: |
+        Only the person who opened the shift, or the owner, may close it. Sales already in
+        progress finish and are counted; any sale that starts afterwards is refused. Expected
+        cash is float plus cash sales minus cash paid back on refunds and returns; the
+        variance is counted minus expected (negative means short).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [countedCash]
+              properties:
+                countedCash: { type: number, minimum: 0 }
+                note: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: Closed shift with its frozen totals
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PosShift" }
+        "400":
+          description: Invalid count
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: No shift is open
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/pos/quote:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [pos]
+      operationId: pos_quote
+      summary: Price a cart exactly as a sale would be charged
+      description: |
+        Prices from the live catalog and the store's tax settings (clients never send prices),
+        applies an optional manual discount, checks it against the cashier's limit, and lists
+        any item that is short of stock. The register calls this on every cart change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  items: { $ref: "#/components/schemas/PosCartItem" }
+                discount: { oneOf: [{ $ref: "#/components/schemas/ManualDiscount" }, { type: "null" }] }
+      responses:
+        "200":
+          description: Priced cart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PosQuote" }
+        "400":
+          description: Empty cart, bad quantity, or a percentage over 100
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: The discount is over the cashier's limit
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stores/{storeId}/pos/sales:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [pos]
+      operationId: pos_sales_list
+      summary: Sales history for the register
+      parameters:
+        - { name: q, in: query, description: "An order number, or part of a customer name or email.", schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200":
+          description: POS orders, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Order" }
+                  pagination: { $ref: "#/components/schemas/PaginationInfo" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [pos]
+      operationId: pos_sale_create
+      summary: Ring up a sale
+      description: |
+        Needs an open shift. Prices are taken from the catalog; the payments must add up to the
+        total exactly. For cash, `amount` is what pays for the sale and `tendered` is what the
+        customer handed over (change is the difference). Stock, the order and the payments are
+        written in one transaction: if any part fails, nothing is recorded.
+        Send a `clientRequestId` (one per sale attempt) so a retried or double-submitted
+        request returns the original sale (200) instead of creating a second (201).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaleInput" }
+            examples:
+              split_payment:
+                value:
+                  items: [{ productId: 64b7f0f0f0f0f0f0f0f0f0f0, quantity: 2 }]
+                  payments: [{ method: card, amount: 12.10 }, { method: cash, amount: 31.10, tendered: 40 }]
+                  clientRequestId: sale-7f3a9c21
+      responses:
+        "201":
+          description: Sale completed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Sale" }
+        "200":
+          description: The same clientRequestId was already used; the original sale is returned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Sale" }
+        "400":
+          description: Invalid cart, payments that do not equal the total, tendered less than the cash payment, or nothing to charge
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Discount over the cashier's limit
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: No open shift, or not enough stock
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/pos/sales/{orderId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [pos]
+      operationId: pos_sale_get
+      summary: One sale, with everything a receipt needs
+      responses:
+        "200":
+          description: The sale
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Sale" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stores/{storeId}/pos/sales/{orderId}/returns:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [pos]
+      operationId: pos_sale_return
+      summary: Take some or all items of a sale back
+      description: |
+        Requires the `refunds` permission (or owner). Refunds each returned unit's price less
+        its share of the sale's discount plus its share of the tax; returning the last units
+        settles to the exact remainder so the parts always add up to what was paid. Stock goes
+        back on the shelf unless `restock` is false (damaged goods). Cash paid back comes out
+        of the open drawer. When every unit is back the sale becomes `refunded`. Two returns
+        of the same unit at once: one succeeds, the other gets 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReturnInput" }
+      responses:
+        "201":
+          description: The sale with its new return
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Sale" }
+        "400":
+          description: Empty return, or an item that is not part of this sale
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: More than is left to return, or the sale is already refunded
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/pos/held:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [pos]
+      operationId: pos_held_list
+      summary: Parked carts
+      responses:
+        "200":
+          description: Held sales, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/HeldSale" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [pos]
+      operationId: pos_held_create
+      summary: Park the current cart to serve someone else
+      description: Stores only product ids and quantities, never prices, and reserves no stock. At most 50 at a time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  items: { $ref: "#/components/schemas/PosCartItem" }
+                discount: { oneOf: [{ $ref: "#/components/schemas/ManualDiscount" }, { type: "null" }] }
+                customerId: { type: string }
+                label: { type: string, maxLength: 60 }
+      responses:
+        "201":
+          description: Parked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HeldSale" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Too many held sales
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /stores/{storeId}/pos/held/{heldId}/resume:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: heldId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [pos]
+      operationId: pos_held_resume
+      summary: Take a parked cart back to the register
+      description: Returns the cart and removes it in one step, so two registers cannot both resume it. Prices are re-read from the catalog by the next quote.
+      responses:
+        "200":
+          description: The cart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HeldSale" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stores/{storeId}/pos/held/{heldId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: heldId
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      tags: [pos]
+      operationId: pos_held_discard
+      summary: Discard a parked cart
+      responses:
+        "204": { description: Discarded }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stores/{storeId}/pos/reports/daily:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [pos]
+      operationId: pos_report_daily
+      summary: What the register took and paid back in a time window
+      description: |
+        Requires `analytics_read` (or owner). The caller chooses the window, normally the
+        store's local day, so no time zone is assumed here. Amounts include tax; net is takings
+        minus money paid back. At most 32 days.
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, description: Exclusive end., schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PosDailyReport" }
+        "400":
+          description: Missing or reversed window, or longer than 32 days
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── SHIPPING ──────────────────────────────────────────────────────────
   /stores/{storeId}/shipping-zones:
@@ -1655,12 +2176,14 @@ components:
 
     OrderItem:
       type: object
-      required: [productId, productTitleSnapshot, unitPrice, quantity, lineTotal]
+      required: [id, productId, productTitleSnapshot, unitPrice, quantity, lineTotal]
       properties:
+        id: { type: string, description: Identifies the line when returning items. }
         productId: { type: string }
         productTitleSnapshot: { type: string }
         unitPrice: { type: number }
         quantity: { type: integer }
+        returnedQuantity: { type: integer, description: Units already taken back through item returns. }
         lineTotal: { type: number }
 
     Order:
@@ -1673,6 +2196,8 @@ components:
         channel: { $ref: "#/components/schemas/SalesChannel" }
         locationId: { type: [string, "null"] }
         cashierUserId: { type: [string, "null"], description: The user who rang up a POS sale. }
+        shiftId: { type: [string, "null"], description: The register shift a POS sale was rung up in. }
+        discountReason: { type: [string, "null"], description: Why a manual POS discount was given. }
         customerId: { type: [string, "null"] }
         customer:
           type: [object, "null"]
@@ -1708,8 +2233,14 @@ components:
             properties:
               id: { type: string }
               method: { type: string, enum: [cash, card, stripe, other] }
-              amount: { type: number }
+              amount: { type: number, description: What was applied to the order (for cash, without the change). }
+              tenderedAmount: { type: [number, "null"], description: Cash only; what the customer handed over. }
+              changeGiven: { type: [number, "null"], description: Cash only; tendered minus amount. }
               status: { type: string, enum: [pending, succeeded, failed, refunded] }
+        returns:
+          type: array
+          description: Item returns (POS sales). Whole-order refunds are in `refunds`.
+          items: { $ref: "#/components/schemas/OrderReturn" }
         refunds:
           type: array
           items:
@@ -1732,6 +2263,298 @@ components:
             shippedAt: { type: [string, "null"], format: date-time }
             deliveredAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
+
+    OrderReturn:
+      type: object
+      properties:
+        id: { type: string }
+        amount: { type: number }
+        method: { type: string, enum: [cash, card, other], description: How the customer was paid back. }
+        reason: { type: [string, "null"] }
+        restocked: { type: boolean }
+        createdByUserId: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              orderItemId: { type: string }
+              productId: { type: string }
+              productTitleSnapshot: { type: string }
+              quantity: { type: integer }
+              amount: { type: number }
+
+    PosSession:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: [string, "null"] }
+            email: { type: string }
+        isOwner: { type: boolean }
+        permissions:
+          type: object
+          properties:
+            sell: { type: boolean }
+            refunds: { type: boolean }
+            analytics: { type: boolean }
+            unlimitedDiscounts: { type: boolean }
+        store:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            currency: { type: string }
+            taxRate: { type: number, description: "Percentage, for example 8.25." }
+        settings:
+          type: object
+          properties:
+            maxCashierDiscountPercent: { type: number }
+
+    PosProduct:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        price: { type: number }
+        taxable: { type: boolean }
+        sku: { type: [string, "null"] }
+        barcode: { type: [string, "null"] }
+        category: { type: string }
+        image: { type: [string, "null"] }
+        stock: { type: integer, description: On hand at the store's location. }
+
+    PosCustomerInput:
+      type: object
+      description: At least one field is required. With an email, an existing customer with that email is reused.
+      properties:
+        name: { type: string, maxLength: 120 }
+        email: { type: string, format: email }
+        phone: { type: string, maxLength: 40 }
+
+    PosCustomer:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: [string, "null"] }
+        email: { type: [string, "null"] }
+        phone: { type: [string, "null"] }
+
+    PosCartItem:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId: { type: string }
+        quantity: { type: integer, minimum: 1 }
+
+    ManualDiscount:
+      type: object
+      required: [type, value]
+      properties:
+        type: { type: string, enum: [percentage, fixed] }
+        value: { type: number, exclusiveMinimum: 0 }
+        reason: { type: string, maxLength: 200 }
+
+    PosQuote:
+      type: object
+      properties:
+        currency: { type: string }
+        taxRate: { type: number }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              productId: { type: string }
+              title: { type: string }
+              unitPrice: { type: number }
+              quantity: { type: integer }
+              taxable: { type: boolean }
+              lineTotal: { type: number }
+        subtotal: { type: number }
+        discountAmount: { type: number }
+        discountPercent: { type: number }
+        taxAmount: { type: number }
+        total: { type: number }
+        shortages:
+          type: array
+          description: Items the shelf cannot cover; a sale with any of these is refused.
+          items:
+            type: object
+            properties:
+              productId: { type: string }
+              requested: { type: integer }
+              available: { type: integer }
+
+    SaleInput:
+      type: object
+      required: [items, payments]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/PosCartItem" }
+        discount: { oneOf: [{ $ref: "#/components/schemas/ManualDiscount" }, { type: "null" }] }
+        customerId: { type: string }
+        customer: { $ref: "#/components/schemas/PosCustomerInput" }
+        payments:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items:
+            type: object
+            required: [method, amount]
+            properties:
+              method: { type: string, enum: [cash, card, other] }
+              amount: { type: number, exclusiveMinimum: 0 }
+              tendered: { type: number, description: Cash only; at least `amount`. }
+        clientRequestId: { type: string, minLength: 8, maxLength: 80 }
+
+    Sale:
+      description: An Order (channel pos) plus what a receipt needs.
+      allOf:
+        - { $ref: "#/components/schemas/Order" }
+        - type: object
+          properties:
+            store:
+              type: object
+              properties:
+                name: { type: string }
+                currency: { type: string }
+            cashier:
+              type: [object, "null"]
+              properties:
+                id: { type: string }
+                name: { type: string }
+            changeDue: { type: number, description: Total cash change handed back. }
+
+    ReturnInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [orderItemId, quantity]
+            properties:
+              orderItemId: { type: string }
+              quantity: { type: integer, minimum: 1 }
+        refundMethod:
+          type: string
+          enum: [cash, card, other]
+          description: Defaults to how the sale was mostly paid (cash when that was not cash, card or other).
+        reason: { type: string, maxLength: 500 }
+        restock: { type: boolean, description: Put items back on the shelf. Default true. }
+
+    PosShift:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [open, closed] }
+        locationId: { type: string }
+        openedAt: { type: string, format: date-time }
+        closedAt: { type: [string, "null"], format: date-time }
+        openedBy:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: [string, "null"] }
+        closedBy:
+          type: [object, "null"]
+          properties:
+            id: { type: string }
+            name: { type: [string, "null"] }
+        openingFloat: { type: number }
+        expectedCash: { type: number, description: Live while open; frozen when closed. }
+        countedCash: { type: [number, "null"] }
+        variance: { type: [number, "null"], description: Counted minus expected; negative is short. }
+        note: { type: [string, "null"] }
+        totals:
+          type: object
+          properties:
+            salesCount: { type: integer }
+            grossSales: { type: number }
+            cashSales: { type: number }
+            cardSales: { type: number }
+            otherSales: { type: number }
+            refundsTotal: { type: number }
+            cashRefunds: { type: number }
+            expectedCash: { type: number }
+
+    HeldSale:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: [string, "null"] }
+        customerId: { type: [string, "null"] }
+        customerName: { type: [string, "null"] }
+        cashierName: { type: [string, "null"] }
+        itemCount: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId: { type: string }
+              title: { type: string }
+              quantity: { type: integer }
+        discount: { oneOf: [{ $ref: "#/components/schemas/ManualDiscount" }, { type: "null" }] }
+        createdAt: { type: string, format: date-time }
+
+    PosDailyReport:
+      type: object
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        currency: { type: string }
+        salesCount: { type: integer }
+        grossSales: { type: number }
+        discountsGiven: { type: number }
+        taxCollected: { type: number }
+        refunds:
+          type: object
+          properties:
+            count: { type: integer }
+            total: { type: number }
+        netSales: { type: number }
+        averageSale: { type: number }
+        byPaymentMethod:
+          type: array
+          items:
+            type: object
+            properties:
+              method: { type: string }
+              sales: { type: number }
+              refunds: { type: number }
+              net: { type: number }
+        byCashier:
+          type: array
+          items:
+            type: object
+            properties:
+              userId: { type: [string, "null"] }
+              name: { type: string }
+              salesCount: { type: integer }
+              sales: { type: number }
+              refunds: { type: number }
+              net: { type: number }
+        topItems:
+          type: array
+          items:
+            type: object
+            properties:
+              productId: { type: string }
+              title: { type: string }
+              quantity: { type: integer }
+              revenue: { type: number }
+        shifts:
+          type: array
+          items: { $ref: "#/components/schemas/PosShift" }
 
     ShipmentStatus:
       type: string

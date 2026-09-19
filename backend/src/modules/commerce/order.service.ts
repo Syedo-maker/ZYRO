@@ -39,6 +39,10 @@ export interface CreateOrderInput {
   locationId?: string;
   /** POS only: the user who rang up the sale. */
   cashierUserId?: string;
+  /** POS only: the open register shift, why a manual discount was given, and a retry key. */
+  shiftId?: string;
+  discountReason?: string;
+  clientRequestId?: string;
   customerId?: string;
   guestEmail?: string;
   /** Where an online order ships. */
@@ -56,13 +60,22 @@ export interface CreateOrderInput {
   /** Live pricing only. */
   shippingAmount?: number;
   /** Payments already taken. Must add up to the order total exactly. */
-  payments: { method: OrderPaymentMethod; amount: number; stripePaymentIntentId?: string }[];
+  payments: {
+    method: OrderPaymentMethod;
+    amount: number;
+    /** Cash only: what the customer handed over (change is this minus `amount`). */
+    tenderedAmount?: number;
+    stripePaymentIntentId?: string;
+  }[];
   stripeCheckoutSessionId?: string;
 }
 
-/** Prices the items from the live catalog and the tenant's tax settings. */
-async function priceFromCatalog(
-  input: CreateOrderInput,
+/**
+ * Prices the items from the live catalog and the tenant's tax settings. Also what the POS
+ * register calls to show live totals, so what it shows is exactly what createOrder charges.
+ */
+export async function priceFromCatalog(
+  input: Pick<CreateOrderInput, "tenantId" | "items" | "discount" | "shippingAmount">,
   tenantTaxRate: number
 ): Promise<OrderSnapshot> {
   const items = input.items ?? [];
@@ -157,6 +170,9 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
         channel: input.channel,
         locationId,
         cashierUserId: input.cashierUserId,
+        shiftId: input.shiftId,
+        discountReason: input.discountReason,
+        clientRequestId: input.clientRequestId,
         customerId: input.customerId,
         guestEmail: input.guestEmail,
         shippingName: input.shipping?.name ?? undefined,
@@ -192,6 +208,7 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
         method: p.method,
         stripePaymentIntentId: p.stripePaymentIntentId,
         amount: p.amount.toFixed(2),
+        tenderedAmount: p.tenderedAmount === undefined ? undefined : p.tenderedAmount.toFixed(2),
         currency: tenant.currency,
         status: "SUCCEEDED" as const,
       })),

@@ -91,6 +91,11 @@ enum ShipmentStatus {
   CANCELLED
 }
 
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
 enum DiscountType {
   PERCENTAGE
   FIXED
@@ -145,20 +150,26 @@ model RefreshToken {
 
 /// A merchant's store. The tenant-isolation boundary for every scoped table below.
 model Tenant {
-  id           String   @id @default(cuid())
-  name         String
-  slug         String   @unique
-  logoUrl      String?
-  themeColor   String?
-  ownerId      String
-  currency     String   @default("USD")
+  id                    String   @id @default(cuid())
+  name                  String
+  slug                  String   @unique
+  logoUrl               String?
+  themeColor            String?
+  ownerId               String
+  currency              String   @default("USD")
   /// Percentage, e.g. 8.25 for 8.25%. Prices are treated as tax-exclusive.
-  taxRate      Decimal  @default(0) @db.Decimal(5, 2)
+  taxRate               Decimal  @default(0) @db.Decimal(5, 2)
   /// Last order number issued for this tenant; incremented atomically inside createOrder.
-  orderCounter Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  orderCounter          Int      @default(0)
+  /// Largest manual discount, as a percentage of the subtotal, a cashier may give at the
+  /// register without the owner's or a discount manager's approval.
+  posMaxDiscountPercent Decimal  @default(20) @db.Decimal(5, 2)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
+  posShifts        PosShift[]
+  orderReturns     OrderReturn[]
+  heldSales        HeldSale[]
   owner            User                @relation("TenantOwner", fields: [ownerId], references: [id])
   staffMembers     StaffMember[]
   locations        Location[]
@@ -214,6 +225,7 @@ model Location {
   inventoryLevels InventoryLevel[]
   stockMovements  StockMovement[]
   orders          Order[]
+  posShifts       PosShift[]
 
   @@index([tenantId])
 }
@@ -338,6 +350,13 @@ model Order {
   total                   Decimal      @db.Decimal(10, 2)
   currency                String       @default("USD")
   discountCodeId          String?
+  /// POS only: why a manual discount was given.
+  discountReason          String?
+  /// POS only: the register shift the sale was rung up in (drawer accounting).
+  shiftId                 String?
+  /// POS only: a key the register generates per sale attempt, so a retried or double
+  /// submitted "Charge" returns the same order instead of creating a second one.
+  clientRequestId         String?
   /// Where an online order ships, collected by Stripe Checkout: name and a normalized
   /// { line1, line2, city, state, postalCode, country } object. Null for POS orders.
   shippingName            String?
@@ -354,9 +373,12 @@ model Order {
   items        OrderItem[]
   payments     Payment[]
   refunds      Refund[]
+  returns      OrderReturn[]
+  shift        PosShift?     @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   shipment     Shipment?
 
   @@unique([tenantId, orderNumber])
+  @@unique([tenantId, clientRequestId])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, channel, createdAt])
@@ -372,9 +394,12 @@ model OrderItem {
   /// Cost price at order time, when the merchant recorded one; enables margin analytics.
   unitCostSnapshot     Decimal? @db.Decimal(10, 2)
   quantity             Int
+  /// How many units have come back through item returns; never more than `quantity`.
+  returnedQuantity     Int      @default(0)
   lineTotal            Decimal  @db.Decimal(10, 2)
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order       Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  returnItems OrderReturnItem[]
 
   @@index([orderId])
 }
@@ -389,7 +414,10 @@ model Payment {
   orderId               String
   method                PaymentMethod @default(STRIPE)
   stripePaymentIntentId String?       @unique
+  /// What was applied to the order. For cash this excludes the change handed back.
   amount                Decimal       @db.Decimal(10, 2)
+  /// Cash only: what the customer handed over; change due is tendered minus amount.
+  tenderedAmount        Decimal?      @db.Decimal(10, 2)
   currency              String        @default("USD")
   status                PaymentStatus @default(PENDING)
   createdAt             DateTime      @default(now())
@@ -419,6 +447,8 @@ model Refund {
   reason          String?
   restocked       Boolean       @default(false)
   createdByUserId String?
+  /// The open register shift when cash or card was handed back, so the drawer balances.
+  shiftId         String?
   createdAt       DateTime      @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -427,6 +457,99 @@ model Refund {
 
   @@index([tenantId])
   @@index([orderId])
+  @@index([shiftId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// POINT OF SALE
+// ──────────────────────────────────────────────────────────────────────────
+
+/// One period of trading at a register, from opening the drawer with a float to counting
+/// it at close. A location has at most one OPEN shift (a partial unique index in the
+/// migration enforces it), which is how "one register per store" is kept true under
+/// concurrent requests. Expected cash is computed and frozen when the shift closes.
+model PosShift {
+  id             String      @id @default(cuid())
+  tenantId       String
+  locationId     String
+  status         ShiftStatus @default(OPEN)
+  openedByUserId String
+  closedByUserId String?
+  openingFloat   Decimal     @db.Decimal(10, 2)
+  /// Frozen at close: float + cash sales - cash paid back on returns.
+  expectedCash   Decimal?    @db.Decimal(10, 2)
+  countedCash    Decimal?    @db.Decimal(10, 2)
+  /// counted minus expected; negative means the drawer is short.
+  variance       Decimal?    @db.Decimal(10, 2)
+  note           String?
+  openedAt       DateTime    @default(now())
+  closedAt       DateTime?
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  orders   Order[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, openedAt])
+}
+
+/// Items taken back from one POS sale (partial or full), with the money returned. A sale
+/// can have several returns until every unit has come back.
+model OrderReturn {
+  id              String        @id @default(cuid())
+  tenantId        String
+  orderId         String
+  shiftId         String?
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String
+  /// How the customer was paid back (cash, card terminal or other).
+  method          PaymentMethod
+  reason          String?
+  restocked       Boolean       @default(true)
+  createdByUserId String?
+  createdAt       DateTime      @default(now())
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items  OrderReturnItem[]
+
+  @@index([tenantId, createdAt])
+  @@index([orderId])
+  @@index([shiftId])
+}
+
+model OrderReturnItem {
+  id                   String  @id @default(cuid())
+  returnId             String
+  orderItemId          String
+  productId            String
+  productTitleSnapshot String
+  quantity             Int
+  amount               Decimal @db.Decimal(10, 2)
+
+  orderReturn OrderReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItem   OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([returnId])
+}
+
+/// A sale a cashier parked to serve someone else first. Only the cart is stored, never a
+/// price, so resuming it always prices from the live catalog. No stock is reserved.
+model HeldSale {
+  id            String   @id @default(cuid())
+  tenantId      String
+  cashierUserId String
+  label         String?
+  customerId    String?
+  /// [{ productId, quantity }]
+  items         Json
+  /// { type: "percentage" | "fixed", value, reason? } or null
+  discount      Json?
+  createdAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
 }
 
 model Shipment {

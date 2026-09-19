@@ -7,9 +7,9 @@ import { PrismaTx } from "../../lib/prisma";
 export const customerService = {
   async findOrCreate(
     tx: PrismaTx,
-    args: { tenantId: string; userId?: string; email?: string; name?: string }
+    args: { tenantId: string; userId?: string; email?: string; name?: string; phone?: string }
   ): Promise<string | undefined> {
-    const { tenantId, userId, name } = args;
+    const { tenantId, userId, name, phone } = args;
     const email = args.email?.trim().toLowerCase() || undefined;
     if (!userId && !email) return undefined;
 
@@ -29,7 +29,7 @@ export const customerService = {
       }
     }
 
-    const created = await tx.customer.create({ data: { tenantId, userId, email, name } });
+    const created = await tx.customer.create({ data: { tenantId, userId, email, name, phone } });
     return created.id;
   },
 };

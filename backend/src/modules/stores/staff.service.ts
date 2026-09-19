@@ -1,5 +1,6 @@
 import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { tenantContext } from "../../lib/tenantContext";
+import { password as passwordLib } from "../../lib/password";
 import { Errors, AppError } from "../../errors/AppError";
 import type { CreateStaffInput } from "./staff.validation";
 
@@ -36,8 +37,18 @@ export const staffService = {
    * merchant elsewhere) before they can be added as staff.
    */
   async create(input: CreateStaffInput) {
-    const user = await prisma.user.findUnique({ where: { email: input.email } });
-    if (!user) throw Errors.notFound("User with that email");
+    // Emails are stored and matched exactly as typed, the same as registration and login.
+    const email = input.email;
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (user && input.password) {
+      throw Errors.validation("That email already has an account; add it without a password");
+    }
+    if (!user) {
+      if (!input.password) throw Errors.notFound("User with that email");
+      user = await prisma.user.create({
+        data: { email, name: input.name, passwordHash: await passwordLib.hash(input.password) },
+      });
+    }
 
     // The tenant-scoping middleware (lib/prisma.ts) also merges tenantId into every
     // where/data object at runtime, but Prisma's generated types can't see that, so

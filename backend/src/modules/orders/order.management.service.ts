@@ -43,6 +43,11 @@ async function refundOrder(
   if (!REFUNDABLE.includes(order.status)) {
     throw Errors.conflict(`An order that is ${order.status.toLowerCase()} cannot be refunded`);
   }
+  // A whole-order refund pays every payment back in full, which would double-refund the
+  // part already returned item by item. The rest of such a sale is returned the same way.
+  if (order.items.some((i) => i.returnedQuantity > 0)) {
+    throw Errors.conflict("Part of this order was already returned; return the remaining items instead of refunding the whole order");
+  }
 
   const payments = order.payments.filter((p) => p.status === "SUCCEEDED");
 
@@ -64,11 +69,17 @@ async function refundOrder(
     });
     if (claim.count === 0) throw Errors.conflict("This order has already been refunded or cancelled");
 
+    // Cash handed back at the counter comes out of whichever drawer is open now.
+    const openShift = order.channel === "POS" && order.locationId
+      ? await tx.posShift.findFirst({ where: { tenantId, locationId: order.locationId, status: "OPEN" } })
+      : null;
+
     for (const payment of payments) {
       await tx.refund.create({
         data: {
           tenantId,
           orderId: order.id,
+          shiftId: openShift?.id,
           paymentId: payment.id,
           amount: payment.amount,
           currency: payment.currency,

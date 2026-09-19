@@ -15,6 +15,7 @@ import { cartRouter } from "./modules/cart/cart.routes";
 import { checkoutRouter } from "./modules/checkout/checkout.routes";
 import { orderRouter } from "./modules/orders/order.routes";
 import { shippingRouter } from "./modules/shipping/shipping.routes";
+import { posRouter } from "./modules/pos/pos.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 
 export const app = express();
@@ -52,6 +53,7 @@ v1.use("/stores/:storeId/cart", cartRouter);
 v1.use("/stores/:storeId/checkout", checkoutRouter);
 v1.use("/stores/:storeId/orders", orderRouter);
 v1.use("/stores/:storeId/shipping-zones", shippingRouter);
+v1.use("/stores/:storeId/pos", posRouter);
 v1.use("/stores/:storeId", storeRouter);
 app.use("/api/v1", v1);
 
