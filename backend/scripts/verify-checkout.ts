@@ -141,7 +141,7 @@ async function main() {
     check("checkout: empty cart is rejected", (await api("POST", `/stores/${A.storeId}/checkout/session`, { guest, body: {} })).status === 400);
     await api("POST", `/stores/${A.storeId}/cart/items`, { guest, body: { productId: p1, quantity: 2 } });
     await api("POST", `/stores/${A.storeId}/cart/items`, { guest, body: { productId: p2, quantity: 1 } });
-    check("checkout: discount codes are refused until Phase 3", (await api("POST", `/stores/${A.storeId}/checkout/session`, { guest, body: { discountCode: "SALE10" } })).status === 400);
+    check("checkout: a discount code that does not exist is refused (codes themselves are covered by verify-discounts.ts)", (await api("POST", `/stores/${A.storeId}/checkout/session`, { guest, body: { discountCode: "SALE10" } })).status === 400);
     check("checkout: unknown shipping zone is 404", (await api("POST", `/stores/${A.storeId}/checkout/session`, { guest, body: { shippingZoneId: "nope" } })).status === 404);
 
     const session1 = await api("POST", `/stores/${A.storeId}/checkout/session`, { guest, body: { shippingZoneId: zone.id } });

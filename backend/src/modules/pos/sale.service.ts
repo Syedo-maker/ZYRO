@@ -4,6 +4,8 @@ import { hasStorePermission } from "../../lib/permissions";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
 import { createOrder, priceFromCatalog, OrderSnapshot } from "../commerce/order.service";
+import { calculateTotals } from "../commerce/pricing.service";
+import { discountService, type ResolvedDiscount } from "../discounts/discount.service";
 import { orderInclude, toOrderView } from "../orders/order.presenter";
 import { posCatalogService } from "./catalog.service";
 import { shiftService, toCents } from "./shift.service";
@@ -38,17 +40,39 @@ export const saleService = {
    * the cashier's limit. The register calls this on every cart change, so the totals on
    * screen and the amount charged can never disagree.
    */
-  async quote(tenantId: string, userId: string, items: { productId: string; quantity: number }[], discount?: ManualDiscount | null) {
+  async quote(
+    tenantId: string,
+    userId: string,
+    items: { productId: string; quantity: number }[],
+    discount?: ManualDiscount | null,
+    discountCode?: string
+  ) {
+    if (discount && discountCode) throw Errors.validation("Use either a discount code or a manual discount, not both");
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw Errors.notFound("Store");
     if (discount?.type === "PERCENTAGE" && discount.value > 100) {
       throw Errors.validation("A percentage discount cannot be more than 100");
     }
 
-    const priced: OrderSnapshot = await priceFromCatalog(
+    let priced: OrderSnapshot = await priceFromCatalog(
       { tenantId, items, discount: discount ? { type: discount.type, value: discount.value } : null },
       Number(tenant.taxRate.toString())
     );
+
+    // A store code is set by the merchant, so it is not held to the cashier's manual-discount
+    // limit; it must still pass its own rules (active, unexpired, under its limit, minimum spend).
+    let code: ResolvedDiscount | null = null;
+    if (discountCode) {
+      code = await discountService.resolve(prisma, tenantId, discountCode, toCents(priced.totals.subtotal));
+      priced = {
+        lines: priced.lines,
+        totals: calculateTotals({
+          lines: priced.lines,
+          discount: { type: code.type, value: code.value },
+          taxRatePercent: Number(tenant.taxRate.toString()),
+        }),
+      };
+    }
 
     const subtotalCents = toCents(priced.totals.subtotal);
     const discountCents = toCents(priced.totals.discountAmount);
@@ -76,6 +100,7 @@ export const saleService = {
     const t = priced.totals;
     return {
       priced,
+      code,
       view: {
         currency: tenant.currency,
         taxRate: Number(tenant.taxRate.toString()),
@@ -89,6 +114,7 @@ export const saleService = {
         })),
         subtotal: Number(t.subtotal),
         discountAmount: Number(t.discountAmount),
+        discountCode: code?.code ?? null,
         discountPercent,
         taxAmount: Number(t.taxAmount),
         total: Number(t.total),
@@ -106,7 +132,7 @@ export const saleService = {
     const shift = await shiftService.getOpen(prisma, tenantId);
     if (!shift) throw Errors.conflict("Open a shift (count the starting cash) before selling");
 
-    const { priced, view } = await this.quote(tenantId, userId, input.items, input.discount);
+    const { priced, view, code } = await this.quote(tenantId, userId, input.items, input.discount, input.discountCode);
     if (view.shortages.length > 0) {
       const s = view.shortages[0];
       throw Errors.insufficientStock(
@@ -145,7 +171,10 @@ export const saleService = {
             locationId: shift.locationId,
             cashierUserId: userId,
             shiftId: shift.id,
-            discountReason: input.discount?.reason,
+            discountReason: input.discount?.reason ?? (code ? `Code ${code.code}` : undefined),
+            // Counted inside the sale itself: if the code stopped being usable meanwhile, the sale is refused.
+            discountCodeId: code?.codeId,
+            redeem: "strict",
             clientRequestId: input.clientRequestId,
             customerId,
             snapshot: priced,

@@ -62,7 +62,7 @@ Two existing endpoints changed: `POST /staff` now accepts `name` and `password` 
 
 - `backend/scripts/verify-pos.ts`: 120 checks through the real HTTP API against real Postgres and MongoDB. Includes concurrency (simultaneous shift opens, duplicate sale submissions, racing returns, sales racing a close), the database-level guarantees (a second open shift and an over-returned item are rejected even by direct insert), and stock-ledger consistency.
 - All earlier suites re-run: commerce core 21, checkout 62, orders 63, phase 1 80, security 27. Total backend checks: 373, all passing.
-- `openapi.yaml` parses and validates; the only lint error left is the missing `license` field in `info`, which was already absent before this module (the linter also lists 15 style warnings about operations with no 4XX response).
+- `openapi.yaml` validates with the linter (0 errors; it lists style warnings about operations with no 4XX response). A statement in an earlier version of this line, that one error remained for a missing license field, was wrong: the remaining error was unquoted commas in three descriptions, fixed in the discount codes module.
 
 ## Not built (kept out on purpose)
 

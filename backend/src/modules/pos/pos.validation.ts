@@ -21,9 +21,13 @@ export type ManualDiscount = z.infer<typeof manualDiscountSchema>;
 
 const cartItems = z.array(cartItem).min(1).max(200);
 
+/** A store discount code (from the discounts module) instead of a manual discount; the two do not combine. */
+const discountCode = z.string().trim().min(1).max(30).optional();
+
 export const quoteSchema = z.object({
   items: cartItems,
   discount: manualDiscountSchema.nullish(),
+  discountCode,
 });
 
 export const customerInputSchema = z.object({
@@ -36,6 +40,7 @@ export type CustomerInput = z.infer<typeof customerInputSchema>;
 export const createSaleSchema = z.object({
   items: cartItems,
   discount: manualDiscountSchema.nullish(),
+  discountCode,
   /** An existing customer, or details for a new one. */
   customerId: z.string().min(1).max(64).optional(),
   customer: customerInputSchema.optional(),

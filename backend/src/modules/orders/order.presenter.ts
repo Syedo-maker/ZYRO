@@ -8,6 +8,7 @@ export const orderInclude = {
   returns: { include: { items: true }, orderBy: { createdAt: "asc" } },
   shipment: true,
   customer: true,
+  discountCode: true,
 } satisfies Prisma.OrderInclude;
 
 export type OrderWithRelations = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
@@ -26,6 +27,8 @@ export function toOrderView(o: OrderWithRelations) {
     cashierUserId: o.cashierUserId,
     shiftId: o.shiftId,
     discountReason: o.discountReason,
+    /** The code the shopper used, when the order was placed with one. */
+    discountCode: o.discountCode?.code ?? null,
     customerId: o.customerId,
     customer: o.customer ? { name: o.customer.name, email: o.customer.email } : null,
     guestEmail: o.guestEmail,

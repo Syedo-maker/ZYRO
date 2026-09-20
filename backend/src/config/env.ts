@@ -47,6 +47,8 @@ export const env = {
     registerMax: num("RATE_LIMIT_REGISTER_MAX", 20),
     /** Silent-login refresh calls per IP per window (one per page load). */
     refreshMax: num("RATE_LIMIT_REFRESH_MAX", 600),
+    /** Discount codes that turn out to be wrong, per IP per window: stops guessing codes. */
+    discountMax: num("RATE_LIMIT_DISCOUNT_MAX", 20),
     /** All API requests per IP per minute. */
     apiMax: num("RATE_LIMIT_API_MAX", 600),
   },

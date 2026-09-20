@@ -53,6 +53,8 @@ export const Errors = {
     new AppError(503, "https://zyro.dev/errors/service-unavailable", "Service unavailable", detail),
   insufficientStock: (detail: string) =>
     new AppError(409, "https://zyro.dev/errors/insufficient-stock", "Insufficient stock", detail),
+  discountInvalid: (detail: string) =>
+    new AppError(400, "https://zyro.dev/errors/invalid-discount-code", "Discount code cannot be used", detail),
   validation: (detail: string) =>
     new AppError(400, "https://zyro.dev/errors/validation-failed", "Request validation failed", detail),
 };

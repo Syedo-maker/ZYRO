@@ -40,19 +40,26 @@ export interface PricingResult {
 const toCents = (amount: number) => Math.round(amount * 100);
 const fromCents = (cents: number) => (cents / 100).toFixed(2);
 
+/**
+ * What a discount takes off a subtotal, in cents: a percentage of it, or a fixed amount,
+ * never more than the subtotal itself. Shared by the totals below and by discount-code
+ * validation, so a code's advertised saving is exactly what checkout applies.
+ */
+export function discountCentsFor(discount: PricingDiscount, subtotalCents: number): number {
+  if (subtotalCents <= 0) return 0;
+  const raw =
+    discount.type === "PERCENTAGE"
+      ? Math.round((subtotalCents * Math.round(discount.value * 100)) / 10000)
+      : toCents(discount.value);
+  return Math.min(Math.max(raw, 0), subtotalCents);
+}
+
 export function calculateTotals(input: PricingInput): PricingResult {
   const lineCents = input.lines.map((l) => toCents(l.unitPrice) * l.quantity);
   const subtotal = lineCents.reduce((a, b) => a + b, 0);
   const taxableSubtotal = input.lines.reduce((sum, l, i) => (l.taxable ? sum + lineCents[i] : sum), 0);
 
-  let discount = 0;
-  if (input.discount && subtotal > 0) {
-    discount =
-      input.discount.type === "PERCENTAGE"
-        ? Math.round((subtotal * Math.round(input.discount.value * 100)) / 10000)
-        : toCents(input.discount.value);
-    discount = Math.min(Math.max(discount, 0), subtotal);
-  }
+  const discount = input.discount ? discountCentsFor(input.discount, subtotal) : 0;
 
   // The discount reduces the taxable base in proportion to the taxable share of the order.
   const taxableDiscount = subtotal > 0 ? Math.round((discount * taxableSubtotal) / subtotal) : 0;

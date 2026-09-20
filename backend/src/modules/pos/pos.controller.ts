@@ -106,7 +106,7 @@ export const posController = {
 
   quote: route(async (req, res) => {
     const input = parse(quoteSchema, req.body);
-    const { view } = await saleService.quote(storeId(req), req.userId!, input.items, input.discount);
+    const { view } = await saleService.quote(storeId(req), req.userId!, input.items, input.discount, input.discountCode);
     res.status(200).json(view);
   }),
 

@@ -11,7 +11,7 @@ Until now the Stripe integration had only been tested against a stand-in. This r
 | Stripe test sandbox | Created with the official Stripe CLI (`stripe sandbox create --email finalyear860@gmail.com`). Test mode only, no real money. |
 | `STRIPE_SECRET_KEY` | In `backend/.env` (gitignored, confirmed by `git check-ignore`). A restricted key (`rkcs_test_...`). |
 | `STRIPE_WEBHOOK_SECRET` | In `backend/.env`; verified to be the same secret the webhook forwarder signs with. |
-| Webhook forwarding | `npx --yes @stripe/cli listen --forward-to localhost:5000/api/v1/webhooks/stripe` (must be running whenever you test payments locally). |
+| Webhook forwarding | `npx --yes @stripe/cli listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired --forward-to localhost:5000/api/v1/webhooks/stripe` (must be running whenever you test payments locally). |
 
 To repeat on another machine: install nothing globally, run `npx --yes @stripe/cli sandbox create --email <your email>`, copy the test key it saves (the CLI keeps it in `~/.config/stripe/config.toml`) into `backend/.env` as `STRIPE_SECRET_KEY`, run `npx --yes @stripe/cli listen --print-secret` and put that value in `STRIPE_WEBHOOK_SECRET`, then start the forwarder as above.
 

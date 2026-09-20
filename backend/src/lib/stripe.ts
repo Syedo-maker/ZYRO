@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import Stripe from "stripe";
 import { env } from "../config/env";
 import { Errors } from "../errors/AppError";
@@ -9,6 +10,12 @@ export interface CheckoutSessionParams {
   customerEmail?: string;
   lineItems: { name: string; unitAmountCents: number; quantity: number }[];
   shipping?: { name: string; amountCents: number };
+  /**
+   * A discount taken off the order, as a fixed amount. The line items above carry the full
+   * prices and the tax already worked out on the discounted subtotal, so the amount off is
+   * exactly the discount and Stripe's total equals the total ZYRO priced.
+   */
+  discount?: { name: string; amountOffCents: number };
   /** ISO country codes Stripe may collect a shipping address for. */
   shippingCountries: string[];
   successUrl: string;
@@ -36,9 +43,31 @@ function createRealGateway(): StripeGateway {
   // One client instance per process; the API key is never set globally.
   const stripe = new Stripe(secretKey);
 
+  /**
+   * Stripe applies a discount through a Coupon object. A fixed-amount coupon is fully
+   * described by its name, amount and currency, so it is created once under an id derived
+   * from those and reused by every checkout with the same discount.
+   */
+  async function couponFor(name: string, amountOffCents: number, currency: string): Promise<string> {
+    const id = `zyro-${createHash("sha256").update(`${name}|${amountOffCents}|${currency}`).digest("hex").slice(0, 24)}`;
+    try {
+      await stripe.coupons.retrieve(id);
+    } catch (err) {
+      if ((err as { code?: string }).code !== "resource_missing") throw err;
+      try {
+        await stripe.coupons.create({ id, name, amount_off: amountOffCents, currency, duration: "once" });
+      } catch (createErr) {
+        // Two checkouts created the same coupon at once; the second finds it already there.
+        if ((createErr as { code?: string }).code !== "resource_already_exists") throw createErr;
+      }
+    }
+    return id;
+  }
+
   return {
     async createCheckoutSession(p) {
       const currency = p.currency.toLowerCase();
+      const coupon = p.discount ? await couponFor(p.discount.name, p.discount.amountOffCents, currency) : undefined;
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         // No payment_method_types: Stripe picks eligible methods from Dashboard settings.
@@ -62,6 +91,7 @@ function createRealGateway(): StripeGateway {
             product_data: { name: item.name },
           },
         })),
+        ...(coupon ? { discounts: [{ coupon }] } : {}),
         ...(p.shipping
           ? {
               shipping_options: [

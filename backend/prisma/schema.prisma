@@ -313,14 +313,19 @@ model CheckoutSession {
   totalCents      Int
   currency        String
   orderId         String?
+  /// The discount code this checkout will redeem. While the session is PENDING and not yet
+  /// expired it holds one of the code's uses, so a limited code cannot be overshot.
+  discountCodeId  String?
   failureReason   String?
   expiresAt       DateTime
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  discountCode DiscountCode? @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status])
+  @@index([discountCodeId, status, expiresAt])
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -589,19 +594,25 @@ model ShippingZone {
 
 /// Codes are unique per store, not globally; two different merchants can both run "SALE20".
 model DiscountCode {
-  id         String       @id @default(cuid())
-  tenantId   String
-  code       String
-  type       DiscountType
-  value      Decimal      @db.Decimal(10, 2)
-  expiresAt  DateTime?
-  usageLimit Int?
-  usageCount Int          @default(0)
-  active     Boolean      @default(true)
-  createdAt  DateTime     @default(now())
+  id          String       @id @default(cuid())
+  tenantId    String
+  code        String
+  type        DiscountType
+  /// A percentage (0 to 100) or an amount in the store's currency, depending on `type`.
+  value       Decimal      @db.Decimal(10, 2)
+  /// The smallest subtotal (before discount and tax) the code applies to; null for any.
+  minSubtotal Decimal?     @db.Decimal(10, 2)
+  expiresAt   DateTime?
+  /// Null means unlimited. Counted when an order is written; pending online checkouts
+  /// count against it until they finish or lapse, so it cannot be overshot.
+  usageLimit  Int?
+  usageCount  Int          @default(0)
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
 
-  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  orders Order[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders           Order[]
+  checkoutSessions CheckoutSession[]
 
   @@unique([tenantId, code])
   @@index([tenantId])

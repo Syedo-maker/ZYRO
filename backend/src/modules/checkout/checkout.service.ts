@@ -7,6 +7,7 @@ import { Product } from "../../models/Product.model";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
 import { calculateTotals } from "../commerce/pricing.service";
+import { discountService, type ResolvedDiscount } from "../discounts/discount.service";
 import type { OrderSnapshot, PricedLine } from "../commerce/order.service";
 import { cartKey, CartOwner } from "../cart/cart.service";
 import type { CreateSessionInput, QuoteInput } from "./checkout.validation";
@@ -14,16 +15,15 @@ import type { CreateSessionInput, QuoteInput } from "./checkout.validation";
 /** Stripe requires a Checkout Session to stay open for at least 30 minutes. */
 const SESSION_MINUTES = 31;
 
+/** Stripe cannot charge less than this (in the currency's smallest unit); a discount must not push an order below it. */
+const MIN_CHARGE_CENTS = 50;
+
 /**
  * Prices the shopper's cart from the live catalog and the store's settings. Used by both
  * the quote (a preview) and the checkout session (which freezes the same numbers), so the
  * total a shopper sees is by construction the total they are charged.
  */
 async function priceCart(storeId: string, owner: CartOwner, input: QuoteInput) {
-  if ("discountCode" in input && input.discountCode) {
-    throw Errors.validation("Discount codes are not available yet");
-  }
-
   const key = cartKey(storeId, owner);
   const raw = await getRedis().hgetall(key);
   const cartEntries = Object.entries(raw);
@@ -65,22 +65,30 @@ async function priceCart(storeId: string, owner: CartOwner, input: QuoteInput) {
     shipping = { name: zone.name, amount: Number(zone.rateAmount.toString()) };
   }
 
+  // One code per order, checked against the cart's subtotal (before discount, tax and shipping).
+  const subtotalCents = lines.reduce((sum, l) => sum + Math.round(l.unitPrice * 100) * l.quantity, 0);
+  const discount: ResolvedDiscount | null = input.discountCode
+    ? await discountService.resolve(prisma, storeId, input.discountCode, subtotalCents, { excludeCartKey: key })
+    : null;
+
   const totals = calculateTotals({
     lines,
+    discount: discount ? { type: discount.type, value: discount.value } : null,
     shippingAmount: shipping?.amount,
     taxRatePercent: Number(tenant.taxRate.toString()),
   });
   const snapshot: OrderSnapshot = { lines, totals };
-  return { key, tenant, shipping, snapshot };
+  return { key, tenant, shipping, snapshot, discount, subtotalCents };
 }
 
 export const checkoutService = {
   /** A price preview for the checkout page: same math as the real session, nothing saved. */
   async quote(storeId: string, owner: CartOwner, input: QuoteInput) {
-    const { tenant, snapshot } = await priceCart(storeId, owner, input);
+    const { tenant, snapshot, discount } = await priceCart(storeId, owner, input);
     const t = snapshot.totals;
     return {
       currency: tenant.currency,
+      discount: discount ? { code: discount.code, type: discount.type.toLowerCase(), value: discount.value } : null,
       subtotal: Number(t.subtotal),
       discountAmount: Number(t.discountAmount),
       taxAmount: Number(t.taxAmount),
@@ -98,20 +106,31 @@ export const checkoutService = {
     // Fail early with a clear 503 if Stripe is not configured, before touching any data.
     const stripe = getStripeGateway();
 
-    const { key, tenant, shipping, snapshot } = await priceCart(storeId, owner, input);
+    const { key, tenant, shipping, snapshot, discount, subtotalCents } = await priceCart(storeId, owner, input);
     const { lines, totals } = snapshot;
 
+    // A discount must never turn an order into one Stripe cannot charge (free, or under its minimum).
+    if (discount && totals.totalCents < MIN_CHARGE_CENTS) {
+      throw Errors.validation("After this discount the order total is too small to pay for online; remove the code or add more to your cart");
+    }
+
     const expiresAt = new Date(Date.now() + SESSION_MINUTES * 60 * 1000);
-    const record = await prisma.checkoutSession.create({
-      data: {
-        tenantId: storeId,
-        userId: owner.kind === "user" ? owner.id : undefined,
-        cartKey: key,
-        snapshot: snapshot as unknown as object,
-        totalCents: totals.totalCents,
-        currency: tenant.currency,
-        expiresAt,
-      },
+    // With a code, the record is created in the same transaction that checks the code still has
+    // a use to give, so the pending checkout holds that use from the moment it exists.
+    const record = await prisma.$transaction(async (tx) => {
+      if (discount) await discountService.assertCanHold(tx, storeId, discount.codeId, subtotalCents, key);
+      return tx.checkoutSession.create({
+        data: {
+          tenantId: storeId,
+          userId: owner.kind === "user" ? owner.id : undefined,
+          cartKey: key,
+          snapshot: snapshot as unknown as object,
+          totalCents: totals.totalCents,
+          currency: tenant.currency,
+          discountCodeId: discount?.codeId,
+          expiresAt,
+        },
+      });
     });
 
     const taxCents = Math.round(Number(totals.taxAmount) * 100);
@@ -135,6 +154,10 @@ export const checkoutService = {
           ...(taxCents > 0 ? [{ name: "Tax", unitAmountCents: taxCents, quantity: 1 }] : []),
         ],
         shipping: shipping ? { name: shipping.name, amountCents: Math.round(shipping.amount * 100) } : undefined,
+        discount:
+          discount && Number(totals.discountAmount) > 0
+            ? { name: `Discount ${discount.code}`, amountOffCents: Math.round(Number(totals.discountAmount) * 100) }
+            : undefined,
         shippingCountries: env.shippingCountries,
         successUrl: `${env.storefrontUrl}/store/${storeId}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${env.storefrontUrl}/store/${storeId}/cart`,

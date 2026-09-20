@@ -13,6 +13,7 @@ process.env.RATE_LIMIT_LOGIN_IP_MAX = "12";
 process.env.RATE_LIMIT_REGISTER_MAX = "6";
 process.env.RATE_LIMIT_REFRESH_MAX = "1000";
 process.env.RATE_LIMIT_API_MAX = "1000";
+process.env.RATE_LIMIT_DISCOUNT_MAX = "5";
 process.env.RATE_LIMIT_WINDOW_MINUTES = "15";
 
 import type { AddressInfo } from "node:net";
@@ -126,6 +127,20 @@ async function main() {
     const regAfter = await call("POST", "/auth/register", { body: { email: `sec-late-${suffix}@example.com`, password: "password123", storeName: "L", storeSlug: `sec-late-${suffix}` } });
     check("registration: a burst of sign-ups from one address is capped (429)", regAfter.status === 429, `status=${regAfter.status}`);
     emails.push(`sec-late-${suffix}@example.com`);
+
+    // ---- Guessing discount codes ----
+    // Any store id works: a code that does not exist is a wrong guess whether or not the store does.
+    const guessAs = (code: string, ip: string) =>
+      call("POST", "/stores/some-store/discount-codes/validate", { body: { code, cartTotal: 50 }, headers: { "X-Guest-Session-Id": `guest-${suffix}-guessing-aaaa`, "X-Forwarded-For": ip } });
+    const guesses = [];
+    for (let i = 1; i <= 5; i++) guesses.push(await guessAs(`GUESS${i}`, "203.0.113.7"));
+    check("discount codes: five wrong guesses are each a plain 400", guesses.every((g) => g.status === 400));
+    const sixthGuess = await guessAs("GUESS6", "203.0.113.7");
+    check("discount codes: the sixth wrong guess from one address is blocked (429) with a wait time", sixthGuess.status === 429 && Number(sixthGuess.headers.get("retry-after")) > 0, `status=${sixthGuess.status}`);
+    const checkoutWhileBlocked = await call("POST", "/stores/some-store/checkout/quote", { body: {}, headers: { "X-Guest-Session-Id": `guest-${suffix}-guessing-aaaa` } });
+    check("discount codes: a normal checkout request (no code) is never counted or blocked", checkoutWhileBlocked.status !== 429);
+    const guessWithCode = await call("POST", "/stores/some-store/checkout/quote", { body: { discountCode: "GUESS7" }, headers: { "X-Guest-Session-Id": `guest-${suffix}-guessing-aaaa` } });
+    check("discount codes: guessing through checkout counts against the same limit", guessWithCode.status === 429);
 
     // ---- The limiter must not take the site down ----
     check("resilience: normal read endpoints still work while auth is limited", (await call("GET", "/stores/none")).status === 404);

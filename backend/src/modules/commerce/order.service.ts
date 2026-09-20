@@ -3,6 +3,7 @@ import { prisma, PrismaTx } from "../../lib/prisma";
 import { Product } from "../../models/Product.model";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
+import { discountService } from "../discounts/discount.service";
 import { calculateTotals, PricingDiscount, PricingResult } from "./pricing.service";
 
 export type OrderChannel = "ONLINE" | "POS";
@@ -57,6 +58,14 @@ export interface CreateOrderInput {
   snapshot?: OrderSnapshot;
   /** Already validated by the discount module; this only applies it. Live pricing only. */
   discount?: (PricingDiscount & { discountCodeId?: string }) | null;
+  /**
+   * The discount code this order redeems (works with a snapshot too, whose totals already
+   * include the discount). The use is counted in the same transaction that writes the order:
+   * `strict` refuses the order if the code is no longer usable (in-store sales), `honour`
+   * always records it (online orders, already paid at the discounted price). Defaults to strict.
+   */
+  discountCodeId?: string;
+  redeem?: "strict" | "honour";
   /** Live pricing only. */
   shippingAmount?: number;
   /** Payments already taken. Must add up to the order total exactly. */
@@ -184,7 +193,7 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
         shippingAmount: totals.shippingAmount,
         total: totals.total,
         currency: tenant.currency,
-        discountCodeId: input.discount?.discountCodeId,
+        discountCodeId: input.discountCodeId ?? input.discount?.discountCodeId,
         stripeCheckoutSessionId: input.stripeCheckoutSessionId,
       },
     });
@@ -213,6 +222,10 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
         status: "SUCCEEDED" as const,
       })),
     });
+
+    if (input.discountCodeId) {
+      await discountService.redeem(tx, { tenantId: input.tenantId, codeId: input.discountCodeId, mode: input.redeem ?? "strict" });
+    }
 
     await inventoryService.deduct(tx, {
       tenantId: input.tenantId,

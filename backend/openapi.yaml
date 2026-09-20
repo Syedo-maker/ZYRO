@@ -784,8 +784,12 @@ paths:
         `webhooks_stripe_handle` receives a paid session; this endpoint does not itself create
         an order. The priced cart (lines, tax, shipping, total) is frozen as a checkout record
         first, and the order is later written from that snapshot, so it always matches what
-        the shopper was charged. `discountCode` is accepted by the schema but refused with 400
-        until the Discounts module (Phase 3) exists. Answers 503 when Stripe is not configured.
+        the shopper was charged. With a `discountCode` the discount is applied to the priced
+        totals and sent to Stripe as a fixed-amount coupon, so Stripe charges exactly the
+        discounted total. The pending checkout holds one use of a limited code until it is
+        paid, expires (31 minutes) or fails, so a code cannot be overspent. A code that would
+        make the order free, or leave less than Stripe's minimum charge, is refused. Answers
+        503 when Stripe is not configured.
       security:
         - bearerAuth: []
         - guestSession: []
@@ -795,7 +799,7 @@ paths:
             schema:
               type: object
               properties:
-                discountCode: { type: string }
+                discountCode: { type: string, maxLength: 30, description: One code per order; case does not matter. }
                 shippingZoneId: { type: string }
       responses:
         "201":
@@ -808,7 +812,11 @@ paths:
                 properties:
                   checkoutUrl: { type: string, format: uri }
         "400":
-          description: Empty cart, an item no longer available, or a discount code (not supported yet)
+          description: |
+            Empty cart, an item no longer available, or a discount code that cannot be used
+            (unknown, switched off, expired, used up, below its minimum spend, or one that would
+            make the order too small to charge). The problem type for a code is
+            `https://zyro.dev/errors/invalid-discount-code` and `detail` says why.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -817,6 +825,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
         "503":
           description: Stripe is not configured on this server
           content:
@@ -844,6 +853,7 @@ paths:
               type: object
               properties:
                 shippingZoneId: { type: string }
+                discountCode: { type: string, maxLength: 30, description: One code per order; case does not matter. }
       responses:
         "200":
           description: Totals
@@ -854,16 +864,24 @@ paths:
                 required: [currency, subtotal, taxAmount, shippingAmount, total]
                 properties:
                   currency: { type: string }
+                  discount:
+                    type: [object, "null"]
+                    description: The code that was applied, or null.
+                    properties:
+                      code: { type: string }
+                      type: { type: string, enum: [percentage, fixed] }
+                      value: { type: number }
                   subtotal: { type: number }
                   discountAmount: { type: number }
                   taxAmount: { type: number }
                   shippingAmount: { type: number }
                   total: { type: number }
         "400":
-          description: Empty cart or an item no longer available
+          description: Empty cart, an item no longer available, or a discount code that cannot be used (see `checkout_session_create`)
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
         "409":
           description: An item is no longer in stock in the requested quantity
           content:
@@ -1355,6 +1373,7 @@ paths:
                   minItems: 1
                   items: { $ref: "#/components/schemas/PosCartItem" }
                 discount: { oneOf: [{ $ref: "#/components/schemas/ManualDiscount" }, { type: "null" }] }
+                discountCode: { type: string, maxLength: 30, description: "A store discount code instead of a manual discount; the two cannot be combined (400). Set by the merchant, so not held to the cashier's manual-discount limit." }
       responses:
         "200":
           description: Priced cart
@@ -1699,7 +1718,7 @@ paths:
       tags: [discounts]
       operationId: discount_codes_list
       summary: List a store's discount codes
-      description: Requires the `discounts_write` staff permission (or owner).
+      description: Requires the `discounts_write` staff permission (or owner). Newest first, at most 200. Each code carries its `status` (active, inactive, expired or used_up) and how many times it has been used.
       responses:
         "200":
           description: Discount codes
@@ -1708,11 +1727,15 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/DiscountCode" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [discounts]
       operationId: discount_codes_create
       summary: Create a discount code
-      description: Requires the `discounts_write` staff permission (or owner).
+      description: |
+        Requires the `discounts_write` staff permission (or owner). Codes are stored upper-case
+        and matched ignoring case, and are unique within a store (two stores can both have
+        SAVE10). One code per order, no stacking, no partial application.
       requestBody:
         required: true
         content:
@@ -1724,6 +1747,12 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DiscountCode" }
+        "400":
+          description: Invalid code format, a value of zero or a percentage over 100, an expiry in the past, or a usage limit below 1
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409":
           description: Code already exists for this store
           content:
@@ -1741,7 +1770,11 @@ paths:
       tags: [discounts]
       operationId: discount_codes_update
       summary: Activate, deactivate, or adjust a discount code
-      description: Requires the `discounts_write` staff permission (or owner).
+      description: |
+        Requires the `discounts_write` staff permission (or owner). The code, type and value
+        cannot be changed once created (create a new code instead), so past orders stay
+        explainable. `null` removes a limit, expiry or minimum. The usage limit cannot be set
+        below the number of times the code has already been used.
       requestBody:
         required: true
         content:
@@ -1750,15 +1783,22 @@ paths:
               type: object
               properties:
                 active: { type: boolean }
-                usageLimit: { type: integer, minimum: 1 }
-                expiresAt: { type: string, format: date-time }
+                usageLimit: { type: [integer, "null"], minimum: 1 }
+                expiresAt: { type: [string, "null"], format: date-time }
+                minSubtotal: { type: [number, "null"], minimum: 0 }
       responses:
         "200":
           description: Updated
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DiscountCode" }
+        "400":
+          description: Nothing to change, or a usage limit below the times already used
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /stores/{storeId}/discount-codes/validate:
     parameters:
@@ -1767,7 +1807,13 @@ paths:
       tags: [discounts]
       operationId: discount_codes_validate
       summary: Validate a discount code against the current cart total
-      description: Called from checkout before `checkout_session_create`, per Implementation_Plan.md Phase 2/3.
+      description: |
+        Lets the storefront say "code accepted, you save X" before checkout. Advisory: the
+        authoritative check happens again in `checkout_quote_create` and
+        `checkout_session_create`, against the real cart. Open to guests and logged-in
+        shoppers. A code held by another shopper's pending checkout counts as used. Wrong
+        codes are rate limited per address (429), so codes cannot be guessed; accepted codes
+        do not count against the limit.
       security:
         - bearerAuth: []
         - guestSession: []
@@ -1779,8 +1825,8 @@ paths:
               type: object
               required: [code, cartTotal]
               properties:
-                code: { type: string }
-                cartTotal: { type: number }
+                code: { type: string, maxLength: 30 }
+                cartTotal: { type: number, minimum: 0, description: "The cart subtotal before discount, tax and shipping." }
       responses:
         "200":
           description: "Valid, discount amount returned"
@@ -1791,12 +1837,19 @@ paths:
                 required: [valid, discountAmount]
                 properties:
                   valid: { type: boolean, enum: [true] }
+                  code: { type: string }
+                  type: { type: string, enum: [percentage, fixed] }
+                  value: { type: number }
                   discountAmount: { type: number }
         "400":
-          description: Code invalid, expired, or usage limit reached
+          description: |
+            Code unknown, switched off, expired, used up, or the cart is below its minimum spend
+            (problem type `https://zyro.dev/errors/invalid-discount-code`, `detail` says why).
+            A code that belongs to another store looks the same as an unknown one.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
   # ── AI ASSISTANT ──────────────────────────────────────────────────────
   /stores/{storeId}/assistant/chat:
@@ -2197,7 +2250,8 @@ components:
         locationId: { type: [string, "null"] }
         cashierUserId: { type: [string, "null"], description: The user who rang up a POS sale. }
         shiftId: { type: [string, "null"], description: The register shift a POS sale was rung up in. }
-        discountReason: { type: [string, "null"], description: Why a manual POS discount was given. }
+        discountReason: { type: [string, "null"], description: "Why a manual POS discount was given, or Code X when a discount code was used." }
+        discountCode: { type: [string, "null"], description: "The discount code the order used, when it used one." }
         customerId: { type: [string, "null"] }
         customer:
           type: [object, "null"]
@@ -2233,7 +2287,7 @@ components:
             properties:
               id: { type: string }
               method: { type: string, enum: [cash, card, stripe, other] }
-              amount: { type: number, description: What was applied to the order (for cash, without the change). }
+              amount: { type: number, description: "What was applied to the order (for cash, without the change)." }
               tenderedAmount: { type: [number, "null"], description: Cash only; what the customer handed over. }
               changeGiven: { type: [number, "null"], description: Cash only; tendered minus amount. }
               status: { type: string, enum: [pending, succeeded, failed, refunded] }
@@ -2376,6 +2430,7 @@ components:
               lineTotal: { type: number }
         subtotal: { type: number }
         discountAmount: { type: number }
+        discountCode: { type: [string, "null"], description: "The store code applied, if any." }
         discountPercent: { type: number }
         taxAmount: { type: number }
         total: { type: number }
@@ -2398,6 +2453,7 @@ components:
           minItems: 1
           items: { $ref: "#/components/schemas/PosCartItem" }
         discount: { oneOf: [{ $ref: "#/components/schemas/ManualDiscount" }, { type: "null" }] }
+        discountCode: { type: string, maxLength: 30, description: A store discount code instead of a manual discount. Its use is counted inside the sale; if it stopped being usable meanwhile (or a racing sale took the last use) the sale is refused (400 or 409). }
         customerId: { type: string }
         customer: { $ref: "#/components/schemas/PosCustomerInput" }
         payments:
@@ -2584,21 +2640,29 @@ components:
       type: object
       required: [code, type, value]
       properties:
-        code: { type: string, minLength: 3, maxLength: 30 }
+        code: { type: string, pattern: "^[A-Za-z0-9_-]{3,30}$", description: "Letters, digits, hyphens and underscores; stored upper-case." }
         type: { $ref: "#/components/schemas/DiscountType" }
-        value: { type: number, minimum: 0 }
-        usageLimit: { type: integer, minimum: 1 }
-        expiresAt: { type: string, format: date-time }
+        value: { type: number, exclusiveMinimum: 0, description: "A percentage up to 100 for `percentage`, an amount in the store currency for `fixed`." }
+        minSubtotal: { type: number, minimum: 0, description: The smallest cart subtotal (before discount and tax) the code applies to. }
+        usageLimit: { type: integer, minimum: 1, description: Omit for unlimited. }
+        expiresAt: { type: string, format: date-time, description: Must be in the future when creating. }
+        active: { type: boolean, default: true }
 
     DiscountCode:
-      allOf:
-        - $ref: "#/components/schemas/DiscountCodeInput"
-        - type: object
-          required: [id, usageCount, active]
-          properties:
-            id: { type: string }
-            usageCount: { type: integer }
-            active: { type: boolean }
+      type: object
+      required: [id, code, type, value, usageCount, active, status]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        type: { $ref: "#/components/schemas/DiscountType" }
+        value: { type: number }
+        minSubtotal: { type: [number, "null"] }
+        usageLimit: { type: [integer, "null"] }
+        expiresAt: { type: [string, "null"], format: date-time }
+        usageCount: { type: integer, description: Orders that have used the code. Refunds do not give a use back. }
+        active: { type: boolean }
+        status: { type: string, enum: [active, inactive, expired, used_up] }
+        createdAt: { type: string, format: date-time }
 
     AnalyticsSummary:
       type: object

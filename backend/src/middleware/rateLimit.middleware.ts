@@ -62,3 +62,14 @@ export const registerLimiter = limiter("register", 60 * 60 * 1000, env.rateLimit
 
 /** Silent login restore, called once per page load. */
 export const refreshLimiter = limiter("refresh", windowMs, env.rateLimit.refreshMax, { keyGenerator: clientIp });
+
+/**
+ * Wrong discount codes only (an accepted code does not count), per IP: a person who fat-fingers
+ * a code is never blocked, but someone guessing codes one after another is. Requests that carry
+ * no code (a normal checkout) are not counted.
+ */
+export const discountAttemptLimiter = limiter("discount", windowMs, env.rateLimit.discountMax, {
+  skipSuccessfulRequests: true,
+  skip: (req) => !req.body?.code && !req.body?.discountCode,
+  keyGenerator: clientIp,
+});

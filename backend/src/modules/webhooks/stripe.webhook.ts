@@ -93,6 +93,9 @@ async function fulfil(session: Stripe.Checkout.Session): Promise<WebhookOutcome>
             guestEmail: record.userId ? undefined : email,
             shipping,
             snapshot,
+            // The use was held when the checkout began; the shopper has already paid the discounted price.
+            discountCodeId: record.discountCodeId ?? undefined,
+            redeem: "honour",
             payments: [{ method: "STRIPE", amount: record.totalCents / 100, stripePaymentIntentId: paymentIntentId }],
             stripeCheckoutSessionId: session.id,
           },

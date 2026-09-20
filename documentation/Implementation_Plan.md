@@ -40,7 +40,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Returns/refunds for POS orders (item-level, stock returns to inventory, cash comes out of the drawer)
 
 **Phase 3: Commerce Completeness**
-- [ ] Module 7 (partial): Discount Codes (backend)
+- [x] Module 7 (partial): Discount Codes (backend; see Phase3_Module7_Discount_Codes.md)
 - [ ] Module 1 (remaining): Search & Reviews (backend)
 - [ ] Module 7 (partial): Analytics Dashboard (backend, baseline; sales split by channel, ONLINE vs POS)
 - [ ] Frontend: Storefront Home, Category/Search, Product Detail + reviews (`Main.dc.html`, `CategoryListing.dc.html`, `ProductDetail.dc.html`) + Admin Dashboard home + Marketing/Analytics UI (`AdminDashboard.dc.html`, `AdminMarketing.dc.html`)
