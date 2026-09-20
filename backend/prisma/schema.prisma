@@ -460,7 +460,7 @@ model Refund {
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId])
+  @@index([tenantId, createdAt])
   @@index([orderId])
   @@index([shiftId])
 }

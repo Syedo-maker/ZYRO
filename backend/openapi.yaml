@@ -1903,16 +1903,42 @@ paths:
     get:
       tags: [analytics]
       operationId: analytics_summary_get
-      summary: Sales, order count, and top-selling products
+      summary: Sales, refunds, channel split, daily trend and top products for a period
       description: |
-        Computed via Postgres aggregate queries and cached for 5 minutes
-        (Implementation_Plan.md Phase 3) rather than served from a data warehouse.
+        Requires the `analytics_read` staff permission (or owner). Computed on demand with
+        Postgres aggregate queries over the same orders both channels write, and cached in
+        Redis for 5 minutes (Implementation_Plan.md Phase 3) instead of a data warehouse, so a
+        sale made in the last few minutes may not show yet; `cached` and `generatedAt` say so.
+        If Redis is unavailable the figures are still computed fresh.
+
+        Definitions (identical to the POS daily report, so the two agree): a sale is an order
+        that has a payment which was taken (succeeded or since refunded). Gross sales is the
+        sum of those orders' totals (after discounts, with tax and shipping). A refund counts
+        in the period it is paid back, whichever period the sale was in (a whole-order refund
+        of a split payment is one refund record per payment). Net sales = gross sales minus
+        refunds. Product figures cover units still kept: sales refunded or cancelled in full
+        and units returned item by item are left out; revenue is before order-level discounts;
+        margin is price minus the cost recorded at sale time, for items that had a cost.
+
+        With no `from` and `to` the last 30 days are reported, ending on the next five-minute
+        mark. `from` is inclusive and `to` exclusive; at most 366 days. `tzOffsetMinutes`
+        decides where one day ends and the next begins in `daily`; totals do not depend on it.
+      parameters:
+        - { name: from, in: query, description: "Start of the period (inclusive). Send with `to`.", schema: { type: string, format: date-time } }
+        - { name: to, in: query, description: "End of the period (exclusive). Send with `from`.", schema: { type: string, format: date-time } }
+        - { name: tzOffsetMinutes, in: query, description: "Minutes east of UTC, for example 300 for Pakistan.", schema: { type: integer, minimum: -840, maximum: 840, default: 0 } }
       responses:
         "200":
           description: Summary
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AnalyticsSummary" }
+        "400":
+          description: "Only one of `from` and `to`, `to` not after `from`, longer than 366 days, a bad date, or a time zone offset out of range"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /stores/{storeId}/analytics/cart-recovery:
     parameters:
@@ -2664,21 +2690,81 @@ components:
         status: { type: string, enum: [active, inactive, expired, used_up] }
         createdAt: { type: string, format: date-time }
 
+    AnalyticsChannelFigures:
+      type: object
+      properties:
+        orders: { type: integer }
+        grossSales: { type: number }
+        refunds: { type: number }
+        netSales: { type: number }
+
     AnalyticsSummary:
       type: object
-      required: [salesLast30Days, orderCount, topProducts]
+      required: [range, currency, totals, byChannel, daily, topProducts, generatedAt, cached]
       properties:
-        salesLast30Days: { type: number }
-        orderCount: { type: integer }
+        range:
+          type: object
+          properties:
+            from: { type: string, format: date-time }
+            to: { type: string, format: date-time }
+            days: { type: integer, description: "Local calendar days the period touches, so `daily` has this many entries." }
+            tzOffsetMinutes: { type: integer }
+        currency: { type: string }
+        generatedAt: { type: string, format: date-time }
+        cached: { type: boolean, description: "True when served from the 5-minute cache." }
+        totals:
+          type: object
+          properties:
+            orders: { type: integer }
+            grossSales: { type: number }
+            discountsGiven: { type: number }
+            taxCollected: { type: number }
+            shippingCharged: { type: number }
+            refunds:
+              type: object
+              properties:
+                count: { type: integer, description: "Refund records (one per refunded payment or return)." }
+                total: { type: number }
+            netSales: { type: number }
+            averageOrderValue: { type: number, description: "Gross sales divided by orders." }
+            unitsSold: { type: integer }
+            productMargin: { type: number, description: "Price minus recorded cost over kept units that had a cost, before order-level discounts." }
+            costCoveragePercent: { type: number, description: "Share of kept units that had a cost on record; margin only speaks for these." }
+            newCustomers: { type: integer }
+        byChannel:
+          type: array
+          description: "Always both channels, online then pos."
+          items:
+            allOf:
+              - $ref: "#/components/schemas/AnalyticsChannelFigures"
+              - type: object
+                properties:
+                  channel: { $ref: "#/components/schemas/SalesChannel" }
+                  averageOrderValue: { type: number }
+                  shareOfNetSales: { type: number, description: "Percent of the store's net sales." }
+        daily:
+          type: array
+          description: "One entry per local day, quiet days as zeros. Refunds appear on the day they were paid back, so a day's net can be negative."
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              online: { $ref: "#/components/schemas/AnalyticsChannelFigures" }
+              pos: { $ref: "#/components/schemas/AnalyticsChannelFigures" }
+              netSales: { type: number }
         topProducts:
           type: array
+          description: "Up to 10, most units first."
           items:
             type: object
             properties:
               productId: { type: string }
               title: { type: string }
               unitsSold: { type: integer }
-
+              revenue: { type: number }
+              unitsOnline: { type: integer }
+              unitsPos: { type: integer }
+              productMargin: { type: [number, "null"], description: "Null when no unit of the product had a cost on record." }
     CartRecoveryFunnel:
       type: object
       required: [sent, opened, clicked, converted]
