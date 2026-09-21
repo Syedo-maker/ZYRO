@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { orderManagementService } from "./order.management.service";
-import { listOrdersQuerySchema, refundSchema, shipmentSchema, updateStatusSchema } from "./order.validation";
+import { listOrdersQuerySchema, myOrdersQuerySchema, refundSchema, shipmentSchema, updateStatusSchema } from "./order.validation";
 import { MANUAL_TARGETS, ManualTarget } from "./order.rules";
 import { Errors } from "../../errors/AppError";
 
@@ -10,6 +10,16 @@ export const orderController = {
     if (!parsed.success) return next(Errors.validation(parsed.error.message));
     try {
       res.status(200).json(await orderManagementService.list(req.params.storeId, parsed.data));
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  listMine: (async (req, res, next) => {
+    const parsed = myOrdersQuerySchema.safeParse(req.query);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      res.status(200).json(await orderManagementService.listMine(req.params.storeId, req.userId!, parsed.data.limit, parsed.data.offset));
     } catch (err) {
       next(err);
     }

@@ -4,6 +4,7 @@ import { useCart } from '../../context/CartContext'
 import { useStore } from '../../context/StoreContext'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
@@ -27,6 +28,11 @@ export function CheckoutPage() {
   const [quote, setQuote] = useState<Quote | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [paying, setPaying] = useState(false)
+  // A discount code the shopper has typed and the server accepted; it stays until they remove it.
+  const [codeInput, setCodeInput] = useState('')
+  const [code, setCode] = useState<string | undefined>()
+  const [codeError, setCodeError] = useState<string | null>(null)
+  const [applying, setApplying] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -49,19 +55,43 @@ export function CheckoutPage() {
     let cancelled = false
     setQuote(null)
     checkoutApi
-      .quote(store.id, zoneId)
+      .quote(store.id, zoneId, code)
       .then((q) => !cancelled && (setQuote(q), setError(null)))
-      .catch((e) => !cancelled && setError(errorMessage(e)))
+      .catch((e) => {
+        if (cancelled) return
+        // A code that stopped working (switched off, used up, cart changed) is dropped with a reason.
+        if (code) {
+          setCode(undefined)
+          setCodeError(errorMessage(e))
+        } else setError(errorMessage(e))
+      })
     return () => {
       cancelled = true
     }
-  }, [store.id, zones, zoneId, cart])
+  }, [store.id, zones, zoneId, cart, code])
+
+  async function applyCode() {
+    const typed = codeInput.trim()
+    if (!typed) return
+    setApplying(true)
+    setCodeError(null)
+    try {
+      // Checked first on its own, so a wrong code shows a message here without disturbing the total.
+      await checkoutApi.quote(store.id, zoneId, typed)
+      setCode(typed)
+      setCodeInput('')
+    } catch (e) {
+      setCodeError(errorMessage(e))
+    } finally {
+      setApplying(false)
+    }
+  }
 
   async function handlePay() {
     setPaying(true)
     setError(null)
     try {
-      const { checkoutUrl } = await checkoutApi.createSession(store.id, zoneId)
+      const { checkoutUrl } = await checkoutApi.createSession(store.id, zoneId, code)
       window.location.assign(checkoutUrl)
     } catch (e) {
       setError(errorMessage(e))
@@ -150,9 +180,45 @@ export function CheckoutPage() {
           </ul>
           <div className="h-px bg-border" />
 
+          <div className="flex flex-col gap-2">
+            {code ? (
+              <p className="flex items-center justify-between rounded-[10px] bg-success-soft px-3 py-2 text-[13px] font-semibold text-success">
+                <span>Code {quote?.discount?.code ?? code.toUpperCase()} applied</span>
+                <button
+                  onClick={() => {
+                    setCode(undefined)
+                    setCodeError(null)
+                  }}
+                  className="underline"
+                  aria-label="Remove discount code"
+                >
+                  Remove
+                </button>
+              </p>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void applyCode()
+                }}
+                className="flex items-end gap-2"
+                aria-label="Have a code?"
+              >
+                <div className="flex-1">
+                  <Input id="discount-code" label="Discount code" maxLength={30} autoComplete="off" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} error={codeError ?? undefined} />
+                </div>
+                <Button type="submit" variant="secondary" disabled={applying || !codeInput.trim()} className="h-11">
+                  {applying ? '...' : 'Apply'}
+                </Button>
+              </form>
+            )}
+            {code && codeError && <p role="alert" className="text-xs text-danger">{codeError}</p>}
+          </div>
+
           {quote ? (
             <div className="flex flex-col gap-2.5" aria-live="polite">
               <TotalsRow label="Subtotal" value={formatMoney(quote.subtotal, quote.currency)} />
+              {quote.discountAmount > 0 && <TotalsRow label={`Discount${quote.discount ? ` (${quote.discount.code})` : ''}`} value={`-${formatMoney(quote.discountAmount, quote.currency)}`} />}
               <TotalsRow label="Shipping" value={formatMoney(quote.shippingAmount, quote.currency)} />
               <TotalsRow label="Tax" value={formatMoney(quote.taxAmount, quote.currency)} />
               <div className="my-1 h-px bg-border" />

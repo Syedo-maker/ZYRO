@@ -16,6 +16,14 @@ export const productController = {
     }
   }) satisfies RequestHandler,
 
+  categories: (async (req, res, next) => {
+    try {
+      res.status(200).json(await productService.categories(req.params.storeId));
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
   suggest: (async (req, res, next) => {
     const parsed = suggestQuerySchema.safeParse(req.query);
     if (!parsed.success) return next(Errors.validation(parsed.error.message));

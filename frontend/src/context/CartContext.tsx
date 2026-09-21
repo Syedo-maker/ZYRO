@@ -17,7 +17,7 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null)
 
 export function CartProvider({ storeId, children }: { storeId: string; children: ReactNode }) {
-  const { isLoading: authLoading } = useAuth()
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [cart, setCart] = useState<Cart | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -30,7 +30,10 @@ export function CartProvider({ storeId, children }: { storeId: string; children:
   useEffect(() => {
     if (authLoading) return
     let cancelled = false
-    reload()
+    // Signing in mid-shopping keeps the cart: the guest cart is folded into the account's first.
+    const ready = isAuthenticated ? cartApi.merge(storeId).catch(() => undefined) : Promise.resolve()
+    ready
+      .then(() => reload())
       .catch(() => {
         if (!cancelled) setCart(null)
       })
@@ -40,7 +43,7 @@ export function CartProvider({ storeId, children }: { storeId: string; children:
     return () => {
       cancelled = true
     }
-  }, [authLoading, reload])
+  }, [authLoading, isAuthenticated, storeId, reload])
 
   const value = useMemo<CartContextValue>(
     () => ({

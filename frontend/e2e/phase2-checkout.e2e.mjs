@@ -125,7 +125,7 @@ let sessionId1 = ''
 
 await step('browse and add to cart', async () => {
   await shop.goto(`${WEB}/store/${storeId}`)
-  await shop.getByRole('heading', { name: 'Shop' }).waitFor()
+  await shop.getByRole('heading', { name: 'New arrivals' }).waitFor()
   await card('Art Poster').waitFor()
   check('shop: both products listed with formatted prices',(await card('Ceramic Mug').getByText('$12.50').isVisible()) && (await card('Art Poster').getByText('$20.00').isVisible()))
   await shop.screenshot({ path: path.join(SHOTS, '1-shop.png') })
@@ -146,7 +146,7 @@ await step('cart page', async () => {
   await shop.getByRole('heading', { name: 'Your cart' }).waitFor()
   check('cart: guest cart survives navigation, subtotal $45.00', await shop.getByText('$45.00').first().isVisible())
   check('cart: increase is disabled at the stock limit (poster)', await shop.getByRole('button', { name: 'Increase quantity of Art Poster' }).isDisabled())
-  check('cart: discount code is visible but disabled (coming in Phase 3)', await shop.getByLabel('Discount code').isDisabled())
+  check('cart: the discount code is entered at checkout, so the cart page has no code box', (await shop.getByLabel('Discount code').count()) === 0)
   await shop.getByRole('button', { name: 'Decrease quantity of Ceramic Mug' }).click()
   await shop.getByText('$32.50').first().waitFor()
   await shop.getByRole('button', { name: 'Increase quantity of Ceramic Mug' }).click()
@@ -313,7 +313,7 @@ await step('keyboard: add to cart without a mouse', async () => {
   watch(kb, 'keyboard')
   await kb.goto(`${WEB}/store/${storeId}`)
   await kb.getByRole('button', { name: /Add to cart/ }).first().waitFor()
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 40; i++) {
     await kb.keyboard.press('Tab')
     const name = await kb.evaluate(() => document.activeElement?.textContent ?? '')
     if (/Add to cart/.test(name)) break
@@ -331,7 +331,7 @@ await step('mobile 320px: no horizontal scroll', async () => {
   const m = await mob.newPage()
   watch(m, 'mobile')
   await m.goto(`${WEB}/store/${storeId}`)
-  await m.getByRole('heading', { name: 'Shop' }).waitFor()
+  await m.getByRole('heading', { name: 'New arrivals' }).waitFor()
   const wide = async () => m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
   check('mobile: shop page fits 320px', !(await wide()))
   await m.getByRole('button', { name: /Add to cart/ }).first().click()

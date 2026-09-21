@@ -10,6 +10,8 @@ export const orderRouter = Router({ mergeParams: true });
 orderRouter.use(requireAuth, withTenantContext);
 
 orderRouter.get("/", requirePermission("ORDERS_WRITE"), orderController.list);
+// The signed-in shopper's own orders. Declared before "/:orderId" so "mine" is never read as an order id.
+orderRouter.get("/mine", orderController.listMine);
 // No permission middleware here: the service lets the merchant side see any order and a
 // shopper see only their own.
 orderRouter.get("/:orderId", orderController.get);

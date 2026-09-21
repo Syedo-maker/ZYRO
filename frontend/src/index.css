@@ -35,6 +35,15 @@
   --color-warning-soft: oklch(95% 0.04 80);
   --color-danger: oklch(50% 0.19 25);
   --color-danger-soft: oklch(94% 0.04 25);
+
+  /* Review stars: 3.5:1 against white and the page background, the minimum for a graphic. */
+  --color-star: oklch(62% 0.15 75);
+
+  /* Chart series (dataviz reference palette slots 1 and 2, validated with the dataviz skill's checker:
+     worst adjacent color-blind separation 24.7, contrast 3:1 or better on white). Online is always blue,
+     in-store always orange, on every chart. */
+  --color-series-online: #2a78d6;
+  --color-series-pos: #eb6834;
 }
 
 body {

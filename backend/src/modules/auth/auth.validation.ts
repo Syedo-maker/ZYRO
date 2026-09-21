@@ -17,6 +17,17 @@ export const registerSchema = z.object({
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
+/**
+ * A shopper's account: an ordinary user with no store. It works at every store on the platform;
+ * a store's own customer record is created the first time they buy there.
+ */
+export const registerCustomerSchema = z.object({
+  email: z.string().email().max(254),
+  password: registerSchema.shape.password,
+  name: z.string().trim().min(1).max(120).optional(),
+});
+export type RegisterCustomerInput = z.infer<typeof registerCustomerSchema>;
+
 export const loginSchema = z.object({
   email: z.string().email().max(254),
   password: z.string().max(1000),

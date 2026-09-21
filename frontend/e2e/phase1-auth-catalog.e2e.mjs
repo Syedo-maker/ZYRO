@@ -169,8 +169,8 @@ await step('orders nav and empty state work for a fresh store', async () => {
   await page.getByRole('link', { name: 'Orders' }).click()
   await page.getByText('No orders yet').waitFor()
   check('nav: Orders page opens from the sidebar', true)
-  const disabled = await page.getByText('Marketing').first().evaluate((el) => el.tagName !== 'A')
-  check('nav: not-yet-built sections (Dashboard, Marketing, Settings) are visibly disabled', disabled)
+  const disabled = await page.getByText('Settings').first().evaluate((el) => el.tagName !== 'A')
+  check('nav: the not-yet-built Settings section is visibly disabled', disabled)
 })
 
 check('no console errors or uncaught exceptions', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '))

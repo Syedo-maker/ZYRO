@@ -136,6 +136,36 @@ export const cartService = {
     return this.get(storeId, owner);
   },
 
+  /**
+   * Brings a browser's guest cart into the signed-in shopper's cart when they sign in, so
+   * signing in mid-shopping (to leave a review, say) does not lose what they had chosen.
+   * Quantities are added and held to what is in stock; products that no longer exist are
+   * skipped. The guest cart is claimed with an atomic rename first, so two merges at once
+   * (two tabs) cannot add it twice. Nothing to merge is fine and changes nothing.
+   */
+  async mergeGuestCart(storeId: string, user: CartOwner, guestId: string): Promise<CartView> {
+    const redis = getRedis();
+    const guestKey = cartKey(storeId, { kind: "guest", id: guestId });
+    const claimed = `${guestKey}:merging:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+    try {
+      await redis.rename(guestKey, claimed);
+    } catch {
+      return this.get(storeId, user); // no guest cart (or another tab already took it)
+    }
+
+    const guestItems = await redis.hgetall(claimed);
+    const userKey = cartKey(storeId, user);
+    for (const [productId, qty] of Object.entries(guestItems)) {
+      if (!Types.ObjectId.isValid(productId) || !(await Product.exists({ _id: productId, storeId }))) continue;
+      const have = Number((await redis.hget(userKey, productId)) ?? 0);
+      const wanted = Math.min(have + Number(qty), await availableFor(storeId, productId));
+      if (wanted > 0) await redis.hset(userKey, productId, wanted);
+    }
+    await redis.del(claimed);
+    await touch(userKey);
+    return this.get(storeId, user);
+  },
+
   async clear(key: string): Promise<void> {
     await getRedis().del(key);
   },

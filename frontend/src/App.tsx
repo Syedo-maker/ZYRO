@@ -11,6 +11,14 @@ import { CartPage } from './pages/storefront/CartPage'
 import { CheckoutPage } from './pages/storefront/CheckoutPage'
 import { OrderConfirmationPage } from './pages/storefront/OrderConfirmationPage'
 import { TeamPage } from './pages/admin/TeamPage'
+import { DashboardPage } from './pages/admin/DashboardPage'
+import { MarketingPage } from './pages/admin/MarketingPage'
+import { ReviewsAdminPage } from './pages/admin/ReviewsAdminPage'
+import { CatalogPage } from './pages/storefront/CatalogPage'
+import { ProductPage } from './pages/storefront/ProductPage'
+import { CustomerAuthPage } from './pages/storefront/account/CustomerAuthPage'
+import { AccountPage } from './pages/storefront/account/AccountPage'
+import { AccountOrderPage } from './pages/storefront/account/AccountOrderPage'
 import { PosEntry, PosLayout } from './pages/pos/PosLayout'
 import { PosLoginPage } from './pages/pos/PosLoginPage'
 import { RegisterPage as PosRegisterPage } from './pages/pos/RegisterPage'
@@ -29,6 +37,9 @@ export default function App() {
             <Route index element={<Navigate to="products" replace />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="orders" element={<OrdersPage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="marketing" element={<MarketingPage />} />
+            <Route path="reviews" element={<ReviewsAdminPage />} />
             <Route path="team" element={<TeamPage />} />
           </Route>
 
@@ -42,6 +53,12 @@ export default function App() {
 
           <Route path="/store/:storeId" element={<StorefrontLayout />}>
             <Route index element={<StorefrontHome />} />
+            <Route path="products" element={<CatalogPage />} />
+            <Route path="products/:productId" element={<ProductPage />} />
+            <Route path="account" element={<AccountPage />} />
+            <Route path="account/login" element={<CustomerAuthPage mode="login" />} />
+            <Route path="account/register" element={<CustomerAuthPage mode="register" />} />
+            <Route path="account/orders/:orderId" element={<AccountOrderPage />} />
             <Route path="cart" element={<CartPage />} />
             <Route path="checkout" element={<CheckoutPage />} />
             <Route path="checkout/success" element={<OrderConfirmationPage />} />

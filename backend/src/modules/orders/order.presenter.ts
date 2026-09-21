@@ -15,6 +15,16 @@ export type OrderWithRelations = Prisma.OrderGetPayload<{ include: typeof orderI
 
 const num = (d: Prisma.Decimal | null) => (d === null ? null : Number(d.toString()));
 
+/**
+ * What a shopper sees of their own order: the same view without the store's internal
+ * bookkeeping (which register and shift, which staff member, internal ids).
+ */
+export function toShopperOrderView(view: ReturnType<typeof toOrderView>) {
+  const { cashierUserId: _c, shiftId: _s, locationId: _l, customerId: _cu, discountReason: _d, ...rest } = view;
+  void _c; void _s; void _l; void _cu; void _d;
+  return { ...rest, returns: rest.returns.map(({ createdByUserId: _u, ...r }) => (void _u, r)) };
+}
+
 /** The Order shape in openapi.yaml: numbers for money, lowercase enums. */
 export function toOrderView(o: OrderWithRelations) {
   return {

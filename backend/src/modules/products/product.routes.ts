@@ -13,6 +13,7 @@ export const productRouter = Router({ mergeParams: true });
 productRouter.get("/", withTenantContext, productController.list);
 // "suggest" is registered before "/:productId" so it is never read as a product id.
 productRouter.get("/suggest", withTenantContext, productController.suggest);
+productRouter.get("/categories", withTenantContext, productController.categories);
 productRouter.get("/:productId", withTenantContext, productController.get);
 // Reviews of a product: public to read, signed-in shoppers write their own.
 productRouter.use("/:productId/reviews", productReviewsRouter);

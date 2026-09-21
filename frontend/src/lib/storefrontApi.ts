@@ -19,15 +19,17 @@ export const cartApi = {
     apiFetch<Cart>(`/stores/${storeId}/cart/items/${productId}`, { method: 'PATCH', body: { quantity }, headers: guest() }),
   remove: (storeId: string, productId: string) =>
     apiFetch<Cart>(`/stores/${storeId}/cart/items/${productId}`, { method: 'DELETE', headers: guest() }),
+  /** Signed in: brings this browser's guest cart into the account's cart. */
+  merge: (storeId: string) => apiFetch<Cart>(`/stores/${storeId}/cart/merge`, { method: 'POST', headers: guest() }),
 }
 
 export const checkoutApi = {
-  quote: (storeId: string, shippingZoneId?: string) =>
-    apiFetch<Quote>(`/stores/${storeId}/checkout/quote`, { method: 'POST', body: { shippingZoneId }, headers: guest() }),
-  createSession: (storeId: string, shippingZoneId?: string) =>
+  quote: (storeId: string, shippingZoneId?: string, discountCode?: string) =>
+    apiFetch<Quote>(`/stores/${storeId}/checkout/quote`, { method: 'POST', body: { shippingZoneId, discountCode }, headers: guest() }),
+  createSession: (storeId: string, shippingZoneId?: string, discountCode?: string) =>
     apiFetch<{ checkoutUrl: string }>(`/stores/${storeId}/checkout/session`, {
       method: 'POST',
-      body: { shippingZoneId },
+      body: { shippingZoneId, discountCode },
       headers: guest(),
     }),
   getSessionStatus: (storeId: string, sessionId: string) =>

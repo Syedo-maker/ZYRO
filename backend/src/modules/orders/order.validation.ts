@@ -21,6 +21,11 @@ export const listOrdersQuerySchema = z.object({
 });
 export type ListOrdersQuery = z.infer<typeof listOrdersQuerySchema>;
 
+export const myOrdersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
+
 export const updateStatusSchema = z.object({ status: orderStatus });
 
 export const refundSchema = z.object({

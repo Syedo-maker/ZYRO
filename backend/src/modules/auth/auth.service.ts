@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { password as passwordLib } from "../../lib/password";
 import { accessToken } from "../../lib/jwt";
@@ -5,7 +6,7 @@ import { refreshToken as refreshTokenLib } from "../../lib/refreshToken";
 import { Errors } from "../../errors/AppError";
 import { tenantContext } from "../../lib/tenantContext";
 import { inventoryService } from "../inventory/inventory.service";
-import type { RegisterInput, LoginInput } from "./auth.validation";
+import type { RegisterInput, RegisterCustomerInput, LoginInput } from "./auth.validation";
 
 interface Session {
   accessToken: string;
@@ -51,6 +52,21 @@ export const authService = {
     });
 
     return issueSession(user.id, user.email, user.name);
+  },
+
+  /** Creates a shopper's account (a User with no store) and signs them in. */
+  async registerCustomer(input: RegisterCustomerInput): Promise<Session> {
+    const existing = await prisma.user.findUnique({ where: { email: input.email } });
+    if (existing) throw Errors.emailTaken();
+    const passwordHash = await passwordLib.hash(input.password);
+    try {
+      const user = await prisma.user.create({ data: { email: input.email, name: input.name, passwordHash } });
+      return issueSession(user.id, user.email, user.name);
+    } catch (err) {
+      // Two sign-ups with the same email at once: the second hits the unique key.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw Errors.emailTaken();
+      throw err;
+    }
   },
 
   async login(input: LoginInput): Promise<Session> {

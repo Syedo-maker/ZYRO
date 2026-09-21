@@ -31,6 +31,9 @@ export interface Product {
   taxable?: boolean
   category: string
   images: string[]
+  /** Mean of the published reviews (two decimals), or null when there are none. */
+  averageRating?: number | null
+  reviewCount?: number
   aiDescriptionStatus: 'draft' | 'published' | null
 }
 

@@ -10,6 +10,12 @@ interface RegisterInput {
   storeSlug: string
 }
 
+interface CustomerRegisterInput {
+  email: string
+  password: string
+  name?: string
+}
+
 interface LoginInput {
   email: string
   password: string
@@ -24,6 +30,8 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (input: LoginInput) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
+  /** A shopper's account: no store, works at every store. */
+  registerCustomer: (input: CustomerRegisterInput) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -85,6 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStores(await apiFetch<MyStore[]>('/users/me/stores'))
   }
 
+  async function registerCustomer(input: CustomerRegisterInput) {
+    const session = await apiFetch<AuthSession>('/auth/register-customer', { method: 'POST', body: input })
+    setAccessToken(session.accessToken)
+    setUser(session.user)
+    setStores([])
+  }
+
   async function logout() {
     await apiFetch('/auth/logout', { method: 'POST' })
     setAccessToken(null)
@@ -100,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: user !== null,
     login,
     register,
+    registerCustomer,
     logout,
   }
 

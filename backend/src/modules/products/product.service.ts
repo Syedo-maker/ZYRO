@@ -130,6 +130,16 @@ export const productService = {
     };
   },
 
+  /** The store's categories with how many products each holds: biggest first, then by name. For category navigation. */
+  async categories(storeId: string) {
+    const rows = await Product.aggregate<{ _id: string; count: number }>([
+      { $match: { storeId } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+    ]);
+    return rows.map((r) => ({ name: r._id, count: r.count }));
+  },
+
   /** Search-box suggestions: products with a title word that starts with what was typed. */
   async suggest(storeId: string, q: string) {
     const startsWith = new RegExp(`(^|\\s)${escapeRegex(q)}`, "i");

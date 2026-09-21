@@ -37,6 +37,8 @@ export interface ShippingZoneInput {
 
 export interface Quote {
   currency: string
+  /** The discount code that was applied, if any. */
+  discount?: { code: string; type: 'percentage' | 'fixed'; value: number } | null
   subtotal: number
   discountAmount: number
   taxAmount: number
@@ -102,10 +104,14 @@ export interface Order {
   shippingAddress: ShippingAddress | null
   subtotal: number
   discountAmount: number
+  /** The discount code the order used, when it used one. */
+  discountCode?: string | null
   taxAmount: number
   shippingAmount: number
   total: number
   currency: string
+  /** Items taken back from an in-store sale (whole-order refunds are in `refunds`). */
+  returns?: { id: string; amount: number }[]
   items: OrderItem[]
   payments: OrderPayment[]
   refunds: OrderRefund[]

@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { authService } from "./auth.service";
-import { registerSchema, loginSchema } from "./auth.validation";
+import { registerSchema, registerCustomerSchema, loginSchema } from "./auth.validation";
 import { Errors } from "../../errors/AppError";
 
 const REFRESH_COOKIE_NAME = "refreshToken";
@@ -23,6 +23,19 @@ export const authController = {
 
     try {
       const session = await authService.register(parsed.data);
+      setRefreshCookie(res, session.refreshToken, session.refreshTokenExpiresAt);
+      res.status(201).json({ accessToken: session.accessToken, user: session.user });
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  registerCustomer: (async (req, res, next) => {
+    const parsed = registerCustomerSchema.safeParse(req.body);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+
+    try {
+      const session = await authService.registerCustomer(parsed.data);
       setRefreshCookie(res, session.refreshToken, session.refreshTokenExpiresAt);
       res.status(201).json({ accessToken: session.accessToken, user: session.user });
     } catch (err) {

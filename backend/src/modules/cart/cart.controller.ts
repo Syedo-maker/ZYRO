@@ -12,6 +12,20 @@ export const cartController = {
     }
   }) satisfies RequestHandler,
 
+  /** Signed-in shoppers only: takes the guest cart named in X-Guest-Session-Id into their own. */
+  merge: (async (req, res, next) => {
+    try {
+      if (req.cartOwner?.kind !== "user") return next(Errors.unauthorized("Sign in to merge a guest cart"));
+      const guest = req.headers["x-guest-session-id"];
+      if (typeof guest !== "string" || !/^[A-Za-z0-9_-]{16,64}$/.test(guest)) {
+        return next(Errors.validation("Send the guest cart's X-Guest-Session-Id header (16 to 64 URL-safe characters)"));
+      }
+      res.status(200).json(await cartService.mergeGuestCart(req.params.storeId, req.cartOwner, guest));
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
   addItem: (async (req, res, next) => {
     const parsed = addItemSchema.safeParse(req.body);
     if (!parsed.success) return next(Errors.validation(parsed.error.message));

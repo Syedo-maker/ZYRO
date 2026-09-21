@@ -9,6 +9,7 @@ export const cartRouter = Router({ mergeParams: true });
 cartRouter.use(withTenantContext, resolveCartOwner);
 
 cartRouter.get("/", cartController.get);
+cartRouter.post("/merge", cartController.merge);
 cartRouter.post("/items", cartController.addItem);
 cartRouter.patch("/items/:itemId", cartController.updateItem);
 cartRouter.delete("/items/:itemId", cartController.removeItem);

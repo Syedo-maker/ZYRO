@@ -4,7 +4,7 @@ import { getStripeGateway } from "../../lib/stripe";
 import { hasStorePermission } from "../../lib/permissions";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
-import { orderInclude, toOrderView } from "./order.presenter";
+import { orderInclude, toOrderView, toShopperOrderView } from "./order.presenter";
 import {
   INITIAL_SHIPMENT_STATUSES,
   ManualTarget,
@@ -157,7 +157,17 @@ export const orderManagementService = {
       include: orderInclude,
     });
     if (!order) throw Errors.notFound("Order");
-    return toOrderView(order);
+    return isMerchant ? toOrderView(order) : toShopperOrderView(toOrderView(order));
+  },
+
+  /** A signed-in shopper's own orders at this store, newest first, without the store's internal fields. */
+  async listMine(tenantId: string, userId: string, limit: number, offset: number) {
+    const where: Prisma.OrderWhereInput = { tenantId, customer: { is: { userId } } };
+    const [rows, total] = await Promise.all([
+      prisma.order.findMany({ where, include: orderInclude, orderBy: { createdAt: "desc" }, skip: offset, take: limit }),
+      prisma.order.count({ where }),
+    ]);
+    return { data: rows.map((o) => toShopperOrderView(toOrderView(o))), pagination: { total, limit, offset } };
   },
 
   async updateStatus(tenantId: string, orderId: string, target: ManualTarget, userId: string) {

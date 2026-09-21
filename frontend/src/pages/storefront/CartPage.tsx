@@ -67,26 +67,12 @@ export function CartPage() {
         <aside className="flex w-full flex-col gap-4 rounded-[14px] border border-border bg-white p-6 lg:w-80" aria-label="Order summary">
           <h2 className="text-[15px] font-bold">Order summary</h2>
 
-          <div className="flex gap-2">
-            <input
-              type="text"
-              disabled
-              aria-label="Discount code"
-              placeholder="Discount code"
-              className="min-w-0 flex-1 rounded-[10px] bg-bg px-3.5 py-2.5 text-[13px] disabled:cursor-not-allowed"
-            />
-            <button type="button" disabled className="rounded-[10px] border border-border px-4 text-sm font-semibold opacity-50">
-              Apply
-            </button>
-          </div>
-          <p className="-mt-2 text-xs text-text-muted">Discount codes are coming soon.</p>
-
           <div className="h-px bg-border" />
           <div className="flex justify-between text-[13px] text-text-secondary">
             <span>Subtotal</span>
             <span className="font-semibold text-text">{formatMoney(cart.subtotal, cart.currency)}</span>
           </div>
-          <p className="text-xs text-text-muted">Shipping and tax are calculated at checkout.</p>
+          <p className="text-xs text-text-muted">Shipping, tax and any discount code are handled at checkout.</p>
 
           {hasStockProblem ? (
             <p className="text-xs font-semibold text-danger">Fix the items marked above to continue.</p>

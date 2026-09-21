@@ -43,7 +43,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Module 7 (partial): Discount Codes (backend; see Phase3_Module7_Discount_Codes.md)
 - [x] Module 1 (remaining): Search & Reviews (backend; see Phase3_Module1_Search_And_Reviews.md)
 - [x] Module 7 (partial): Analytics Dashboard (backend, baseline; sales split by channel, ONLINE vs POS; see Phase3_Module7_Analytics_Dashboard.md)
-- [ ] Frontend: Storefront Home, Category/Search, Product Detail + reviews (`Main.dc.html`, `CategoryListing.dc.html`, `ProductDetail.dc.html`) + Admin Dashboard home + Marketing/Analytics UI (`AdminDashboard.dc.html`, `AdminMarketing.dc.html`)
+- [x] Frontend: Storefront Home, Category/Search, Product Detail + reviews (`Main.dc.html`, `CategoryListing.dc.html`, `ProductDetail.dc.html`) + Admin Dashboard home + Marketing/Analytics UI (`AdminDashboard.dc.html`, `AdminMarketing.dc.html`), plus customer sign-up/login/My account and the checkout discount code box; verified in real Chromium; see `documentation/Phase3_Frontend_Storefront_Customer_And_Admin.md`
 
 **Phase 4: AI Feature 1**
 - [ ] AI Orchestrator (provider adapter + BullMQ job queue + quota system)
