@@ -18,6 +18,7 @@ import { shippingRouter } from "./modules/shipping/shipping.routes";
 import { posRouter } from "./modules/pos/pos.routes";
 import { discountRouter } from "./modules/discounts/discount.routes";
 import { analyticsRouter } from "./modules/analytics/analytics.routes";
+import { merchantReviewsRouter } from "./modules/reviews/review.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 
 export const app = express();
@@ -58,6 +59,7 @@ v1.use("/stores/:storeId/shipping-zones", shippingRouter);
 v1.use("/stores/:storeId/pos", posRouter);
 v1.use("/stores/:storeId/discount-codes", discountRouter);
 v1.use("/stores/:storeId/analytics", analyticsRouter);
+v1.use("/stores/:storeId/reviews", merchantReviewsRouter);
 v1.use("/stores/:storeId", storeRouter);
 app.use("/api/v1", v1);
 

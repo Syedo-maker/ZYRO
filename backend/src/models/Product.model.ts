@@ -54,8 +54,10 @@ const productSchema = new Schema<ProductDocument>(
   { timestamps: true }
 );
 
-// Search (Implementation_Plan.md Phase 3, Module 1 remaining: Search & Reviews)
-productSchema.index({ title: "text", description: "text" });
+// Search (Implementation_Plan.md Phase 3, Module 1 remaining: Search & Reviews). A title match
+// outranks a category match, which outranks a word buried in the description. Changing the
+// weights of an existing text index needs `npm run sync-indexes` once (see scripts/sync-indexes.ts).
+productSchema.index({ title: "text", category: "text", description: "text" }, { weights: { title: 10, category: 3, description: 1 }, name: "product_search" });
 
 // Browsing/filtering by category within a store; storeId alone covers plain catalog listing
 productSchema.index({ storeId: 1, category: 1 });

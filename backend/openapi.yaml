@@ -391,19 +391,40 @@ paths:
       operationId: products_list
       summary: Browse or search a store's product catalog
       description: |
-        Public. Supports plain browsing (category filter, pagination) and keyword search via
-        the `q` parameter against the MongoDB text index on title/description
-        (Implementation_Plan.md Phase 3), folded into this collection endpoint rather than a
-        separate `/search` path, since a search is just a filtered list, not a distinct resource.
+        Public. Browsing and search are one endpoint (a search is a filtered list, not a
+        separate resource). `q` uses the MongoDB text index over title, category and description,
+        where a title match outranks a category match, which outranks a description match, and
+        `sort=relevance` (the default with `q`) ranks best first. If the text search finds nothing,
+        for example a partial word such as `cer` for "Ceramic", it falls back to a case-insensitive
+        contains match on title and category, ordered by title. Regex characters in `q` are plain
+        text. An empty `q` means browse. Each product carries its average rating and review count,
+        computed on read from published reviews; the catalog cannot be sorted or filtered by rating
+        (that would need a stored average, which the plan avoids).
       security: []
       parameters:
         - name: q
           in: query
-          description: Keyword search across product title and description.
-          schema: { type: string }
+          description: "Keyword search across title, category and description (at most 100 characters)."
+          schema: { type: string, maxLength: 100 }
         - name: category
           in: query
           schema: { type: string }
+        - name: minPrice
+          in: query
+          description: "Inclusive lower bound on price."
+          schema: { type: number, minimum: 0 }
+        - name: maxPrice
+          in: query
+          description: "Inclusive upper bound on price; not less than minPrice."
+          schema: { type: number, minimum: 0 }
+        - name: inStock
+          in: query
+          description: "true leaves out products with no stock on hand."
+          schema: { type: boolean }
+        - name: sort
+          in: query
+          description: "relevance ranks search matches best first (newest when there is no `q`)."
+          schema: { type: string, enum: [relevance, newest, price_asc, price_desc, title], default: relevance }
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -436,6 +457,36 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Product" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/products/suggest:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [catalog]
+      operationId: products_suggest
+      summary: Search-box suggestions
+      description: "Public. Up to 8 products with a title word that starts with `q`, sorted by title; for a type-ahead box. Matching is case-insensitive and regex characters are plain text."
+      security: []
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 60 } }
+      responses:
+        "200":
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    title: { type: string }
+                    category: { type: string }
+        "400":
+          description: A missing or empty query
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /stores/{storeId}/products/{productId}:
     parameters:
@@ -536,10 +587,18 @@ paths:
     get:
       tags: [reviews]
       operationId: reviews_list
-      summary: List reviews for a product
+      summary: List a product's reviews with its rating summary
+      description: |
+        Public. Only published reviews, with the average rating, the count and the star
+        breakdown computed on read from them (Implementation_Plan.md Phase 3: not stored on the
+        product). The reviewer's id and email are never exposed; only the name as it is shown
+        ("Sam O."). A signed-in shopper also gets `myReview` (their own, even if hidden) so the
+        page can offer edit and delete; a missing or invalid token just means signed out.
       security: []
       parameters:
-        - $ref: "#/components/parameters/Limit"
+        - { name: sort, in: query, schema: { type: string, enum: [newest, oldest, highest, lowest], default: newest } }
+        - { name: rating, in: query, description: "Only reviews with this many stars; the summary still describes all reviews.", schema: { type: integer, minimum: 1, maximum: 5 } }
+        - { name: limit, in: query, schema: { type: integer, default: 10, maximum: 50 } }
         - $ref: "#/components/parameters/Offset"
       responses:
         "200":
@@ -548,20 +607,39 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data, pagination, averageRating]
+                required: [data, pagination, averageRating, reviewCount, distribution]
                 properties:
                   data:
                     type: array
                     items: { $ref: "#/components/schemas/ProductReview" }
                   pagination: { $ref: "#/components/schemas/PaginationInfo" }
-                  averageRating:
-                    type: number
-                    description: Computed on read via aggregation, not stored on the product (Implementation_Plan.md Phase 3).
+                  averageRating: { type: [number, "null"], description: "Two decimals; null when the product has no published reviews." }
+                  reviewCount: { type: integer }
+                  distribution:
+                    type: object
+                    description: "How many reviews gave each number of stars."
+                    properties:
+                      "1": { type: integer }
+                      "2": { type: integer }
+                      "3": { type: integer }
+                      "4": { type: integer }
+                      "5": { type: integer }
+                  myReview:
+                    oneOf:
+                      - { $ref: "#/components/schemas/OwnReview" }
+                      - { type: "null" }
+        "404": { $ref: "#/components/responses/NotFound" }
     post:
       tags: [reviews]
       operationId: reviews_create
       summary: Leave a review for a product
-      description: Requires a logged-in customer account (one review per customer per product).
+      description: |
+        Requires a signed-in account; one review per person per product. Any account may review;
+        `verifiedPurchase` is true when the reviewer has a paid order in this store containing
+        the product that was not refunded or cancelled (checked when the review is written).
+        The store's owner and staff cannot review their own products (403). Text is stored as
+        plain text with control characters removed. At most 10 review writes (create, edit,
+        delete) per person per hour (429).
       requestBody:
         required: true
         content:
@@ -571,19 +649,139 @@ paths:
               required: [rating]
               properties:
                 rating: { type: integer, minimum: 1, maximum: 5 }
+                title: { type: string, maxLength: 100 }
                 comment: { type: string, maxLength: 2000 }
       responses:
         "201":
           description: Review created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ProductReview" }
-        "409":
-          description: Customer has already reviewed this product
+              schema: { $ref: "#/components/schemas/OwnReview" }
+        "400":
+          description: A rating that is not a whole number from 1 to 5, or text that is too long
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
+        "401": { description: Not signed in }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: The person has already reviewed this product
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
 
+  /stores/{storeId}/products/{productId}/reviews/mine:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    put:
+      tags: [reviews]
+      operationId: reviews_update_mine
+      summary: Edit your own review
+      description: "Changes only the fields sent. Keeps its place and its verified badge; a review the store has hidden stays hidden."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                title: { type: string, maxLength: 100 }
+                comment: { type: string, maxLength: 2000 }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnReview" }
+        "400":
+          description: Nothing to change, or an invalid value
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { description: Not signed in }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+    delete:
+      tags: [reviews]
+      operationId: reviews_delete_mine
+      summary: Delete your own review
+      description: "Removes it from the page and the average. You can write a new one afterwards."
+      responses:
+        "204": { description: Deleted }
+        "401": { description: Not signed in }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /stores/{storeId}/reviews:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [reviews]
+      operationId: reviews_moderation_list
+      summary: Every review in the store, hidden ones included
+      description: "Requires the `products_write` staff permission (or owner). Newest first, with the product title."
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [published, hidden] } }
+        - { name: productId, in: query, schema: { type: string } }
+        - { name: rating, in: query, schema: { type: integer, minimum: 1, maximum: 5 } }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ModerationReview" }
+                  pagination: { $ref: "#/components/schemas/PaginationInfo" }
+        "401": { description: Not signed in }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/reviews/{reviewId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: reviewId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [reviews]
+      operationId: reviews_moderate
+      summary: Hide or show a review, and reply to it
+      description: |
+        Requires the `products_write` staff permission (or owner). A hidden review is kept
+        but not shown or counted, and its author cannot post another. The reviewer's own words
+        are never edited. `reply` adds or changes the store's public reply; null removes it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [published, hidden] }
+                reply: { type: [string, "null"], maxLength: 1000 }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModerationReview" }
+        "400":
+          description: Nothing to change, or an invalid value
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   # ── AI CONTENT ────────────────────────────────────────────────────────
   /stores/{storeId}/products/{productId}/ai-description/generate:
     parameters:
@@ -2167,6 +2365,8 @@ components:
           properties:
             id: { type: string }
             storeId: { type: string }
+            averageRating: { type: [number, "null"], description: "Mean of the published reviews, two decimals; null when there are none. Computed on read." }
+            reviewCount: { type: integer, description: "Published reviews." }
             aiDescriptionStatus:
               type: [string, "null"]
               enum: [draft, published, null]
@@ -2183,15 +2383,35 @@ components:
 
     ProductReview:
       type: object
-      required: [id, productId, customerId, rating]
+      description: "A published review as shoppers see it. No reviewer id or email."
+      required: [id, productId, authorName, rating]
       properties:
         id: { type: string }
         productId: { type: string }
-        customerId: { type: string }
+        authorName: { type: string, description: "The reviewer as shown, for example Sam O., or Customer." }
         rating: { type: integer, minimum: 1, maximum: 5 }
-        comment: { type: string }
+        title: { type: [string, "null"] }
+        comment: { type: [string, "null"] }
+        verifiedPurchase: { type: boolean }
+        merchantReply: { type: [string, "null"] }
+        merchantRepliedAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
+    OwnReview:
+      description: "A review as its author sees it: adds the moderation status."
+      allOf:
+        - $ref: "#/components/schemas/ProductReview"
+        - type: object
+          properties:
+            status: { type: string, enum: [published, hidden] }
+
+    ModerationReview:
+      allOf:
+        - $ref: "#/components/schemas/OwnReview"
+        - type: object
+          properties:
+            productTitle: { type: string }
     AiGeneratedContent:
       type: object
       required: [id, productId, status, content]

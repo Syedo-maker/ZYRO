@@ -14,6 +14,7 @@ process.env.RATE_LIMIT_REGISTER_MAX = "6";
 process.env.RATE_LIMIT_REFRESH_MAX = "1000";
 process.env.RATE_LIMIT_API_MAX = "1000";
 process.env.RATE_LIMIT_DISCOUNT_MAX = "5";
+process.env.RATE_LIMIT_REVIEW_MAX = "3";
 process.env.RATE_LIMIT_WINDOW_MINUTES = "15";
 
 import type { AddressInfo } from "node:net";
@@ -141,6 +142,18 @@ async function main() {
     check("discount codes: a normal checkout request (no code) is never counted or blocked", checkoutWhileBlocked.status !== 429);
     const guessWithCode = await call("POST", "/stores/some-store/checkout/quote", { body: { discountCode: "GUESS7" }, headers: { "X-Guest-Session-Id": `guest-${suffix}-guessing-aaaa` } });
     check("discount codes: guessing through checkout counts against the same limit", guessWithCode.status === 429);
+
+    // ---- Review spam ----
+    // Any product id works: every attempt at a review counts against the person, found or not.
+    const tokenA = okReg.json.accessToken as string;
+    const reviewAttempt = (token: string) => call("POST", "/stores/some-store/products/64b7f0f0f0f0f0f0f0f0f0f0/reviews", { body: { rating: 5 }, headers: { Authorization: `Bearer ${token}` } });
+    const reviewAttempts = [];
+    for (let i = 1; i <= 3; i++) reviewAttempts.push(await reviewAttempt(tokenA));
+    check("reviews: a person's first three review writes in the hour are answered normally", reviewAttempts.every((r) => r.status === 404));
+    const fourth = await reviewAttempt(tokenA);
+    check("reviews: the fourth is blocked (429) with a wait time, so review spam is slowed", fourth.status === 429 && Number(fourth.headers.get("retry-after")) > 0, `status=${fourth.status}`);
+    const readingReviews = await call("GET", "/stores/some-store/products/64b7f0f0f0f0f0f0f0f0f0f0/reviews");
+    check("reviews: reading reviews is never limited by it", readingReviews.status !== 429);
 
     // ---- The limiter must not take the site down ----
     check("resilience: normal read endpoints still work while auth is limited", (await call("GET", "/stores/none")).status === 404);

@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { productService } from "./product.service";
-import { productInputSchema, listProductsQuerySchema } from "./product.validation";
+import { productInputSchema, listProductsQuerySchema, suggestQuerySchema } from "./product.validation";
 import { Errors } from "../../errors/AppError";
 
 export const productController = {
@@ -11,6 +11,16 @@ export const productController = {
     try {
       const result = await productService.list(req.params.storeId, parsed.data);
       res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  suggest: (async (req, res, next) => {
+    const parsed = suggestQuerySchema.safeParse(req.query);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      res.status(200).json(await productService.suggest(req.params.storeId, parsed.data.q));
     } catch (err) {
       next(err);
     }

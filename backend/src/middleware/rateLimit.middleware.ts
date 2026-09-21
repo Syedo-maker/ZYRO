@@ -73,3 +73,8 @@ export const discountAttemptLimiter = limiter("discount", windowMs, env.rateLimi
   skip: (req) => !req.body?.code && !req.body?.discountCode,
   keyGenerator: clientIp,
 });
+
+/** Review writes per signed-in person per hour (keyed on the account, so switching address does not help); slows review spam. */
+export const reviewWriteLimiter = limiter("review", 60 * 60 * 1000, env.rateLimit.reviewMax, {
+  keyGenerator: (req) => (req.userId ? `u:${req.userId}` : clientIp(req)),
+});
