@@ -38,29 +38,44 @@ export async function getOrCreateQuota(tenantId: string, month = currentMonth())
   }
 }
 
-/** Throws 402 if this tenant has used up its quota for the current month; does not consume it. */
-export async function assertQuotaAvailable(tenantId: string, kind: AiUsageKind): Promise<void> {
+/**
+ * Atomically reserves one unit of this month's quota and reports whether that succeeded.
+ * `check remaining, then increment` as two separate steps would let concurrent calls all pass
+ * the check before any of them writes, letting a tenant exceed a hard limit (a genuine
+ * TOCTOU race, flagged in this module's security review even though nothing calls generate()
+ * yet); a single conditional `UPDATE ... WHERE used < limit` closes that, since Postgres holds
+ * the row lock for the whole statement, so only one of two racing callers can ever see it
+ * succeed. Raw SQL, not `updateMany`, because Prisma's filter API cannot compare one column to
+ * another (`generationsUsed < generationsLimit`) - the same reason discount.service.ts's
+ * `redeem("strict", ...)` reaches for `$executeRaw` instead of `updateMany`. Manually includes
+ * `tenantId` in the WHERE clause because raw queries bypass the tenant-scoping extension in
+ * lib/prisma.ts (it only intercepts named model operations, not `$executeRaw`).
+ */
+export async function reserveQuota(tenantId: string, kind: AiUsageKind, month = currentMonth()): Promise<boolean> {
+  await getOrCreateQuota(tenantId, month); // ensures the row exists before the conditional update targets it
+  const changed =
+    kind === "chat"
+      ? await prisma.$executeRaw`UPDATE "AiUsageQuota" SET "chatMessagesUsed" = "chatMessagesUsed" + 1 WHERE "tenantId" = ${tenantId} AND "month" = ${month} AND "chatMessagesUsed" < "chatMessagesLimit"`
+      : await prisma.$executeRaw`UPDATE "AiUsageQuota" SET "generationsUsed" = "generationsUsed" + 1 WHERE "tenantId" = ${tenantId} AND "month" = ${month} AND "generationsUsed" < "generationsLimit"`;
+  return changed > 0;
+}
+
+/** Builds the 402 message for a reservation that failed, from the row's own limit. */
+export async function quotaExhaustedMessage(tenantId: string, kind: AiUsageKind): Promise<string> {
   const quota = await getOrCreateQuota(tenantId);
-  const [used, limit] = kind === "chat" ? [quota.chatMessagesUsed, quota.chatMessagesLimit] : [quota.generationsUsed, quota.generationsLimit];
-  if (used >= limit) {
-    throw Errors.quotaExhausted(
-      kind === "chat"
-        ? `This store has used all ${limit} AI chat messages included this month.`
-        : `This store has used all ${limit} AI generations included this month.`
-    );
-  }
+  return kind === "chat"
+    ? `This store has used all ${quota.chatMessagesLimit} AI chat messages included this month.`
+    : `This store has used all ${quota.generationsLimit} AI generations included this month.`;
 }
 
 /**
- * Called only after a generation succeeds (Implementation_Plan.md Phase 4: "a failed
- * generation shouldn't cost the merchant their quota"). `updateMany`, not `update`, per the
- * tenant-scoping rule in lib/prisma.ts (AiUsageQuota is tenant-scoped and has no natural key
- * findUnique/update could target safely without it).
+ * Gives back a reservation from `reserveQuota` when the generation it was held for ultimately
+ * failed (Implementation_Plan.md Phase 4: "a failed generation shouldn't cost the merchant
+ * their quota"). `updateMany`, not `update`, per the tenant-scoping rule in lib/prisma.ts.
  */
-export async function incrementUsage(tenantId: string, kind: AiUsageKind, month = currentMonth()): Promise<void> {
-  await getOrCreateQuota(tenantId, month); // ensures the row exists before incrementing it
+export async function releaseQuota(tenantId: string, kind: AiUsageKind, month = currentMonth()): Promise<void> {
   await prisma.aiUsageQuota.updateMany({
     where: { tenantId, month },
-    data: kind === "chat" ? { chatMessagesUsed: { increment: 1 } } : { generationsUsed: { increment: 1 } },
+    data: kind === "chat" ? { chatMessagesUsed: { decrement: 1 } } : { generationsUsed: { decrement: 1 } },
   });
 }

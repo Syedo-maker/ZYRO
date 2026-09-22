@@ -87,12 +87,21 @@ export const discountService = {
    * transaction that creates the CheckoutSession: the code's row is locked first, so two
    * shoppers racing for the last use are handled one after the other and the loser is told
    * the code is used up, instead of both paying for a discount that no longer exists.
+   *
+   * Counts every currently-held reservation, including this same cart's own (unlike
+   * `resolve()`'s read-only preview, this call is the one that actually creates a hold, so it
+   * must never exclude anything: a security review found that excluding the caller's own cart
+   * key here let one shopper hold a limited code's last use across unlimited parallel, unpaid
+   * checkout sessions, since each new one only ever saw OTHER carts' holds. The cart's own
+   * earlier holds are superseded before this runs (checkout.service.ts createSession), so a
+   * shopper genuinely retrying an abandoned attempt is unaffected; only a second cart or a
+   * second concurrent attempt this one doesn't know about is ever really "in the way".
    */
-  async assertCanHold(tx: PrismaTx, tenantId: string, codeId: string, subtotalCents: number, cartKey: string): Promise<void> {
+  async assertCanHold(tx: PrismaTx, tenantId: string, codeId: string, subtotalCents: number): Promise<void> {
     await tx.$queryRaw`SELECT "id" FROM "DiscountCode" WHERE "id" = ${codeId} AND "tenantId" = ${tenantId} FOR UPDATE`;
     const row = await tx.discountCode.findFirst({ where: { id: codeId, tenantId } });
     if (!row) throw Errors.discountInvalid("That discount code is not valid.");
-    const reserved = row.usageLimit === null ? 0 : await reservedCount(tx, tenantId, codeId, new Date(), cartKey);
+    const reserved = row.usageLimit === null ? 0 : await reservedCount(tx, tenantId, codeId, new Date());
     const verdict = evaluateDiscountCode(stateOf(row, reserved), subtotalCents, new Date());
     if (!verdict.ok) throw Errors.discountInvalid(verdict.message);
   },

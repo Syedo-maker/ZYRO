@@ -261,6 +261,7 @@ await step('write, edit and delete a review', cp, async () => {
   await cp.getByRole('button', { name: 'Save changes' }).click()
   await cp.getByText('Your review was updated.').waitFor()
   check('review: editing to 5 stars updates the average to 5.0', (await cp.locator('#reviews').getByText('5.0', { exact: true }).count()) >= 1)
+  await cp.getByText('5.0 · 1 review').waitFor() // the header re-fetches its own rating independently of the reviews section
   check('review: the product header shows the new rating as well', (await cp.getByText('5.0 · 1 review').count()) === 1)
 
   await cp.locator('#reviews').getByRole('button', { name: 'Delete' }).click()
@@ -349,6 +350,7 @@ await step('verified purchase review', cp, async () => {
   await cp.getByLabel('Your review (optional)').fill('Keeps coffee hot for ages.')
   await cp.getByRole('button', { name: 'Post review' }).click()
   await cp.getByText('Thank you. Your review is published.').waitFor()
+  await cp.locator('#reviews').getByText('Verified purchase').first().waitFor() // the list re-fetches separately from the toast
   check('review: a shopper who bought the product gets the "Verified purchase" badge', (await cp.locator('#reviews').getByText('Verified purchase').count()) >= 1)
 })
 

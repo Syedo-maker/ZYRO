@@ -2,7 +2,7 @@ import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
 import { getAiQueue, getAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
 import type { AiGenerateResult } from "../../lib/aiProvider";
-import { assertQuotaAvailable, incrementUsage, type AiUsageKind } from "./ai.quota.service";
+import { reserveQuota, releaseQuota, quotaExhaustedMessage, type AiUsageKind } from "./ai.quota.service";
 
 export interface GenerateInput {
   tenantId: string;
@@ -23,13 +23,17 @@ export interface GenerateInput {
  * single internal service wraps all LLM calls behind one interface"). Modules 3 and 6 are
  * built on this; it defines no prompt templates or endpoints of its own.
  *
- * Order of operations matters here: quota is checked *before* the job is enqueued, and only
- * incremented *after* it succeeds, so a failed generation never costs the tenant a turn they
- * didn't get (Implementation_Plan.md Phase 4, `AiUsageQuota` note).
+ * Order of operations matters here: quota is reserved atomically *before* the job is enqueued
+ * (so two concurrent calls can never both slip past an exhausted limit - a security review
+ * flagged the earlier check-then-increment version as a race), and given back if the job
+ * fails, so a failed generation never costs the tenant a turn they didn't get
+ * (Implementation_Plan.md Phase 4, `AiUsageQuota` note).
  */
 export async function generate(input: GenerateInput): Promise<AiGenerateResult> {
   const kind: AiUsageKind = input.kind ?? "generation";
-  await assertQuotaAvailable(input.tenantId, kind);
+  if (!(await reserveQuota(input.tenantId, kind))) {
+    throw Errors.quotaExhausted(await quotaExhaustedMessage(input.tenantId, kind));
+  }
 
   const job = await getAiQueue().add(
     input.promptType,
@@ -48,15 +52,12 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
     }
   );
 
-  let result: AiGenerateResult;
   try {
-    result = await job.waitUntilFinished(getAiQueueEvents(), env.ai.jobTimeoutMs);
+    return await job.waitUntilFinished(getAiQueueEvents(), env.ai.jobTimeoutMs);
   } catch (err) {
+    await releaseQuota(input.tenantId, kind); // give the reservation back; this attempt never happened
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
     // being unable to fulfil the request right now, not something the caller did wrong.
     throw Errors.serviceUnavailable(`AI generation failed: ${err instanceof Error ? err.message : String(err)}`);
   }
-
-  await incrementUsage(input.tenantId, kind);
-  return result;
 }

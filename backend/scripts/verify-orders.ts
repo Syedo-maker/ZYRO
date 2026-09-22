@@ -39,6 +39,9 @@ async function main() {
       refundCalls.push({ pi, key });
       return { id: `re_${key}` };
     },
+    async expireCheckoutSession() {
+      throw new Error("not used here");
+    },
     constructEvent() {
       throw new Error("not used here");
     },

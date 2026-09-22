@@ -30,6 +30,13 @@ export interface StripeGateway {
   refundPaymentIntent(paymentIntentId: string, idempotencyKey: string): Promise<{ id: string }>;
   /** Verifies the Stripe-Signature header against the raw body. Throws if invalid. */
   constructEvent(rawBody: Buffer, signature: string): Stripe.Event;
+  /**
+   * Makes a Checkout Session unpayable. Throws if Stripe cannot confirm that (already paid,
+   * already expired, or a network failure); the caller (checkout.service.ts, superseding a
+   * cart's own earlier discount hold) treats that as "assume it might still be paid" rather
+   * than silently discarding a payment Stripe may still accept.
+   */
+  expireCheckoutSession(stripeSessionId: string): Promise<void>;
 }
 
 const randomSuffix = () =>
@@ -120,6 +127,10 @@ function createRealGateway(): StripeGateway {
 
     constructEvent(rawBody, signature) {
       return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+    },
+
+    async expireCheckoutSession(stripeSessionId) {
+      await stripe.checkout.sessions.expire(stripeSessionId);
     },
   };
 }

@@ -114,11 +114,40 @@ export const checkoutService = {
       throw Errors.validation("After this discount the order total is too small to pay for online; remove the code or add more to your cart");
     }
 
+    if (discount) {
+      // Starting a new checkout for this cart supersedes any of its own still-pending holds on
+      // a discount code, so retrying an abandoned attempt never lets the same cart hold a
+      // limited code's last use twice over (a security review found the old code only ever
+      // checked OTHER carts' holds, letting one shopper hoard a "1 use" code across unlimited
+      // parallel, unpaid sessions - discount.service.ts's assertCanHold). The Stripe session is
+      // expired FIRST and only marked FAILED here once Stripe confirms it can no longer be
+      // paid, so a shopper genuinely mid-payment on an older tab is never silently short-changed
+      // of an order they paid for: if expiring fails for any reason (already paid, already
+      // expired, a network error), that old hold is left exactly as it was and still counts
+      // below, same as any other real reservation.
+      const stale = await prisma.checkoutSession.findMany({
+        where: { tenantId: storeId, cartKey: key, status: "PENDING", expiresAt: { gt: new Date() }, discountCodeId: { not: null } },
+        select: { id: true, stripeSessionId: true },
+      });
+      for (const s of stale) {
+        if (!s.stripeSessionId) continue;
+        try {
+          await stripe.expireCheckoutSession(s.stripeSessionId);
+        } catch {
+          continue;
+        }
+        await prisma.checkoutSession.updateMany({
+          where: { id: s.id, tenantId: storeId, status: "PENDING" },
+          data: { status: "FAILED", failureReason: "Superseded by a new checkout for this cart" },
+        });
+      }
+    }
+
     const expiresAt = new Date(Date.now() + SESSION_MINUTES * 60 * 1000);
     // With a code, the record is created in the same transaction that checks the code still has
     // a use to give, so the pending checkout holds that use from the moment it exists.
     const record = await prisma.$transaction(async (tx) => {
-      if (discount) await discountService.assertCanHold(tx, storeId, discount.codeId, subtotalCents, key);
+      if (discount) await discountService.assertCanHold(tx, storeId, discount.codeId, subtotalCents);
       return tx.checkoutSession.create({
         data: {
           tenantId: storeId,

@@ -67,6 +67,7 @@ async function main() {
   const realGateway = getStripeGateway();
   let sessionCounter = 0;
   let failNextSession = false;
+  const expiredSessionIds: string[] = [];
   setStripeGateway({
     ...realGateway,
     async createCheckoutSession(params) {
@@ -80,6 +81,9 @@ async function main() {
     },
     async refundPaymentIntent(_pi, key) {
       return { id: `re_${key}` };
+    },
+    async expireCheckoutSession(stripeSessionId) {
+      expiredSessionIds.push(stripeSessionId);
     },
   });
   const signer = new Stripe("sk_test_verifydisc");
@@ -274,6 +278,10 @@ async function main() {
     check("hold: while they pay, another shopper's quote, session and validate all say it is used up", (await quote(gQ2, { discountCode: "ONLYONE" })).status === 400 && (await startSession(gQ2, { discountCode: "ONLYONE" })).status === 400 && /usage limit/.test((await v("ONLYONE", 20, A.storeId, gQ2)).json.detail));
     check("hold: the shopper holding it is not blocked by their own page (retry works, quote works)", (await quote(gP, { discountCode: "ONLYONE" })).status === 200 && (await startSession(gP, { discountCode: "ONLYONE" })).status === 201);
     const recP = await prismaUnscoped.checkoutSession.findMany({ where: { tenantId: A.storeId, cartKey: { contains: gP } }, orderBy: { createdAt: "asc" } });
+    check(
+      "hold: retrying supersedes the first hold rather than adding a second one (security fix: a shopper used to be able to hold a 1-use code across unlimited parallel unpaid sessions - see discount.service.ts assertCanHold)",
+      recP.length === 2 && recP[0].status === "FAILED" && recP[1].status === "PENDING" && expiredSessionIds.includes(recP[0].stripeSessionId!)
+    );
     await sendEvent("checkout.session.expired", { id: recP[0].stripeSessionId, object: "checkout.session" });
     await sendEvent("checkout.session.expired", { id: recP[1].stripeSessionId, object: "checkout.session" });
     check("hold: when the checkout expires the use is released and the next shopper can have it", (await pending(oneId)) === 0 && (await startSession(gQ2, { discountCode: "ONLYONE" })).status === 201);
@@ -291,6 +299,20 @@ async function main() {
     for (const g of racers) await fillCart(A.storeId, g, [[widget, 1]]);
     const race = await Promise.all(racers.map((g) => startSession(g, { discountCode: "ONLYONE" })));
     check("hold race: five shoppers start checkout at once for a 1-use code: exactly one gets it", race.filter((r) => r.status === 201).length === 1 && race.filter((r) => r.status === 400).length === 4 && (await pending(oneId)) === 1, race.map((r) => r.status).join());
+    for (const g of racers) await sendEvent("checkout.session.expired", { id: (await prismaUnscoped.checkoutSession.findFirst({ where: { tenantId: A.storeId, cartKey: { contains: g }, status: "PENDING" } }))?.stripeSessionId ?? "none", object: "checkout.session" });
+
+    // ---- Security fix: one shopper cannot hoard a limited code by repeatedly retrying without paying ----
+    const gHoard = newGuest();
+    await fillCart(A.storeId, gHoard, [[widget, 1]]);
+    const attempts = [];
+    for (let i = 0; i < 5; i++) attempts.push(await startSession(gHoard, { discountCode: "ONLYONE" }));
+    check("hoard: five straight, unpaid retries by the same shopper all succeed one at a time (each retry supersedes the last)", attempts.every((r) => r.status === 201));
+    const hoardRows = await prismaUnscoped.checkoutSession.findMany({ where: { tenantId: A.storeId, cartKey: { contains: gHoard } } });
+    check("hoard: only the LAST attempt is still pending; the other four were superseded, not left holding the code too", hoardRows.filter((r) => r.status === "PENDING").length === 1 && hoardRows.filter((r) => r.status === "FAILED").length === 4);
+    check("hoard: a genuinely different shopper is still correctly refused (the code is really down to 0, not secretly hoarded)", (await startSession(gQ2, { discountCode: "ONLYONE" })).status === 400);
+    const lastHoard = hoardRows.find((r) => r.status === "PENDING")!;
+    await sendEvent("checkout.session.expired", { id: lastHoard.stripeSessionId, object: "checkout.session" });
+    check("hoard: cleaned up, the code is available again", (await pending(oneId)) === 0);
 
     // paying after the merchant switched the code off: the shopper was already charged the discount
     const honour = await makeCode({ code: "HONOUR", type: "fixed", value: 4, usageLimit: 1 });
