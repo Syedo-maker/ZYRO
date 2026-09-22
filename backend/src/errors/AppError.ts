@@ -57,4 +57,6 @@ export const Errors = {
     new AppError(400, "https://zyro.dev/errors/invalid-discount-code", "Discount code cannot be used", detail),
   validation: (detail: string) =>
     new AppError(400, "https://zyro.dev/errors/validation-failed", "Request validation failed", detail),
+  quotaExhausted: (detail: string) =>
+    new AppError(402, "https://zyro.dev/errors/ai-quota-exhausted", "Monthly AI usage quota exhausted", detail),
 };

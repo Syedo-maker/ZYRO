@@ -73,4 +73,19 @@ export const env = {
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? "15m",
     refreshExpiresInDays: Number(process.env.JWT_REFRESH_EXPIRES_IN_DAYS ?? 7),
   },
+  // AI Orchestrator (Implementation_Plan.md Phase 4). Optional at startup, like Stripe: the
+  // rest of the API runs without a key, and AI endpoints answer 503 until it is set.
+  ai: {
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    // The model every provider adapter call uses. Short, structured content (a product
+    // description, a review summary, a tag list, an SEO snippet) does not need the biggest
+    // model; a cheaper/faster one is a one-line env change and does not touch quota accounting,
+    // which counts generations, not tokens.
+    model: process.env.AI_MODEL ?? "claude-opus-5",
+    /** New tenants (and a tenant's first request in a new month) start with this many. */
+    monthlyGenerationsLimit: num("AI_MONTHLY_GENERATIONS_LIMIT", 50),
+    monthlyChatMessagesLimit: num("AI_MONTHLY_CHAT_MESSAGES_LIMIT", 200),
+    /** How long a caller of generate() waits for the BullMQ job before giving up. */
+    jobTimeoutMs: num("AI_JOB_TIMEOUT_MS", 60_000),
+  },
 };

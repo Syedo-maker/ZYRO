@@ -927,12 +927,17 @@ paths:
       tags: [ai-content]
       operationId: ai_usage_get
       summary: Get this store's AI usage for the current month
+      description: |
+        Requires the `products_write` staff permission (or owner), same as generating AI
+        content. The row for the current month is created on first read, with the tenant's
+        default limits, if nothing has been generated yet this month.
       responses:
         "200":
           description: Usage quota
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AiUsageQuota" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── CART ──────────────────────────────────────────────────────────────
   /stores/{storeId}/cart:
