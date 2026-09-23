@@ -4,6 +4,7 @@ import { withTenantContext } from "../../middleware/tenantContext.middleware";
 import { requirePermission } from "../../middleware/requirePermission.middleware";
 import { productController } from "./product.controller";
 import { productReviewsRouter } from "../reviews/review.routes";
+import { aiContentRouter } from "../ai-content/ai-content.routes";
 
 // Mounted at /stores/:storeId/products; see app.ts.
 export const productRouter = Router({ mergeParams: true });
@@ -17,6 +18,9 @@ productRouter.get("/categories", withTenantContext, productController.categories
 productRouter.get("/:productId", withTenantContext, productController.get);
 // Reviews of a product: public to read, signed-in shoppers write their own.
 productRouter.use("/:productId/reviews", productReviewsRouter);
+// AI content tools (Phase 4, Module 6): description draft/regenerate/publish, auto-tag, SEO
+// metadata. Each route below is individually permission-checked, same as product writes.
+productRouter.use("/:productId", aiContentRouter);
 
 // withTenantContext runs before requirePermission because that middleware itself reads
 // the active tenant context (to look up the caller's StaffMember row) and because product

@@ -13,6 +13,10 @@ process.env.RATE_LIMIT_ENABLED = "false";
 // Tight limits so quota exhaustion can be reached in a handful of calls instead of 50.
 process.env.AI_MONTHLY_GENERATIONS_LIMIT = "2";
 process.env.AI_MONTHLY_CHAT_MESSAGES_LIMIT = "1";
+// An isolated BullMQ queue, so this script's own fake AiProvider is what actually answers its
+// jobs even if a real backend or e2e-server.ts happens to be running against the same Redis
+// (see the comment on AI_QUEUE_NAME in lib/aiQueue.ts).
+process.env.AI_QUEUE_NAME = `ai-generate-verify-${Date.now().toString(36)}`;
 
 import type { AddressInfo } from "node:net";
 

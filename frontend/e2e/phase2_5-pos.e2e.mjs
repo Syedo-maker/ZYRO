@@ -134,7 +134,7 @@ await step('owner: team, limit and product setup', owner.page, async () => {
 
   await page.getByRole('link', { name: 'Products' }).click()
   await page.getByRole('button', { name: '+ Add product' }).click()
-  await page.getByLabel('Title').fill('Scanner Mug')
+  await page.getByLabel('Title', { exact: true }).fill('Scanner Mug')
   await page.getByLabel('Price').fill('12')
   await page.getByLabel('Stock').fill('5')
   await page.getByLabel('Category').fill('kitchen')

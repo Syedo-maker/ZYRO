@@ -26,6 +26,22 @@ export interface ProductDocument {
   taxable: boolean;
   costPrice?: Types.Decimal128; // enables margin analytics; never exposed to shoppers
   category: string;
+  /** Set by the merchant, often from an AI auto-tag suggestion (Phase 4, Module 6); never
+   *  written by the AI tool itself, which only ever returns a suggestion to accept or edit. */
+  tags: string[];
+  /** Meta title/description for the storefront product page's <title>/<meta description>,
+   *  often from an AI SEO-metadata suggestion; same "suggest, never silently overwrite" rule. */
+  seoTitle?: string;
+  seoDescription?: string;
+  /** A merchant-facing summary of this product's reviews (Phase 4, Module 6). Cached rather
+   *  than recomputed on every read; `reviewCountAtGeneration` is compared against the live
+   *  count to tell the admin UI when it has gone stale enough to offer regenerating. */
+  reviewSummary?: {
+    text: string;
+    model: string;
+    generatedAt: Date;
+    reviewCountAtGeneration: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +66,25 @@ const productSchema = new Schema<ProductDocument>(
     taxable: { type: Boolean, default: true },
     costPrice: { type: Schema.Types.Decimal128 },
     category: { type: String, required: true, index: true },
+    tags: {
+      type: [String],
+      default: [],
+      validate: { validator: (arr: string[]) => arr.length <= 10, message: "A product may have at most 10 tags." },
+    },
+    seoTitle: { type: String, trim: true, maxlength: 70 },
+    seoDescription: { type: String, trim: true, maxlength: 160 },
+    reviewSummary: {
+      type: new Schema(
+        {
+          text: { type: String, required: true, maxlength: 2000 },
+          model: { type: String, required: true },
+          generatedAt: { type: Date, required: true },
+          reviewCountAtGeneration: { type: Number, required: true },
+        },
+        { _id: false }
+      ),
+      required: false,
+    },
   },
   { timestamps: true }
 );

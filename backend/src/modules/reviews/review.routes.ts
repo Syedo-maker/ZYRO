@@ -7,6 +7,7 @@ import { withTenantContext } from "../../middleware/tenantContext.middleware";
 import { requirePermission } from "../../middleware/requirePermission.middleware";
 import { reviewWriteLimiter } from "../../middleware/rateLimit.middleware";
 import { reviewService } from "./review.service";
+import { aiContentService } from "../ai-content/ai-content.service";
 import {
   createReviewSchema,
   listReviewsQuerySchema,
@@ -84,6 +85,24 @@ productReviewsRouter.delete(
   route(async (req, res) => {
     await reviewService.removeMine(storeId(req), req.params.productId, req.userId!);
     res.status(204).send();
+  })
+);
+
+// AI review summarization (Phase 4, Module 6): a merchant-facing insight, not shopper content,
+// so it lives here (this product's reviews) rather than in the merchant moderation router.
+const summarizeManage = [requireAuth, withTenantContext, requirePermission("PRODUCTS_WRITE")];
+productReviewsRouter.get(
+  "/summary",
+  ...summarizeManage,
+  route(async (req, res) => {
+    res.status(200).json(await aiContentService.getReviewSummary(storeId(req), req.params.productId));
+  })
+);
+productReviewsRouter.post(
+  "/summarize",
+  ...summarizeManage,
+  route(async (req, res) => {
+    res.status(202).json(await aiContentService.summarizeReviews(storeId(req), req.params.productId));
   })
 );
 

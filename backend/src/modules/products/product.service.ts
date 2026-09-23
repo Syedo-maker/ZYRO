@@ -1,5 +1,6 @@
 import { Types, HydratedDocument } from "mongoose";
 import { Product, ProductDocument } from "../../models/Product.model";
+import { AiGeneratedContent } from "../../models/AiGeneratedContent.model";
 import { prisma } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
@@ -13,7 +14,7 @@ interface Rating {
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-function toPublicProduct(doc: HydratedDocument<ProductDocument>, stock: number, rating?: Rating) {
+function toPublicProduct(doc: HydratedDocument<ProductDocument>, stock: number, rating?: Rating, aiDescriptionStatus: "draft" | "published" | null = null) {
   return {
     id: doc._id.toString(),
     storeId: doc.storeId,
@@ -26,11 +27,23 @@ function toPublicProduct(doc: HydratedDocument<ProductDocument>, stock: number, 
     taxable: doc.taxable !== false,
     category: doc.category,
     images: doc.images,
+    tags: doc.tags ?? [],
+    seoTitle: doc.seoTitle ?? null,
+    seoDescription: doc.seoDescription ?? null,
     // Computed on read from the published reviews (never stored on the product).
     averageRating: rating?.averageRating ?? null,
     reviewCount: rating?.reviewCount ?? 0,
-    aiDescriptionStatus: null as "draft" | "published" | null, // wired up once Module 6 (AI Content Tools) exists
+    // Only resolved for a single product (get()); a plain null in list() avoids an extra
+    // lookup per row on a page of results, and the catalog grid has nowhere to show it anyway.
+    aiDescriptionStatus,
   };
+}
+
+/** The one place this reads AiGeneratedContent, so a list page never pays for N extra lookups. */
+async function aiDescriptionStatusOf(doc: HydratedDocument<ProductDocument>): Promise<"draft" | "published" | null> {
+  if (!doc.aiDescriptionId) return null;
+  const content = await AiGeneratedContent.findOne({ _id: doc.aiDescriptionId, storeId: doc.storeId }).select("status");
+  return content?.status ?? null;
 }
 
 /** Splits the API payload into the catalog fields (MongoDB) and the stock target (Postgres). */
@@ -172,8 +185,12 @@ export const productService = {
     if (!Types.ObjectId.isValid(productId)) throw Errors.notFound("Product");
     const doc = await Product.findOne({ _id: productId, storeId });
     if (!doc) throw Errors.notFound("Product");
-    const stock = await inventoryService.getTotals(prisma, storeId, [productId]);
-    return toPublicProduct(doc, stock.get(productId) ?? 0, (await ratingsFor(storeId, [productId])).get(productId));
+    const [stock, rating, aiDescriptionStatus] = await Promise.all([
+      inventoryService.getTotals(prisma, storeId, [productId]),
+      ratingsFor(storeId, [productId]),
+      aiDescriptionStatusOf(doc),
+    ]);
+    return toPublicProduct(doc, stock.get(productId) ?? 0, rating.get(productId), aiDescriptionStatus);
   },
 
   async update(storeId: string, productId: string, input: ProductInput, userId?: string) {

@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { uploadsApi } from '../../lib/productsApi'
+import { AiToolsPanel } from './AiToolsPanel'
 import type { Product, ProductInput } from '../../types/api'
 
 interface ProductFormProps {
@@ -22,6 +23,9 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
   const [barcode, setBarcode] = useState(initial?.barcode ?? '')
   const [taxable, setTaxable] = useState(initial?.taxable ?? true)
   const [images, setImages] = useState<string[]>(initial?.images ?? [])
+  const [tags, setTags] = useState((initial?.tags ?? []).join(', '))
+  const [seoTitle, setSeoTitle] = useState(initial?.seoTitle ?? '')
+  const [seoDescription, setSeoDescription] = useState(initial?.seoDescription ?? '')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -58,6 +62,12 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         taxable,
         category,
         images,
+        tags: tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean),
+        seoTitle: seoTitle.trim() || undefined,
+        seoDescription: seoDescription.trim() || undefined,
       })
     } catch (err) {
       setError(
@@ -157,6 +167,35 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
           />
         </div>
       </div>
+
+      <Input
+        id="tags"
+        label="Tags (comma-separated, optional)"
+        placeholder="mug, ceramic, coffee"
+        value={tags}
+        onChange={(e) => setTags(e.target.value)}
+      />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Input id="seoTitle" label="Meta title (optional)" maxLength={70} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} />
+        <Input id="seoDescription" label="Meta description (optional)" maxLength={160} value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} />
+      </div>
+
+      {initial && (
+        <AiToolsPanel
+          storeId={storeId}
+          productId={initial.id}
+          onApplyDescription={(text) => setDescription(text)}
+          onApplyCategoryAndTags={(suggestedCategory, suggestedTags) => {
+            setCategory(suggestedCategory)
+            setTags(suggestedTags.join(', '))
+          }}
+          onApplySeo={(title, desc) => {
+            setSeoTitle(title)
+            setSeoDescription(desc)
+          }}
+        />
+      )}
 
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 

@@ -47,11 +47,11 @@ Tracks build progress. One item is completed per session, in order, only when ex
 
 **Phase 4: AI Feature 1**
 - [x] AI Orchestrator (provider adapter + BullMQ job queue + quota system); see `documentation/Phase4_AI_Orchestrator.md`
-- [ ] Module 6: AI Content Tools (product descriptions)
-- [ ] Module 6 (added): AI review summarization
-- [ ] Module 6 (added): AI auto-categorization/tagging
-- [ ] Module 6 (added): AI SEO metadata generation
-- [ ] Frontend: wire the AI generate/regenerate/publish flow + quota display into the Admin Catalog UI (scaffolded in Phase 1, made functional here) + UI touches for summarization/auto-tag/SEO metadata
+- [x] Module 6: AI Content Tools (product descriptions); see `documentation/Phase4_Module6_AI_Content_Tools.md`
+- [x] Module 6 (added): AI review summarization
+- [x] Module 6 (added): AI auto-categorization/tagging
+- [x] Module 6 (added): AI SEO metadata generation
+- [x] Frontend: wire the AI generate/regenerate/publish flow + quota display into the Admin Catalog UI (scaffolded in Phase 1, made functional here) + UI touches for summarization/auto-tag/SEO metadata
 
 **Phase 5: AI Feature 2**
 - [ ] Module 3: AI Shopping Assistant (backend)

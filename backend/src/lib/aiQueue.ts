@@ -3,7 +3,18 @@ import { Queue, QueueEvents, UnrecoverableError, Worker, type Job } from "bullmq
 import { getBullRedis } from "./redis";
 import { getAiProvider, type AiGenerateResult } from "./aiProvider";
 
-export const AI_QUEUE_NAME = "ai-generate";
+/**
+ * BullMQ queues are a Redis-global resource, not a per-process one: any worker in any process
+ * pointed at the same Redis and the same queue name can pick up a job, using whatever
+ * `AiProvider` *that* process has registered. Two real workers sharing one queue name is the
+ * normal, intended way to scale, but a script that installs its own fake provider (the verify
+ * scripts, via setAiProvider) needs its jobs to only ever be picked up by its own worker - never
+ * by an unrelated one already running against the same Redis (e2e-server.ts, or a `npm run dev`
+ * left running). `AI_QUEUE_NAME` is overridable for exactly that: each verify script sets it to
+ * a unique name before importing anything, so it gets an isolated queue no other process is
+ * listening on, the same way other verify scripts isolate their data with a throwaway tenant.
+ */
+export const AI_QUEUE_NAME = process.env.AI_QUEUE_NAME ?? "ai-generate";
 
 /** What a caller enqueues. `tenantId` and `promptType` are carried for logging only; the
  *  quota check and the increment-on-success both happen in ai.orchestrator.ts, around the

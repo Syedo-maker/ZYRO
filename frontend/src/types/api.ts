@@ -31,6 +31,10 @@ export interface Product {
   taxable?: boolean
   category: string
   images: string[]
+  /** Often filled from an AI auto-tag suggestion; the suggestion itself never writes here. */
+  tags: string[]
+  seoTitle?: string | null
+  seoDescription?: string | null
   /** Mean of the published reviews (two decimals), or null when there are none. */
   averageRating?: number | null
   reviewCount?: number
@@ -48,6 +52,9 @@ export interface ProductInput {
   taxable?: boolean
   category: string
   images?: string[]
+  tags?: string[]
+  seoTitle?: string
+  seoDescription?: string
 }
 
 export interface PaginationInfo {

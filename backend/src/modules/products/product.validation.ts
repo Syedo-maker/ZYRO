@@ -13,6 +13,11 @@ export const productInputSchema = z.object({
   costPrice: z.number().min(0).optional(),
   category: z.string().min(1),
   images: z.array(z.string().url()).max(10).optional().default([]),
+  /** Often filled from an AI auto-tag suggestion (Phase 4, Module 6), but only once the
+   *  merchant saves the form; the suggestion endpoint itself never writes to the product. */
+  tags: z.array(z.string().trim().min(1).max(30)).max(10).optional().default([]),
+  seoTitle: z.string().trim().max(70).optional(),
+  seoDescription: z.string().trim().max(160).optional(),
 });
 export type ProductInput = z.infer<typeof productInputSchema>;
 

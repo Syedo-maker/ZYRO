@@ -22,6 +22,8 @@ async function main() {
   const { connectMongo } = await import("../src/lib/mongo");
   const { prismaUnscoped } = await import("../src/lib/prisma");
   const { getStripeGateway, setStripeGateway } = await import("../src/lib/stripe");
+  const { setAiProvider } = await import("../src/lib/aiProvider");
+  const { startAiWorker } = await import("../src/lib/aiQueue");
 
   await connectMongo();
   const port = Number(process.env.PORT ?? 5000);
@@ -37,6 +39,25 @@ async function main() {
       return { id: `re_${key}` };
     },
   });
+
+  // Stands in for the Anthropic API (Phase 4's AI Orchestrator): no key, no network call, no
+  // cost, but a reply shaped for whichever AI Content Tool asked (Phase 4 Module 6), so the
+  // admin UI's parsing of a structured reply is exercised for real, not skipped.
+  let aiCallCount = 0;
+  setAiProvider({
+    async generate({ system }) {
+      aiCallCount++;
+      const text = /Category:.*Tags:/s.test(system)
+        ? "Category: Kitchenware\nTags: mug, ceramic, handmade"
+        : /meta title/i.test(system)
+          ? "Title: Ceramic Mug | Handmade & Dishwasher Safe\nDescription: A handmade ceramic mug that keeps drinks hot for hours. Shop the collection today."
+          : /summarize customer reviews/i.test(system)
+            ? "Shoppers consistently praise how well this mug retains heat, with no complaints so far."
+            : `A handmade ceramic mug built for daily use (generation #${aiCallCount}).`;
+      return { text, model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+    },
+  });
+  startAiWorker();
 
   const outer = express();
   outer.get("/__fake-stripe/:id", (req, res) => {

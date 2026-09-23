@@ -153,3 +153,45 @@ export interface DiscountUpdate {
   expiresAt?: string | null
   minSubtotal?: number | null
 }
+
+// ---- AI content tools (Phase 4, Module 6) ----
+
+export interface AiUsageQuota {
+  month: string
+  generationsUsed: number
+  generationsLimit: number
+  chatMessagesUsed: number
+  chatMessagesLimit: number
+}
+
+export interface AiDescriptionDraft {
+  id: string
+  productId: string
+  status: 'draft' | 'published'
+  content: string
+  model: string
+  editedByMerchant: boolean
+}
+
+export interface ReviewSummary {
+  text: string
+  model: string
+  generatedAt: string
+  reviewCountAtGeneration: number
+}
+
+export interface ReviewSummaryStatus {
+  summary: ReviewSummary | null
+  currentReviewCount: number
+  stale: boolean
+}
+
+export interface AutoTagSuggestion {
+  category: string
+  tags: string[]
+}
+
+export interface SeoMetadataSuggestion {
+  seoTitle: string
+  seoDescription: string
+}
