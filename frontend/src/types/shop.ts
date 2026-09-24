@@ -195,3 +195,11 @@ export interface SeoMetadataSuggestion {
   seoTitle: string
   seoDescription: string
 }
+
+// ---- AI Shopping Assistant (Phase 5, Module 3) ----
+
+export interface AssistantChatResponse {
+  conversationId: string
+  reply: string
+  suggestedProducts: Product[]
+}

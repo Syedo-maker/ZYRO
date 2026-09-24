@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { StoreContext } from '../../context/StoreContext'
 import { Spinner } from '../../components/ui/Spinner'
 import { SearchBox } from '../../components/storefront/SearchBox'
+import { AssistantWidget } from '../../components/storefront/AssistantWidget'
 import { catalogApi } from '../../lib/shopApi'
 import { storefrontApi } from '../../lib/storefrontApi'
 import type { StoreProfile } from '../../types/commerce'
@@ -145,6 +146,7 @@ export function StorefrontLayout() {
               <span>Secure checkout by Stripe</span>
             </div>
           </footer>
+          <AssistantWidget storeId={store.id} currency={store.currency} />
         </div>
       </CartProvider>
     </StoreContext.Provider>

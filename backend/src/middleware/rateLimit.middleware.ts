@@ -78,3 +78,11 @@ export const discountAttemptLimiter = limiter("discount", windowMs, env.rateLimi
 export const reviewWriteLimiter = limiter("review", 60 * 60 * 1000, env.rateLimit.reviewMax, {
   keyGenerator: (req) => (req.userId ? `u:${req.userId}` : clientIp(req)),
 });
+
+/** Chat messages per shopper per minute (keyed on the same identity as their cart: signed-in
+ *  user or guest session id), not per IP: a shared address (a store, a campus) should not
+ *  throttle one shopper's chat because of another's. Each message also costs AI quota, but
+ *  that is monthly and store-wide; this stops one person hammering the endpoint quickly. */
+export const chatMessageLimiter = limiter("chat", 60 * 1000, env.rateLimit.chatMax, {
+  keyGenerator: (req) => (req.cartOwner ? `${req.cartOwner.kind}:${req.cartOwner.id}` : clientIp(req)),
+});

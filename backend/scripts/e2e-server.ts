@@ -53,7 +53,9 @@ async function main() {
           ? "Title: Ceramic Mug | Handmade & Dishwasher Safe\nDescription: A handmade ceramic mug that keeps drinks hot for hours. Shop the collection today."
           : /summarize customer reviews/i.test(system)
             ? "Shoppers consistently praise how well this mug retains heat, with no complaints so far."
-            : `A handmade ceramic mug built for daily use (generation #${aiCallCount}).`;
+            : /shopping assistant/i.test(system)
+              ? "Yes! Based on what's in stock, I'd recommend the ones shown below."
+              : `A handmade ceramic mug built for daily use (generation #${aiCallCount}).`;
       return { text, model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
     },
   });

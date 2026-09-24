@@ -54,10 +54,10 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Frontend: wire the AI generate/regenerate/publish flow + quota display into the Admin Catalog UI (scaffolded in Phase 1, made functional here) + UI touches for summarization/auto-tag/SEO metadata
 
 **Phase 5: AI Feature 2**
-- [ ] Module 3: AI Shopping Assistant (backend)
+- [x] Module 3: AI Shopping Assistant (backend); see `documentation/Phase5_Module3_AI_Shopping_Assistant.md`
 - [ ] Module 7 (remaining): Abandoned-Cart Recovery (backend)
 - [ ] AI business insights (added by the Commerce + POS amendment): sales trend analysis, best sellers, low-stock alerts and simple demand forecasting from the `StockMovement` ledger, using the Phase 4 orchestrator
-- [ ] Frontend: AI Assistant chat widget (`AIAssistant.dc.html`) wired to the real endpoint
+- [x] Frontend: AI Assistant chat widget (`AIAssistant.dc.html`) wired to the real endpoint
 
 **Phase 6: AI Recommendation Service (Python)** *(new phase, added post-Phase 1 scope amendment)*
 - [ ] Python/FastAPI microservice scaffold + embedding pipeline
