@@ -21,6 +21,7 @@ import { analyticsRouter } from "./modules/analytics/analytics.routes";
 import { merchantReviewsRouter } from "./modules/reviews/review.routes";
 import { aiRouter } from "./modules/ai/ai.routes";
 import { assistantRouter } from "./modules/assistant/assistant.routes";
+import { cartRecoveryRouter } from "./modules/cart-recovery/cartRecovery.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 
 export const app = express();
@@ -64,6 +65,7 @@ v1.use("/stores/:storeId/analytics", analyticsRouter);
 v1.use("/stores/:storeId/reviews", merchantReviewsRouter);
 v1.use("/stores/:storeId/ai-usage", aiRouter);
 v1.use("/stores/:storeId/assistant", assistantRouter);
+v1.use("/stores/:storeId/cart-recovery", cartRecoveryRouter);
 v1.use("/stores/:storeId", storeRouter);
 app.use("/api/v1", v1);
 

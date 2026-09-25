@@ -55,7 +55,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 
 **Phase 5: AI Feature 2**
 - [x] Module 3: AI Shopping Assistant (backend); see `documentation/Phase5_Module3_AI_Shopping_Assistant.md`
-- [ ] Module 7 (remaining): Abandoned-Cart Recovery (backend)
+- [x] Module 7 (remaining): Abandoned-Cart Recovery (backend); see `documentation/Phase5_Module7_Abandoned_Cart_Recovery.md`
 - [ ] AI business insights (added by the Commerce + POS amendment): sales trend analysis, best sellers, low-stock alerts and simple demand forecasting from the `StockMovement` ledger, using the Phase 4 orchestrator
 - [x] Frontend: AI Assistant chat widget (`AIAssistant.dc.html`) wired to the real endpoint
 

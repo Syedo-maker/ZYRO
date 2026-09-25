@@ -90,4 +90,20 @@ export const env = {
     /** How long a caller of generate() waits for the BullMQ job before giving up. */
     jobTimeoutMs: num("AI_JOB_TIMEOUT_MS", 60_000),
   },
+  // Abandoned-cart recovery (Implementation_Plan.md Phase 5, Module 7 remainder).
+  cartRecovery: {
+    /** A cart with no activity for this long is "abandoned" (the plan's own example: 2 hours). */
+    abandonedAfterHours: num("CART_RECOVERY_ABANDONED_AFTER_HOURS", 2),
+    /** How often the repeatable BullMQ job re-scans Redis for newly-abandoned carts. */
+    scanIntervalHours: num("CART_RECOVERY_SCAN_INTERVAL_HOURS", 1),
+    /** A cart is not emailed again within this long of its last recovery email, even if the
+     *  job keeps finding it still abandoned on every later scan. */
+    cooldownHours: num("CART_RECOVERY_COOLDOWN_HOURS", 24),
+  },
+  // Transactional email (recovery emails only, so far). Optional at startup, like Stripe and the
+  // AI orchestrator: the scan job runs and logs "would have sent" without a real send until set.
+  email: {
+    sendgridApiKey: process.env.SENDGRID_API_KEY,
+    fromEmail: process.env.SENDGRID_FROM_EMAIL,
+  },
 };
