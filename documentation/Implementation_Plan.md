@@ -10,6 +10,8 @@ This document is a working plan, not a submission deliverable. It intentionally 
 > **Frontend scheduling amendment (also post-Phase 1):** this plan originally described backend work only in every phase; no phase scheduled turning the Phase 0 wireframes into actual React screens. Fixed by adding a Frontend module to every phase below, paired with that phase's backend module(s) against the wireframes in `design/wireframes/`, so each phase is demoable end-to-end (not just API-testable) once complete. Phase 1's frontend module is now owed retroactively, since that phase's backend was already built and marked done before this gap was caught, so it's listed as the next outstanding item, ahead of Phase 2.
 >
 > **Commerce + POS amendment (2026-09-19):** ZYRO is now defined as a real, multi-tenant Commerce + POS SaaS, not only an online store. The POS is a second sales channel over one shared commerce core (catalog, inventory, customers, pricing, discounts, orders, analytics). An architecture review found the original schema was online-only (stock on the MongoDB product, no order channel, Stripe-only payments, no tenant-scoped customers), so a Commerce Core Foundation module was added at the start of Phase 2 and a POS phase (2.5) after it. Phase 3 analytics and Phase 4/5 AI features become channel-aware, and the AI layer gains business insights (sales trends, low-stock alerts, demand forecasting). The timeline grows from 31 to about 35 weeks.
+>
+> **Checklist update (2026-09-25):** the team's revised list added six items, marked *(new, 2026-09-25)* below: staff accounts as its own Phase 3 line (already built, ticked), AI marketing copy generation, the AI quota meter on the merchant dashboard, stretch AI product photo editing, a mobile responsiveness check in Phase 7, and a Turnitin plagiarism report in Phase 8. Phases 0 to 6 are complete except the three new open items in Phases 4 and 6 (marketing copy, dashboard quota meter, photo editing); Phases 7 and 8 have not started. Nothing else in the plan was restructured.
 
 ---
 
@@ -43,6 +45,7 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Module 7 (partial): Discount Codes (backend; see Phase3_Module7_Discount_Codes.md)
 - [x] Module 1 (remaining): Search & Reviews (backend; see Phase3_Module1_Search_And_Reviews.md)
 - [x] Module 7 (partial): Analytics Dashboard (backend, baseline; sales split by channel, ONLINE vs POS; see Phase3_Module7_Analytics_Dashboard.md)
+- [x] *(new, 2026-09-25)* Staff accounts (limited-access roles): owner-only staff API with per-route permission checks (`PRODUCTS_WRITE`, `POS_SELL`, `INVENTORY_WRITE`, `REFUNDS` and others) enforced across catalog, orders, discounts, analytics and POS, plus the Team page. Built earlier across Phase 1 and Phase 2.5; listed here so the checklist matches the team's current plan.
 - [x] Frontend: Storefront Home, Category/Search, Product Detail + reviews (`Main.dc.html`, `CategoryListing.dc.html`, `ProductDetail.dc.html`) + Admin Dashboard home + Marketing/Analytics UI (`AdminDashboard.dc.html`, `AdminMarketing.dc.html`), plus customer sign-up/login/My account and the checkout discount code box; verified in real Chromium; see `documentation/Phase3_Frontend_Storefront_Customer_And_Admin.md`
 
 **Phase 4: AI Feature 1**
@@ -51,6 +54,8 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Module 6 (added): AI review summarization
 - [x] Module 6 (added): AI auto-categorization/tagging
 - [x] Module 6 (added): AI SEO metadata generation
+- [ ] *(new, 2026-09-25)* Module 6: AI marketing copy generation (product promo text: social post, email blurb, ad headline), through the orchestrator and quota system
+- [ ] *(new, 2026-09-25)* Module 6: AI quota meter on the merchant dashboard (the per-product AI panel already shows usage; this adds it to the Admin Dashboard home)
 - [x] Frontend: wire the AI generate/regenerate/publish flow + quota display into the Admin Catalog UI (scaffolded in Phase 1, made functional here) + UI touches for summarization/auto-tag/SEO metadata
 
 **Phase 5: AI Feature 2**
@@ -63,20 +68,23 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Python/FastAPI microservice scaffold + embedding pipeline
 - [x] `GET /stores/:storeId/products/:productId/recommendations` (Node-proxied)
 - [x] Wire into AI Shopping Assistant's "suggested related products" (upgrade from Phase 5's keyword matching)
-- [x] Frontend: display recommended products on Product Detail + Storefront Home
+- [x] Frontend: display recommended products on Product Detail + Storefront Home; see `documentation/Phase6_AI_Recommendation_Service.md`
+- [ ] *(new, 2026-09-25, stretch)* AI product photo editing (only if time allows after Phases 7 and 8 are on track)
 
-**Phase 7: Testing**
-- [ ] Unit tests (Jest)
-- [ ] Integration tests incl. tenant-isolation (Jest + Supertest)
-- [ ] End-to-end golden-path test (Playwright)
-- [ ] AI quota enforcement check (load/manual)
-- [ ] Python recommendation service tests (pytest)
+**Phase 7: Testing** *(nothing below is ticked yet. Coverage that already exists is noted, because it is not the same as the formal deliverable)*
+- [ ] Unit tests (Jest). Not started: so far logic is covered by the end-to-end `backend/scripts/verify-*.ts` scripts (789 checks), not by Jest unit tests.
+- [ ] Integration tests incl. tenant-isolation (Jest + Supertest). Tenant isolation is already checked inside the verify scripts against real Postgres, MongoDB and Redis; converting them to Jest + Supertest is the open work.
+- [ ] End-to-end golden-path test (Playwright). Seven Playwright browser suites exist (auth and catalog, checkout, POS, storefront and admin, AI content, assistant, recommendations); one single golden-path test is still to write.
+- [ ] AI quota enforcement check (load/manual). Quota limits are already checked in `verify-ai.ts`, `verify-ai-content.ts` and `verify-assistant.ts`; the load/manual check is still to do.
+- [ ] Python recommendation service tests (pytest). 14 tests already written in `recommendation-service/tests/`; tick once Phase 7 is formally run and documented.
+- [ ] *(new, 2026-09-25)* Mobile browser responsiveness check. Only a 375px width check inside a few suites so far; a proper pass over the storefront, admin and POS screens is open.
 
 **Phase 8: Deployment & Documentation**
 - [ ] Docker Compose stack (postgres, mongo, redis, api, web, recommendation-service)
 - [ ] Environment/secrets setup (`.env.example`)
 - [ ] Final documentation pass (README, exit-criteria updates, demo script)
 - [ ] Gantt chart generated from Section 2
+- [ ] *(new, 2026-09-25)* Turnitin plagiarism report
 
 ---
 
