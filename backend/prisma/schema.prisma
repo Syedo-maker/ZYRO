@@ -185,6 +185,7 @@ model Tenant {
   discountCodes    DiscountCode[]
   aiUsageQuotas    AiUsageQuota[]
   cartRecoveryLogs CartRecoveryEvent[]
+  aiBusinessInsight AiBusinessInsight?
 
   @@index([ownerId])
 }
@@ -657,4 +658,21 @@ model CartRecoveryEvent {
 
   @@index([tenantId])
   @@index([tenantId, status])
+}
+
+/// The one cached AI business-insights write-up for a store (Implementation_Plan.md Phase 5:
+/// "AI business insights"), generated on demand from real, computed facts (never invented by
+/// the AI) - `facts` is a snapshot of exactly what was fed to the prompt, kept for the
+/// merchant's own trust/debugging, not re-parsed by the app. One row per tenant (generating
+/// again replaces it); staleness is judged by `generatedAt`, not stored here.
+model AiBusinessInsight {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  text        String
+  model       String
+  facts       Json
+  generatedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }

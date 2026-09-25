@@ -106,4 +106,16 @@ export const env = {
     sendgridApiKey: process.env.SENDGRID_API_KEY,
     fromEmail: process.env.SENDGRID_FROM_EMAIL,
   },
+  // AI business insights (Implementation_Plan.md Phase 5, the last item).
+  insights: {
+    /** A product with no InventoryLevel.lowStockThreshold set (Phase 0 schema, never wired up
+     *  before this) falls back to this fixed floor. */
+    lowStockFallbackThreshold: num("LOW_STOCK_FALLBACK_THRESHOLD", 5),
+    /** How many days of recent sales the demand forecast averages a daily sell-through rate over. */
+    velocityWindowDays: num("INSIGHTS_VELOCITY_WINDOW_DAYS", 14),
+    /** A product forecast to run out within this many days is flagged, even above its threshold. */
+    forecastDaysThreshold: num("INSIGHTS_FORECAST_DAYS_THRESHOLD", 7),
+    /** GET /stores/:id/insights reports the cached write-up stale once it is this many hours old. */
+    staleAfterHours: num("INSIGHTS_STALE_AFTER_HOURS", 24),
+  },
 };

@@ -2371,6 +2371,50 @@ paths:
                   conversionRate: { type: number, description: "converted / sent, as a percentage to one decimal place." }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  # ── AI BUSINESS INSIGHTS ──────────────────────────────────────────────
+  /stores/{storeId}/insights:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [insights]
+      operationId: insights_get
+      summary: The cached AI business-insights write-up, and whether it is stale
+      description: |
+        Requires the `analytics_read` staff permission (or owner). Implementation_Plan.md Phase
+        5's last item: a plain-language summary of the sales trend, best sellers, and any product
+        low on stock or forecast to run out soon (from `InventoryLevel.lowStockThreshold` and
+        recent sales velocity in the `StockMovement` ledger), written by the AI orchestrator from
+        real computed figures - never calls the AI itself. `null` when nothing has been generated
+        yet. `stale` is true once the cached write-up is older than the store's staleness window.
+      responses:
+        "200":
+          description: Insight status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BusinessInsightStatus" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/insights/generate:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [insights]
+      operationId: insights_generate
+      summary: Recompute the underlying figures and write a fresh insights summary
+      description: Consumes one AI generation from the monthly quota. Replaces the previously cached write-up.
+      responses:
+        "202":
+          description: Generated and cached
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BusinessInsight" }
+        "402":
+          description: Monthly AI usage quota exhausted
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   # ── ANALYTICS ─────────────────────────────────────────────────────────
   /stores/{storeId}/analytics/summary:
     parameters:
@@ -2722,6 +2766,28 @@ components:
             reviewCountAtGeneration: { type: integer, description: Published review count when this summary was generated. }
         currentReviewCount: { type: integer, description: Published review count right now. }
         stale: { type: boolean, description: True once enough new published reviews have arrived to offer regenerating. }
+
+    BusinessInsight:
+      type: object
+      required: [text, model, generatedAt, facts]
+      properties:
+        text: { type: string }
+        model: { type: string }
+        generatedAt: { type: string, format: date-time }
+        facts:
+          type: object
+          description: A snapshot of exactly what was fed to the prompt (sales trend, best sellers, low-stock items), kept for the merchant's own trust/debugging - not part of the app's own contract, so its shape may grow.
+
+    BusinessInsightStatus:
+      type: object
+      required: [insight, stale]
+      properties:
+        insight:
+          oneOf:
+            - $ref: "#/components/schemas/BusinessInsight"
+            - type: "null"
+          description: Null when nothing has been generated yet.
+        stale: { type: boolean, description: True once the cached write-up is older than the store's staleness window. }
 
     AiUsageQuota:
       type: object
