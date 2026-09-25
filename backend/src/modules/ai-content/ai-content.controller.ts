@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 import { Errors } from "../../errors/AppError";
 import { aiContentService } from "./ai-content.service";
-import { updateDraftSchema } from "./ai-content.validation";
+import { marketingCopySchema, updateDraftSchema } from "./ai-content.validation";
 
 export const aiContentController = {
   getDraft: (async (req, res, next) => {
@@ -58,6 +58,16 @@ export const aiContentController = {
   generateSeoMetadata: (async (req, res, next) => {
     try {
       res.status(200).json(await aiContentService.generateSeoMetadata(req.params.storeId, req.params.productId));
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  generateMarketingCopy: (async (req, res, next) => {
+    const parsed = marketingCopySchema.safeParse(req.body);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      res.status(200).json(await aiContentService.generateMarketingCopy(req.params.storeId, req.params.productId, parsed.data));
     } catch (err) {
       next(err);
     }

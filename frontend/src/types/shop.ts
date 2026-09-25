@@ -186,6 +186,21 @@ export interface ReviewSummaryStatus {
   stale: boolean
 }
 
+export type MarketingChannel = 'social_post' | 'email' | 'ad_headlines'
+export type MarketingTone = 'friendly' | 'professional' | 'playful' | 'luxury'
+
+export interface MarketingCopyInput {
+  channel: MarketingChannel
+  tone: MarketingTone
+  notes?: string
+}
+
+export interface MarketingCopy {
+  channel: MarketingChannel
+  tone: MarketingTone
+  text: string
+}
+
 export interface AutoTagSuggestion {
   category: string
   tags: string[]

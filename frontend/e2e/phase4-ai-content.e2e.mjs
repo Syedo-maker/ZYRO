@@ -1,6 +1,6 @@
 // Browser test for Phase 4, Module 6: AI Content Tools wired into the Admin Catalog product
 // form (product description generate/edit/regenerate/publish, review summary, auto-tag, SEO
-// metadata) plus the quota display. Real Chromium against the real frontend and backend; the
+// metadata, marketing copy) plus the quota display, and the AI usage meter on the dashboard. Real Chromium against the real frontend and backend; the
 // Anthropic API is stood in by e2e-server.ts's fake AI provider, keyed off which tool's prompt
 // is asking, so parsing of a real (if scripted) reply is exercised, not skipped.
 //
@@ -76,6 +76,17 @@ await step('sign in and open the product', op, async () => {
   await op.getByLabel('Password').fill(password)
   await op.getByRole('button', { name: 'Log in' }).click()
   await op.waitForURL('**/admin/products')
+  // The dashboard's AI usage meter, before anything has been generated
+  await op.goto(`${WEB}/admin/dashboard`)
+  const meter = op.getByRole('region', { name: 'AI usage this month' })
+  await meter.waitFor()
+  const genBar = meter.getByRole('progressbar', { name: 'AI content generations' })
+  const chatBar = meter.getByRole('progressbar', { name: 'Shopping assistant replies' })
+  check('dashboard meter: shows both allowances, generations and assistant replies', (await genBar.count()) === 1 && (await chatBar.count()) === 1)
+  check('dashboard meter: a new store has used none of either', (await genBar.getAttribute('aria-valuenow')) === '0' && (await chatBar.getAttribute('aria-valuenow')) === '0')
+  check('dashboard meter: says when the allowance resets', await meter.getByText(/^Resets on /).isVisible())
+  await shot(op, 'dashboard-meter')
+  await op.goto(`${WEB}/admin/products`)
   await op.getByRole('button', { name: 'Edit Ceramic Mug' }).click()
   await op.getByRole('heading', { name: 'Edit Ceramic Mug' }).waitFor()
   await op.getByText(/AI generations used this month/).waitFor()
@@ -128,6 +139,35 @@ await step('auto-tag and SEO metadata are suggestions, not silent writes', op, a
   check('save: the applied category, tags, SEO title and description all persisted to the server', saved.category === 'Kitchenware' && JSON.stringify(saved.tags) === '["mug","ceramic","handmade"]' && saved.seoTitle === 'Ceramic Mug | Handmade & Dishwasher Safe')
 })
 
+await step('marketing copy: channel, tone and offer, edit and copy', op, async () => {
+  await owner.ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: WEB })
+  await op.getByRole('button', { name: 'Edit Ceramic Mug' }).click()
+  await op.getByRole('button', { name: 'Write marketing copy' }).waitFor()
+  check('marketing: nothing is shown until copy is asked for', (await op.getByRole('textbox', { name: 'Marketing copy result' }).count()) === 0)
+  await op.getByRole('combobox', { name: 'Marketing channel' }).selectOption('email')
+  await op.getByRole('combobox', { name: 'Marketing tone' }).selectOption('luxury')
+  await op.getByRole('textbox', { name: 'Offer details (optional)' }).fill('20% off this weekend')
+  await op.getByRole('button', { name: 'Write marketing copy' }).click()
+  const result = op.getByRole('textbox', { name: 'Marketing copy result' })
+  await result.waitFor()
+  const email = await result.inputValue()
+  check('marketing: an email comes back with its Subject line', /^Subject: /.test(email))
+  check('marketing: the offer the merchant typed is what reaches the model, and shows in the copy', email.includes('20% off this weekend'))
+  await shot(op, 'marketing-copy')
+  await op.getByRole('combobox', { name: 'Marketing channel' }).selectOption('ad_headlines')
+  await op.getByRole('textbox', { name: 'Offer details (optional)' }).fill('')
+  await op.getByRole('button', { name: 'Write another version' }).click()
+  await op.waitForFunction(() => document.querySelector('textarea[aria-label="Marketing copy result"]')?.value.startsWith('Sip in style'))
+  check('marketing: ad headlines come back as three lines', (await result.inputValue()).split('\n').length === 3)
+  await result.fill('Sip in style, edited by hand')
+  await op.getByRole('button', { name: 'Copy', exact: true }).click()
+  await op.getByText('Copied to the clipboard.').waitFor()
+  check('marketing: Copy puts the edited text on the clipboard', (await op.evaluate(() => navigator.clipboard.readText())) === 'Sip in style, edited by hand')
+  const saved = (await api('GET', `/stores/${storeId}/products/${mug}`)).json
+  check('marketing: nothing was saved to the product', saved.description !== 'Sip in style, edited by hand')
+  await op.getByRole('button', { name: 'Cancel' }).click()
+})
+
 await step('review summary', op, async () => {
   await op.getByRole('button', { name: 'Edit Ceramic Mug' }).click()
   await op.getByRole('button', { name: 'Summarize reviews' }).waitFor()
@@ -148,6 +188,16 @@ await step('a product with no reviews shows no summarize button', op, async () =
   await op.getByRole('button', { name: 'Edit Lonely Product' }).click()
   await op.getByText('This product has no published reviews yet.').waitFor()
   check('reviews: a product with zero published reviews explains why, instead of offering a button that would fail', (await op.getByRole('button', { name: 'Summarize reviews' }).count()) === 0)
+})
+
+await step('dashboard meter follows real usage', op, async () => {
+  const usage = (await api('GET', `/stores/${storeId}/ai-usage`, { token: ownerToken })).json
+  await op.goto(`${WEB}/admin/dashboard`)
+  const meter = op.getByRole('region', { name: 'AI usage this month' })
+  await meter.waitFor()
+  check('dashboard meter: generations used matches the server after all the AI tool use above', (await meter.getByRole('progressbar', { name: 'AI content generations' }).getAttribute('aria-valuenow')) === String(usage.generationsUsed) && usage.generationsUsed >= 7, `used ${usage.generationsUsed}`)
+  check('dashboard meter: the figure is also written out in words', await meter.getByText(`${usage.generationsUsed} of ${usage.generationsLimit} used`).isVisible())
+  await shot(op, 'dashboard-meter-used')
 })
 
 console.log(consoleErrors.length === 0 ? 'PASS  no console errors or uncaught exceptions' : `FAIL  console errors:\n${consoleErrors.join('\n')}`)

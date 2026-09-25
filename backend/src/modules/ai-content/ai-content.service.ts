@@ -5,6 +5,7 @@ import { ProductReview } from "../../models/ProductReview.model";
 import { Errors } from "../../errors/AppError";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { productService } from "../products/product.service";
+import { MARKETING_CHANNELS, type MarketingCopyInput } from "./ai-content.validation";
 
 /**
  * Module 6: AI Content Tools (Implementation_Plan.md Phase 4). Every function here is a thin
@@ -214,7 +215,77 @@ export const aiContentService = {
     });
     return parseSeoMetadata(result.text);
   },
+
+  /**
+   * Promotional text for one channel (a social post, an email, or short ad headlines) in a chosen
+   * tone. Returned only, like auto-tag and SEO metadata: nothing is stored, the merchant copies
+   * or edits it. The model is told to use only the product facts and the merchant's own
+   * `notes` for any offer, because inventing a discount or a claim in advertising text is the
+   * failure that would actually cost a merchant something.
+   */
+  async generateMarketingCopy(storeId: string, productId: string, input: MarketingCopyInput) {
+    const product = await requireProduct(storeId, productId);
+    const spec = MARKETING_SPECS[input.channel];
+    const result = await aiGenerate({
+      tenantId: storeId,
+      promptType: "marketing_copy",
+      system:
+        `You write ${spec.what} for an online store. Tone: ${input.tone}. ${spec.format} ` +
+        "Use only the product facts and offer details given below. Never invent a discount, price, " +
+        "shipping promise, stock level, review or claim that is not given. Plain text, no markdown.",
+      prompt:
+        `${describeProduct(product)}\n` +
+        (input.notes ? `Offer details from the merchant: ${input.notes}` : "Offer details from the merchant: none (do not mention any offer)."),
+      maxTokens: spec.maxTokens,
+    });
+    return { channel: input.channel, tone: input.tone, text: spec.parse(result.text) };
+  },
 };
+
+const MARKETING_SPECS: Record<
+  (typeof MARKETING_CHANNELS)[number],
+  { what: string; format: string; maxTokens: number; parse: (text: string) => string }
+> = {
+  social_post: {
+    what: "a short social media post (Instagram or Facebook style)",
+    format: "2 to 4 sentences, then 2 or 3 relevant hashtags on a final line. Reply with only the post.",
+    maxTokens: 250,
+    parse: (text) => cleanCopy(text, 800),
+  },
+  email: {
+    what: "a short promotional email",
+    format:
+      "Reply in exactly this format: a first line 'Subject: <subject under 60 characters>', a blank line, then " +
+      "a body of 3 to 5 short sentences ending with a call to action.",
+    maxTokens: 350,
+    parse: (text) => {
+      const cleaned = cleanCopy(text, 1500);
+      if (!/^Subject:\s*\S/i.test(cleaned)) throw Errors.serviceUnavailable("The AI's suggestion could not be understood; please try again.");
+      return cleaned;
+    },
+  },
+  ad_headlines: {
+    what: "three alternative advertising headlines",
+    format: "Each under 30 characters. Reply with exactly three lines, one headline per line, nothing else.",
+    maxTokens: 100,
+    parse: (text) => {
+      const lines = text
+        .split("\n")
+        .map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").replace(/^["']|["']$/g, "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      if (lines.length === 0) throw Errors.serviceUnavailable("The AI's suggestion could not be understood; please try again.");
+      return lines.join("\n");
+    },
+  },
+};
+
+/** Trims the reply, drops markdown emphasis the prompt asked not to use (but keeps # for hashtags), and caps its length. */
+function cleanCopy(text: string, max: number): string {
+  const cleaned = text.replace(/[*`]+/g, "").trim();
+  if (!cleaned) throw Errors.serviceUnavailable("The AI's suggestion could not be understood; please try again.");
+  return cleaned.slice(0, max);
+}
 
 /** The prompts above ask for a strict two-line reply so it can be parsed without a structured-output
  *  API feature; a model that does not follow the format is treated as a (retryable) service failure

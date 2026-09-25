@@ -1032,6 +1032,62 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /stores/{storeId}/products/{productId}/marketing-copy:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    post:
+      tags: [ai-content]
+      operationId: ai_content_marketing_copy
+      summary: Generate promotional text for one channel in a chosen tone
+      description: |
+        A suggestion only, same pattern as `ai_content_auto_tag`: nothing is saved, the merchant
+        copies or edits the text. The model is given the product's facts and, as the only source of
+        any offer, the optional `notes`; it is told never to invent a discount, price or claim.
+        `email` replies always start with a `Subject:` line; `ad_headlines` returns three lines.
+        Consumes one AI generation from the monthly quota (also when the reply cannot be used and
+        the answer is `503`). Requires the `products_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel]
+              properties:
+                channel: { type: string, enum: [social_post, email, ad_headlines] }
+                tone: { type: string, enum: [friendly, professional, playful, luxury], default: friendly }
+                notes: { type: string, maxLength: 200, description: Offer details to mention, for example "20% off this weekend". }
+      responses:
+        "200":
+          description: Suggestion
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [channel, tone, text]
+                properties:
+                  channel: { type: string, enum: [social_post, email, ad_headlines] }
+                  tone: { type: string, enum: [friendly, professional, playful, luxury] }
+                  text: { type: string, maxLength: 1500 }
+        "400":
+          description: Unknown channel or tone, or notes over 200 characters
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "402":
+          description: Monthly AI usage quota exhausted
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: The AI is not configured, or its reply could not be understood
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /stores/{storeId}/products/{productId}/reviews/summary:
     parameters:
       - $ref: "#/components/parameters/StoreId"

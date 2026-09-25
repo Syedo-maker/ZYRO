@@ -11,7 +11,7 @@ This document is a working plan, not a submission deliverable. It intentionally 
 >
 > **Commerce + POS amendment (2026-09-19):** ZYRO is now defined as a real, multi-tenant Commerce + POS SaaS, not only an online store. The POS is a second sales channel over one shared commerce core (catalog, inventory, customers, pricing, discounts, orders, analytics). An architecture review found the original schema was online-only (stock on the MongoDB product, no order channel, Stripe-only payments, no tenant-scoped customers), so a Commerce Core Foundation module was added at the start of Phase 2 and a POS phase (2.5) after it. Phase 3 analytics and Phase 4/5 AI features become channel-aware, and the AI layer gains business insights (sales trends, low-stock alerts, demand forecasting). The timeline grows from 31 to about 35 weeks.
 >
-> **Checklist update (2026-09-25):** the team's revised list added six items, marked *(new, 2026-09-25)* below: staff accounts as its own Phase 3 line (already built, ticked), AI marketing copy generation, the AI quota meter on the merchant dashboard, stretch AI product photo editing, a mobile responsiveness check in Phase 7, and a Turnitin plagiarism report in Phase 8. Phases 0 to 6 are complete except the three new open items in Phases 4 and 6 (marketing copy, dashboard quota meter, photo editing); Phases 7 and 8 have not started. Nothing else in the plan was restructured.
+> **Checklist update (2026-09-25):** the team's revised list added six items, marked *(new, 2026-09-25)* below: staff accounts as its own Phase 3 line (already built, ticked), AI marketing copy generation, the AI quota meter on the merchant dashboard, stretch AI product photo editing, a mobile responsiveness check in Phase 7, and a Turnitin plagiarism report in Phase 8. Phases 0 to 5 are complete, including every Phase 4 item; Phase 6 is complete except the stretch photo editing item; Phases 7 and 8 have not started. Nothing else in the plan was restructured.
 
 ---
 
@@ -54,8 +54,8 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Module 6 (added): AI review summarization
 - [x] Module 6 (added): AI auto-categorization/tagging
 - [x] Module 6 (added): AI SEO metadata generation
-- [ ] *(new, 2026-09-25)* Module 6: AI marketing copy generation (product promo text: social post, email blurb, ad headline), through the orchestrator and quota system
-- [ ] *(new, 2026-09-25)* Module 6: AI quota meter on the merchant dashboard (the per-product AI panel already shows usage; this adds it to the Admin Dashboard home)
+- [x] *(new, 2026-09-25)* Module 6: AI marketing copy generation (social post, email, ad headlines, in a chosen tone), through the orchestrator and quota system; see `documentation/Phase4_Marketing_Copy_And_Quota_Meter.md`
+- [x] *(new, 2026-09-25)* Module 6: AI quota meter on the merchant dashboard (generations and assistant replies, with reset date); see `documentation/Phase4_Marketing_Copy_And_Quota_Meter.md`
 - [x] Frontend: wire the AI generate/regenerate/publish flow + quota display into the Admin Catalog UI (scaffolded in Phase 1, made functional here) + UI touches for summarization/auto-tag/SEO metadata
 
 **Phase 5: AI Feature 2**

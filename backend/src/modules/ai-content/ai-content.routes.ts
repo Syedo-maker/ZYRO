@@ -17,3 +17,4 @@ aiContentRouter.post("/ai-description/regenerate", ...manage, aiContentControlle
 aiContentRouter.post("/ai-description/publish", ...manage, aiContentController.publishDescription);
 aiContentRouter.post("/auto-tag", ...manage, aiContentController.autoTag);
 aiContentRouter.post("/seo-metadata/generate", ...manage, aiContentController.generateSeoMetadata);
+aiContentRouter.post("/marketing-copy", ...manage, aiContentController.generateMarketingCopy);

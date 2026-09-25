@@ -4,8 +4,21 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { ApiError } from '../../lib/apiClient'
 import { errorMessage } from '../../lib/ordersApi'
-import { aiUsageApi, aiDescriptionApi, aiSuggestionsApi, aiReviewSummaryApi } from '../../lib/aiContentApi'
-import type { AiDescriptionDraft, AiUsageQuota, AutoTagSuggestion, ReviewSummaryStatus, SeoMetadataSuggestion } from '../../types/shop'
+import { aiUsageApi, aiDescriptionApi, aiSuggestionsApi, aiReviewSummaryApi, aiMarketingApi } from '../../lib/aiContentApi'
+import type { AiDescriptionDraft, AiUsageQuota, AutoTagSuggestion, MarketingChannel, MarketingTone, ReviewSummaryStatus, SeoMetadataSuggestion } from '../../types/shop'
+
+const CHANNELS: { value: MarketingChannel; label: string }[] = [
+  { value: 'social_post', label: 'Social media post' },
+  { value: 'email', label: 'Email' },
+  { value: 'ad_headlines', label: 'Ad headlines' },
+]
+const TONES: { value: MarketingTone; label: string }[] = [
+  { value: 'friendly', label: 'Friendly' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'playful', label: 'Playful' },
+  { value: 'luxury', label: 'Luxury' },
+]
+const fieldClass = 'h-9 rounded-[10px] border border-border bg-white px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
 
 interface AiToolsPanelProps {
   storeId: string
@@ -46,6 +59,11 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
   const [reviewSummary, setReviewSummary] = useState<ReviewSummaryStatus | null>(null)
   const [tagSuggestion, setTagSuggestion] = useState<AutoTagSuggestion | null>(null)
   const [seoSuggestion, setSeoSuggestion] = useState<SeoMetadataSuggestion | null>(null)
+  const [channel, setChannel] = useState<MarketingChannel>('social_post')
+  const [tone, setTone] = useState<MarketingTone>('friendly')
+  const [notes, setNotes] = useState('')
+  const [copyText, setCopyText] = useState<string | null>(null)
+  const [copied, setCopied] = useState<'yes' | 'failed' | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -121,6 +139,21 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
     if (result) setReviewSummary(result)
   }
 
+  async function handleMarketingCopy() {
+    setCopied(null)
+    const result = await run('marketing', () => aiMarketingApi.generate(storeId, productId, { channel, tone, ...(notes.trim() ? { notes: notes.trim() } : {}) }))
+    if (result) setCopyText(result.text)
+  }
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(copyText ?? '')
+      setCopied('yes')
+    } catch {
+      // Clipboard access can be blocked (insecure page, denied permission): the text is selectable, so say so.
+      setCopied('failed')
+    }
+  }
+
   if (!loaded) return <p className="text-xs text-text-muted">Loading AI tools…</p>
 
   return (
@@ -193,6 +226,62 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
             <Button type="button" className="h-8 px-3 text-xs" onClick={() => onApplyCategoryAndTags(tagSuggestion.category, tagSuggestion.tags)}>
               Apply
             </Button>
+          </div>
+        )}
+      </section>
+
+      {/* ---- Marketing copy ---- */}
+      <section className="flex flex-col gap-2">
+        <span className="text-xs font-semibold text-text-secondary">Marketing copy</span>
+        <div className="flex flex-wrap gap-2">
+          <select aria-label="Marketing channel" value={channel} onChange={(e) => setChannel(e.target.value as MarketingChannel)} className={fieldClass}>
+            {CHANNELS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <select aria-label="Marketing tone" value={tone} onChange={(e) => setTone(e.target.value as MarketingTone)} className={fieldClass}>
+            {TONES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <input
+          aria-label="Offer details (optional)"
+          placeholder="Offer to mention, e.g. 20% off this weekend (optional)"
+          maxLength={200}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className={`${fieldClass} w-full`}
+        />
+        <Button type="button" variant="secondary" className="h-9 self-start px-4 text-xs" disabled={busy !== null} onClick={() => void handleMarketingCopy()}>
+          {busy === 'marketing' ? 'Writing…' : copyText ? 'Write another version' : 'Write marketing copy'}
+        </Button>
+        {copyText !== null && (
+          <div className="flex flex-col gap-2">
+            <textarea
+              aria-label="Marketing copy result"
+              rows={channel === 'email' ? 6 : 4}
+              value={copyText}
+              onChange={(e) => {
+                setCopyText(e.target.value)
+                setCopied(null)
+              }}
+              className="rounded-[10px] border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            />
+            <div className="flex items-center gap-3">
+              <Button type="button" className="h-8 px-3 text-xs" onClick={() => void handleCopy()}>
+                Copy
+              </Button>
+              <span role="status" className="text-xs text-text-muted">
+                {copied === 'yes' && 'Copied to the clipboard.'}
+                {copied === 'failed' && 'Could not copy automatically; select the text and copy it.'}
+                {copied === null && 'Not saved anywhere. Edit it, then copy it where you need it.'}
+              </span>
+            </div>
           </div>
         )}
       </section>

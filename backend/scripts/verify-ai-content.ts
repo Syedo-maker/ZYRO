@@ -1,16 +1,16 @@
 /**
  * End-to-end check of Module 6, AI Content Tools (Implementation_Plan.md Phase 4): the product
  * description draft/edit/regenerate/publish lifecycle, review summarization and its staleness,
- * auto-tag, and SEO metadata, all against the real HTTP API, real Postgres/MongoDB/Redis/BullMQ,
+ * auto-tag, SEO metadata, and marketing copy, all against the real HTTP API, real Postgres/MongoDB/Redis/BullMQ,
  * with a fake AI provider standing in for the network call to Anthropic (the same pattern
  * verify-discounts.ts uses for Stripe). Creates throwaway stores and users and removes them after.
  * Usage: npx tsx scripts/verify-ai-content.ts   (Redis must be running on REDIS_URL)
  */
 process.env.RATE_LIMIT_ENABLED = "false";
-// Store A's own lifecycle test makes ~15 AI calls end to end; store B gets its own quota row
+// Store A's own lifecycle test makes ~25 AI calls end to end; store B gets its own quota row
 // (Implementation_Plan.md Phase 4: quota is per [tenantId, month]) and is used, untouched by A,
 // to actually run one out and check every AI content tool is refused once it is.
-process.env.AI_MONTHLY_GENERATIONS_LIMIT = "20";
+process.env.AI_MONTHLY_GENERATIONS_LIMIT = "40";
 // An isolated BullMQ queue, so this script's own fake AiProvider is what actually answers its
 // jobs even if a real backend or e2e-server.ts happens to be running against the same Redis
 // (see the comment on AI_QUEUE_NAME in lib/aiQueue.ts).
@@ -155,6 +155,33 @@ async function main() {
     nextReply = "no format at all";
     check("seo-metadata: an unparsable reply is a clean error", (await api("POST", `/stores/${A.storeId}/products/${mug}/seo-metadata/generate`, { token: A.token })).status === 503);
 
+    // ---- Marketing copy: per channel and tone, offer details only from the merchant, never stored ----
+    const usedBeforeCopy = (await api("GET", `/stores/${A.storeId}/ai-usage`, { token: A.token })).json.generationsUsed as number;
+    const copyUrl = `/stores/${A.storeId}/products/${mug}/marketing-copy`;
+    nextReply = "**Start your morning right** with our handmade Ceramic Mug.\nKeeps coffee warm for hours.\n#coffee #handmade";
+    const social = await api("POST", copyUrl, { token: A.token, body: { channel: "social_post" } });
+    check("marketing: a social post comes back cleaned of markdown emphasis, hashtags kept, with the default tone", social.status === 200 && social.json.channel === "social_post" && social.json.tone === "friendly" && !/\*/.test(social.json.text) && /#coffee #handmade/.test(social.json.text));
+    const socialCall = calls[calls.length - 1];
+    check("marketing: the prompt carries the product facts, and says no offer may be mentioned when the merchant gave none", /Ceramic Mug/.test(socialCall.prompt) && /kitchen/.test(socialCall.prompt) && /none \(do not mention any offer\)/.test(socialCall.prompt));
+    check("marketing: the system prompt forbids inventing discounts or claims", /Never invent a discount/.test(socialCall.system) && /Tone: friendly/.test(socialCall.system));
+    nextReply = "Subject: A new favourite mug\n\nOur handmade Ceramic Mug is 20% off this weekend. Shop now.";
+    const email = await api("POST", copyUrl, { token: A.token, body: { channel: "email", tone: "luxury", notes: "20% off this weekend" } });
+    check("marketing: an email keeps its Subject line, and the requested tone reaches the model", email.status === 200 && /^Subject: A new favourite mug/.test(email.json.text) && email.json.tone === "luxury" && /Tone: luxury/.test(calls[calls.length - 1].system));
+    check("marketing: the merchant's offer details, and only those, are given to the model as the offer", /Offer details from the merchant: 20% off this weekend/.test(calls[calls.length - 1].prompt));
+    nextReply = "Just some text without the subject line.";
+    check("marketing: an email reply without the requested Subject line is a clean error, not garbage", (await api("POST", copyUrl, { token: A.token, body: { channel: "email" } })).status === 503);
+    nextReply = "1. Sip in style\n2) Warm all morning\n- \"Handmade for you\"\n4. Extra fourth line";
+    const ads = await api("POST", copyUrl, { token: A.token, body: { channel: "ad_headlines", tone: "playful" } });
+    check("marketing: ad headlines are numbered or bulleted lines stripped down to three plain headlines", ads.status === 200 && ads.json.text === "Sip in style\nWarm all morning\nHandmade for you");
+    nextReply = "   ";
+    check("marketing: an empty reply is a clean error", (await api("POST", copyUrl, { token: A.token, body: { channel: "social_post" } })).status === 503);
+    check("marketing: every generation, including the failed ones, is spent from the same quota as the other AI tools", (await api("GET", `/stores/${A.storeId}/ai-usage`, { token: A.token })).json.generationsUsed === usedBeforeCopy + 5);
+    check("marketing: nothing is saved to the product (its live description is untouched)", (await api("GET", `/stores/${A.storeId}/products/${mug}`)).json.description === "Final: the one that gets published.");
+    check("marketing: an unknown channel, unknown tone, over-long notes or no body at all are 400", (await api("POST", copyUrl, { token: A.token, body: { channel: "billboard" } })).status === 400 && (await api("POST", copyUrl, { token: A.token, body: { channel: "email", tone: "angry" } })).status === 400 && (await api("POST", copyUrl, { token: A.token, body: { channel: "email", notes: "x".repeat(201) } })).status === 400 && (await api("POST", copyUrl, { token: A.token })).status === 400);
+    check("marketing: a 400 spends no quota", (await api("GET", `/stores/${A.storeId}/ai-usage`, { token: A.token })).json.generationsUsed === usedBeforeCopy + 5);
+    check("marketing: no token is 401, staff without products_write is 403", (await api("POST", copyUrl, { body: { channel: "email" } })).status === 401 && (await api("POST", copyUrl, { token: staffToken, body: { channel: "email" } })).status === 403);
+    check("marketing: another store cannot generate copy for this store's product (404)", (await api("POST", `/stores/${B.storeId}/products/${mug}/marketing-copy`, { token: B.token, body: { channel: "email" } })).status === 404);
+
     // ---- Review summarization: refuses with nothing to summarize, then caches, then goes stale ----
     check("reviews: summarizing with no published reviews yet is refused (400)", (await api("POST", `/stores/${A.storeId}/products/${mug}/reviews/summarize`, { token: A.token })).status === 400);
     check("reviews: with nothing generated yet, the summary status is null and not stale", JSON.stringify((await api("GET", `/stores/${A.storeId}/products/${mug}/reviews/summary`, { token: A.token })).json) === JSON.stringify({ summary: null, currentReviewCount: 0, stale: false }));
@@ -200,6 +227,7 @@ async function main() {
     check("quota: the limit was actually reached (used equals limit)", (await api("GET", `/stores/${B.storeId}/ai-usage`, { token: B.token })).json.generationsUsed === limitB);
     const exhausted = await api("POST", `/stores/${B.storeId}/products/${bMug}/seo-metadata/generate`, { token: B.token });
     check("quota: once the monthly limit is reached, every AI content tool is refused with 402, not just the one that hit it", exhausted.status === 402);
+    check("quota: marketing copy is refused with 402 too, once the limit is reached", (await api("POST", `/stores/${B.storeId}/products/${bMug}/marketing-copy`, { token: B.token, body: { channel: "email" } })).status === 402);
   } finally {
     const productIds = await Product.find({ storeId: { $in: created.tenantIds } }).select("_id");
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });

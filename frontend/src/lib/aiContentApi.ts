@@ -3,7 +3,7 @@
 // one AI generation from the store's monthly quota (`aiUsageApi.getUsage`).
 import { apiFetch } from './apiClient'
 import type { Product } from '../types/api'
-import type { AiDescriptionDraft, AiUsageQuota, AutoTagSuggestion, ReviewSummaryStatus, SeoMetadataSuggestion } from '../types/shop'
+import type { AiDescriptionDraft, AiUsageQuota, AutoTagSuggestion, MarketingCopy, MarketingCopyInput, ReviewSummaryStatus, SeoMetadataSuggestion } from '../types/shop'
 
 export const aiUsageApi = {
   get: (storeId: string) => apiFetch<AiUsageQuota>(`/stores/${storeId}/ai-usage`),
@@ -25,6 +25,12 @@ export const aiDescriptionApi = {
 export const aiSuggestionsApi = {
   autoTag: (storeId: string, productId: string) => apiFetch<AutoTagSuggestion>(`/stores/${storeId}/products/${productId}/auto-tag`, { method: 'POST' }),
   seoMetadata: (storeId: string, productId: string) => apiFetch<SeoMetadataSuggestion>(`/stores/${storeId}/products/${productId}/seo-metadata/generate`, { method: 'POST' }),
+}
+
+export const aiMarketingApi = {
+  /** Promotional text for one channel and tone. Nothing is saved; costs one generation. */
+  generate: (storeId: string, productId: string, body: MarketingCopyInput) =>
+    apiFetch<MarketingCopy>(`/stores/${storeId}/products/${productId}/marketing-copy`, { method: 'POST', body }),
 }
 
 export const aiReviewSummaryApi = {

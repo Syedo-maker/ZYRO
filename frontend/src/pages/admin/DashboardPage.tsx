@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { SalesByDayChart } from '../../components/charts/SalesByDayChart'
 import { ChannelSplit, StatTile, TopProducts } from '../../components/charts/DashboardParts'
+import { AiUsageMeter } from './AiUsageMeter'
 import { formatDate, formatMoney } from '../../lib/format'
 import { errorMessage, ordersApi } from '../../lib/ordersApi'
 import { analyticsApi } from '../../lib/shopApi'
@@ -153,6 +154,8 @@ export function DashboardPage() {
           )}
         </>
       )}
+
+      <AiUsageMeter storeId={activeStore.id} />
 
       <section aria-label="Recent orders" className="rounded-2xl border border-border bg-white p-5">
         <div className="mb-3 flex items-baseline justify-between">

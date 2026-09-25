@@ -45,9 +45,16 @@ async function main() {
   // admin UI's parsing of a structured reply is exercised for real, not skipped.
   let aiCallCount = 0;
   setAiProvider({
-    async generate({ system }) {
+    async generate({ system, prompt }) {
       aiCallCount++;
-      const text = /Category:.*Tags:/s.test(system)
+      const offer = /Offer details from the merchant: (.+?)\.?$/m.exec(prompt)?.[1];
+      const text = /promotional email/.test(system)
+        ? `Subject: Fresh for the morning${offer && !/^none/.test(offer) ? `\n\nOur Ceramic Mug: ${offer}. Shop now.` : "\n\nOur Ceramic Mug is back. Shop now."}`
+        : /advertising headlines/.test(system)
+          ? "Sip in style\nWarm all morning\nHandmade for you"
+          : /social media post/.test(system)
+            ? "Start your morning right with a handmade mug.\n#coffee #handmade"
+            : /Category:.*Tags:/s.test(system)
         ? "Category: Kitchenware\nTags: mug, ceramic, handmade"
         : /meta title/i.test(system)
           ? "Title: Ceramic Mug | Handmade & Dishwasher Safe\nDescription: A handmade ceramic mug that keeps drinks hot for hours. Shop the collection today."
