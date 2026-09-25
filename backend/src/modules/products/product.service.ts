@@ -3,6 +3,7 @@ import { Product, ProductDocument } from "../../models/Product.model";
 import { AiGeneratedContent } from "../../models/AiGeneratedContent.model";
 import { prisma } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
+import { indexProductInBackground } from "../../lib/recommendationClient";
 import { inventoryService } from "../inventory/inventory.service";
 import { ratingsFor, reviewService } from "../reviews/review.service";
 import type { ProductInput, ListProductsQuery } from "./product.validation";
@@ -178,7 +179,23 @@ export const productService = {
       await Product.deleteOne({ _id: doc._id, storeId });
       throw err;
     }
+    indexProductInBackground(storeId, doc._id.toString());
     return toPublicProduct(doc, stock);
+  },
+
+  /**
+   * Several products by id, in the order the ids were given (similarity order for callers such as
+   * recommendations), with stock and rating like a catalog row. Ids that do not exist in this
+   * store, or are not valid ids, are simply absent from the result.
+   */
+  async getMany(storeId: string, ids: string[]) {
+    const valid = ids.filter((id) => Types.ObjectId.isValid(id));
+    if (valid.length === 0) return [];
+    const docs = await Product.find({ _id: { $in: valid }, storeId });
+    const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+    const found = valid.filter((id) => byId.has(id));
+    const [stock, ratings] = await Promise.all([inventoryService.getTotals(prisma, storeId, found), ratingsFor(storeId, found)]);
+    return found.map((id) => toPublicProduct(byId.get(id)!, stock.get(id) ?? 0, ratings.get(id)));
   },
 
   async get(storeId: string, productId: string) {
@@ -209,6 +226,7 @@ export const productService = {
     if (!doc) throw Errors.notFound("Product");
 
     await setStock(storeId, productId, stock, "ADJUSTMENT", userId);
+    indexProductInBackground(storeId, productId);
     return toPublicProduct(doc, stock);
   },
 

@@ -42,6 +42,11 @@ export interface ProductDocument {
     generatedAt: Date;
     reviewCountAtGeneration: number;
   };
+  /** Written by the Python recommendation service (Phase 6), never by Node. Excluded from every
+   *  query by default (select: false): a 384-number vector has no business in an API response. */
+  embedding?: number[];
+  /** Fingerprint of the text and model `embedding` was computed from; see recommendation-service/app/text.py. */
+  embeddingHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +90,9 @@ const productSchema = new Schema<ProductDocument>(
       ),
       required: false,
     },
+    // default: undefined so a new product does not store an empty [] that would look "embedded".
+    embedding: { type: [Number], select: false, default: undefined },
+    embeddingHash: { type: String, select: false },
   },
   { timestamps: true }
 );

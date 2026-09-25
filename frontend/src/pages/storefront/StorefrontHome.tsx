@@ -4,6 +4,8 @@ import { useStore } from '../../context/StoreContext'
 import { Alert } from '../../components/ui/Alert'
 import { ProductCard } from '../../components/storefront/ProductCard'
 import { ProductGridSkeleton } from '../../components/storefront/ProductGridSkeleton'
+import { RecommendationsSection } from '../../components/storefront/RecommendationsSection'
+import { lastViewed } from '../../lib/recentlyViewed'
 import { errorMessage } from '../../lib/ordersApi'
 import { catalogApi } from '../../lib/shopApi'
 import { useAddToCart } from '../../lib/useAddToCart'
@@ -17,6 +19,9 @@ export function StorefrontHome() {
   const { addingId, message, addToCart } = useAddToCart()
   const [products, setProducts] = useState<Product[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // Recommendations follow the last product this shopper opened here; a first-time visitor has
+  // none, so they simply do not see the section.
+  const viewedId = lastViewed(store.id)
 
   useEffect(() => {
     let cancelled = false
@@ -63,6 +68,8 @@ export function StorefrontHome() {
           ))}
         </ul>
       </section>
+
+      {viewedId && <RecommendationsSection productId={viewedId} heading="Recommended for you" headingId="reco-heading" />}
 
       {categories.length > 0 && (
         <section aria-labelledby="cat-heading" className="flex flex-col gap-4">

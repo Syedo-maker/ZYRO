@@ -33,6 +33,9 @@ export const catalogApi = {
   suggest: (storeId: string, q: string) =>
     apiFetch<Suggestion[]>(`/stores/${storeId}/products/suggest${qs({ q })}`),
   categories: (storeId: string) => apiFetch<CategoryCount[]>(`/stores/${storeId}/products/categories`),
+  /** "Products like this one" (Phase 6); an empty list when the recommendation service has nothing or is unavailable. */
+  recommendations: (storeId: string, productId: string, limit = 4) =>
+    apiFetch<{ data: Product[] }>(`/stores/${storeId}/products/${productId}/recommendations${qs({ limit })}`),
 }
 
 /** Reviews on the storefront (public to read, signed-in shoppers write their own). */

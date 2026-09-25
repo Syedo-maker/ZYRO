@@ -27,6 +27,14 @@ backend/prisma/*.db
 # User-uploaded files (local disk storage for this prototype)
 backend/uploads/
 
+# Python recommendation service (Phase 6): virtualenv, bytecode, caches, downloaded model files
+recommendation-service/.venv/
+recommendation-service/.env
+recommendation-service/model-cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+
 # Test coverage and browser-test screenshots
 coverage/
 frontend/e2e/shots/

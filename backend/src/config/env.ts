@@ -106,6 +106,17 @@ export const env = {
     sendgridApiKey: process.env.SENDGRID_API_KEY,
     fromEmail: process.env.SENDGRID_FROM_EMAIL,
   },
+  // Recommendation microservice (Implementation_Plan.md Phase 6): a separate Python process.
+  // Optional at startup like Stripe and the AI key: without a URL and token the store works as
+  // before, recommendations come back empty, and the assistant falls back to keyword matching.
+  recommendation: {
+    url: process.env.RECOMMENDATION_SERVICE_URL,
+    token: process.env.RECOMMENDATION_SERVICE_TOKEN,
+    /** A shopper is waiting on the product page, so a slow service is given up on quickly. */
+    timeoutMs: num("RECOMMENDATION_TIMEOUT_MS", 4000),
+    /** How long a computed recommendation list is reused before the service is asked again. */
+    cacheSeconds: num("RECOMMENDATION_CACHE_SECONDS", 60),
+  },
   // AI business insights (Implementation_Plan.md Phase 5, the last item).
   insights: {
     /** A product with no InventoryLevel.lowStockThreshold set (Phase 0 schema, never wired up

@@ -61,6 +61,25 @@ async function main() {
   });
   startAiWorker();
 
+  // Stands in for the Python recommendation service (Phase 6): no second process to start for a
+  // browser test. "Similar" here just means same category first, then the rest, which is enough
+  // to test what the UI does with the answer; the real similarity is verify-recommendations.ts's job.
+  const { setRecommendationClient } = await import("../src/lib/recommendationClient");
+  const { Product } = await import("../src/models/Product.model");
+  setRecommendationClient({
+    async recommend(storeId, productId, limit) {
+      const source = await Product.findOne({ _id: productId, storeId }).select("category");
+      if (!source) return null;
+      const others = await Product.find({ storeId, _id: { $ne: productId } }).select("category").sort({ _id: 1 });
+      const ranked = [...others.filter((p) => p.category === source.category), ...others.filter((p) => p.category !== source.category)];
+      return ranked.slice(0, limit).map((p, i) => ({ productId: p._id.toString(), score: 1 - i * 0.01 }));
+    },
+    async search() {
+      return [];
+    },
+    async embedProduct() {},
+  });
+
   const outer = express();
   outer.get("/__fake-stripe/:id", (req, res) => {
     res.type("html").send(`<title>Fake Stripe</title><h1>Fake Stripe checkout</h1><p>${req.params.id}</p>`);

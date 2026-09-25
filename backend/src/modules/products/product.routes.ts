@@ -3,6 +3,7 @@ import { requireAuth } from "../../middleware/requireAuth.middleware";
 import { withTenantContext } from "../../middleware/tenantContext.middleware";
 import { requirePermission } from "../../middleware/requirePermission.middleware";
 import { productController } from "./product.controller";
+import { recommendationController } from "../recommendations/recommendation.controller";
 import { productReviewsRouter } from "../reviews/review.routes";
 import { aiContentRouter } from "../ai-content/ai-content.routes";
 
@@ -16,6 +17,8 @@ productRouter.get("/", withTenantContext, productController.list);
 productRouter.get("/suggest", withTenantContext, productController.suggest);
 productRouter.get("/categories", withTenantContext, productController.categories);
 productRouter.get("/:productId", withTenantContext, productController.get);
+// "Products like this one" (Phase 6). Public, like the catalog it draws from.
+productRouter.get("/:productId/recommendations", withTenantContext, recommendationController.forProduct);
 // Reviews of a product: public to read, signed-in shoppers write their own.
 productRouter.use("/:productId/reviews", productReviewsRouter);
 // AI content tools (Phase 4, Module 6): description draft/regenerate/publish, auto-tag, SEO

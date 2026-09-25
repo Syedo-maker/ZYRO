@@ -60,10 +60,10 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Frontend: AI Assistant chat widget (`AIAssistant.dc.html`) wired to the real endpoint
 
 **Phase 6: AI Recommendation Service (Python)** *(new phase, added post-Phase 1 scope amendment)*
-- [ ] Python/FastAPI microservice scaffold + embedding pipeline
-- [ ] `GET /stores/:storeId/products/:productId/recommendations` (Node-proxied)
-- [ ] Wire into AI Shopping Assistant's "suggested related products" (upgrade from Phase 5's keyword matching)
-- [ ] Frontend: display recommended products on Product Detail + Storefront Home
+- [x] Python/FastAPI microservice scaffold + embedding pipeline
+- [x] `GET /stores/:storeId/products/:productId/recommendations` (Node-proxied)
+- [x] Wire into AI Shopping Assistant's "suggested related products" (upgrade from Phase 5's keyword matching)
+- [x] Frontend: display recommended products on Product Detail + Storefront Home
 
 **Phase 7: Testing**
 - [ ] Unit tests (Jest)

@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { productService } from "../products/product.service";
+import { getRecommendationClient, RecommendationUnavailableError, type ScoredProduct } from "../../lib/recommendationClient";
 import { ChatTranscript, type ChatRole } from "../../models/ChatTranscript.model";
 import type { CartOwner } from "../cart/cart.service";
 
@@ -11,9 +12,9 @@ import type { CartOwner } from "../cart/cart.service";
  * infrastructure from earlier phases: the AI Orchestrator (Phase 4) for the actual LLM call and
  * quota accounting, and the Mongo text-index search from Phase 3, Module 1 for "relevant
  * product data" - the plan's own words for why this is keyword matching, not a vector-embedding
- * pipeline: "keeps scope realistic while still supporting AI-suggested related products". A
- * real similarity search is Phase 6's job (a separate Python service), noted there as the
- * planned upgrade path for this exact keyword search.
+ * pipeline: "keeps scope realistic while still supporting AI-suggested related products". Phase 6
+ * (the separate Python recommendation service) has since been added as the upgrade path for
+ * exactly this keyword search: see findRelevantProducts() below.
  */
 
 const MAX_CONTEXT_TURNS = 6;
@@ -70,6 +71,37 @@ async function appendToTranscript(storeId: string, conversationId: string, owner
   );
 }
 
+const MAX_SUGGESTED = 5;
+
+/**
+ * Keyword matches (the Phase 3 text index) first, then meaning-based matches from the Phase 6
+ * recommendation service. A shopper asking "something to drink my morning tea from" shares no
+ * words with "Ceramic mug", which is exactly what the plan's "AI-suggested related products"
+ * needs the embeddings for. Keyword hits keep their place at the front because an exact word
+ * match is the more trustworthy signal; semantic hits fill the remaining slots. If the service
+ * is not configured or is down, this is the plain keyword search it always was.
+ */
+async function findRelevantProducts(storeId: string, message: string) {
+  const keyword = await productService.list(storeId, { q: message, limit: MAX_SUGGESTED, offset: 0, inStock: false });
+  if (keyword.data.length >= MAX_SUGGESTED) return keyword;
+
+  let scored: ScoredProduct[] = [];
+  try {
+    scored = await getRecommendationClient().search(storeId, message, MAX_SUGGESTED);
+  } catch (err) {
+    if (!(err instanceof RecommendationUnavailableError) || !/not configured/.test(err.message)) {
+      console.warn(`[assistant] semantic search unavailable, using keyword matches only: ${(err as Error).message}`);
+    }
+  }
+  const have = new Set(keyword.data.map((p) => p.id));
+  const extraIds = scored.map((s) => s.productId).filter((id) => !have.has(id));
+  if (extraIds.length === 0) return keyword;
+
+  const extras = await productService.getMany(storeId, extraIds);
+  const data = [...keyword.data, ...extras].slice(0, MAX_SUGGESTED);
+  return { ...keyword, data };
+}
+
 export const assistantService = {
   /**
    * `conversationId` is minted and held by the caller (backend/openapi.yaml, drafted in Phase
@@ -83,7 +115,7 @@ export const assistantService = {
 
     const [history, matches] = await Promise.all([
       getRecentContext(storeId, conversationId),
-      productService.list(storeId, { q: message, limit: 5, offset: 0, inStock: false }),
+      findRelevantProducts(storeId, message),
     ]);
 
     const productLines = matches.data.map((p) => `- ${p.title} ($${p.price.toFixed(2)}, ${p.category}${p.stock > 0 ? "" : ", currently out of stock"})`);

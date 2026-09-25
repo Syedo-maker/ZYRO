@@ -591,6 +591,45 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /stores/{storeId}/products/{productId}/recommendations:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      tags: [catalog]
+      operationId: products_recommendations
+      summary: Products similar to this one
+      description: |
+        Phase 6. Node proxies to the internal Python recommendation service, which ranks the
+        store's products by cosine similarity of their text embeddings (title, category and
+        description). The product itself, sold-out products and other stores' products are
+        never returned. This is a bonus feature, so it never fails the page: when the service is
+        not configured, down or slow, the answer is a normal `200` with an empty `data` list.
+        An unknown product is still `404`. Public, like the catalog.
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 12, default: 4 }
+      responses:
+        "200":
+          description: Similar products, most similar first (possibly empty)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Product" }
+        "400":
+          description: limit out of range
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   # ── UPLOADS ───────────────────────────────────────────────────────────
   /stores/{storeId}/uploads/images:
     parameters:

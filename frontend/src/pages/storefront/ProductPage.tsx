@@ -5,7 +5,9 @@ import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { StarRating } from '../../components/StarRating'
+import { RecommendationsSection } from '../../components/storefront/RecommendationsSection'
 import { ReviewsSection } from '../../components/storefront/ReviewsSection'
+import { rememberViewed } from '../../lib/recentlyViewed'
 import { formatMoney } from '../../lib/format'
 import { ApiError } from '../../lib/apiClient'
 import { errorMessage } from '../../lib/ordersApi'
@@ -32,6 +34,7 @@ export function ProductPage() {
   const load = useCallback(async () => {
     try {
       setProduct(await catalogApi.get(store.id, productId))
+      rememberViewed(store.id, productId)
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) setNotFound(true)
       else setError(errorMessage(e))
@@ -150,6 +153,8 @@ export function ProductPage() {
           </div>
         </div>
       </div>
+
+      <RecommendationsSection productId={product.id} heading="You might also like" headingId="similar-heading" />
 
       <ReviewsSection productId={product.id} onChanged={() => void catalogApi.get(store.id, productId).then(setProduct).catch(() => undefined)} />
     </div>
