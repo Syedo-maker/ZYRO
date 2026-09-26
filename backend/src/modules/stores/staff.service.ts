@@ -38,19 +38,21 @@ export const staffService = {
    * merchant elsewhere) before they can be added as staff.
    */
   async create(input: CreateStaffInput) {
-    // The plan's staff limit comes first: a refused request must not leave a new account behind.
-    await planService.assertCanAddStaff(tenantContext.getTenantId()!);
-
     // Emails are stored and matched exactly as typed, the same as registration and login.
     const email = input.email;
     let user = await prisma.user.findUnique({ where: { email } });
     if (user && input.password) {
       throw Errors.validation("That email already has an account; add it without a password");
     }
+    if (!user && !input.password) throw Errors.notFound("User with that email");
+
+    // The plan's staff limit comes after the input checks (a wrong request is still a 400 or 404)
+    // and before anything is created: a request refused for the limit must not leave a new account behind.
+    await planService.assertCanAddStaff(tenantContext.getTenantId()!);
+
     if (!user) {
-      if (!input.password) throw Errors.notFound("User with that email");
       user = await prisma.user.create({
-        data: { email, name: input.name, passwordHash: await passwordLib.hash(input.password) },
+        data: { email, name: input.name, passwordHash: await passwordLib.hash(input.password!) }, // present: an unknown email without one was refused above
       });
     }
 

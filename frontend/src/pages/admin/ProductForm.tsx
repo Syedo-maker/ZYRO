@@ -2,6 +2,8 @@ import { useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { uploadsApi } from '../../lib/productsApi'
+import { upgradeHintOf } from '../../lib/billingApi'
+import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { AiToolsPanel } from './AiToolsPanel'
 import type { Product, ProductInput } from '../../types/api'
 
@@ -28,6 +30,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
   const [seoDescription, setSeoDescription] = useState(initial?.seoDescription ?? '')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [limitError, setLimitError] = useState<unknown>(null)
   const [submitting, setSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -50,6 +53,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    setLimitError(null)
     setSubmitting(true)
     try {
       await onSubmit({
@@ -70,11 +74,16 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         seoDescription: seoDescription.trim() || undefined,
       })
     } catch (err) {
-      setError(
-        err instanceof Error && /SKU or barcode/.test((err as { detail?: string }).detail ?? '')
-          ? 'That SKU or barcode is already used by another product.'
-          : 'Could not save this product. Please check the fields and try again.'
-      )
+      if (upgradeHintOf(err)) {
+        // The plan's product limit: show what to do about it instead of a vague "could not save".
+        setLimitError(err)
+      } else {
+        setError(
+          err instanceof Error && /SKU or barcode/.test((err as { detail?: string }).detail ?? '')
+            ? 'That SKU or barcode is already used by another product.'
+            : 'Could not save this product. Please check the fields and try again.'
+        )
+      }
     } finally {
       setSubmitting(false)
     }
@@ -198,6 +207,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
       )}
 
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <UpgradeNotice error={limitError} />
 
       <div className="flex gap-3 mt-2">
         <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>

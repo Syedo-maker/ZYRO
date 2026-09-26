@@ -46,6 +46,8 @@ const reg = await api('POST', '/auth/register', {
 })
 const ownerToken = reg.json.accessToken
 const storeId = (await api('GET', '/users/me/stores', { token: ownerToken })).json[0].id
+// This suite adds several staff, more than the Free plan includes: put the store on Business the way a paid checkout leaves it (the e2e server plays Stripe's webhook).
+await fetch('http://localhost:5000/__e2e/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storeId, kind: 'subscription', plan: 'BUSINESS' }) })
 const widget = (await api('POST', `/stores/${storeId}/products`, { token: ownerToken, body: { title: 'Widget', price: 20, stock: 10, category: 'tools' } })).json
 const gadget = (await api('POST', `/stores/${storeId}/products`, { token: ownerToken, body: { title: 'Gadget', price: 10.5, stock: 2, category: 'tools' } })).json
 await api('POST', '/auth/register', { body: { email: noAccessEmail, password, storeName: 'Other', storeSlug: `e2e-pos-x-${suffix}` } })

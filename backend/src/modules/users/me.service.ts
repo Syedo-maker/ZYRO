@@ -13,7 +13,8 @@ export const meService = {
   async getProfile(userId: string) {
     const user = await prismaUnscoped.user.findUnique({ where: { id: userId } });
     if (!user) return null;
-    return { id: user.id, email: user.email, name: user.name };
+    // platformAdmin only decides whether the UI shows the platform view; the /platform routes check the role themselves.
+    return { id: user.id, email: user.email, name: user.name, platformAdmin: user.platformRole === "SUPER_ADMIN" };
   },
 
   /**

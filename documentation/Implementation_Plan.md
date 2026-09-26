@@ -11,7 +11,7 @@ This document is a working plan, not a submission deliverable. It intentionally 
 >
 > **Commerce + POS amendment (2026-09-19):** ZYRO is now defined as a real, multi-tenant Commerce + POS SaaS, not only an online store. The POS is a second sales channel over one shared commerce core (catalog, inventory, customers, pricing, discounts, orders, analytics). An architecture review found the original schema was online-only (stock on the MongoDB product, no order channel, Stripe-only payments, no tenant-scoped customers), so a Commerce Core Foundation module was added at the start of Phase 2 and a POS phase (2.5) after it. Phase 3 analytics and Phase 4/5 AI features become channel-aware, and the AI layer gains business insights (sales trends, low-stock alerts, demand forecasting). The timeline grows from 31 to about 35 weeks.
 >
-> **Checklist update (2026-09-25):** the team's revised list added six items, marked *(new, 2026-09-25)* below: staff accounts as its own Phase 3 line (already built, ticked), AI marketing copy generation, the AI quota meter on the merchant dashboard, stretch AI product photo editing, a mobile responsiveness check in Phase 7, and a Turnitin plagiarism report in Phase 8. Phases 0 to 5 are complete, including every Phase 4 item; Phase 6 is complete except the stretch photo editing item; Phases 7 and 8 have not started. Nothing else in the plan was restructured.
+> **Checklist update (2026-09-25):** the team's revised list added six items, marked *(new, 2026-09-25)* below: staff accounts as its own Phase 3 line (already built, ticked), AI marketing copy generation, the AI quota meter on the merchant dashboard, stretch AI product photo editing, a mobile responsiveness check in Phase 7, and a Turnitin plagiarism report in Phase 8. Phases 0 to 5 are complete, including every Phase 4 item; Phase 6 is complete except the stretch photo editing item; Part A of the 2026-09-26 roadmap is complete; Phases 7 and 8 have not started. Nothing else in the plan was restructured.
 
 ---
 
@@ -71,6 +71,14 @@ Tracks build progress. One item is completed per session, in order, only when ex
 - [x] Frontend: display recommended products on Product Detail + Storefront Home; see `documentation/Phase6_AI_Recommendation_Service.md`
 - [ ] *(new, 2026-09-25, stretch)* AI product photo editing (only if time allows after Phases 7 and 8 are on track)
 
+**New parts (roadmap of 2026-09-26)** *(new, built after Phase 6 and before Phase 7. Detailed schema, endpoints, risks, estimates and viva answers are still to be written and approved; Part A was started on the team's instruction ahead of that. Each part is built on its own branch and merged by pull request.)*
+- [x] 🆕 **Part A: Revenue model.** Free, Pro and Business plans with limits; plan changes only from Stripe's verified webhook, falling back to Free on a failed renewal; limits with upgrade prompts; one-off AI top-up packs; orchestrator cost controls (model per task, prompt cap, cache); platform view of per-store totals. See `documentation/PartA_Revenue_Model.md`.
+- [ ] 🆕 Part B: Usage counters (order and sales counters updated at write time; AI usage per tenant per month)
+- [ ] 🆕 Part C: AI Growth Advisor (weekly rules, then one short AI message; extends the business insights)
+- [ ] 🆕 Part D: AI Trend Scout (weekly trend reports per category, Pakistan and worldwide, with sources)
+- [ ] 🆕 Part E: AI Payment and Trust (COD, payment adapter, COD risk agent, screenshot verifier, courier reconciliation, payment nudge, payment error helper)
+- [ ] 🆕 Part F: Search (keep keyword search independent of AI; semantic search is a stretch)
+- [ ] 🆕 Part G (stretch): voice-note store manager, bargaining assistant, season and festival planner
 **Phase 7: Testing** *(nothing below is ticked yet. Coverage that already exists is noted, because it is not the same as the formal deliverable)*
 - [ ] Unit tests (Jest). Not started: so far logic is covered by the end-to-end `backend/scripts/verify-*.ts` scripts (789 checks), not by Jest unit tests.
 - [ ] Integration tests incl. tenant-isolation (Jest + Supertest). Tenant isolation is already checked inside the verify scripts against real Postgres, MongoDB and Redis; converting them to Jest + Supertest is the open work.

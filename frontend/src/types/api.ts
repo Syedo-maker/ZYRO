@@ -4,6 +4,8 @@ export interface User {
   id: string
   email: string
   name: string | null
+  /** True for a platform operator (can open the platform view). Only /users/me reports it. */
+  platformAdmin?: boolean
 }
 
 export interface Store {

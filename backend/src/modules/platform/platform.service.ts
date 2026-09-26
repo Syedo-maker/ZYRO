@@ -18,7 +18,6 @@ const SALES_JOIN = `EXISTS (SELECT 1 FROM "Payment" p WHERE p."orderId" = o."id"
 
 interface Totals {
   orders: number;
-  gross: string;
 }
 
 export const platformService = {
@@ -32,7 +31,7 @@ export const platformService = {
       monthlyRecurringCents += PLANS[tier].priceCents;
     }
     const [totals] = await prismaUnscoped.$queryRawUnsafe<Totals[]>(
-      `SELECT count(*)::int AS orders, COALESCE(sum(o."total"), 0)::text AS gross FROM "Order" o WHERE ${SALES_JOIN}`
+      `SELECT count(*)::int AS orders FROM "Order" o WHERE ${SALES_JOIN}`
     );
     const quotas = await prismaUnscoped.aiUsageQuota.aggregate({
       where: { month: currentMonth() },
@@ -42,8 +41,8 @@ export const platformService = {
       stores: tenants.length,
       storesByPlan: byPlan,
       monthlyRecurringRevenue: monthlyRecurringCents / 100,
+      // Orders only: stores sell in different currencies, so a platform-wide sales sum would mix them.
       orders: totals?.orders ?? 0,
-      grossSales: Number(totals?.gross ?? 0),
       aiUsageThisMonth: { generations: quotas._sum.generationsUsed ?? 0, chatMessages: quotas._sum.chatMessagesUsed ?? 0 },
       /** Each plan and top-up pack: price against worst-case cost, so a bad edit to lib/plans.ts is visible. */
       economics: planEconomics(),
@@ -60,7 +59,7 @@ export const platformService = {
         orderBy: { createdAt: "desc" },
         skip: opts.offset,
         take: opts.limit,
-        select: { id: true, name: true, slug: true, plan: true, planExpiresAt: true, createdAt: true },
+        select: { id: true, name: true, slug: true, currency: true, plan: true, planExpiresAt: true, createdAt: true },
       }),
       prismaUnscoped.tenant.count({ where }),
     ]);
@@ -90,6 +89,7 @@ export const platformService = {
           id: t.id,
           name: t.name,
           slug: t.slug,
+          currency: t.currency,
           plan: PLANS[tier].name,
           paidUntil: t.planExpiresAt,
           createdAt: t.createdAt,

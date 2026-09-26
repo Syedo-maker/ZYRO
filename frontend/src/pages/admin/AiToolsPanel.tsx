@@ -3,6 +3,8 @@ import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { ApiError } from '../../lib/apiClient'
+import { upgradeHintOf } from '../../lib/billingApi'
+import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { errorMessage } from '../../lib/ordersApi'
 import { aiUsageApi, aiDescriptionApi, aiSuggestionsApi, aiReviewSummaryApi, aiMarketingApi } from '../../lib/aiContentApi'
 import type { AiDescriptionDraft, AiUsageQuota, AutoTagSuggestion, MarketingChannel, MarketingTone, ReviewSummaryStatus, SeoMetadataSuggestion } from '../../types/shop'
@@ -64,6 +66,7 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
   const [notes, setNotes] = useState('')
   const [copyText, setCopyText] = useState<string | null>(null)
   const [copied, setCopied] = useState<'yes' | 'failed' | null>(null)
+  const [limitError, setLimitError] = useState<unknown>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -88,13 +91,16 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
   async function run<T>(name: string, action: () => Promise<T>): Promise<T | undefined> {
     setBusy(name)
     setError(null)
+    setLimitError(null)
     try {
       const result = await action()
       const fresh = await aiUsageApi.get(storeId)
       setUsage(fresh)
       return result
     } catch (e) {
-      setError(quotaExhausted(e) ? `This store has used all ${usage?.generationsLimit ?? ''} AI generations included this month.` : errorMessage(e))
+      // A used-up allowance is a 402 carrying an upgrade hint: show that, not a bare error.
+      if (quotaExhausted(e) && upgradeHintOf(e)) setLimitError(e)
+      else setError(errorMessage(e))
       return undefined
     } finally {
       setBusy(null)
@@ -163,6 +169,7 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
         <QuotaLine usage={usage} />
       </div>
       {error && <Alert>{error}</Alert>}
+      <UpgradeNotice error={limitError} />
 
       {/* ---- Description ---- */}
       <section className="flex flex-col gap-2">

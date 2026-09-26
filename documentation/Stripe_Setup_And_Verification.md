@@ -11,7 +11,7 @@ Until now the Stripe integration had only been tested against a stand-in. This r
 | Stripe test sandbox | Created with the official Stripe CLI (`stripe sandbox create --email finalyear860@gmail.com`). Test mode only, no real money. |
 | `STRIPE_SECRET_KEY` | In `backend/.env` (gitignored, confirmed by `git check-ignore`). A restricted key (`rkcs_test_...`). |
 | `STRIPE_WEBHOOK_SECRET` | In `backend/.env`; verified to be the same secret the webhook forwarder signs with. |
-| Webhook forwarding | `npx --yes @stripe/cli listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired --forward-to localhost:5000/api/v1/webhooks/stripe` (must be running whenever you test payments locally). |
+| Webhook forwarding | `npx --yes @stripe/cli listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted --forward-to localhost:5000/api/v1/webhooks/stripe` (must be running whenever you test payments locally). |
 
 To repeat on another machine: install nothing globally, run `npx --yes @stripe/cli sandbox create --email <your email>`, copy the test key it saves (the CLI keeps it in `~/.config/stripe/config.toml`) into `backend/.env` as `STRIPE_SECRET_KEY`, run `npx --yes @stripe/cli listen --print-secret` and put that value in `STRIPE_WEBHOOK_SECRET`, then start the forwarder as above.
 
@@ -48,3 +48,11 @@ Stripe's real page displayed a **"Choose currency" switch (PKR or USD)**. This i
 ## Not covered
 
 Disputes and chargebacks (`charge.dispute.*` events) are not handled, and there are no partial refunds; both matter once real money flows. Stripe's own receipt emails were not checked in the sandbox. A real delayed payment method (bank debit) was not run.
+
+## Plans and billing (Part A)
+
+ZYRO's own subscriptions and AI packs use the same keys and the same webhook endpoint as shoppers' payments. Three more events are needed (already in the forwarder command above): `customer.subscription.created`, `customer.subscription.updated` and `customer.subscription.deleted`. The handler tells the two kinds of payment apart by the `purpose` in the Checkout Session's metadata, and it never trusts an event's contents for a subscription: it reads the subscription from Stripe again, so a late event cannot undo a later one.
+
+The API key needs permission to create Checkout Sessions, read and write Customers and Subscriptions, and create Billing Portal sessions and configurations. A restricted key that was made only for checkout may lack these; if the billing endpoints answer 500, widen the key's permissions first.
+
+Without Stripe, `scripts/e2e-server.ts` stands in for it: Choose Pro or Buy an AI pack goes to a fake payment page, and `POST /__e2e/billing` (`{ storeId, kind: "subscription" | "topup" | "cancel", plan | pack }`) plays Stripe's webhook through the real handler. That is how the billing screens can be tried with no account.

@@ -162,6 +162,11 @@ export interface AiUsageQuota {
   generationsLimit: number
   chatMessagesUsed: number
   chatMessagesLimit: number
+  /** Credits from bought AI packs, spent only after the monthly allowance is used up. */
+  topUpGenerations: number
+  topUpChatMessages: number
+  /** The plan the allowance comes from, e.g. "Free". */
+  plan: string
 }
 
 export interface AiDescriptionDraft {

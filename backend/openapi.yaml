@@ -64,6 +64,10 @@ tags:
     description: Sales and marketing analytics.
   - name: webhooks
     description: Inbound webhooks from third-party providers.
+  - name: billing
+    description: Plans, subscriptions and AI top-up packs for a store (owner only), and the public price list.
+  - name: platform
+    description: The platform operator's view of per-store totals (super administrators only; no customer data).
 
 security:
   - bearerAuth: []
@@ -1057,7 +1061,7 @@ paths:
               properties:
                 channel: { type: string, enum: [social_post, email, ad_headlines] }
                 tone: { type: string, enum: [friendly, professional, playful, luxury], default: friendly }
-                notes: { type: string, maxLength: 200, description: Offer details to mention, for example "20% off this weekend". }
+                notes: { type: string, maxLength: 200, description: "Offer details to mention, for example 20% off this weekend." }
       responses:
         "200":
           description: Suggestion
@@ -2609,6 +2613,202 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  # ── PLANS AND BILLING (Part A) ────────────────────────────────────────
+  /plans:
+    get:
+      tags: [billing]
+      operationId: plans_list
+      summary: The public price list
+      description: |
+        Free, Pro and Business with their limits and monthly price, and the one-off AI top-up packs.
+        `billingConfigured` is false when the server has no Stripe keys, in which case nothing can be bought.
+      security: []
+      responses:
+        "200":
+          description: Catalog
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanCatalog" }
+
+  /stores/{storeId}/billing:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [billing]
+      operationId: billing_overview
+      summary: This store's plan, limits and usage
+      description: |
+        Owner-only: staff never see or spend billing, whatever permissions they hold. `plan.tier` is the
+        plan the store can use right now: a paid plan whose paid period plus a 24 hour grace has passed
+        counts as FREE even if no webhook has arrived, and `plan.lapsedFrom` then names the plan it lapsed from.
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BillingOverview" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/billing/subscribe:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [billing]
+      operationId: billing_subscribe
+      summary: Start a Pro or Business subscription
+      description: |
+        Owner-only. Returns a Stripe Checkout URL; the price is the server's, the request only names the
+        plan. **The plan does not change here.** It changes only when Stripe's verified webhook confirms
+        the payment. Only a store on Free can start one (`409` otherwise): a paid store changes plan by
+        cancelling and choosing again when the period ends.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan]
+              properties:
+                plan: { type: string, enum: [PRO, BUSINESS] }
+      responses:
+        "200":
+          description: Where to send the browser
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutUrl" }
+        "400": { description: "Unknown plan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "The store already has a paid plan" }
+        "503": { description: "Stripe is not configured on this server" }
+  /stores/{storeId}/billing/top-up:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [billing]
+      operationId: billing_top_up
+      summary: Buy a one-off AI top-up pack
+      description: |
+        Owner-only, on any plan. Returns a Stripe Checkout URL. Credits are added only when the verified
+        webhook confirms payment, exactly once per payment. They are spent after the plan's monthly
+        allowance runs out, and do not expire at month end.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pack]
+              properties:
+                pack: { type: string, enum: [small, large] }
+      responses:
+        "200":
+          description: Where to send the browser
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutUrl" }
+        "400": { description: "Unknown pack" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { description: "Stripe is not configured on this server" }
+  /stores/{storeId}/billing/portal:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [billing]
+      operationId: billing_portal
+      summary: Open Stripe's page to manage the subscription
+      description: Owner-only. Update the card, see invoices, or cancel (at the end of the paid period).
+      responses:
+        "200":
+          description: Where to send the browser
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutUrl" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "The store has no Stripe customer yet (it never paid)" }
+  /stores/{storeId}/domain:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    patch:
+      tags: [stores]
+      operationId: store_domain_update
+      summary: Set or clear the store's custom domain
+      description: |
+        Owner-only. Setting a domain needs a plan that includes one (Business): otherwise `402` with an
+        `upgrade` hint. Clearing (`null`) is always allowed. Only the name is stored; serving the storefront
+        on it is not built yet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customDomain]
+              properties:
+                customDomain: { type: [string, "null"], example: shop.example.com, description: "A plain host name, lowercase; no scheme, port or path." }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customDomain: { type: [string, "null"],  }
+        "400": { description: "Not a valid host name" }
+        "402": { $ref: "#/components/responses/PlanLimit" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Another store already uses that domain" }
+  # ── PLATFORM (Part A) ─────────────────────────────────────────────────
+  /platform/summary:
+    get:
+      tags: [platform]
+      operationId: platform_summary
+      summary: Totals across all stores, and each plan's price against its worst-case cost
+      description: |
+        Super administrators only (`User.platformRole`, granted with `scripts/make-super-admin.ts`, never
+        through the API). Counts and sums only: no customer data. Orders are counted but sales are not
+        summed across stores, because stores sell in different currencies.
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformSummary" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /platform/tenants:
+    get:
+      tags: [platform]
+      operationId: platform_tenants
+      summary: Per-store totals
+      description: |
+        Super administrators only. For each store: name, address, plan, paid-until, product count, order
+        count, sales in the store's own currency and this month's AI use. No owner emails and no customer data.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
+          description: Matches the store name or address.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: A page of stores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/PlatformTenant" }
+                  pagination: { $ref: "#/components/schemas/PaginationInfo" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2652,6 +2852,18 @@ components:
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Error" }
+    PlanLimit:
+      description: |
+        The store's plan does not include this (a product, staff or analytics-window limit, or a feature such
+        as a custom domain). The problem body carries an `upgrade` member saying which limit and which plan lifts it.
+      content:
+        application/problem+json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - type: object
+                properties:
+                  upgrade: { $ref: "#/components/schemas/UpgradeHint" }
     TooManyRequests:
       description: |
         Too many attempts. Wait for the number of seconds in `Retry-After` before trying again.
@@ -2666,6 +2878,131 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    UpgradeHint:
+      type: object
+      required: [feature, currentPlan, requiredPlan]
+      description: |
+        Carried by `402` answers: a plan limit (`plan-limit-reached`) or an used-up AI allowance
+        (`ai-quota-exhausted`, which also has `topUpAvailable: true`).
+      properties:
+        feature: { type: string, enum: [products, staff, analytics_range, custom_domain, ai_generations, ai_chat_messages] }
+        currentPlan: { type: string, example: Free }
+        requiredPlan: { type: [string, "null"], description: "The cheapest plan that lifts the limit; null when even the top plan does not." }
+        limit: { type: integer, description: "The current plan's limit, when it is a number." }
+    PlanInfo:
+      type: object
+      required: [tier, name, priceCents, currency, maxProducts, maxStaff, aiGenerationsPerMonth, aiChatMessagesPerMonth, analyticsMaxDays, customDomain]
+      properties:
+        tier: { type: string, enum: [FREE, PRO, BUSINESS] }
+        name: { type: string }
+        priceCents: { type: integer, description: "Monthly price in the smallest unit of `currency`; 0 for Free." }
+        currency: { type: string, example: usd }
+        maxProducts: { type: integer }
+        maxStaff: { type: integer, description: "Staff accounts besides the owner." }
+        aiGenerationsPerMonth: { type: integer }
+        aiChatMessagesPerMonth: { type: integer }
+        analyticsMaxDays: { type: integer, description: "Longest window one analytics request may cover." }
+        customDomain: { type: boolean }
+
+    TopUpPack:
+      type: object
+      required: [id, name, generations, chatMessages, priceCents]
+      properties:
+        id: { type: string, enum: [small, large] }
+        name: { type: string }
+        generations: { type: integer }
+        chatMessages: { type: integer }
+        priceCents: { type: integer }
+
+    PlanCatalog:
+      type: object
+      required: [currency, plans, topUpPacks, billingConfigured]
+      properties:
+        currency: { type: string }
+        plans: { type: array, items: { $ref: "#/components/schemas/PlanInfo" } }
+        topUpPacks: { type: array, items: { $ref: "#/components/schemas/TopUpPack" } }
+        billingConfigured: { type: boolean }
+
+    UsageFigure:
+      type: object
+      required: [used, limit]
+      properties:
+        used: { type: integer }
+        limit: { type: integer }
+
+    BillingOverview:
+      allOf:
+        - $ref: "#/components/schemas/PlanCatalog"
+        - type: object
+          required: [plan, limits, usage, topUp]
+          properties:
+            plan:
+              type: object
+              required: [tier, name, status, lapsedFrom, paidUntil, canManageSubscription]
+              properties:
+                tier: { type: string, enum: [FREE, PRO, BUSINESS], description: "The plan the store can use right now." }
+                name: { type: string }
+                status: { type: string, enum: [free, active, grace], description: "grace: the paid period ended a moment ago and is still honoured while a renewal arrives." }
+                lapsedFrom: { type: [string, "null"], description: "The paid plan that ended, when the store is back on Free." }
+                paidUntil: { type: [string, "null"], format: date-time,  }
+                canManageSubscription: { type: boolean }
+            limits: { $ref: "#/components/schemas/PlanInfo" }
+            usage:
+              type: object
+              properties:
+                products: { $ref: "#/components/schemas/UsageFigure" }
+                staff: { $ref: "#/components/schemas/UsageFigure" }
+                aiGenerations: { $ref: "#/components/schemas/UsageFigure" }
+                aiChatMessages: { $ref: "#/components/schemas/UsageFigure" }
+            topUp:
+              type: object
+              properties:
+                generations: { type: integer }
+                chatMessages: { type: integer }
+
+    CheckoutUrl:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, format: uri, description: "A Stripe-hosted page to send the browser to." }
+    PlatformSummary:
+      type: object
+      properties:
+        stores: { type: integer }
+        storesByPlan: { type: object, additionalProperties: { type: integer } }
+        monthlyRecurringRevenue: { type: number, description: "In US dollars, from plans currently paid for." }
+        orders: { type: integer }
+        aiUsageThisMonth:
+          type: object
+          properties:
+            generations: { type: integer }
+            chatMessages: { type: integer }
+        economics:
+          type: array
+          description: Each plan and pack, its price and its worst-case cost in US dollars.
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              priceUsd: { type: number }
+              worstCaseCostUsd: { type: number }
+              profitable: { type: boolean }
+
+    PlatformTenant:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        currency: { type: string }
+        plan: { type: string }
+        paidUntil: { type: [string, "null"], format: date-time,  }
+        createdAt: { type: string, format: date-time }
+        products: { type: integer }
+        orders: { type: integer }
+        grossSales: { type: number, description: "In the store's own currency." }
+        aiGenerationsUsed: { type: integer }
+        aiChatMessagesUsed: { type: integer }
     Error:
       description: RFC 7807 problem details.
       type: object
@@ -2710,6 +3047,7 @@ components:
         id: { type: string }
         email: { type: string, format: email }
         name: { type: string }
+        platformAdmin: { type: boolean, description: "Only in the users_me_get answer: true for a platform operator, who may open the /platform routes." }
 
     Store:
       type: object
@@ -2886,13 +3224,16 @@ components:
 
     AiUsageQuota:
       type: object
-      required: [month, generationsUsed, generationsLimit, chatMessagesUsed, chatMessagesLimit]
+      required: [month, generationsUsed, generationsLimit, chatMessagesUsed, chatMessagesLimit, topUpGenerations, topUpChatMessages, plan]
       properties:
         month: { type: string, description: "YYYY-MM" }
         generationsUsed: { type: integer }
         generationsLimit: { type: integer }
         chatMessagesUsed: { type: integer }
         chatMessagesLimit: { type: integer }
+        topUpGenerations: { type: integer, description: "Credits left from bought AI packs; spent only after the monthly allowance is used up." }
+        topUpChatMessages: { type: integer }
+        plan: { type: string, description: "The plan the allowance comes from, e.g. Free." }
 
     CartItem:
       type: object

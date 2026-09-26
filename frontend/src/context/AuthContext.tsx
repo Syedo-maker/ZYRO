@@ -82,8 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(input: LoginInput) {
     const session = await apiFetch<AuthSession>('/auth/login', { method: 'POST', body: input })
     setAccessToken(session.accessToken)
-    setUser(session.user)
-    setStores(await apiFetch<MyStore[]>('/users/me/stores'))
+    // The sign-in answer has no platformAdmin flag; /users/me does.
+    const [profile, mine] = await Promise.all([apiFetch<User>('/users/me'), apiFetch<MyStore[]>('/users/me/stores')])
+    setUser(profile)
+    setStores(mine)
   }
 
   async function register(input: RegisterInput) {
