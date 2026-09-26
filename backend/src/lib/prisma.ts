@@ -6,7 +6,7 @@ import { tenantContext } from "./tenantContext";
  * must be scoped to the current request's tenant on every read/write; this is the
  * Postgres-side counterpart to the Mongoose `tenantScopePlugin` from the MongoDB models.
  */
-const TENANT_SCOPED_MODELS = new Set([
+export const TENANT_SCOPED_MODELS = new Set([
   "StaffMember",
   "Location",
   "InventoryLevel",

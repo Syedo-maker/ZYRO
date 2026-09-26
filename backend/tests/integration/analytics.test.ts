@@ -7,35 +7,38 @@
  * 5-minute Redis cache (and that a Redis failure only costs speed), permissions, validation,
  * tenant isolation, and speed with thousands of orders.
  * Creates throwaway stores and removes them after.
- * Usage: npx tsx scripts/verify-analytics.ts   (Redis must be running on REDIS_URL)
+ * Run with: npm test -- analytics
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "false"; // many registrations in a row; verify-security.ts covers the limits
 process.env.STRIPE_SECRET_KEY = "sk_test_verifyanalytics";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_verifyanalytics";
 
-import type { AddressInfo } from "node:net";
-
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
 
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { getRedis, closeRedis } = await import("../src/lib/redis");
-  const { getStripeGateway, setStripeGateway } = await import("../src/lib/stripe");
-  const { tenantContext } = await import("../src/lib/tenantContext");
-  const { createOrder } = await import("../src/modules/commerce/order.service");
-  const { resolveRange, localDays } = await import("../src/modules/analytics/analytics.service");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { getRedis, closeRedis } = await import("../../src/lib/redis");
+  const { getStripeGateway, setStripeGateway } = await import("../../src/lib/stripe");
+  const { tenantContext } = await import("../../src/lib/tenantContext");
+  const { createOrder } = await import("../../src/modules/commerce/order.service");
+  const { resolveRange, localDays } = await import("../../src/modules/analytics/analytics.service");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
   setStripeGateway({
     ...getStripeGateway(),
     async refundPaymentIntent(_pi, key) {
@@ -79,11 +82,11 @@ async function main() {
     const cashier = await staffMember(A, "cashier", ["pos_sell"]);
     await prismaUnscoped.tenant.update({ where: { id: A.storeId }, data: { taxRate: "10" } });
 
-    const mk = async (title: string, price: number, costPrice?: number, taxable = true) =>
-      (await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title, price, stock: 5000, category: "t", taxable, ...(costPrice === undefined ? {} : { costPrice }) } })).json.id as string;
+    const mk = async (title: string, price: number, costPrice?: number, taxable = true, category = "t") =>
+      (await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title, price, stock: 5000, category, taxable, ...(costPrice === undefined ? {} : { costPrice }) } })).json.id as string;
     const widget = await mk("Widget", 20, 8);
     const gadget = await mk("Gadget", 10, undefined, false);
-    const gizmo = await mk("Gizmo", 50, 30);
+    const gizmo = await mk("Gizmo", 50, 30, true, "premium");
 
     let pi = 0;
     const at = (iso: string) => new Date(iso);
@@ -152,6 +155,7 @@ async function main() {
     check("products: units split by channel", p1.unitsOnline === 2 && p1.unitsPos === 3 && p2.unitsOnline === 1 && p2.unitsPos === 3 && p3.unitsOnline === 1 && p3.unitsPos === 1);
     check("products: margin from the recorded cost (Widget 60, Gizmo 40); null when no cost was ever recorded (Gadget)", p1.productMargin === 60 && p3.productMargin === 40 && p2.productMargin === null && j.totals.productMargin === 100 && j.totals.costCoveragePercent === 63.6);
     check("products: each has an id", j.topProducts.every((p: { productId: string }) => p.productId === widget || p.productId === gadget || p.productId === gizmo));
+    check("categories: revenue and units per category, largest first (t: Widget 100 + Gadget 40 = 140, 9 units; premium: Gizmo 100, 2 units)", JSON.stringify(j.byCategory) === JSON.stringify([{ category: "t", revenue: 140, unitsSold: 9 }, { category: "premium", revenue: 100, unitsSold: 2 }]), JSON.stringify(j.byCategory));
 
     // ---- Daily series ----
     const day = (d: string) => j.daily.find((x: { date: string }) => x.date === d);
@@ -185,9 +189,9 @@ async function main() {
 
     // ---- Empty periods, and isolation ----
     const empty = (await S("?from=2026-01-01T00:00:00Z&to=2026-01-08T00:00:00Z")).json;
-    check("empty: a quiet week is zeros, both channels, 7 days, no products, not an error", empty.totals.orders === 0 && empty.totals.netSales === 0 && empty.totals.averageOrderValue === 0 && empty.byChannel.length === 2 && empty.byChannel.every((c: { shareOfNetSales: number }) => c.shareOfNetSales === 0) && empty.daily.length === 7 && empty.topProducts.length === 0 && empty.totals.costCoveragePercent === 0);
+    check("empty: a quiet week is zeros, both channels, 7 days, no products, not an error", empty.totals.orders === 0 && empty.totals.netSales === 0 && empty.totals.averageOrderValue === 0 && empty.byChannel.length === 2 && empty.byChannel.every((c: { shareOfNetSales: number }) => c.shareOfNetSales === 0) && empty.daily.length === 7 && empty.topProducts.length === 0 && empty.byCategory.length === 0 && empty.totals.costCoveragePercent === 0);
     const bView = await S(`?${WINDOW}`, B.token, B.storeId);
-    check("isolation: store B sees none of store A's sales, even for the same window", bView.status === 200 && bView.json.totals.orders === 0 && bView.json.totals.grossSales === 0 && bView.json.topProducts.length === 0 && bView.json.totals.newCustomers === 0);
+    check("isolation: store B sees none of store A's sales, even for the same window", bView.status === 200 && bView.json.totals.orders === 0 && bView.json.totals.grossSales === 0 && bView.json.topProducts.length === 0 && bView.json.byCategory.length === 0 && bView.json.totals.newCustomers === 0);
     check("isolation: store B's owner cannot read store A's analytics (403)", (await S(`?${WINDOW}`, B.token, A.storeId)).status === 403);
 
     // ---- Permissions and validation ----
@@ -255,17 +259,64 @@ async function main() {
       await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     }
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "setup: the refund and the return were accepted",
+  "summary: 200 with the range, currency and generation time",
+  "totals: 6 sales, gross 285.40 (131.00 online + 154.40 in-store)",
+  "totals: unpaid, cancelled-unpaid, before-window and end-of-window orders are not counted",
+  "totals: refunds are 32.00 in 2 records (22.00 online whole-order, 10.00 in-store return)",
+  "totals: net sales 253.40 (109.00 online, 144.40 in-store)",
+  "totals: average order value 47.57 and channel averages",
+  "totals: discounts 6.00, tax 21.40, no shipping",
+  "channels: both channels are always listed and their shares add to 100%",
+  "customers: only the 2 created inside the window are new",
+  "products: 11 units kept (a fully refunded sale and a returned unit are left out)",
+  "products: ranked by units: Widget 5, Gadget 4, Gizmo 2",
+  "products: revenue before order discounts, net of returned units (Widget 100, Gadget 40, Gizmo 100)",
+  "products: units split by channel",
+  "products: margin from the recorded cost (Widget 60, Gizmo 40); null when no cost was ever recorded (Gadget)",
+  "products: each has an id",
+  "categories: revenue and units per category, largest first (t: Widget 100 + Gadget 40 = 140, 9 units; premium: Gizmo 100, 2 units)",
+  "daily: one entry for every day, quiet days included as zeros",
+  "daily: Aug 5 has both online orders (109.00), Aug 6 both in-store (114.40)",
+  "daily: a refund lands on the day it is paid back, not the day of the sale",
+  "daily: the days add up to the totals",
+  "oracle: gross, refunds, net and order count match a straight recomputation from the database",
+  "parity: the in-store figures equal the POS daily report for the same window",
+  "timezone: at +05:00 the 23:30Z order belongs to Aug 6, and the window touches 32 local days",
+  "timezone: totals do not depend on the zone",
+  "timezone: at -05:00 both online orders (10:00Z and 23:30Z) stay on Aug 5, and the window touches 32 local days (Jul 31 to Aug 31)",
+  "timezone: pure helper covers the calendar days a window touches",
+  "empty: a quiet week is zeros, both channels, 7 days, no products, not an error",
+  "isolation: store B sees none of store A's sales, even for the same window",
+  "isolation: store B's owner cannot read store A's analytics (403)",
+  "permissions: no token is 401",
+  "permissions: a cashier (pos_sell only) is 403",
+  "permissions: staff with analytics_read can read it",
+  "permissions: someone with no role at the store is 403",
+  "validation: only 'from', or only 'to', is 400",
+  "validation: 'to' not after 'from' is 400",
+  "validation: more than 366 days is 400, exactly 366 is fine",
+  "validation: a bad date or an out-of-range time zone is 400",
+  "default: the window is the last 30 days ending on a five-minute mark",
+  "default: with no dates it reports the last 30 days and includes a sale made just now (and the Sep 1 order from the scenario, which falls in the last 30 days)",
+  "cache: the first answer is stored in Redis for 5 minutes",
+  "cache: the next request is served from the cache (same numbers, marked cached), so a sale a moment ago is not in it yet",
+  "cache: once the entry is gone (or after 5 minutes) fresh figures appear",
+  "cache: analysts share the store's cache entry",
+  "cache: another store's default request has its own entry and its own numbers",
+  "cache: if Redis is down the dashboard still answers with fresh, correct figures",
+  /^speed: a 364-day report over .* orders answers in under 1\.5 seconds$/,
+  "scale: every order is counted, split 1/3 in-store and 2/3 online, and the money adds up",
+  "speed: the order query can use an index on tenant and date",
+]);

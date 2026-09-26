@@ -4,8 +4,18 @@
  * auto-tag, SEO metadata, and marketing copy, all against the real HTTP API, real Postgres/MongoDB/Redis/BullMQ,
  * with a fake AI provider standing in for the network call to Anthropic (the same pattern
  * verify-discounts.ts uses for Stripe). Creates throwaway stores and users and removes them after.
- * Usage: npx tsx scripts/verify-ai-content.ts   (Redis must be running on REDIS_URL)
+ * Run with: npm test -- ai-content
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "false";
 // Store A's own lifecycle test makes ~25 AI calls end to end; store B gets its own quota row
 // (Implementation_Plan.md Phase 4: quota is per [tenantId, month]) and is used, untouched by A,
@@ -18,29 +28,22 @@ process.env.AI_CACHE_SECONDS = "0";
 // (see the comment on AI_QUEUE_NAME in lib/aiQueue.ts).
 process.env.AI_QUEUE_NAME = `ai-generate-verify-${Date.now().toString(36)}`;
 
-import type { AddressInfo } from "node:net";
-
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
 
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { setAiProvider } = await import("../src/lib/aiProvider");
-  const { startAiWorker, closeAiQueue } = await import("../src/lib/aiQueue");
-  const { AiGeneratedContent } = await import("../src/models/AiGeneratedContent.model");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { setAiProvider } = await import("../../src/lib/aiProvider");
+  const { startAiWorker, closeAiQueue } = await import("../../src/lib/aiQueue");
+  const { AiGeneratedContent } = await import("../../src/models/AiGeneratedContent.model");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
   startAiWorker();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
   async function api(method: string, path: string, opts: { token?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
@@ -234,22 +237,72 @@ async function main() {
     const productIds = await Product.find({ storeId: { $in: created.tenantIds } }).select("_id");
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });
     await AiGeneratedContent.deleteMany({ storeId: { $in: created.tenantIds } });
-    const { ProductReview } = await import("../src/models/ProductReview.model");
+    const { ProductReview } = await import("../../src/models/ProductReview.model");
     await ProductReview.deleteMany({ storeId: { $in: created.tenantIds }, productId: { $in: productIds.map((p) => p._id) } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeAiQueue();
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "product: tags, seoTitle and seoDescription round-trip through create/update",
+  "ai-usage: starts at 0 of 6 generations",
+  "description: before anything is generated, GET returns null (and costs nothing)",
+  "description: generate returns a draft with the fake provider's text",
+  "description: the prompt includes what the merchant already entered (title, category, price)",
+  "description: generating consumes one generation from quota",
+  "product: aiDescriptionStatus is now draft, and the live description is unchanged until published",
+  "description: GET now returns the draft just generated, without spending another generation",
+  "description: the merchant can edit the draft by hand, marking it edited, with no quota cost",
+  "description: an empty edit is rejected (400)",
+  "description: regenerate replaces the draft and consumes another generation",
+  "description: the merchant's edited version was kept in history before being replaced",
+  "description: history never grows past 5 entries no matter how many times it is regenerated",
+  "description: history keeps the most recent superseded versions, oldest dropped first",
+  "description: publish copies the draft into the product's live description and returns the full product",
+  "product: aiDescriptionStatus is now published",
+  "description: generating again after a publish creates a fresh draft (status resets), keeping the published version reachable in history",
+  "product: the live description (already published) is untouched by a new unpublished draft",
+  "auto-tag: parses the category and tag list from the model's reply",
+  "auto-tag: a suggestion is never saved to the product by itself",
+  "auto-tag: a reply that does not follow the requested format is a clean error, not a crash or garbage data",
+  "seo-metadata: parses the meta title and description from the model's reply",
+  "seo-metadata: a suggestion is never saved to the product by itself",
+  "seo-metadata: an unparsable reply is a clean error",
+  "marketing: a social post comes back cleaned of markdown emphasis, hashtags kept, with the default tone",
+  "marketing: the prompt carries the product facts, and says no offer may be mentioned when the merchant gave none",
+  "marketing: the system prompt forbids inventing discounts or claims",
+  "marketing: an email keeps its Subject line, and the requested tone reaches the model",
+  "marketing: the merchant's offer details, and only those, are given to the model as the offer",
+  "marketing: an email reply without the requested Subject line is a clean error, not garbage",
+  "marketing: ad headlines are numbered or bulleted lines stripped down to three plain headlines",
+  "marketing: an empty reply is a clean error",
+  "marketing: every generation, including the failed ones, is spent from the same quota as the other AI tools",
+  "marketing: nothing is saved to the product (its live description is untouched)",
+  "marketing: an unknown channel, unknown tone, over-long notes or no body at all are 400",
+  "marketing: a 400 spends no quota",
+  "marketing: no token is 401, staff without products_write is 403",
+  "marketing: another store cannot generate copy for this store's product (404)",
+  "reviews: summarizing with no published reviews yet is refused (400)",
+  "reviews: with nothing generated yet, the summary status is null and not stale",
+  "reviews: summarizing with one review generates and caches a summary",
+  "reviews: summarizing consumed one generation, same quota as the description tools",
+  "reviews: GET returns the cached summary without calling the AI again",
+  "reviews: once 5 more reviews arrive, the cached summary is reported stale",
+  "reviews: regenerating refreshes the cache and clears staleness",
+  "permissions: no token is 401 on every AI content route",
+  "permissions: staff without products_write cannot use any AI content tool (403)",
+  "isolation: store B cannot see or act on store A's product (404, not 403 - ids do not leak)",
+  "ai-usage: store B's quota is untouched by everything done to store A (still 0 used)",
+  "quota: the limit was actually reached (used equals limit)",
+  "quota: once the monthly limit is reached, every AI content tool is refused with 402, not just the one that hit it",
+  "quota: marketing copy is refused with 402 too, once the limit is reached",
+]);

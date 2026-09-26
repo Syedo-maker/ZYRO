@@ -2,31 +2,34 @@
  * End-to-end check of Order & Shipping Management against the real local Postgres and
  * MongoDB, driven through the real HTTP API. Stripe's refund call is replaced by a
  * recording fake. Creates throwaway stores and users and removes them after.
- * Usage: npx tsx scripts/verify-orders.ts
+ * Run with: npm test -- orders
  */
-process.env.RATE_LIMIT_ENABLED = "false"; // these tests register many users quickly; verify-security.ts covers the limits
-import type { AddressInfo } from "node:net";
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
 }
 
+process.env.RATE_LIMIT_ENABLED = "false"; // these tests register many users quickly; verify-security.ts covers the limits
+
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { setStripeGateway } = await import("../src/lib/stripe");
-  const { tenantContext } = await import("../src/lib/tenantContext");
-  const { createOrder } = await import("../src/modules/commerce/order.service");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { setStripeGateway } = await import("../../src/lib/stripe");
+  const { tenantContext } = await import("../../src/lib/tenantContext");
+  const { createOrder } = await import("../../src/modules/commerce/order.service");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
 
   const refundCalls: { pi: string; key: string }[] = [];
   let failRefunds = false;
@@ -40,6 +43,19 @@ async function main() {
       return { id: `re_${key}` };
     },
     async expireCheckoutSession() {
+      throw new Error("not used here");
+    },
+    // Plan billing (Part A) is not used by this suite.
+    async createSubscriptionCheckout() {
+      throw new Error("not used here");
+    },
+    async createTopUpCheckout() {
+      throw new Error("not used here");
+    },
+    async createBillingPortalSession() {
+      throw new Error("not used here");
+    },
+    async retrieveSubscription() {
       throw new Error("not used here");
     },
     constructEvent() {
@@ -229,17 +245,78 @@ async function main() {
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "setup: 10 orders (11 units) placed, stock 30 to 19",
+  "zones: staff without orders_write cannot create (403)",
+  "zones: no token is 401",
+  "zones: staff with orders_write creates a zone",
+  "zones: negative rate is rejected",
+  "zones: list is public (shoppers see options before checkout)",
+  "zones: update",
+  "zones: another store's owner cannot edit (403)",
+  "zones: unknown zone is 404",
+  "zones: delete then delete again",
+  "orders: no token is 401",
+  "orders: a user with no role in the store gets 403",
+  "orders: staff with orders_write lists all 10, newest first",
+  "orders: lowercase enums and money as numbers",
+  "orders: channel filter (3 POS orders)",
+  "orders: status filter",
+  "orders: search by order number",
+  "orders: search by email fragment, case-insensitive",
+  "orders: search matches a linked customer's email",
+  "orders: date range in the future finds nothing",
+  "orders: pagination",
+  "orders: invalid filter is 400",
+  "orders: another store's owner sees none of them",
+  "detail: merchant sees any order with payments",
+  "detail: a shopper sees their own order",
+  "detail: a shopper cannot see someone else's order (404, not 403)",
+  "detail: another store's owner cannot see it either",
+  "detail: unknown order is 404",
+  "status: paid to fulfilled",
+  "status: fulfilling again is 409",
+  "status: refunded cannot be set by hand (400)",
+  "status: completed cannot be set by hand (400)",
+  "status: nonsense is 400",
+  "status: a shipped-out (fulfilled) order cannot be cancelled (409)",
+  "status: a POS order cannot be fulfilled or cancelled by hand (409)",
+  "cancel: staff without the refunds permission cannot cancel a paid order (403)",
+  "cancel: order becomes cancelled, payment refunded, one refund record",
+  "cancel: Stripe refunded once with a per-payment idempotency key",
+  "cancel: stock went back on the shelf (+1)",
+  "cancel: cancelling again is 409",
+  "refund: staff with only orders_write is forbidden (403)",
+  "refund: POS cash sale is refunded with no Stripe call",
+  "refund: a completed sale is not restocked unless asked (goods left the shop)",
+  "refund: split payment (card + cash) makes one refund per payment",
+  "refund: restock true puts the item back (+1)",
+  "refund: refunding again is 409",
+  "refund: a fulfilled online order refunds via Stripe, not restocked by default",
+  "refund: two simultaneous refunds of one order: exactly one wins",
+  "refund: only one refund record and stock restored once",
+  "refund: if Stripe fails, the order is untouched and nothing is recorded",
+  "refund: retrying after Stripe recovers succeeds",
+  "shipment: POS orders have no shipment (409)",
+  "shipment: empty body is 400",
+  "shipment: a new shipment cannot start as delivered (409)",
+  "shipment: shipping marks the order fulfilled and stamps shippedAt",
+  "shipment: delivered stamps deliveredAt and keeps carrier",
+  "shipment: delivered cannot go back to pending (409)",
+  "shipment: another store's owner cannot update it (403)",
+  "shipment: a refunded order cannot be shipped (409)",
+  "shipment: carrier-only creates a pending shipment, order stays paid",
+  "cancel: a pending shipment is cancelled with the order",
+  "ledger: stock movements still add up to the current stock",
+  "isolation: store B has no refunds, shipments or orders of store A",
+]);

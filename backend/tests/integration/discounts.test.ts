@@ -5,37 +5,40 @@
  * webhook fulfilment), holding a limited code while a shopper pays, in-store use at the register,
  * concurrency, and tenant isolation. Stripe's network calls are replaced by a recording fake.
  * Creates throwaway stores and removes them after.
- * Usage: npx tsx scripts/verify-discounts.ts   (Redis must be running on REDIS_URL)
+ * Run with: npm test -- discounts
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "false"; // many registrations in a row; verify-security.ts covers the limits
 process.env.STRIPE_SECRET_KEY = "sk_test_verifydisc";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_verifydisc";
 
-import type { AddressInfo } from "node:net";
 import Stripe from "stripe";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
-
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prisma, prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { getStripeGateway, setStripeGateway } = await import("../src/lib/stripe");
-  const { tenantContext } = await import("../src/lib/tenantContext");
-  const { createOrder } = await import("../src/modules/commerce/order.service");
-  const { discountService } = await import("../src/modules/discounts/discount.service");
-  const rules = await import("../src/modules/discounts/discount.rules");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prisma, prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { getStripeGateway, setStripeGateway } = await import("../../src/lib/stripe");
+  const { tenantContext } = await import("../../src/lib/tenantContext");
+  const { createOrder } = await import("../../src/modules/commerce/order.service");
+  const { discountService } = await import("../../src/modules/discounts/discount.service");
+  const rules = await import("../../src/modules/discounts/discount.rules");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
 
   // ---- The pure rules, no database ----
   {
@@ -103,7 +106,7 @@ async function main() {
       headers: { "Content-Type": "application/json", "Stripe-Signature": signer.webhooks.generateTestHeaderString({ payload, secret: "whsec_verifydisc" }) },
       body: payload,
     });
-    return { status: res.status, json: await res.json() };
+    return { status: res.status, json: (await res.json()) as any };
   }
 
   const suffix = Date.now().toString(36);
@@ -397,17 +400,123 @@ async function main() {
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "rules: 10% of 50.00 is 5.00",
+  "rules: a fixed 5.00 is 5.00",
+  "rules: a fixed amount larger than the subtotal is capped at the subtotal",
+  "rules: 100% takes off the whole subtotal",
+  "rules: percentage rounds to the cent like pricing does (12.5% of 33.33 = 4.17)",
+  "rules: an inactive code is refused",
+  "rules: a code expiring in the past is refused",
+  "rules: a code expiring exactly now is already expired",
+  "rules: a code expiring in the future is fine",
+  "rules: usage at the limit is refused",
+  "rules: pending checkouts hold uses (2 used + 1 pending of 3 leaves none after another)",
+  "rules: no limit means unlimited",
+  "rules: below the minimum subtotal is refused, exactly the minimum is fine",
+  "rules: several problems report the first: inactive before expired before used up",
+  "rules: codes are matched ignoring case and spaces",
+  "rules: status for the merchant list",
+  "manage: the owner creates a percentage code; it is stored upper-case with a status",
+  "manage: the same code in another case is a duplicate (409)",
+  "manage: store B creates its own SAVE10 with a different value",
+  "manage: a fixed-amount code",
+  "manage: percentage over 100 is 400",
+  "manage: value 0 and negative are 400",
+  "manage: a code with spaces or symbols is 400",
+  "manage: a code shorter than 3 or longer than 30 is 400",
+  "manage: an expiry in the past is 400",
+  "manage: a usage limit of 0 is 400",
+  "manage: an unknown type is 400",
+  "permissions: no token is 401",
+  "permissions: staff without discounts_write cannot list or create (403)",
+  "permissions: a cashier cannot manage codes (403)",
+  "permissions: staff with discounts_write can create and list",
+  "permissions: another store's owner cannot list this store's codes (403)",
+  "isolation: store A's list holds only its own three codes (its SAVE10 is 10%); store B's list only its own",
+  "manage: a code can be created with a future expiry",
+  "update: an empty change is 400",
+  "update: a code can be switched off, and shows as inactive",
+  "update: and back on",
+  "update: the code, type and value cannot be changed (ignored)",
+  "update: an unknown id is 404",
+  "isolation: another store cannot change this store's code (404)",
+  "update: the limit and minimum are stored",
+  "update: a limit below the times already used is 400",
+  "update: the limit can be removed (null) and the expiry cleared",
+  "list: statuses are active, expired and used up as they should be",
+  "validate: works without an account, ignores case, and returns the saving",
+  "validate: a fixed code capped at the cart total",
+  "validate: no guest id or token is 400",
+  "validate: a missing or negative cart total is 400",
+  "validate: an unknown code is 400 with the discount problem type",
+  "validate: an expired code says it has expired",
+  "validate: a used-up code says it reached its limit",
+  "validate: a switched-off code is refused",
+  "isolation: store B's SAVE10 is its own 50% code; A's code name means nothing to a code that B lacks",
+  "quote: without a code nothing changes (subtotal 50.00, tax 3.20, total 53.20)",
+  "quote: SAVE10 takes 5.00 off, cuts tax to 2.88 (discount reduces the taxable base) and leaves shipping alone: 53.38",
+  "quote: a fixed code gives the same 5.00",
+  "quote: an unknown code is 400 and a wrong-store code is refused too",
+  "quote: an over-long code is 400",
+  "validate: below the minimum spend says what is needed (60.00)",
+  "quote: a code with a minimum spend refuses a 50.00 cart, naming the minimum",
+  "quote: exactly the minimum (60.00) qualifies",
+  "session: created with a code (201)",
+  "session: Stripe is told a fixed 5.00 discount named after the code",
+  "session: lines + tax - discount + shipping equals exactly the total ZYRO stored (53.38), so Stripe will charge the priced amount",
+  "session: without a code Stripe is sent no discount",
+  "session: the pending checkout holds a use but the count is still 0 until it is paid",
+  "fulfil: the paid webhook creates the order",
+  "fulfil: the order records the code, the 5.00 discount and the total",
+  "fulfil: the code's use is now counted (1) and the hold is gone",
+  "fulfil: the order view names the code",
+  "fulfil: the same webhook again does not count a second use",
+  "session: a code that makes the order free is refused with a clear reason (Stripe cannot charge 0)",
+  "quote: but the preview still shows what the code would do",
+  "session: a discount leaving under the 0.50 minimum charge is refused",
+  "session: and refused sessions do not hold a use or leave a session behind",
+  "hold: the first shopper gets the last use",
+  "hold: while they pay, another shopper's quote, session and validate all say it is used up",
+  "hold: the shopper holding it is not blocked by their own page (retry works, quote works)",
+  "hold: retrying supersedes the first hold rather than adding a second one (security fix: a shopper used to be able to hold a 1-use code across unlimited parallel unpaid sessions - see discount.service.ts assertCanHold)",
+  "hold: when the checkout expires the use is released and the next shopper can have it",
+  "hold: a checkout that lapses by time alone also releases it (no cleanup job needed)",
+  "hold: if Stripe is down the session fails and does not keep holding the use",
+  "hold race: five shoppers start checkout at once for a 1-use code: exactly one gets it",
+  "hoard: five straight, unpaid retries by the same shopper all succeed one at a time (each retry supersedes the last)",
+  "hoard: only the LAST attempt is still pending; the other four were superseded, not left holding the code too",
+  "hoard: a genuinely different shopper is still correctly refused (the code is really down to 0, not secretly hoarded)",
+  "hoard: cleaned up, the code is available again",
+  "honour: a shopper who paid before the code was switched off still gets their order, with the discount",
+  "pos: cashier opens a shift",
+  "pos: a code prices at the register exactly as online (47.88, code shown)",
+  "pos: a code and a manual discount together are refused (no stacking)",
+  "pos: a store code is the merchant's, so a cashier may use a 50% code but not give 50% by hand",
+  "pos: an unknown code is 400",
+  "pos: the sale completes at 47.88, records the code and a reason for the receipt",
+  "pos: the use is counted with the sale",
+  "pos: paying the full price instead of the discounted amount is refused",
+  "pos race: two tills using a 1-use code at once: exactly one sale gets it",
+  "pos: the used-up code is refused at the register afterwards",
+  "pos: a use held by a shopper who is paying online is not given away at the register",
+  "atomic: an order that fails on stock leaves the code's use uncounted",
+  "atomic: redeeming a code that was switched off between quote and sale is refused, and counts nothing",
+  "returns: taking items back from a discounted sale refunds the discounted price and the use stays counted",
+  "database: a lower-case code cannot be stored",
+  "database: a zero value and a percentage over 100 cannot be stored",
+  "database: a usage limit of 0 cannot be stored",
+  "database: two codes with the same name in one store cannot both exist",
+  "isolation: store B's checkout cannot use store A's codes, and its own SAVE10 is a different 50% code",
+  "isolation: using A's codes never touched B's",
+]);

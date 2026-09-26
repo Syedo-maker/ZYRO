@@ -2,6 +2,7 @@ import { apiFetch } from './apiClient'
 import type { Product } from '../types/api'
 import type {
   AnalyticsSummary,
+  CartRecoveryPerformance,
   CategoryCount,
   DiscountCode,
   DiscountInput,
@@ -62,6 +63,10 @@ export const reviewsAdminApi = {
 export const accountApi = {
   myOrders: (storeId: string, query: { limit?: number; offset?: number } = {}) =>
     apiFetch<MyOrdersPage>(`/stores/${storeId}/orders/mine${qs(query)}`),
+}
+
+export const cartRecoveryApi = {
+  performance: (storeId: string) => apiFetch<CartRecoveryPerformance>(`/stores/${storeId}/cart-recovery/performance`),
 }
 
 export const analyticsApi = {

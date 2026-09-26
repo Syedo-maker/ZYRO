@@ -118,6 +118,18 @@ export interface AnalyticsSummary {
     unitsPos: number
     productMargin: number | null
   }[]
+  /** Revenue per product category, largest first; the rest summed as "Other". */
+  byCategory: { category: string; revenue: number; unitsSold: number }[]
+}
+
+/** Abandoned-cart recovery emails over the store's whole history. */
+export interface CartRecoveryPerformance {
+  sent: number
+  /** Always 0 today: email opens and clicks are not tracked yet. */
+  opened: number
+  clicked: number
+  converted: number
+  conversionRate: number
 }
 
 // ---- Discount codes ----

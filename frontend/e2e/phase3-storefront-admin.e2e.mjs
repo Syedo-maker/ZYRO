@@ -452,6 +452,11 @@ await step('marketing', op, async () => {
   await op.getByText('Discount code updated.').waitFor()
   await op.getByRole('row').filter({ hasText: 'WELCOME5' }).getByText('0 / 5').waitFor({ timeout: 5000 }).catch(() => undefined)
   check('marketing: the limit can be changed afterwards', /0 \/ 5/.test(await op.getByRole('row').filter({ hasText: 'WELCOME5' }).innerText()))
+  // The two figures from the marketing wireframe: sales by category (this store has sold by now) and recovery emails (none sent yet).
+  const byCategory = op.getByRole('region', { name: 'Sales by category, last 30 days' })
+  await byCategory.getByRole('listitem').first().waitFor()
+  check('marketing: sales by category lists the categories sold, with revenue and share', (await byCategory.getByRole('listitem').count()) >= 1 && /\$[\d,.]+ · \d+% · \d+ sold/.test(await byCategory.innerText()))
+  check('marketing: cart-recovery performance says plainly that no emails have gone out yet', await op.getByRole('region', { name: 'Abandoned-cart recovery' }).getByText('No recovery emails sent yet').isVisible())
   await shot(op, 'marketing')
   // the storefront now refuses the switched-off code
   await cp.goto(`${S}/products/${notebook}`)

@@ -4,30 +4,33 @@
  * cash drawer, priced sales with split payments, discount limits, idempotent submission,
  * item returns, held sales, the daily summary, concurrency, and tenant isolation.
  * Creates throwaway stores and users and removes them after.
- * Usage: npx tsx scripts/verify-pos.ts
+ * Run with: npm test -- pos
  */
-process.env.RATE_LIMIT_ENABLED = "false"; // many registrations in a row; verify-security.ts covers the limits
-import type { AddressInfo } from "node:net";
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
 }
 
+process.env.RATE_LIMIT_ENABLED = "false"; // many registrations in a row; verify-security.ts covers the limits
+
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { tenantContext } = await import("../src/lib/tenantContext");
-  const { createOrder } = await import("../src/modules/commerce/order.service");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { tenantContext } = await import("../../src/lib/tenantContext");
+  const { createOrder } = await import("../../src/modules/commerce/order.service");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
 
   async function api(method: string, path: string, opts: { token?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -335,17 +338,134 @@ async function main() {
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "cashier: the owner creates a new cashier account with a starting password (201)",
+  "cashier: the new cashier can sign in",
+  "cashier: a password for an email that already has an account is refused (400)",
+  "cashier: an unknown email with no password is 404 (existing behaviour kept)",
+  "cashier: a too-short starting password is 400",
+  "cashier: staff cannot create staff (owner only, 403)",
+  "auth: no token is 401",
+  "auth: a user with no role at this store is 403",
+  "auth: staff without pos_sell cannot use the register (403)",
+  "session: the cashier sees their own permissions (sell yes, refunds no)",
+  "session: the owner is flagged and has every permission",
+  "products: an exact barcode finds the product with its stock",
+  "products: a SKU works as a code too",
+  "products: part of a title finds it, case-insensitively",
+  "products: regex characters in a search are treated as text, not a pattern (200, none)",
+  "products: an unknown barcode returns an empty list",
+  "products: another store's register cannot see this catalog",
+  "quote: subtotal 50.50, tax 8% on the taxable 40.00 only (3.20), total 53.70",
+  "quote: a 10% discount lowers the taxable base too (total 48.33)",
+  "discount: a cashier cannot give 25% (limit is 20%): 403 with a clear reason",
+  "discount: the owner can give 25%",
+  "discount: a manager with the discounts permission can give 25%",
+  "discount: a fixed amount is checked as a percentage of the sale (10.00 of 50.50 is 19.8%, fine)",
+  "discount: a fixed amount over the limit (20.00 of 50.50 = 39.6%) is refused",
+  "discount: over 100% is rejected (400)",
+  "quote: an empty cart is 400",
+  "quote: quantity 0 is 400",
+  "quote: an unknown product is 404",
+  "quote: asking for more than is in stock lists the shortage",
+  "shift: none is open at first (null)",
+  "shift: a sale without an open shift is refused (409)",
+  "shift: a negative starting float is 400",
+  "shift: the cashier opens a shift with a 100.00 float (201)",
+  "shift: a second open shift at the same register is refused (409)",
+  "shift: the current shift is returned",
+  "shift: the other store has no open shift",
+  "sale: payments that do not add up to the total are 400",
+  "sale: cash handed over less than the cash payment is 400",
+  "sale: a tendered amount on a card payment is 400",
+  "sale: an unknown payment method is 400",
+  "sale: not enough stock is 409 and nothing is taken",
+  "sale: 2 widgets for cash 43.20, 50.00 handed over: completed POS sale, change 6.80",
+  "sale: it records the cashier, the shift and the store on the receipt",
+  "sale: stock came off the shelf (50 to 48)",
+  "sale: a split payment (card 12.10 + cash 20.00) totalling 32.10 works",
+  "sale: order numbers are sequential per store",
+  "sale: a price sent by the client is ignored, the catalog price is charged",
+  "idempotency: submitting the same sale twice returns the first one (201 then 200)",
+  "idempotency: stock was deducted once",
+  "idempotency: four simultaneous submissions make exactly one order",
+  "customer: a new customer is created with the sale",
+  "customer: the same email finds the same customer, no duplicate",
+  "customer: search by name, email and phone all find her",
+  "customer: a customer with only a name and phone can be added (201)",
+  "customer: an empty customer is 400",
+  "customer: another store's customer id cannot be attached to a sale (404)",
+  "customer: the other store cannot see this store's customers",
+  "history: lists only POS sales",
+  "history: search by order number",
+  "history: search by customer name",
+  "history: a date range that excludes everything is empty",
+  "receipt: a sale can be fetched by id with store, cashier and change",
+  "history: an online order is not a POS sale (404)",
+  "history: another store cannot read this sale (404)",
+  "return: a cashier without the refunds permission cannot take items back (403)",
+  "return: an empty return is 400",
+  "return: an item from a different sale is 400",
+  "return: more than was bought is 409",
+  "return: 1 of 2 widgets is refunded 21.60 (20.00 plus its 1.60 tax), paid back in cash like the sale",
+  "return: the sale stays completed and the item shows 1 returned",
+  "return: the unit went back on the shelf",
+  "return: returning the last unit settles to the exact remainder and refunds the sale",
+  "return: restock false leaves the shelf alone (damaged goods)",
+  "return: nothing is left to return (409)",
+  "return: a whole-order refund after partial returns is refused (409)",
+  "return: another store cannot return this sale (404)",
+  "discount: a fixed 1.01 off three widgets gives 63.71 and records the reason",
+  "return: three single returns of a discounted sale add up to exactly what was paid",
+  "return: two simultaneous returns of the same unit: one wins (201), one is refused (409)",
+  "return: the shelf got the unit back once, not twice",
+  "refund: a whole POS sale can still be refunded from the orders screen",
+  "held: a cart is parked with a label (201)",
+  "held: it appears in the list for any cashier",
+  "held: another store sees none",
+  "held: another store cannot resume it (404)",
+  "held: resuming returns the cart and discount",
+  "held: it can be resumed only once (second try is 404)",
+  "held: a parked cart can be discarded (204)",
+  "held: an unknown customer is 404",
+  "drawer: expected cash is float + cash sales - cash paid back (100 + 105.80 - 64.80 = 141.00)",
+  "drawer: card sales are counted apart from cash",
+  "drawer: a manager who did not open it cannot close it (403)",
+  "drawer: a negative count is 400",
+  "drawer: closing with 138.50 counted shows a 2.50 shortage",
+  "drawer: no shift is open afterwards, and selling is refused (409)",
+  "drawer: closing again is 409",
+  "shift: three simultaneous opens: exactly one wins",
+  "drawer race: four rounds of sales racing a close: each sale completed inside the shift or was refused",
+  "drawer race: every completed sale is in the frozen expected cash (nothing slips through), and the owner can close any shift",
+  "shift: a new shift opens after closing",
+  "report: a cashier without analytics access is 403",
+  "report: a window over 32 days is 400",
+  "report: 'to' before 'from' is 400",
+  "report: gross sales, sales count and refunds match the database",
+  "report: net = gross - refunds",
+  "report: the payment-method split adds up to net sales",
+  "report: per-cashier totals name the cashier and add up",
+  "report: top items lists widgets first",
+  "report: every shift in the window appears with its variance",
+  "report: the other store sees none of it",
+  "settings: staff cannot change the discount limit (403)",
+  "settings: over 100 is 400",
+  "settings: the owner sets the limit to 5%",
+  "settings: a cashier's 10% discount is now refused, exactly 5% is fine (no half-cent surprises)",
+  "settings: the session shows the new limit",
+  /^ledger: stock movements add up to the shelf count \(.*\)$/,
+  "database: two open shifts at one location cannot exist even by direct insert",
+  "database: returned quantity can never exceed the quantity sold",
+  "database: another store owns none of these records",
+]);
