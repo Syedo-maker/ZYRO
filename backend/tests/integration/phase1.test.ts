@@ -2,28 +2,31 @@
  * End-to-end check of Phase 1 (authentication, multi-tenancy, staff, store, catalog,
  * image uploads) against the real local Postgres and MongoDB, through the real HTTP API.
  * Creates throwaway stores and users and removes them after.
- * Usage: npx tsx scripts/verify-phase1.ts
+ * Run with: npm test -- phase1
  */
-process.env.RATE_LIMIT_ENABLED = "false"; // these tests register many users quickly; verify-security.ts covers the limits
-import type { AddressInfo } from "node:net";
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
 }
 
+process.env.RATE_LIMIT_ENABLED = "false"; // these tests register many users quickly; verify-security.ts covers the limits
+
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { Product } = await import("../src/models/Product.model");
-  const { closeRedis } = await import("../src/lib/redis");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { Product } = await import("../../src/models/Product.model");
+  const { closeRedis } = await import("../../src/lib/redis");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
-  const server = app.listen(0);
-  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const origin = APP_ORIGIN;
   const base = `${origin}/api/v1`;
 
   interface Res { status: number; json: any; headers: Headers; type: string }
@@ -107,7 +110,7 @@ async function main() {
     const me = await call("GET", "/users/me", { token: A.token });
     check("me: returns the caller's profile without the password hash", me.status === 200 && me.json.email === A.email && !("passwordHash" in me.json));
     const jwt = (await import("jsonwebtoken")).default;
-    const { env } = await import("../src/config/env");
+    const { env } = await import("../../src/config/env");
     const expired = jwt.sign({ sub: A.userId }, env.jwt.accessSecret, { expiresIn: -10 });
     check("me: an expired token is 401", (await call("GET", "/users/me", { token: expired })).status === 401);
     check("me: a token signed with the wrong secret is 401", (await call("GET", "/users/me", { token: jwt.sign({ sub: A.userId }, "some-other-secret") })).status === 401);
@@ -205,17 +208,95 @@ async function main() {
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "register: 201 with an access token and the user, no refresh token in the body",
+  "register: refresh token is an httpOnly cookie scoped to /api/v1/auth, SameSite=Lax",
+  "register: access token carries only the user id (no tenant baked in)",
+  "register: also created the owner's store with a default location",
+  "register: duplicate email is 409",
+  "register: duplicate store slug is 409",
+  "register: short password is 400",
+  "register: invalid slug is 400",
+  "register: invalid email is 400",
+  "register: a failed registration leaves no half-created user",
+  "login: 200 with token and cookie",
+  "login: wrong password and unknown email give the same 401 (no account enumeration)",
+  "errors: RFC 7807 problem+json with type, title, status",
+  "passwords are stored hashed, never in plain text",
+  "refresh: valid cookie gives a new access token and a rotated cookie",
+  "refresh: replaying the old (rotated) token is 401",
+  "refresh: no cookie is 401",
+  "refresh: garbage cookie is 401",
+  "refresh: two simultaneous refreshes of one token give one 200 and one clean 401, never a 500",
+  "logout: 204 and the cookie is cleared",
+  "logout: the refresh token is really revoked (refresh after logout is 401)",
+  "logout: logging out twice is harmless",
+  "me: no token is 401",
+  "me: malformed token is 401",
+  "me: returns the caller's profile without the password hash",
+  "me: an expired token is 401",
+  "me: a token signed with the wrong secret is 401",
+  "stores: /users/me/stores lists only the caller's own store as owner",
+  "staff: no token is 401",
+  "staff: another store's owner cannot add staff to my store (403)",
+  "staff: unknown email is 404",
+  "staff: empty permissions is 400",
+  "staff: uppercase permission names are rejected (contract is lowercase)",
+  "staff: an unknown permission is 400",
+  "staff: the owner cannot be added as staff of their own store (409)",
+  "staff: owner adds staff (201), response follows the contract (email, lowercase permissions)",
+  "staff: adding the same person twice is 409",
+  "staff: staff cannot add more staff (owner only)",
+  "staff: owner lists staff with emails",
+  "staff: staff cannot list staff (403) and another owner cannot either (403)",
+  "stores: the staff member sees store A with role staff",
+  "catalog: no token cannot create a product (401)",
+  "catalog: a user with no role in the store cannot create (403)",
+  "catalog: another store's owner cannot create in my store (403)",
+  "catalog: staff with products_write can create (201), stock echoed, tenant set",
+  "catalog: negative price is 400",
+  "catalog: missing title is 400",
+  "catalog: fractional stock is 400",
+  "catalog: public list needs no login and shows both products with stock",
+  "catalog: category filter",
+  "catalog: text search",
+  "catalog: pagination",
+  "catalog: public get by id",
+  "catalog: an unknown or malformed product id is 404",
+  "catalog: update changes price and stock",
+  "catalog: store B's data cannot reach A's product by id (404 inside B)",
+  "catalog: A's product is untouched after B's attempts",
+  "catalog: store B's public list does not include A's products",
+  "staff: another owner cannot remove my staff (403)",
+  "staff: an unknown staff id is 404",
+  "staff: owner removes staff (204)",
+  "staff: a removed staff member immediately loses access (403)",
+  "staff: the list is empty again",
+  "store: public profile needs no login, exposes no owner details",
+  "store: unknown store is 404",
+  "store: branding update by another owner is 403",
+  "store: branding rejects a bad color",
+  "store: owner updates name and theme color",
+  "upload: no token is 401",
+  "upload: a user without products_write is 403",
+  "upload: a PNG is accepted and a URL returned",
+  "upload: the returned URL actually serves the image",
+  "upload: a non-image is rejected with 400, not a 500",
+  "upload: a file over 5 MB is rejected with 400",
+  "upload: a request with no file is a clean 4xx, not a crash",
+  "upload: a product stores the image URL, not the file",
+  "catalog: a product cannot hold more than 10 images",
+  "catalog: owner deletes a product (204) and it is gone (404)",
+  "routing: an unknown route is a 404 problem+json",
+  "health endpoint answers",
+]);

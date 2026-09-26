@@ -3,30 +3,33 @@
  * "my orders" without the store's internal fields, and the category list with counts, against
  * the real local Postgres and MongoDB, through the real HTTP API. Creates throwaway stores and
  * users and removes them after.
- * Usage: npx tsx scripts/verify-customers.ts
+ * Run with: npm test -- customers
  */
-process.env.RATE_LIMIT_ENABLED = "false"; // verify-security.ts covers the limits
-import type { AddressInfo } from "node:net";
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
 }
 
+process.env.RATE_LIMIT_ENABLED = "false"; // verify-security.ts covers the limits
+
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { tenantContext } = await import("../src/lib/tenantContext");
-  const { createOrder } = await import("../src/modules/commerce/order.service");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { tenantContext } = await import("../../src/lib/tenantContext");
+  const { createOrder } = await import("../../src/modules/commerce/order.service");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
   async function api(method: string, path: string, opts: { token?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
@@ -115,51 +118,79 @@ async function main() {
     const stocked = await mkProduct(A, "Limited Print", 9, "art");
     await api("PATCH", `/stores/${A.storeId}/products/${stocked}`, { token: A.token, body: {} }).catch(() => undefined);
     const addGuest = (productId: string, quantity: number) => fetch(`${base}/stores/${A.storeId}/cart/items`, { method: "POST", headers: { "Content-Type": "application/json", "X-Guest-Session-Id": guestId }, body: JSON.stringify({ productId, quantity }) });
-    const getCart = async (headers: Record<string, string>) => (await fetch(`${base}/stores/${A.storeId}/cart`, { headers })).json();
+    const getCart = async (headers: Record<string, string>): Promise<any> => (await fetch(`${base}/stores/${A.storeId}/cart`, { headers })).json();
     const merge = (token: string | undefined, guest: string | undefined) => fetch(`${base}/stores/${A.storeId}/cart/merge`, { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(guest ? { "X-Guest-Session-Id": guest } : {}) } });
     const userAdd = (productId: string, quantity: number) => fetch(`${base}/stores/${A.storeId}/cart/items`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${c2token}` }, body: JSON.stringify({ productId, quantity }) });
     await addGuest(mug, 2);
     await addGuest(stocked, 3);
     await userAdd(mug, 1);
-    const merged = await (await merge(c2token, guestId)).json();
+    const merged = await ((await merge(c2token, guestId)).json() as Promise<any>);
     const qty = (cart: { items: { productId: string; quantity: number }[] }, id: string) => cart.items.find((i) => i.productId === id)?.quantity;
     check("cart merge: signing in adds the guest cart to the account cart (1 + 2 mugs = 3, plus 3 prints)", qty(merged, mug) === 3 && qty(merged, stocked) === 3);
     check("cart merge: the guest cart is emptied, so nothing is counted twice", (await getCart({ "X-Guest-Session-Id": guestId })).items.length === 0);
-    check("cart merge: merging again changes nothing (idempotent)", qty(await (await merge(c2token, guestId)).json(), mug) === 3);
+    check("cart merge: merging again changes nothing (idempotent)", qty(await ((await merge(c2token, guestId)).json() as Promise<any>), mug) === 3);
     const scarce = (await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Scarce", price: 5, stock: 2, category: "art" } })).json.id as string;
     await userAdd(scarce, 1);
     await addGuest(scarce, 1);
-    const clamp = await (await merge(c2token, guestId)).json();
+    const clamp = await ((await merge(c2token, guestId)).json() as Promise<any>);
     await fetch(`${base}/stores/${A.storeId}/cart/items`, { method: "POST", headers: { "Content-Type": "application/json", "X-Guest-Session-Id": guestId }, body: JSON.stringify({ productId: scarce, quantity: 1 }) });
     check("cart merge: quantities are held to what is in stock (1 + 1 of a product with 2 left is 2, never more)", qty(clamp, scarce) === 2);
     await addGuest(scarce, 1);
-    check("cart merge: asking for more than the shelf holds is clamped, not an error", qty(await (await merge(c2token, guestId)).json(), scarce) === 2);
+    check("cart merge: asking for more than the shelf holds is clamped, not an error", qty(await ((await merge(c2token, guestId)).json() as Promise<any>), scarce) === 2);
     await addGuest(mug, 2);
     const both = await Promise.all([merge(c2token, guestId), merge(c2token, guestId)]);
     const final = await getCart({ Authorization: `Bearer ${c2token}` });
     check("cart merge: two tabs signing in at once add the guest cart only once (3 + 2 = 5, not 7)", both.every((r) => r.status === 200) && qty(final, mug) === 5);
     check("cart merge: a guest cannot merge (401), and a malformed guest id is 400", (await merge(undefined, guestId)).status === 401 && (await merge(c2token, "short")).status === 400);
-    check("cart merge: without a guest id header it is 400; with nothing to merge it is 200 and unchanged", (await merge(c2token, undefined)).status === 400 && qty(await (await merge(c2token, `guest-${suffix}-nothingtomerge`)).json(), mug) === 5);
+    check("cart merge: without a guest id header it is 400; with nothing to merge it is 200 and unchanged", (await merge(c2token, undefined)).status === 400 && qty((await (await merge(c2token, `guest-${suffix}-nothingtomerge`)).json()) as any, mug) === 5);
     await addGuest(mug, 1);
     await api("DELETE", `/stores/${A.storeId}/products/${stocked}`, { token: A.token });
-    const skipped = await (await merge(c2token, guestId)).json();
+    const skipped = await ((await merge(c2token, guestId)).json() as Promise<any>);
     check("cart merge: a product deleted since it was added is skipped, not an error", qty(skipped, stocked) === undefined && qty(skipped, mug) === 6);
-    check("cart merge: another store's cart is untouched", (await (await fetch(`${base}/stores/${B.storeId}/cart`, { headers: { Authorization: `Bearer ${c2token}` } })).json()).items.length === 0);
+    check("cart merge: another store's cart is untouched", ((await (await fetch(`${base}/stores/${B.storeId}/cart`, { headers: { Authorization: `Bearer ${c2token}` } })).json()) as any).items.length === 0);
   } finally {
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "sign-up: a shopper creates an account with just an email and password (201) and is signed in",
+  "sign-up: the name is trimmed and saved, and a refresh cookie is set",
+  "sign-up: it is a plain account: no store is created",
+  "sign-up: the account can sign in afterwards",
+  "sign-up: the same email again is 409, and a merchant's email cannot be taken either",
+  "sign-up: a short password, a bad email, an over-long password or name are all 400",
+  "sign-up: a name is optional",
+  "my orders: a shopper sees exactly their own orders at this store, newest first (2 online + 1 in-store)",
+  "my orders: never another shopper's, and never another store's",
+  "my orders: none of the store's internal fields (cashier, shift, location, customer id, discount reason)",
+  "my orders: the useful parts are there (items, payments, totals, status, shipment)",
+  "my orders: paging",
+  "my orders: a shopper with no orders here gets an empty list, and needs to be signed in (401)",
+  "my orders: 'mine' is not mistaken for an order id, and the merchant list is still for staff only",
+  "order detail: a shopper can open their own order, without internal fields",
+  "order detail: someone else's order is 404 (ids cannot be probed)",
+  "order detail: the merchant still sees the full view (cashier and shift)",
+  "categories: public list with counts, biggest first then by name (kitchen 3, art 1, lighting 1)",
+  "categories: another store has its own list, and an empty store has none",
+  "categories: 'categories' is not mistaken for a product id",
+  "cart merge: signing in adds the guest cart to the account cart (1 + 2 mugs = 3, plus 3 prints)",
+  "cart merge: the guest cart is emptied, so nothing is counted twice",
+  "cart merge: merging again changes nothing (idempotent)",
+  "cart merge: quantities are held to what is in stock (1 + 1 of a product with 2 left is 2, never more)",
+  "cart merge: asking for more than the shelf holds is clamped, not an error",
+  "cart merge: two tabs signing in at once add the guest cart only once (3 + 2 = 5, not 7)",
+  "cart merge: a guest cannot merge (401), and a malformed guest id is 400",
+  "cart merge: without a guest id header it is 400; with nothing to merge it is 200 and unchanged",
+  "cart merge: a product deleted since it was added is skipped, not an error",
+  "cart merge: another store's cart is untouched",
+]);

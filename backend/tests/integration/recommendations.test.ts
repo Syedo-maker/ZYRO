@@ -5,12 +5,20 @@
  * GET /stores/:storeId/products/:productId/recommendations. Also checks the parts that must
  * degrade gracefully (service down, wrong token, not configured) and the assistant's merge of
  * keyword and semantic matches (with a fake client, since that part is Node logic).
- * Usage: npx tsx scripts/verify-recommendations.ts   (MongoDB, Postgres and Redis running;
- *        recommendation-service/.venv created with `pip install -r requirements.txt`)
+ * Run with: npm test -- recommendations
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
-import type { AddressInfo } from "node:net";
 
 const SERVICE_PORT = 8011;
 const TOKEN = `verify-token-${Date.now().toString(36)}`;
@@ -20,12 +28,6 @@ process.env.RECOMMENDATION_SERVICE_TOKEN = TOKEN;
 process.env.RECOMMENDATION_CACHE_SECONDS = "60";
 // The assistant checks below use their own BullMQ queue and fake AI provider (see verify-assistant.ts).
 process.env.AI_QUEUE_NAME = `ai-generate-verify-${Date.now().toString(36)}`;
-
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function until<T>(fn: () => Promise<T | undefined | false>, ms = 8000): Promise<T | undefined> {
   const end = Date.now() + ms;
@@ -38,23 +40,23 @@ async function until<T>(fn: () => Promise<T | undefined | false>, ms = 8000): Pr
 }
 
 async function main() {
-  const { app } = await import("../src/app");
-  const { env } = await import("../src/config/env");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { setAiProvider } = await import("../src/lib/aiProvider");
-  const { startAiWorker, closeAiQueue } = await import("../src/lib/aiQueue");
-  const { setRecommendationClient, RecommendationUnavailableError } = await import("../src/lib/recommendationClient");
-  const { recommendationService } = await import("../src/modules/recommendations/recommendation.service");
-  const { Product } = await import("../src/models/Product.model");
-  const { ChatTranscript } = await import("../src/models/ChatTranscript.model");
+  const { app } = await import("../../src/app");
+  const { env } = await import("../../src/config/env");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { setAiProvider } = await import("../../src/lib/aiProvider");
+  const { startAiWorker, closeAiQueue } = await import("../../src/lib/aiQueue");
+  const { setRecommendationClient, RecommendationUnavailableError } = await import("../../src/lib/recommendationClient");
+  const { recommendationService } = await import("../../src/modules/recommendations/recommendation.service");
+  const { Product } = await import("../../src/models/Product.model");
+  const { ChatTranscript } = await import("../../src/models/ChatTranscript.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
   startAiWorker();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
   async function api(method: string, p: string, opts: { token?: string; guest?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
@@ -65,7 +67,7 @@ async function main() {
   }
 
   // ---- Start the real Python service ----
-  const serviceDir = path.resolve(__dirname, "../../recommendation-service");
+  const serviceDir = path.resolve(__dirname, "../../../recommendation-service");
   const python = path.join(serviceDir, ".venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
   let child: ChildProcess | undefined = spawn(python, ["-m", "uvicorn", "app.asgi:app", "--host", "127.0.0.1", "--port", String(SERVICE_PORT)], {
     cwd: serviceDir,
@@ -84,7 +86,7 @@ async function main() {
   if (!up) {
     console.error("The Python service did not start:\n" + serviceLog);
     child.kill();
-    process.exit(1);
+    exitScenario(1);
   }
 
   const suffix = Date.now().toString(36);
@@ -155,7 +157,7 @@ async function main() {
 
     // ---- The Python service itself is closed to anyone without the token ----
     check("service: /health is open, everything else needs the internal token", (await svc("/health")).status === 200 && (await svc(`/recommendations?storeId=${A.storeId}&productId=${shoe1}`)).status === 401 && (await svc(`/recommendations?storeId=${A.storeId}&productId=${shoe1}`, { headers: { "X-Internal-Token": "wrong" } })).status === 401);
-    const direct = await (await svc("/search", { method: "POST", headers: { "X-Internal-Token": TOKEN }, body: JSON.stringify({ storeId: A.storeId, query: "coffee mug", limit: 5 }) })).json();
+    const direct: any = await (await svc("/search", { method: "POST", headers: { "X-Internal-Token": TOKEN }, body: JSON.stringify({ storeId: A.storeId, query: "coffee mug", limit: 5 }) })).json();
     check("service: /search finds the mugs for 'coffee mug' and stays inside the store", direct.items.length >= 2 && [mug1, mug2].includes(direct.items[0].productId) && !direct.items.some((i: { productId: string }) => i.productId === bShoe));
 
     // ---- Graceful degradation ----
@@ -240,19 +242,48 @@ async function main() {
     await ChatTranscript.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
     child?.kill();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeAiQueue();
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "indexing: creating a product had the service embed it in the background (vector stored on the document)",
+  "indexing: editing a product's text recomputes its vector",
+  "recommendations: public (no token) and 200",
+  "recommendations: the most similar in-stock product comes first (the other running shoe)",
+  "recommendations: never includes the product itself",
+  "recommendations: sold-out products are left out",
+  "recommendations: unrelated in-stock products still fill the row after the close matches",
+  "recommendations: never includes another store's product",
+  "recommendations: returned as real Product objects (price, stock) with no vector and no cost price",
+  "recommendations: limit is honoured",
+  "recommendations: an out-of-range limit is 400",
+  "product API: a single product never exposes its vector",
+  "recommendations: an unknown product id is 404",
+  "recommendations: a malformed product id is 404",
+  "isolation: another store's product id under this store's path is 404, not a leak",
+  "isolation: an unknown store is 404",
+  "service: /health is open, everything else needs the internal token",
+  "service: /search finds the mugs for 'coffee mug' and stays inside the store",
+  "degradation: a rejected token gives an empty list, not an error page",
+  "degradation: with the service down the endpoint still answers 200 with no recommendations, quickly",
+  "degradation: an unknown product is still 404 with the service down (checked in Node)",
+  "degradation: creating a product does not fail when the service is down (indexing is fire-and-forget)",
+  "assistant: a question sharing no words with any product still suggests the semantic match",
+  "assistant: a semantic hit that is not in this store is never shown (hydrated from this store only)",
+  "assistant: the prompt lists the semantic match, so the model can talk about it",
+  "assistant: keyword matches stay first, semantic ones fill in after",
+  "assistant: no product appears twice",
+  "assistant: with semantic search failing it still answers, from keyword matches",
+  "unconfigured: creating a product works (no synchronous error out of the indexing hook)",
+  "unconfigured: recommendations are an empty 200",
+  "unconfigured: the assistant still answers from keywords",
+]);

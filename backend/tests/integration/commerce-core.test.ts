@@ -2,23 +2,27 @@
  * End-to-end check of the Commerce Core Foundation against the real local databases:
  * pricing math, atomic stock deduction, oversell protection under concurrency, order
  * numbering, and cross-tenant isolation. Creates throwaway tenants and removes them after.
- * Usage: npx tsx scripts/verify-commerce-core.ts
+ * Run with: npm test -- commerce-core
  */
-import mongoose from "mongoose";
-import { connectMongo } from "../src/lib/mongo";
-import { prisma, prismaUnscoped } from "../src/lib/prisma";
-import { tenantContext } from "../src/lib/tenantContext";
-import { Product } from "../src/models/Product.model";
-import { authService } from "../src/modules/auth/auth.service";
-import { productService } from "../src/modules/products/product.service";
-import { createOrder } from "../src/modules/commerce/order.service";
-import { calculateTotals } from "../src/modules/commerce/pricing.service";
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
 }
+
+import mongoose from "mongoose";
+import { connectMongo } from "../../src/lib/mongo";
+import { prisma, prismaUnscoped } from "../../src/lib/prisma";
+import { tenantContext } from "../../src/lib/tenantContext";
+import { Product } from "../../src/models/Product.model";
+import { authService } from "../../src/modules/auth/auth.service";
+import { productService } from "../../src/modules/products/product.service";
+import { createOrder } from "../../src/modules/commerce/order.service";
+import { calculateTotals } from "../../src/modules/commerce/pricing.service";
 
 async function makeTenant(tag: string) {
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -72,7 +76,7 @@ async function main() {
     const product = await tenantContext.run(tenantA.id, () =>
       productService.create(
         tenantA.id,
-        { title: "Test Widget", description: "", price: 20, stock: 10, category: "test", images: [], taxable: true, sku: "W-1" },
+        { title: "Test Widget", description: "", price: 20, stock: 10, category: "test", images: [], tags: [], taxable: true, sku: "W-1" },
         undefined
       )
     );
@@ -83,7 +87,7 @@ async function main() {
 
     const dup = await tenantContext
       .run(tenantA.id, () =>
-        productService.create(tenantA.id, { title: "Dup", description: "", price: 1, stock: 1, category: "t", images: [], taxable: true, sku: "W-1" })
+        productService.create(tenantA.id, { title: "Dup", description: "", price: 1, stock: 1, category: "t", images: [], tags: [], taxable: true, sku: "W-1" })
       )
       .then(() => false)
       .catch(() => true);
@@ -134,7 +138,7 @@ async function main() {
 
     // 6. Concurrency: 5 registers race for the last unit
     await tenantContext.run(tenantA.id, () =>
-      productService.update(tenantA.id, product.id, { title: "Test Widget", description: "", price: 20, stock: 1, category: "test", images: [], taxable: true, sku: "W-1" })
+      productService.update(tenantA.id, product.id, { title: "Test Widget", description: "", price: 20, stock: 1, category: "test", images: [], tags: [], taxable: true, sku: "W-1" })
     );
     const results = await Promise.allSettled(
       Array.from({ length: 5 }, () =>
@@ -173,14 +177,34 @@ async function main() {
       await prismaUnscoped.user.delete({ where: { id: t.ownerId } });
     }
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await mongoose.disconnect();
   await prisma.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "pricing: subtotal",
+  "pricing: discount",
+  "pricing: total is consistent",
+  "pricing: fixed discount capped at subtotal",
+  "registration creates one default location",
+  "product create records stock in inventory",
+  "stock is not persisted on the Mongo product",
+  "duplicate SKU in the same store is rejected",
+  "POS order: number 1, COMPLETED, correct totals",
+  "POS sale deducts stock (10 -> 7)",
+  "online order: number 2, PAID, channel ONLINE",
+  "online sale draws from the same stock (7 -> 5)",
+  "oversell is rejected",
+  "rejected order leaves stock unchanged",
+  "payment that does not match total is rejected",
+  "5 concurrent sales of the last unit: exactly 1 succeeds",
+  "stock ends at exactly 0, never negative",
+  "failed orders did not consume order numbers",
+  "stock ledger sums to current quantity",
+  "tenant B cannot sell tenant A's product",
+  "tenant B cannot read tenant A's inventory even by asking for it",
+]);
