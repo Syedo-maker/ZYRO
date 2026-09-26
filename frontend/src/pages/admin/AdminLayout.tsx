@@ -20,18 +20,29 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Settings', to: '/admin/settings', enabled: false },
 ]
 
+/** Only the store owner spends money, and only a platform operator sees the platform view. */
+const OWNER_ITEM: NavItem = { label: 'Plan & billing', to: '/admin/billing', enabled: true }
+const PLATFORM_ITEM: NavItem = { label: 'Platform', to: '/admin/platform', enabled: true }
+
 export function AdminLayout() {
   const { isLoading, isAuthenticated, activeStore, user, logout } = useAuth()
 
   if (isLoading) return null
   if (!isAuthenticated) return <Navigate to="/login" replace />
 
+  const items = [
+    ...NAV_ITEMS.filter((i) => i.enabled),
+    ...(activeStore?.role === 'owner' ? [OWNER_ITEM] : []),
+    ...(user?.platformAdmin ? [PLATFORM_ITEM] : []),
+    ...NAV_ITEMS.filter((i) => !i.enabled),
+  ]
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-bg">
       {/* A column on a wide screen; a row of links that scrolls sideways on a phone or tablet. */}
       <aside className="w-full lg:w-[220px] shrink-0 bg-text flex flex-row lg:flex-col items-center lg:items-stretch p-3 lg:p-4 gap-1 overflow-x-auto">
         <div className="font-display text-lg font-bold text-white px-2 lg:pb-6">ZYRO</div>
-        {NAV_ITEMS.map((item) =>
+        {items.map((item) =>
           item.enabled ? (
             <NavLink
               key={item.to}

@@ -7,6 +7,7 @@ import { AppError } from "../../errors/AppError";
 import { createOrder, OrderSnapshot } from "../commerce/order.service";
 import { customerService } from "../customers/customer.service";
 import { cartService } from "../cart/cart.service";
+import { billingPurpose, handleSubscriptionCheckout, handleTopUpCheckout, syncSubscription, type BillingOutcome } from "../billing/billing.webhook";
 
 export type WebhookOutcome =
   | "fulfilled"
@@ -149,11 +150,21 @@ async function close(session: Stripe.Checkout.Session, status: "EXPIRED" | "FAIL
   return status === "EXPIRED" ? "marked-expired" : "marked-failed";
 }
 
-export async function handleStripeEvent(event: Stripe.Event): Promise<WebhookOutcome> {
+export async function handleStripeEvent(event: Stripe.Event): Promise<WebhookOutcome | BillingOutcome> {
   switch (event.type) {
     case "checkout.session.completed":
-    case "checkout.session.async_payment_succeeded":
-      return fulfil(event.data.object as Stripe.Checkout.Session);
+    case "checkout.session.async_payment_succeeded": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      // ZYRO's own billing (a plan or an AI top-up pack) shares these events with shoppers' order payments.
+      const purpose = billingPurpose(session);
+      if (purpose === "subscription") return handleSubscriptionCheckout(session);
+      if (purpose === "ai_topup") return handleTopUpCheckout(session);
+      return fulfil(session);
+    }
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+      return syncSubscription((event.data.object as Stripe.Subscription).id);
     case "checkout.session.async_payment_failed":
       return close(event.data.object as Stripe.Checkout.Session, "FAILED", "Payment failed");
     case "checkout.session.expired":

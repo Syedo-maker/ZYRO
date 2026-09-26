@@ -2,6 +2,7 @@ import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { tenantContext } from "../../lib/tenantContext";
 import { password as passwordLib } from "../../lib/password";
 import { Errors, AppError } from "../../errors/AppError";
+import { planService } from "../billing/plan.service";
 import type { CreateStaffInput } from "./staff.validation";
 
 interface StaffRow {
@@ -43,10 +44,15 @@ export const staffService = {
     if (user && input.password) {
       throw Errors.validation("That email already has an account; add it without a password");
     }
+    if (!user && !input.password) throw Errors.notFound("User with that email");
+
+    // The plan's staff limit comes after the input checks (a wrong request is still a 400 or 404)
+    // and before anything is created: a request refused for the limit must not leave a new account behind.
+    await planService.assertCanAddStaff(tenantContext.getTenantId()!);
+
     if (!user) {
-      if (!input.password) throw Errors.notFound("User with that email");
       user = await prisma.user.create({
-        data: { email, name: input.name, passwordHash: await passwordLib.hash(input.password) },
+        data: { email, name: input.name, passwordHash: await passwordLib.hash(input.password!) }, // present: an unknown email without one was refused above
       });
     }
 

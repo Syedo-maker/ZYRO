@@ -25,6 +25,7 @@ const TENANT_SCOPED_MODELS = new Set([
   "AiUsageQuota",
   "CartRecoveryEvent",
   "AiBusinessInsight",
+  "AiTopUpPurchase",
 ]);
 
 // Operations where merging `{ tenantId }` into `where`/`data` is safe and sufficient.

@@ -10,6 +10,8 @@
  */
 process.env.RATE_LIMIT_ENABLED = "false";
 process.env.AI_MONTHLY_GENERATIONS_LIMIT = "2";
+// Identical facts would otherwise be answered from the AI cache without spending quota; these checks are about quota.
+process.env.AI_CACHE_SECONDS = "0";
 // An isolated BullMQ queue, so this script's own fake AiProvider is what actually answers its
 // jobs even if a real backend or e2e-server.ts happens to be running against the same Redis
 // (see the AI_QUEUE_NAME comment in lib/aiQueue.ts).

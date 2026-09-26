@@ -10,3 +10,4 @@ export const storeRouter = Router({ mergeParams: true });
 
 storeRouter.get("/", storeController.get); // public: no auth, per openapi.yaml
 storeRouter.patch("/branding", requireAuth, requireOwner, storeController.updateBranding);
+storeRouter.patch("/domain", requireAuth, requireOwner, storeController.updateDomain);

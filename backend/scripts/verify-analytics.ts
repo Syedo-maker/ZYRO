@@ -58,6 +58,8 @@ async function main() {
     const reg = await api("POST", "/auth/register", { body: { email, password: "password123", storeName: `Verify ${tag}`, storeSlug: `verify-an-${tag}-${suffix}` } });
     const stores = await api("GET", "/users/me/stores", { token: reg.json.accessToken });
     const storeId = (Array.isArray(stores.json) ? stores.json : stores.json.data)[0].id as string;
+    // This script needs more than the Free plan includes, so the store is put on Business the way a paid checkout leaves it.
+    await prismaUnscoped.tenant.update({ where: { id: storeId }, data: { plan: "BUSINESS", planExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) } });
     created.tenantIds.push(storeId);
     created.userIds.push(reg.json.user.id);
     return { token: reg.json.accessToken as string, storeId, userId: reg.json.user.id as string };

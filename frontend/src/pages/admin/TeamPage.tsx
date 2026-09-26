@@ -8,6 +8,8 @@ import { Spinner } from '../../components/ui/Spinner'
 import { apiFetch } from '../../lib/apiClient'
 import { errorMessage } from '../../lib/ordersApi'
 import { posApi } from '../../lib/posApi'
+import { upgradeHintOf } from '../../lib/billingApi'
+import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 
 interface StaffMember {
   id: string
@@ -47,6 +49,7 @@ export function TeamPage() {
   const [staff, setStaff] = useState<StaffMember[] | null>(null)
   const [limit, setLimit] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [limitError, setLimitError] = useState<unknown>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'cashier' as Role })
@@ -73,6 +76,7 @@ export function TeamPage() {
   async function add(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    setLimitError(null)
     setMessage(null)
     setBusy(true)
     try {
@@ -88,7 +92,9 @@ export function TeamPage() {
       setForm({ name: '', email: '', password: '', role: form.role })
       await load()
     } catch (err) {
-      setError(errorMessage(err))
+      // A plan's staff limit gets an upgrade prompt rather than a bare error.
+      if (upgradeHintOf(err)) setLimitError(err)
+      else setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
@@ -133,6 +139,7 @@ export function TeamPage() {
       </div>
 
       {error && <Alert>{error}</Alert>}
+      <UpgradeNotice error={limitError} />
       {message && <Alert tone="success">{message}</Alert>}
 
       <section aria-labelledby="staff-heading" className="bg-white border border-border rounded-2xl">

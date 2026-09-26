@@ -7,12 +7,15 @@ export class AppError extends Error {
   readonly status: number;
   readonly type: string;
   readonly detail?: string;
+  /** Extra members added to the problem body (RFC 7807 allows them), e.g. the `upgrade` hint on a plan limit. */
+  readonly extensions?: Record<string, unknown>;
 
-  constructor(status: number, type: string, title: string, detail?: string) {
+  constructor(status: number, type: string, title: string, detail?: string, extensions?: Record<string, unknown>) {
     super(title);
     this.status = status;
     this.type = type;
     this.detail = detail;
+    this.extensions = extensions;
   }
 
   toProblem() {
@@ -21,8 +24,20 @@ export class AppError extends Error {
       title: this.message,
       status: this.status,
       ...(this.detail ? { detail: this.detail } : {}),
+      ...(this.extensions ?? {}),
     };
   }
+}
+
+/** What a client needs to show "upgrade to X" instead of a bare error. */
+export interface UpgradeHint {
+  /** Which limit was hit: "products", "staff", "analytics_range", "custom_domain". */
+  feature: string;
+  currentPlan: string;
+  /** The cheapest plan that allows it; null when even the top plan does not. */
+  requiredPlan: string | null;
+  /** The current plan's limit, when it is a number. */
+  limit?: number;
 }
 
 export const Errors = {
@@ -57,6 +72,9 @@ export const Errors = {
     new AppError(400, "https://zyro.dev/errors/invalid-discount-code", "Discount code cannot be used", detail),
   validation: (detail: string) =>
     new AppError(400, "https://zyro.dev/errors/validation-failed", "Request validation failed", detail),
-  quotaExhausted: (detail: string) =>
-    new AppError(402, "https://zyro.dev/errors/ai-quota-exhausted", "Monthly AI usage quota exhausted", detail),
+  quotaExhausted: (detail: string, extensions?: Record<string, unknown>) =>
+    new AppError(402, "https://zyro.dev/errors/ai-quota-exhausted", "Monthly AI usage quota exhausted", detail, extensions),
+  /** 402, with an `upgrade` member so the storefront admin can offer the right plan instead of an error. */
+  planLimit: (detail: string, upgrade: UpgradeHint) =>
+    new AppError(402, "https://zyro.dev/errors/plan-limit-reached", "Your plan's limit has been reached", detail, { upgrade }),
 };

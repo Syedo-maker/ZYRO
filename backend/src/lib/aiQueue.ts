@@ -22,6 +22,7 @@ export const AI_QUEUE_NAME = process.env.AI_QUEUE_NAME ?? "ai-generate";
 export interface AiJobData {
   tenantId: string;
   promptType: string;
+  model: string;
   system: string;
   prompt: string;
   maxTokens: number;
@@ -60,6 +61,7 @@ export function startAiWorker(): Worker<AiJobData, AiGenerateResult> {
     async (job: Job<AiJobData>) => {
       try {
         return await getAiProvider().generate({
+          model: job.data.model,
           system: job.data.system,
           prompt: job.data.prompt,
           maxTokens: job.data.maxTokens,

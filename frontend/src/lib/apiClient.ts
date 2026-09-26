@@ -17,19 +17,23 @@ export class ApiError extends Error {
   status: number
   type: string
   detail?: string
+  /** Any other members of the problem body, e.g. `upgrade` on a 402 plan limit. */
+  extra: Record<string, unknown>
 
-  constructor(status: number, type: string, title: string, detail?: string) {
+  constructor(status: number, type: string, title: string, detail?: string, extra: Record<string, unknown> = {}) {
     super(title)
     this.status = status
     this.type = type
     this.detail = detail
+    this.extra = extra
   }
 }
 
 async function parseErrorBody(res: Response): Promise<ApiError> {
   try {
     const body = await res.json()
-    return new ApiError(res.status, body.type ?? 'about:blank', body.title ?? res.statusText, body.detail)
+    const { type, title, status: _status, detail, ...extra } = body
+    return new ApiError(res.status, type ?? 'about:blank', title ?? res.statusText, detail, extra)
   } catch {
     return new ApiError(res.status, 'about:blank', res.statusText)
   }

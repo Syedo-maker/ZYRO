@@ -11,6 +11,8 @@ import { CartPage } from './pages/storefront/CartPage'
 import { CheckoutPage } from './pages/storefront/CheckoutPage'
 import { OrderConfirmationPage } from './pages/storefront/OrderConfirmationPage'
 import { TeamPage } from './pages/admin/TeamPage'
+import { BillingPage } from './pages/admin/BillingPage'
+import { PlatformPage } from './pages/admin/PlatformPage'
 import { DashboardPage } from './pages/admin/DashboardPage'
 import { MarketingPage } from './pages/admin/MarketingPage'
 import { ReviewsAdminPage } from './pages/admin/ReviewsAdminPage'
@@ -41,6 +43,8 @@ export default function App() {
             <Route path="marketing" element={<MarketingPage />} />
             <Route path="reviews" element={<ReviewsAdminPage />} />
             <Route path="team" element={<TeamPage />} />
+            <Route path="billing" element={<BillingPage />} />
+            <Route path="platform" element={<PlatformPage />} />
           </Route>
 
           <Route path="/pos" element={<PosEntry />} />

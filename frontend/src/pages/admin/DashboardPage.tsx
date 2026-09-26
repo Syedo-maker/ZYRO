@@ -8,6 +8,8 @@ import { Spinner } from '../../components/ui/Spinner'
 import { SalesByDayChart } from '../../components/charts/SalesByDayChart'
 import { ChannelSplit, StatTile, TopProducts } from '../../components/charts/DashboardParts'
 import { AiUsageMeter } from './AiUsageMeter'
+import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
+import { upgradeHintOf } from '../../lib/billingApi'
 import { formatDate, formatMoney } from '../../lib/format'
 import { errorMessage, ordersApi } from '../../lib/ordersApi'
 import { analyticsApi } from '../../lib/shopApi'
@@ -42,6 +44,7 @@ export function DashboardPage() {
   const [data, setData] = useState<{ now: AnalyticsSummary; before: AnalyticsSummary } | null>(null)
   const [recent, setRecent] = useState<Order[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [limitError, setLimitError] = useState<unknown>(null)
   const [refreshing, setRefreshing] = useState(false)
 
   const load = useCallback(async () => {
@@ -58,7 +61,16 @@ export function DashboardPage() {
   useEffect(() => {
     setData(null)
     setError(null)
-    load().catch((e) => setError(errorMessage(e, 'Could not load the dashboard.')))
+    load().catch((e) => {
+      if (upgradeHintOf(e) && days !== 30) {
+        // The plan does not cover a report this long: say so and go back to the 30 days every plan includes.
+        setLimitError(e)
+        setDays(30)
+      } else {
+        setError(errorMessage(e, 'Could not load the dashboard.'))
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `days` is read only to pick the fallback, not to reload
   }, [load])
 
   useEffect(() => {
@@ -98,7 +110,10 @@ export function DashboardPage() {
             {PERIODS.map((d) => (
               <button
                 key={d}
-                onClick={() => setDays(d)}
+                onClick={() => {
+                  setLimitError(null)
+                  setDays(d)
+                }}
                 aria-pressed={days === d}
                 className={`h-10 px-4 text-sm font-semibold ${days === d ? 'bg-brand text-white' : 'hover:bg-bg'}`}
               >
@@ -113,6 +128,7 @@ export function DashboardPage() {
       </div>
 
       {error && <Alert>{error}</Alert>}
+      <UpgradeNotice error={limitError} isOwner={activeStore.role === 'owner'} />
       {!data && !error && <Spinner label="Loading the dashboard" />}
 
       {data && t && p && (
@@ -155,7 +171,7 @@ export function DashboardPage() {
         </>
       )}
 
-      <AiUsageMeter storeId={activeStore.id} />
+      <AiUsageMeter storeId={activeStore.id} isOwner={activeStore.role === 'owner'} />
 
       <section aria-label="Recent orders" className="rounded-2xl border border-border bg-white p-5">
         <div className="mb-3 flex items-baseline justify-between">
