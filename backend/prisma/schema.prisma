@@ -37,6 +37,14 @@ enum PlatformRole {
   SUPER_ADMIN
 }
 
+/// A store's subscription plan (Part A, revenue model). What each tier includes lives in
+/// src/lib/plans.ts, not here, so limits and prices can change without a migration.
+enum PlanTier {
+  FREE
+  PRO
+  BUSINESS
+}
+
 /// Which sales channel created an order. Both channels share one order, inventory and
 /// payment model; only the workflow in front of it differs.
 enum SalesChannel {
@@ -164,9 +172,27 @@ model Tenant {
   /// Largest manual discount, as a percentage of the subtotal, a cashier may give at the
   /// register without the owner's or a discount manager's approval.
   posMaxDiscountPercent Decimal  @default(20) @db.Decimal(5, 2)
+
+  /// Plan the store last paid for. It only ever changes from a verified Stripe webhook
+  /// (modules/billing/billing.webhook.ts), never from a client request or AI output. What the
+  /// store may actually use right now is the *effective* plan (lib/plans.ts effectiveTier):
+  /// a paid plan whose paid period, plus a short grace, has passed counts as FREE.
+  plan                  PlanTier  @default(FREE)
+  /// End of the paid period, from Stripe. Null on FREE.
+  planExpiresAt         DateTime?
+  stripeCustomerId      String?   @unique
+  stripeSubscriptionId  String?   @unique
+  /// One-off AI top-up packs: credits spent only after the month's plan allowance runs out.
+  aiTopUpGenerations    Int       @default(0)
+  aiTopUpChatMessages   Int       @default(0)
+  /// A domain the store is served on (Business plan feature). Stored and unique; routing by
+  /// domain is not built yet.
+  customDomain          String?   @unique
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
+  aiTopUpPurchases AiTopUpPurchase[]
   posShifts        PosShift[]
   orderReturns     OrderReturn[]
   heldSales        HeldSale[]
@@ -639,6 +665,24 @@ model AiUsageQuota {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, month])
+  @@index([tenantId])
+}
+
+/// One paid AI top-up pack. The unique Stripe session id is what makes crediting idempotent:
+/// Stripe can deliver the same webhook twice, and the second insert fails instead of crediting again.
+model AiTopUpPurchase {
+  id              String   @id @default(cuid())
+  tenantId        String
+  packId          String
+  generations     Int
+  chatMessages    Int
+  amountCents     Int
+  currency        String
+  stripeSessionId String   @unique
+  createdAt       DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId])
 }
 

@@ -149,6 +149,7 @@ export const insightsService = {
       system: SYSTEM_PROMPT,
       prompt: factsToPrompt(facts),
       maxTokens: 350,
+      cache: true, // identical figures produce an identical write-up; regenerating with nothing new costs nothing
     });
 
     const now = new Date();

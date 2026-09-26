@@ -23,6 +23,8 @@ import { aiRouter } from "./modules/ai/ai.routes";
 import { assistantRouter } from "./modules/assistant/assistant.routes";
 import { cartRecoveryRouter } from "./modules/cart-recovery/cartRecovery.routes";
 import { insightsRouter } from "./modules/insights/insights.routes";
+import { billingRouter, plansRouter } from "./modules/billing/billing.routes";
+import { platformRouter } from "./modules/platform/platform.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 
 export const app = express();
@@ -68,7 +70,10 @@ v1.use("/stores/:storeId/ai-usage", aiRouter);
 v1.use("/stores/:storeId/assistant", assistantRouter);
 v1.use("/stores/:storeId/cart-recovery", cartRecoveryRouter);
 v1.use("/stores/:storeId/insights", insightsRouter);
+v1.use("/stores/:storeId/billing", billingRouter);
 v1.use("/stores/:storeId", storeRouter);
+v1.use("/plans", plansRouter);
+v1.use("/platform", platformRouter);
 app.use("/api/v1", v1);
 
 app.use((req, res) => {

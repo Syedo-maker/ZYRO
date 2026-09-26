@@ -2,6 +2,7 @@ import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { tenantContext } from "../../lib/tenantContext";
 import { password as passwordLib } from "../../lib/password";
 import { Errors, AppError } from "../../errors/AppError";
+import { planService } from "../billing/plan.service";
 import type { CreateStaffInput } from "./staff.validation";
 
 interface StaffRow {
@@ -37,6 +38,9 @@ export const staffService = {
    * merchant elsewhere) before they can be added as staff.
    */
   async create(input: CreateStaffInput) {
+    // The plan's staff limit comes first: a refused request must not leave a new account behind.
+    await planService.assertCanAddStaff(tenantContext.getTenantId()!);
+
     // Emails are stored and matched exactly as typed, the same as registration and login.
     const email = input.email;
     let user = await prisma.user.findUnique({ where: { email } });

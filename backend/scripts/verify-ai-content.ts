@@ -11,6 +11,8 @@ process.env.RATE_LIMIT_ENABLED = "false";
 // (Implementation_Plan.md Phase 4: quota is per [tenantId, month]) and is used, untouched by A,
 // to actually run one out and check every AI content tool is refused once it is.
 process.env.AI_MONTHLY_GENERATIONS_LIMIT = "40";
+// These checks repeat identical requests and count quota for each; the AI cache would answer the repeats for free.
+process.env.AI_CACHE_SECONDS = "0";
 // An isolated BullMQ queue, so this script's own fake AiProvider is what actually answers its
 // jobs even if a real backend or e2e-server.ts happens to be running against the same Redis
 // (see the comment on AI_QUEUE_NAME in lib/aiQueue.ts).

@@ -23,8 +23,54 @@ export interface CheckoutSessionParams {
   expiresAt: Date;
 }
 
+/** A ZYRO plan subscription, reduced to what billing needs (never a raw Stripe object). */
+export interface BillingSubscription {
+  id: string;
+  customerId: string;
+  /** Stripe's own status: active, trialing, past_due, canceled, unpaid, incomplete, ... */
+  status: string;
+  /** The plan tier ZYRO put in the subscription's metadata at checkout; null if missing. */
+  plan: string | null;
+  /** The store ZYRO put in the metadata at checkout; null if missing. */
+  tenantId: string | null;
+  /** End of the period paid for; null if Stripe reports none. */
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+interface BillingCheckoutBase {
+  tenantId: string;
+  /** Reuse the store's Stripe customer if it has one, otherwise let Checkout make one from the email. */
+  customerId?: string;
+  customerEmail?: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+export interface SubscriptionCheckoutParams extends BillingCheckoutBase {
+  plan: string;
+  planName: string;
+  priceCents: number;
+  currency: string;
+}
+
+export interface TopUpCheckoutParams extends BillingCheckoutBase {
+  packId: string;
+  packName: string;
+  priceCents: number;
+  currency: string;
+}
+
 /** What the rest of the app needs from Stripe. Kept small so tests can substitute a fake. */
 export interface StripeGateway {
+  /** Starts a monthly plan subscription. The plan only changes later, from the verified webhook. */
+  createSubscriptionCheckout(params: SubscriptionCheckoutParams): Promise<{ id: string; url: string }>;
+  /** A one-off AI top-up pack purchase. Credits are added only from the verified webhook. */
+  createTopUpCheckout(params: TopUpCheckoutParams): Promise<{ id: string; url: string }>;
+  /** A link where the store manages its card, sees invoices and cancels its subscription. */
+  createBillingPortalSession(customerId: string, returnUrl: string): Promise<{ url: string }>;
+  /** The subscription as Stripe has it right now (webhooks can arrive out of order, so state is read, not inferred). */
+  retrieveSubscription(subscriptionId: string): Promise<BillingSubscription>;
   createCheckoutSession(params: CheckoutSessionParams): Promise<{ id: string; url: string }>;
   /** Refunds the full payment. The same idempotency key always yields the same refund. */
   refundPaymentIntent(paymentIntentId: string, idempotencyKey: string): Promise<{ id: string }>;
@@ -69,6 +115,31 @@ function createRealGateway(): StripeGateway {
       }
     }
     return id;
+  }
+
+  /**
+   * The Billing Portal needs a saved configuration before it will open. This makes one that lets
+   * the store update its card, see invoices and cancel at the end of the period, and reuses it
+   * (found by its metadata) on later calls and restarts. Changing between paid plans is
+   * deliberately not offered there: a plan change goes through ZYRO's own checkout, so the plan
+   * ZYRO records always comes from a subscription ZYRO created.
+   */
+  let portalConfigId: string | undefined;
+  async function portalConfiguration(): Promise<string> {
+    if (portalConfigId) return portalConfigId;
+    const existing = await stripe.billingPortal.configurations.list({ active: true, limit: 100 });
+    const ours = existing.data.find((c) => c.metadata?.app === "zyro");
+    if (ours) return (portalConfigId = ours.id);
+    const created = await stripe.billingPortal.configurations.create({
+      metadata: { app: "zyro" },
+      business_profile: { headline: "Manage your ZYRO subscription" },
+      features: {
+        invoice_history: { enabled: true },
+        payment_method_update: { enabled: true },
+        subscription_cancel: { enabled: true, mode: "at_period_end" },
+      },
+    });
+    return (portalConfigId = created.id);
   }
 
   return {
@@ -131,6 +202,75 @@ function createRealGateway(): StripeGateway {
 
     async expireCheckoutSession(stripeSessionId) {
       await stripe.checkout.sessions.expire(stripeSessionId);
+    },
+
+    async createSubscriptionCheckout(p) {
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        client_reference_id: p.tenantId,
+        // `purpose` is how the webhook tells a plan purchase from a shopper's order payment.
+        metadata: { purpose: "subscription", tenantId: p.tenantId, plan: p.plan },
+        subscription_data: { metadata: { tenantId: p.tenantId, plan: p.plan } },
+        integration_identifier: `zyro-billing-subscription-${randomSuffix()}`,
+        ...(p.customerId ? { customer: p.customerId } : { customer_email: p.customerEmail }),
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: p.currency,
+              unit_amount: p.priceCents,
+              recurring: { interval: "month" },
+              product_data: { name: `ZYRO ${p.planName} plan`, metadata: { plan: p.plan } },
+            },
+          },
+        ],
+        success_url: p.successUrl,
+        cancel_url: p.cancelUrl,
+      });
+      if (!session.url) throw new Error("Stripe returned a Checkout Session without a URL");
+      return { id: session.id, url: session.url };
+    },
+
+    async createTopUpCheckout(p) {
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        client_reference_id: p.tenantId,
+        metadata: { purpose: "ai_topup", tenantId: p.tenantId, packId: p.packId },
+        integration_identifier: `zyro-billing-topup-${randomSuffix()}`,
+        adaptive_pricing: { enabled: false },
+        ...(p.customerId ? { customer: p.customerId } : { customer_email: p.customerEmail }),
+        line_items: [
+          { quantity: 1, price_data: { currency: p.currency, unit_amount: p.priceCents, product_data: { name: `ZYRO ${p.packName}` } } },
+        ],
+        success_url: p.successUrl,
+        cancel_url: p.cancelUrl,
+      });
+      if (!session.url) throw new Error("Stripe returned a Checkout Session without a URL");
+      return { id: session.id, url: session.url };
+    },
+
+    async createBillingPortalSession(customerId, returnUrl) {
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+        configuration: await portalConfiguration(),
+      });
+      return { url: session.url };
+    },
+
+    async retrieveSubscription(subscriptionId) {
+      const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      // Since API version 2025-03-31 the paid period is on the items, not on the subscription.
+      const ends = sub.items.data.map((item) => item.current_period_end);
+      return {
+        id: sub.id,
+        customerId: typeof sub.customer === "string" ? sub.customer : sub.customer.id,
+        status: sub.status,
+        plan: sub.metadata?.plan ?? null,
+        tenantId: sub.metadata?.tenantId ?? null,
+        currentPeriodEnd: ends.length > 0 ? new Date(Math.max(...ends) * 1000) : null,
+        cancelAtPeriodEnd: sub.cancel_at_period_end,
+      };
     },
   };
 }

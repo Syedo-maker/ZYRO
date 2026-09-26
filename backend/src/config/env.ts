@@ -79,16 +79,32 @@ export const env = {
   // rest of the API runs without a key, and AI endpoints answer 503 until it is set.
   ai: {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
-    // The model every provider adapter call uses. Short, structured content (a product
-    // description, a review summary, a tag list, an SEO snippet) does not need the biggest
-    // model; a cheaper/faster one is a one-line env change and does not touch quota accounting,
-    // which counts generations, not tokens.
-    model: process.env.AI_MODEL ?? "claude-opus-5",
-    /** New tenants (and a tenant's first request in a new month) start with this many. */
-    monthlyGenerationsLimit: num("AI_MONTHLY_GENERATIONS_LIMIT", 50),
-    monthlyChatMessagesLimit: num("AI_MONTHLY_CHAT_MESSAGES_LIMIT", 200),
+    // Cost control (Part A): each kind of request uses the cheapest model that does it well
+    // (lib/aiModels.ts decides which). "fast" is for short structured outputs and chat replies,
+    // "standard" for writing a merchant will publish. Neither needs the largest model; setting
+    // AI_MODEL_STANDARD=claude-opus-5 upgrades the writing tasks in one line, and the plan
+    // prices in lib/plans.ts must then be re-checked (they are, at startup, against the
+    // ceilings there).
+    models: {
+      fast: process.env.AI_MODEL_FAST ?? "claude-haiku-4-5",
+      standard: process.env.AI_MODEL_STANDARD ?? process.env.AI_MODEL ?? "claude-sonnet-5",
+    },
+    /** A prompt (system plus caller text) longer than this is cut, so no one call can cost more than the ceilings in lib/plans.ts assume. About 4,000 tokens. */
+    maxPromptChars: num("AI_MAX_PROMPT_CHARS", 16_000),
+    /** Identical requests for a repeatable task are answered from Redis for this long, without a new AI call or quota. 0 turns caching off. */
+    cacheSeconds: Number(process.env.AI_CACHE_SECONDS ?? 24 * 60 * 60),
+    /** The FREE plan's monthly allowance (see lib/plans.ts; Pro and Business have their own). */
+    monthlyGenerationsLimit: num("AI_MONTHLY_GENERATIONS_LIMIT", 15),
+    monthlyChatMessagesLimit: num("AI_MONTHLY_CHAT_MESSAGES_LIMIT", 40),
     /** How long a caller of generate() waits for the BullMQ job before giving up. */
     jobTimeoutMs: num("AI_JOB_TIMEOUT_MS", 60_000),
+  },
+  // Plans and billing (Part A, revenue model). Stripe Billing uses the same Stripe keys as
+  // checkout above; the plan catalog itself is in lib/plans.ts.
+  billing: {
+    /** A paid plan keeps working this long after its paid period ends, so a renewal webhook that
+     *  arrives a little late does not flicker the store down to Free. After it, the store is Free. */
+    graceHours: num("PLAN_GRACE_HOURS", 24),
   },
   // Abandoned-cart recovery (Implementation_Plan.md Phase 5, Module 7 remainder).
   cartRecovery: {

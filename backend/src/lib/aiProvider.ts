@@ -1,8 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../config/env";
 import { Errors } from "../errors/AppError";
+import { directAnswerParams } from "./aiModels";
 
 export interface AiGenerateParams {
+  /** Which model to use, chosen by the orchestrator from the prompt type (lib/aiModels.ts). */
+  model: string;
   /** Frozen instructions for this promptType; never shopper/merchant-supplied text. */
   system: string;
   /** The one piece of caller-supplied context (product fields, review text, ...). */
@@ -30,7 +33,7 @@ export interface AiProvider {
 }
 
 function createRealProvider(): AiProvider {
-  const { anthropicApiKey, model } = env.ai;
+  const { anthropicApiKey } = env.ai;
   if (!anthropicApiKey) {
     throw Errors.serviceUnavailable("AI features are not configured (set ANTHROPIC_API_KEY)");
   }
@@ -38,12 +41,14 @@ function createRealProvider(): AiProvider {
   const client = new Anthropic({ apiKey: anthropicApiKey });
 
   return {
-    async generate({ system, prompt, maxTokens }) {
+    async generate({ model, system, prompt, maxTokens }) {
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
         system,
         messages: [{ role: "user", content: prompt }],
+        // These are short answers: no reasoning tokens (they count against max_tokens and cost output price).
+        ...directAnswerParams(model),
       });
 
       const text = response.content

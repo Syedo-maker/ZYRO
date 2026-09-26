@@ -4,6 +4,7 @@ import { AiGeneratedContent } from "../../models/AiGeneratedContent.model";
 import { prisma } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
 import { indexProductInBackground } from "../../lib/recommendationClient";
+import { planService } from "../billing/plan.service";
 import { inventoryService } from "../inventory/inventory.service";
 import { ratingsFor, reviewService } from "../reviews/review.service";
 import type { ProductInput, ListProductsQuery } from "./product.validation";
@@ -162,6 +163,7 @@ export const productService = {
   },
   async create(storeId: string, input: ProductInput, userId?: string) {
     const { stock, catalog } = splitInput(input);
+    await planService.assertCanAddProduct(storeId);
 
     let doc;
     try {

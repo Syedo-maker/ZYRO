@@ -177,6 +177,7 @@ export const aiContentService = {
         "what reviewers actually wrote.",
       prompt: `Reviews of "${product.title}":\n${body}`,
       maxTokens: 300,
+      cache: true, // the reviews are part of the prompt, so a new review is a new question
     });
 
     const reviewSummary = { text: result.text, model: result.model, generatedAt: new Date(), reviewCountAtGeneration: totalPublished };
@@ -196,6 +197,7 @@ export const aiContentService = {
         "Category: <category>\nTags: <tag1>, <tag2>, <tag3>",
       prompt: `Title: ${product.title}\nDescription: ${product.description || "(none given)"}\nCurrent category: ${product.category}`,
       maxTokens: 100,
+      cache: true, // same product text in, same tags out: no reason to pay twice
     });
     return parseAutoTag(result.text);
   },
@@ -212,6 +214,7 @@ export const aiContentService = {
         "Title: <meta title>\nDescription: <meta description>",
       prompt: `Product: ${product.title}\nCategory: ${product.category}\nDescription: ${product.description || "(none given)"}`,
       maxTokens: 150,
+      cache: true,
     });
     return parseSeoMetadata(result.text);
   },
