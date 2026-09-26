@@ -30,14 +30,30 @@ Extra rules for AI phases: no customer personal data in any prompt; AI output is
 
 Extra rules for payment phases: an amount or plan changes only from a verified webhook; the same event delivered twice changes nothing more; a wrong amount is refused.
 
-**Test commands used below** (all in `backend/` unless stated):
-regression = every `npx tsx scripts/verify-<name>.ts`; browser = `node e2e/<suite>.e2e.mjs` in `frontend/` (needs the e2e server and the frontend running); python = `.\.venv\Scripts\python.exe -m pytest` in `recommendation-service/`.
+**Test commands** (see `backend/tests/README.md`):
+- backend = `npm test` in `backend/` (Jest and Supertest against the real Postgres, MongoDB and Redis; `npm test -- <name>` runs one suite, for example `npm test -- billing`);
+- real services = `npm run test:real` in `backend/` (the real Anthropic API and Stripe test mode; needs the keys in `backend/.env`);
+- browser = `node e2e/<suite>.e2e.mjs` in `frontend/` (needs `npx tsx scripts/e2e-server.ts` in `backend/` and `npm run dev` in `frontend/`);
+- python = `.\.venv\Scripts\python.exe -m pytest` in `recommendation-service/`.
+A suite name like `phase1` below means `backend/tests/integration/phase1.test.ts`.
 
 ---
 
 ## Where things stand today (2026-09-26)
 
-Phases 0 to 6 and Part A are **built and their tests pass today**. What is missing is the formal record: nobody has signed the gates, and each phase has gaps this checklist makes visible. So the first step is a **baseline sign-off**: you read the status lines below, approve or reject them, and the gaps are carried as tracked debts. Part B does not start before that.
+Phases 0 to 6 and Part A are built and their tests pass. On 2026-09-26 the gaps first listed here were closed, on your instruction that there be none:
+
+| Gap | Now |
+|---|---|
+| Backend tests were scripts, not Jest | All 16 suites moved to Jest and Supertest (every check kept, one Jest test each); 36 more unit tests; 1,002 backend tests in all |
+| Part A's tests were throwaway | Committed: `billing` (50) and `partA-billing` in the browser (17) |
+| No phone or tablet walkthrough | `responsive` browser suite: every storefront, admin and register screen at 375 px and 768 px. It found and fixed real faults (Products and Marketing pages scrolled sideways on a phone) |
+| No screen to endpoint table | `documentation/Phase0_Traceability.md`, checked by `contract` and `contract-routes`. They found a promised endpoint the server never had (removed from the contract) and a wireframe card never built (cart-recovery performance, now built, with sales by category) |
+| Migrations on an empty database, tenant scoping of every table | Now automated: `migrations`, `tenant-scope` |
+| Real Stripe never run | Suite written (`npm run test:real -- stripe-billing`). **Blocked:** the sandbox key expired on 2026-09-26. Needs a new test key |
+| Real Anthropic API never run | Suite written (`npm run test:real -- anthropic`). **Blocked:** no key yet |
+
+The last two need something only you can provide. Every other gap is closed. After that, the gates wait for your sign-off.
 
 ---
 
@@ -53,7 +69,8 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 
 **Done when:** all four pass, and the schema was reviewed against the multi-tenancy rule.
 
-**Status today:** the first three are checkable now and pass; the traceability table was never written. **Gap:** write it.
+**Tests:** `migrations` (a fresh schema gets every table), `tenant-scope` (every table with a `tenantId` is scoped), `contract` and `contract-routes` (the table, the contract and the server agree), `openapi.yaml` lint 0 errors.
+**Status today:** all pass. No gaps.
 **Sign-off:** approved by ______ on ______
 
 ## Phase 1: Foundation (authentication, multi-tenancy, catalog)
@@ -61,12 +78,12 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 **Build:** register and log in, refresh and log out, store and staff, permissions, product create and edit, image upload, admin UI.
 
 **Tests that must pass**
-- `verify-phase1` (80 checks), `verify-security` (34 checks), browser `phase1-auth-catalog` (24 checks).
+- `phase1` (80 checks), `security` (34 checks), browser `phase1-auth-catalog` (24 checks), and the phase's screens in `responsive`.
 - Specifically: wrong password refused; expired and revoked tokens refused; login and registration rate limits; a staff member without a permission gets 403; store B cannot read or edit store A's products (404); only JPEG, PNG or WebP under 5 MB accepted; no password or token ever returned.
 
 **Done when:** all pass, and a person can register, add a product with a picture and see it, with no console errors.
 
-**Status today:** passing. **Gaps:** these are scripts, not Jest and Supertest; no phone-width walkthrough recorded.
+**Status today:** all pass. No gaps.
 **Sign-off:** approved by ______ on ______
 
 ## Phase 2: Commerce core, cart and checkout, orders and shipping
@@ -74,12 +91,12 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 **Build:** inventory in Postgres, customers, cart (Redis), Stripe checkout, orders, shipping zones, cancellations and refunds, storefront and admin orders UI.
 
 **Tests that must pass**
-- `verify-commerce-core` (21), `verify-checkout` (62), `verify-orders` (63), browser `phase2-checkout` (49).
+- `commerce-core` (21), `checkout` (62), `orders` (63), `customers` (30), browser `phase2-checkout` (49), and the storefront screens in `responsive`.
 - Specifically: two shoppers cannot buy the last unit; the same webhook twice makes one order; a wrong charged amount is refused; an out-of-stock payment is refunded automatically; a refund returns stock and money; the cart never shows a stale price.
 
 **Done when:** all pass, and a shopper can buy, the merchant can ship and refund.
 
-**Status today:** passing with Stripe faked. **Gaps:** the real-Stripe run (`stripe-real`, 22 checks) needs a live sandbox, which was due to expire on 2026-09-26.
+**Status today:** all pass with Stripe faked. **Blocked:** the real-Stripe runs (browser `stripe-real`, 22 checks, and `npm run test:real -- stripe-billing`) need a new Stripe test key; the old sandbox expired on 2026-09-26.
 **Sign-off:** approved by ______ on ______
 
 ## Phase 2.5: Point of sale
@@ -87,12 +104,12 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 **Build:** register screen, barcode and search, split cash and card payments, shifts and cash drawer, held sales, receipts, returns, daily summary, team page.
 
 **Tests that must pass**
-- `verify-pos` (120), browser `phase2_5-pos` (70).
+- `pos` (119 tests covering 120 checks), browser `phase2_5-pos` (70), and the register screens in `responsive` at phone and tablet width.
 - Specifically: a cashier cannot exceed the discount limit; change is exact; a return puts stock back and takes cash from the drawer; a cashier with no register permission is turned away; POS and online sales share one inventory.
 
 **Done when:** all pass, and a shift can be opened, sales made, and the shift closed with a correct drawer count.
 
-**Status today:** passing. **Gaps:** no phone or tablet-width walkthrough of the register.
+**Status today:** all pass. No gaps.
 **Sign-off:** approved by ______ on ______
 
 ## Phase 3: Commerce completeness (discounts, search, reviews, analytics, staff, storefront)
@@ -100,12 +117,12 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 **Build:** discount codes, search and reviews, analytics dashboard, staff accounts, customer accounts, storefront and admin dashboard.
 
 **Tests that must pass**
-- `verify-discounts` (108), `verify-search-reviews` (86), `verify-analytics` (48), `verify-customers` (30), browser `phase3-storefront-admin` (91).
+- `discounts` (108), `search-reviews` (86), `analytics` (49), `customers` (30), browser `phase3-storefront-admin` (93).
 - Specifically: a code with a usage limit cannot be over-used by simultaneous checkouts; a verified-purchase review needs a real order; analytics equals hand-computed figures; refunds count in the period they are paid.
 
 **Done when:** all pass, and the dashboard figures match the orders.
 
-**Status today:** passing. **Gaps:** none beyond the common ones (Jest, phone width).
+**Status today:** all pass. No gaps. (The Marketing page now also shows cart-recovery performance and sales by category, as its wireframe does.)
 **Sign-off:** approved by ______ on ______
 
 ## Phase 4: AI orchestrator and content tools
@@ -113,12 +130,12 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 **Build:** orchestrator (queue, quota), descriptions, review summary, tags, SEO text, marketing copy, quota meter.
 
 **Tests that must pass**
-- `verify-ai` (16), `verify-ai-content` (52), browser `phase4-ai-content` (27).
+- `ai` (16), `ai-content` (52), unit `aiModels` (12), browser `phase4-ai-content` (27).
 - Specifically: quota is reserved atomically (no two calls slip past the limit); a failed call gives the quota back; an unparsable AI reply is a clean error; a suggestion is never saved without the merchant; with no key the feature answers 503, not a crash.
 
 **Done when:** all pass.
 
-**Status today:** passing with a fake AI. **Gap:** the real Anthropic API has **never** been called (no key). Until it is, "works with real AI" is unproven.
+**Status today:** all pass with a fake AI. **Blocked:** the real Anthropic API has never been called; `npm run test:real -- anthropic` is written and waits for a key.
 **Sign-off:** approved by ______ on ______
 
 ## Phase 5: Assistant, cart recovery, insights
@@ -126,12 +143,12 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 **Build:** shopping assistant, abandoned-cart recovery, business insights, chat widget.
 
 **Tests that must pass**
-- `verify-assistant` (20), `verify-cart-recovery` (17), `verify-insights` (16), browser `phase5-assistant` (10).
+- `assistant` (20), `cart-recovery` (17), `insights` (16), browser `phase5-assistant` (10).
 - Specifically: the assistant never suggests another store's product; chat has its own quota; a recovery email is sent once per cooldown; insights never show a number the database did not produce.
 
 **Done when:** all pass.
 
-**Status today:** passing with fake AI and fake email. **Gaps:** real AI and real email never run.
+**Status today:** all pass with a fake AI and fake email. **Blocked:** real AI (same key as Phase 4). Real email needs a SendGrid key; until then the recovery job logs what it would have sent, as designed.
 **Sign-off:** approved by ______ on ______
 
 ## Phase 6: Recommendation service (Python)
@@ -139,7 +156,7 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 **Build:** FastAPI service, embeddings, similar-product endpoint, assistant upgrade, storefront rows.
 
 **Tests that must pass**
-- python `pytest` (14), `verify-recommendations` (31), browser `phase6-recommendations` (14).
+- python `pytest` (14), `recommendations` (31), browser `phase6-recommendations` (14).
 - Specifically: recommendations never include the product itself, sold-out products or another store's products; the service down means an empty list, not an error; a wrong token is refused.
 
 **Done when:** all pass, and the real model has been tried once by hand.
@@ -156,12 +173,14 @@ Phases 0 to 6 and Part A are **built and their tests pass today**. What is missi
 
 **Done when:** all pass, **and** billing has run once against a real Stripe sandbox.
 
-**Status today:** the checks pass, but they were not committed. **Gaps:** real Stripe and real AI never run; the checks must be committed.
+**Status today:** all pass; committed as `billing` (50), unit `plans` (14) and browser `partA-billing` (17). **Blocked:** real Stripe and real AI, as above.
 **Sign-off:** approved by ______ on ______
 
 ---
 
 ## Parts still to build (each has its gate written now, before it starts)
+
+*From Part B on, every part's tests are written in Jest and Supertest as it is built, and committed with it.*
 
 ### Part B: Usage counters
 - **Build:** order and sales counters updated when an order completes; AI usage per store per month; the platform view reads them.
@@ -197,10 +216,10 @@ Each of B to G also has to pass G1 to G9.
 ## Phase 7: Consolidation testing (what needs the whole system)
 
 Per-phase tests are done by now. This phase adds what only makes sense on the finished product:
-- Convert the script checks to **Jest and Supertest** (or keep them and document why), with a coverage report.
+- A **coverage report** for the Jest suites (the move to Jest and Supertest was done on 2026-09-26).
 - **One golden-path test** in Playwright: sign up, add a product, sell online, sell at the register, refund, buy a plan.
 - **AI quota load test**: many simultaneous calls never exceed the limit.
-- **Mobile responsiveness** on every screen.
+- **Mobile responsiveness** of any screen added after 2026-09-26 (every earlier screen is covered by the `responsive` browser suite).
 - **Security review** of the whole system, and a dependency audit.
 - Performance check on a store with thousands of products.
 
@@ -216,8 +235,8 @@ Per-phase tests are done by now. This phase adds what only makes sense on the fi
 
 ---
 
-## Decisions this checklist needs from you
+## Decisions
 
-1. **Baseline sign-off.** Do you accept Phases 0 to 6 and Part A as passed, with the gaps above carried as tracked debts (real Stripe, real AI, Jest conversion, phone-width walkthroughs)? Or do you want any gap closed before Part B?
-2. **Test style from Part B on.** New parts get committed tests. Do you want them as Jest and Supertest from the start, or as the current script style with Jest conversion in Phase 7?
-3. **Who approves.** You alone, or you and Sikander both.
+1. **Baseline sign-off.** Your answer (2026-09-26): no gaps. Every gap is closed except real Stripe and real AI, which wait for keys only you can provide. Once those two pass, Phases 0 to 6 and Part A are ready for your sign-off.
+2. **Test style from Part B on.** Your answer: as recommended, Jest and Supertest from the start, committed with each part.
+3. **Who approves.** Not answered; taken as you, until you say otherwise.

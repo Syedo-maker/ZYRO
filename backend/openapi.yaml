@@ -2558,20 +2558,6 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /stores/{storeId}/analytics/cart-recovery:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-    get:
-      tags: [analytics]
-      operationId: analytics_cart_recovery_get
-      summary: Abandoned-cart recovery funnel (sent / opened / clicked / converted)
-      responses:
-        "200":
-          description: Funnel counts
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/CartRecoveryFunnel" }
-
   # ── WEBHOOKS ──────────────────────────────────────────────────────────
   /webhooks/stripe:
     post:
@@ -3787,11 +3773,12 @@ components:
               unitsOnline: { type: integer }
               unitsPos: { type: integer }
               productMargin: { type: [number, "null"], description: "Null when no unit of the product had a cost on record." }
-    CartRecoveryFunnel:
-      type: object
-      required: [sent, opened, clicked, converted]
-      properties:
-        sent: { type: integer }
-        opened: { type: integer }
-        clicked: { type: integer }
-        converted: { type: integer }
+        byCategory:
+          type: array
+          description: "Revenue and units kept per product category, largest revenue first; past the sixth, the rest are summed as Other. A product's current category is used (orders do not record one); a deleted product counts under Removed products."
+          items:
+            type: object
+            properties:
+              category: { type: string }
+              revenue: { type: number }
+              unitsSold: { type: integer }

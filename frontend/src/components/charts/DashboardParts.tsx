@@ -76,6 +76,29 @@ export function ChannelSplit({ data, currency }: { data: AnalyticsSummary['byCha
   )
 }
 
+/** Revenue per category as a ranked list: the bar is only revenue relative to the biggest category, the figures are written out. */
+export function CategorySales({ categories, currency }: { categories: AnalyticsSummary['byCategory']; currency: string }) {
+  const max = Math.max(1, ...categories.map((c) => c.revenue))
+  const total = categories.reduce((s, c) => s + c.revenue, 0)
+  return (
+    <ol className="flex flex-col gap-3">
+      {categories.map((c) => (
+        <li key={c.category} className="flex flex-col gap-1.5">
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate font-semibold">{c.category}</span>
+            <span className="shrink-0 text-text-secondary tabular-nums">
+              {formatMoney(c.revenue, currency)} · {total > 0 ? Math.round((c.revenue / total) * 100) : 0}% · {c.unitsSold} sold
+            </span>
+          </div>
+          <span className="h-2 overflow-hidden rounded-full bg-bg" aria-hidden="true">
+            <span className="block h-full rounded-full bg-text-secondary/60" style={{ width: `${(c.revenue / max) * 100}%` }} />
+          </span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
 /** The best sellers as a ranked list: the bar is only the units relative to the top seller, the numbers are written out. */
 export function TopProducts({ products, currency }: { products: AnalyticsSummary['topProducts']; currency: string }) {
   const max = Math.max(1, ...products.map((p) => p.unitsSold))

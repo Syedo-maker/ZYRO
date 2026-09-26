@@ -82,11 +82,11 @@ async function main() {
     const cashier = await staffMember(A, "cashier", ["pos_sell"]);
     await prismaUnscoped.tenant.update({ where: { id: A.storeId }, data: { taxRate: "10" } });
 
-    const mk = async (title: string, price: number, costPrice?: number, taxable = true) =>
-      (await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title, price, stock: 5000, category: "t", taxable, ...(costPrice === undefined ? {} : { costPrice }) } })).json.id as string;
+    const mk = async (title: string, price: number, costPrice?: number, taxable = true, category = "t") =>
+      (await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title, price, stock: 5000, category, taxable, ...(costPrice === undefined ? {} : { costPrice }) } })).json.id as string;
     const widget = await mk("Widget", 20, 8);
     const gadget = await mk("Gadget", 10, undefined, false);
-    const gizmo = await mk("Gizmo", 50, 30);
+    const gizmo = await mk("Gizmo", 50, 30, true, "premium");
 
     let pi = 0;
     const at = (iso: string) => new Date(iso);
@@ -155,6 +155,7 @@ async function main() {
     check("products: units split by channel", p1.unitsOnline === 2 && p1.unitsPos === 3 && p2.unitsOnline === 1 && p2.unitsPos === 3 && p3.unitsOnline === 1 && p3.unitsPos === 1);
     check("products: margin from the recorded cost (Widget 60, Gizmo 40); null when no cost was ever recorded (Gadget)", p1.productMargin === 60 && p3.productMargin === 40 && p2.productMargin === null && j.totals.productMargin === 100 && j.totals.costCoveragePercent === 63.6);
     check("products: each has an id", j.topProducts.every((p: { productId: string }) => p.productId === widget || p.productId === gadget || p.productId === gizmo));
+    check("categories: revenue and units per category, largest first (t: Widget 100 + Gadget 40 = 140, 9 units; premium: Gizmo 100, 2 units)", JSON.stringify(j.byCategory) === JSON.stringify([{ category: "t", revenue: 140, unitsSold: 9 }, { category: "premium", revenue: 100, unitsSold: 2 }]), JSON.stringify(j.byCategory));
 
     // ---- Daily series ----
     const day = (d: string) => j.daily.find((x: { date: string }) => x.date === d);
@@ -188,9 +189,9 @@ async function main() {
 
     // ---- Empty periods, and isolation ----
     const empty = (await S("?from=2026-01-01T00:00:00Z&to=2026-01-08T00:00:00Z")).json;
-    check("empty: a quiet week is zeros, both channels, 7 days, no products, not an error", empty.totals.orders === 0 && empty.totals.netSales === 0 && empty.totals.averageOrderValue === 0 && empty.byChannel.length === 2 && empty.byChannel.every((c: { shareOfNetSales: number }) => c.shareOfNetSales === 0) && empty.daily.length === 7 && empty.topProducts.length === 0 && empty.totals.costCoveragePercent === 0);
+    check("empty: a quiet week is zeros, both channels, 7 days, no products, not an error", empty.totals.orders === 0 && empty.totals.netSales === 0 && empty.totals.averageOrderValue === 0 && empty.byChannel.length === 2 && empty.byChannel.every((c: { shareOfNetSales: number }) => c.shareOfNetSales === 0) && empty.daily.length === 7 && empty.topProducts.length === 0 && empty.byCategory.length === 0 && empty.totals.costCoveragePercent === 0);
     const bView = await S(`?${WINDOW}`, B.token, B.storeId);
-    check("isolation: store B sees none of store A's sales, even for the same window", bView.status === 200 && bView.json.totals.orders === 0 && bView.json.totals.grossSales === 0 && bView.json.topProducts.length === 0 && bView.json.totals.newCustomers === 0);
+    check("isolation: store B sees none of store A's sales, even for the same window", bView.status === 200 && bView.json.totals.orders === 0 && bView.json.totals.grossSales === 0 && bView.json.topProducts.length === 0 && bView.json.byCategory.length === 0 && bView.json.totals.newCustomers === 0);
     check("isolation: store B's owner cannot read store A's analytics (403)", (await S(`?${WINDOW}`, B.token, A.storeId)).status === 403);
 
     // ---- Permissions and validation ----
@@ -285,6 +286,7 @@ declare([
   "products: units split by channel",
   "products: margin from the recorded cost (Widget 60, Gizmo 40); null when no cost was ever recorded (Gadget)",
   "products: each has an id",
+  "categories: revenue and units per category, largest first (t: Widget 100 + Gadget 40 = 140, 9 units; premium: Gizmo 100, 2 units)",
   "daily: one entry for every day, quiet days included as zeros",
   "daily: Aug 5 has both online orders (109.00), Aug 6 both in-store (114.40)",
   "daily: a refund lands on the day it is paid back, not the day of the sale",

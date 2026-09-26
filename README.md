@@ -58,6 +58,15 @@ Needs PostgreSQL, MongoDB and Redis running; then:
 AI features answer 503 until `ANTHROPIC_API_KEY` is set; payments and plans answer 503 until the
 Stripe keys are set (`documentation/Stripe_Setup_And_Verification.md`).
 
+## Tests
+
+Every phase ends with a test gate and a sign-off before the next begins
+(`documentation/Phase_Gates_Checklist.md`).
+
+- Backend: `npm test` in `backend/` (Jest and Supertest; see `backend/tests/README.md`).
+- Browser: `node e2e/<suite>.e2e.mjs` in `frontend/`, with the e2e server and the frontend running.
+- Python: `.\.venv\Scripts\python.exe -m pytest` in `recommendation-service/`.
+
 ## Tech stack
 
 React · TypeScript · Node.js/Express · PostgreSQL (Prisma) · MongoDB (Mongoose) ·
