@@ -77,8 +77,8 @@ export function PlatformPage() {
           <section aria-label="Platform totals" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Tile label="Stores" value={String(summary.stores)} note={Object.entries(summary.storesByPlan).map(([tier, n]) => `${n} ${tier.toLowerCase()}`).join(', ')} />
             <Tile label="Monthly recurring revenue" value={formatMoney(summary.monthlyRecurringRevenue, 'USD')} note="From plans currently paid for" />
-            <Tile label="Orders taken" value={summary.orders.toLocaleString()} note="Online and register, all stores" />
-            <Tile label="AI used this month" value={`${summary.aiUsageThisMonth.generations + summary.aiUsageThisMonth.chatMessages}`} note={`${summary.aiUsageThisMonth.generations} generations, ${summary.aiUsageThisMonth.chatMessages} assistant replies`} />
+            <Tile label="Orders taken" value={summary.orders.toLocaleString()} note={`${summary.ordersThisMonth.toLocaleString()} this month, online and register, all stores`} />
+            <Tile label="AI used this month" value={`${summary.aiUsageThisMonth.generations + summary.aiUsageThisMonth.chatMessages}`} note={`${summary.aiUsageThisMonth.generations} generations, ${summary.aiUsageThisMonth.chatMessages} replies, ${(summary.aiUsageThisMonth.inputTokens + summary.aiUsageThisMonth.outputTokens).toLocaleString()} tokens, ${summary.aiUsageThisMonth.cachedAnswers} answered from cache`} />
           </section>
 
           <section aria-label="Plan economics" className="rounded-2xl border border-border bg-white p-5">
@@ -143,8 +143,8 @@ export function PlatformPage() {
                   <th scope="col" className="py-2 pr-4 font-semibold">Plan</th>
                   <th scope="col" className="py-2 pr-4 font-semibold">Since</th>
                   <th scope="col" className="py-2 pr-4 text-right font-semibold">Products</th>
-                  <th scope="col" className="py-2 pr-4 text-right font-semibold">Orders</th>
-                  <th scope="col" className="py-2 pr-4 text-right font-semibold">Sales</th>
+                  <th scope="col" className="py-2 pr-4 text-right font-semibold">Orders (month)</th>
+                  <th scope="col" className="py-2 pr-4 text-right font-semibold">Sales (month)</th>
                   <th scope="col" className="py-2 text-right font-semibold">AI this month</th>
                 </tr>
               </thead>
@@ -159,8 +159,8 @@ export function PlatformPage() {
                     </td>
                     <td className="py-2.5 pr-4 text-text-secondary">{formatDate(t.createdAt)}</td>
                     <td className="py-2.5 pr-4 text-right tabular-nums">{t.products}</td>
-                    <td className="py-2.5 pr-4 text-right tabular-nums">{t.orders}</td>
-                    <td className="py-2.5 pr-4 text-right tabular-nums">{formatMoney(t.grossSales, t.currency)}</td>
+                    <td className="py-2.5 pr-4 text-right tabular-nums">{t.orders} <span className="text-xs text-text-secondary">({t.ordersThisMonth})</span></td>
+                    <td className="py-2.5 pr-4 text-right tabular-nums">{formatMoney(t.grossSales, t.currency)} <span className="text-xs text-text-secondary">({formatMoney(t.salesThisMonth, t.currency)})</span></td>
                     <td className="py-2.5 text-right tabular-nums">
                       {t.aiGenerationsUsed} + {t.aiChatMessagesUsed}
                     </td>

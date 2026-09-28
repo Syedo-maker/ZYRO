@@ -4,6 +4,7 @@ import { Product } from "../../models/Product.model";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
 import { discountService } from "../discounts/discount.service";
+import { usageService } from "../usage/usage.service";
 import { calculateTotals, PricingDiscount, PricingResult } from "./pricing.service";
 
 export type OrderChannel = "ONLINE" | "POS";
@@ -234,6 +235,9 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
       items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
       userId: input.cashierUserId,
     });
+
+    // The store's monthly counters (Part B), in this same transaction: the order counts if and only if it exists.
+    await usageService.recordOrder(tx, order);
 
     return order;
   };

@@ -104,6 +104,20 @@ export async function quotaExhaustedError(tenantId: string, kind: AiUsageKind) {
   });
 }
 
+/** Tokens used by one successful call, added to this month's row (Part B). The row already exists: reserveQuota made sure of it. */
+export async function recordTokens(tenantId: string, inputTokens: number, outputTokens: number, month = currentMonth()): Promise<void> {
+  await prisma.aiUsageQuota.updateMany({
+    where: { tenantId, month },
+    data: { inputTokens: { increment: Math.max(0, inputTokens) }, outputTokens: { increment: Math.max(0, outputTokens) } },
+  });
+}
+
+/** A request answered from the AI cache: no call, no quota, no cost, but worth counting to see what the cache saves. */
+export async function recordCachedAnswer(tenantId: string, month = currentMonth()): Promise<void> {
+  await getOrCreateQuota(tenantId, month);
+  await prisma.aiUsageQuota.updateMany({ where: { tenantId, month }, data: { cachedAnswers: { increment: 1 } } });
+}
+
 /**
  * Gives back a reservation from `reserveQuota` when the generation it was held for ultimately
  * failed (Implementation_Plan.md Phase 4: "a failed generation shouldn't cost the merchant

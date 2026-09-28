@@ -186,6 +186,8 @@ The last two need something only you can provide. Every other gap is closed. Aft
 - **Build:** order and sales counters updated when an order completes; AI usage per store per month; the platform view reads them.
 - **Tests:** an order (online or POS) increments exactly once; a refund is handled as decided; two simultaneous orders count as two; a cancelled or unpaid order does not count; counters equal a fresh recount from the orders table; store B's counters never change from store A's sales.
 - **Done when:** counters match a full recount on a database with mixed orders, and the platform view matches.
+- **Status (2026-09-28):** built; `usage-counters` (16) passes, with the full gate below. The refund decision: refunds and returns are counted separately (`refundCount`, `refundTotal`) in the month they are paid back, and net sales is gross minus refunds, the same as analytics. See `PartB_Usage_Counters.md`.
+- **Sign-off:** approved by ______ on ______
 
 ### Part C: AI Growth Advisor
 - **Build:** weekly job with cheap rules, then one AI message only when a rule fires; dashboard card; merchants can turn it off.

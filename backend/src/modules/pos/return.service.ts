@@ -2,6 +2,7 @@ import type { PaymentMethod } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
+import { usageService } from "../usage/usage.service";
 import { toCents } from "./shift.service";
 import { saleService } from "./sale.service";
 import type { ReturnInput } from "./pos.validation";
@@ -105,7 +106,7 @@ export const returnService = {
       for (const l of lines) {
         await tx.orderItem.update({ where: { id: l.item.id }, data: { returnedQuantity: { increment: l.quantity } } });
       }
-      await tx.orderReturn.create({
+      const orderReturn = await tx.orderReturn.create({
         data: {
           tenantId,
           orderId: order.id,
@@ -127,6 +128,9 @@ export const returnService = {
           },
         },
       });
+
+      // The store's monthly counters (Part B): money paid back, in this same transaction.
+      await usageService.recordRefund(tx, orderReturn);
 
       if (restock) {
         const locationId = order.locationId ?? (await inventoryService.getDefaultLocationId(tx, tenantId));

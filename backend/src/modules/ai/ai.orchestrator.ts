@@ -5,7 +5,7 @@ import { getAiQueue, getAiQueueEvents, type AiJobData } from "../../lib/aiQueue"
 import type { AiGenerateResult } from "../../lib/aiProvider";
 import { modelFor } from "../../lib/aiModels";
 import { getRedis } from "../../lib/redis";
-import { reserveQuota, releaseQuota, quotaExhaustedError, type AiUsageKind } from "./ai.quota.service";
+import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, type AiUsageKind } from "./ai.quota.service";
 
 export interface GenerateInput {
   tenantId: string;
@@ -61,7 +61,10 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
   if (cacheKey) {
     try {
       const hit = await getRedis().get(cacheKey);
-      if (hit) return JSON.parse(hit) as AiGenerateResult;
+      if (hit) {
+        await recordCachedAnswer(input.tenantId).catch((err: Error) => console.error("AI usage count failed:", err.message));
+        return JSON.parse(hit) as AiGenerateResult;
+      }
     } catch (err) {
       console.error("AI cache read failed:", (err as Error).message); // a cache problem only costs a real call
     }
@@ -97,6 +100,9 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
     // being unable to fulfil the request right now, not something the caller did wrong.
     throw Errors.serviceUnavailable(`AI generation failed: ${err instanceof Error ? err.message : String(err)}`);
   }
+
+  // Only a successful call reaches this point: its tokens are what the store's AI actually cost (Part B).
+  await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => console.error("AI usage count failed:", err.message));
 
   if (cacheKey) {
     await getRedis()
