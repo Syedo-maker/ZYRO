@@ -70,7 +70,8 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
       const hit = await getRedis().get(cacheKey);
       if (hit) {
         if (!platformPays) await recordCachedAnswer(input.tenantId).catch((err: Error) => console.error("AI usage count failed:", err.message));
-        return JSON.parse(hit) as AiGenerateResult;
+        const cached = JSON.parse(hit) as AiGenerateResult;
+        return { ...cached, text: tidyText(cached.text) }; // an answer cached before tidyText existed is tidied too
       }
     } catch (err) {
       console.error("AI cache read failed:", (err as Error).message); // a cache problem only costs a real call
@@ -100,7 +101,8 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
 
   let result: AiGenerateResult;
   try {
-    result = await job.waitUntilFinished(getAiQueueEvents(), env.ai.jobTimeoutMs);
+    const raw: AiGenerateResult = await job.waitUntilFinished(getAiQueueEvents(), env.ai.jobTimeoutMs);
+    result = { ...raw, text: tidyText(raw.text) };
   } catch (err) {
     if (source) await releaseQuota(input.tenantId, kind, source); // give the reservation back, to where it came from; this attempt never happened
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
@@ -117,4 +119,13 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
       .catch((err: Error) => console.error("AI cache write failed:", err.message));
   }
   return result;
+}
+
+/**
+ * House style for everything the AI writes: no em dashes (the project's writing rule). The model
+ * uses them freely, so every answer is tidied here, in the one place all AI features pass through,
+ * rather than in each prompt. "word—word" and "word — word" both become "word - word".
+ */
+export function tidyText(text: string): string {
+  return text.replace(/[ \t]*—[ \t]*/g, " - ");
 }
