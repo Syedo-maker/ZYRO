@@ -188,12 +188,15 @@ model Tenant {
   /// A domain the store is served on (Business plan feature). Stored and unique; routing by
   /// domain is not built yet.
   customDomain          String?   @unique
+  /// Weekly growth tips on the dashboard (Part C). The owner can switch them off.
+  growthTipsEnabled     Boolean   @default(true)
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   aiTopUpPurchases AiTopUpPurchase[]
   monthlyUsage     TenantMonthlyUsage[]
+  growthTips       GrowthTip[]
   posShifts        PosShift[]
   orderReturns     OrderReturn[]
   heldSales        HeldSale[]
@@ -695,6 +698,30 @@ model TenantMonthlyUsage {
 
   @@unique([tenantId, month])
   @@index([month])
+}
+
+/// One weekly Growth Advisor tip (Part C). At most one per store per week (the unique key). `rules`
+/// are the checks that fired with the figures that fired them; `message` is what the merchant reads,
+/// written by the AI from those figures (`source: ai`) or, when the AI is not available, from a
+/// template (`source: template`). The AI cost is the platform's, recorded here, never the store's quota.
+model GrowthTip {
+  id           String    @id @default(cuid())
+  tenantId     String
+  /// Monday of the week (UTC), "YYYY-MM-DD".
+  weekStart    String
+  rules        Json
+  message      String
+  source       String
+  model        String?
+  inputTokens  Int       @default(0)
+  outputTokens Int       @default(0)
+  dismissedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, weekStart])
+  @@index([tenantId, createdAt])
 }
 
 /// One paid AI top-up pack. The unique Stripe session id is what makes crediting idempotent:

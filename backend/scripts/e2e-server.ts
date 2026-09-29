@@ -70,6 +70,11 @@ async function main() {
     async generate({ system, prompt }) {
       aiCallCount++;
       const offer = /Offer details from the merchant: (.+?)\.?$/m.exec(prompt)?.[1];
+      // Growth Advisor tips (Part C): written from the facts in the prompt, like the real model.
+      const tipFacts = /practical message to the owner of a small shop/.test(system)
+        ? prompt.split("\n").filter((l) => l.startsWith("- ")).map((l) => l.replace(/^- \[\w+\] /, "")).join(" ")
+        : null;
+      if (tipFacts !== null) return { text: `This week: ${tipFacts}`, model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
       const text = /promotional email/.test(system)
         ? `Subject: Fresh for the morning${offer && !/^none/.test(offer) ? `\n\nOur Ceramic Mug: ${offer}. Shop now.` : "\n\nOur Ceramic Mug is back. Shop now."}`
         : /advertising headlines/.test(system)

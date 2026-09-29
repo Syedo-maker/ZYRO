@@ -65,7 +65,7 @@ async function salesVelocity(tenantId: string): Promise<Map<string, number>> {
   return out;
 }
 
-async function computeLowStock(tenantId: string): Promise<LowStockItem[]> {
+export async function computeLowStock(tenantId: string): Promise<LowStockItem[]> {
   const [levels, velocity, products] = await Promise.all([
     stockLevels(tenantId),
     salesVelocity(tenantId),

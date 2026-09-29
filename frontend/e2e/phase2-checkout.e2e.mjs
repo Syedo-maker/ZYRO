@@ -214,6 +214,8 @@ await step('order detail, shipping address and shipment', async () => {
   await panel().getByRole('button', { name: 'Mark shipped' }).click()
   await panel().getByText('Shipped', { exact: true }).waitFor()
   check('shipment: marking shipped moves the order to Fulfilled', await panel().getByText('Fulfilled').first().isVisible())
+  // The panel updates at once; the order list reloads right after, so wait for that reload before reading it.
+  await admin.getByRole('row', { name: /#1.*Fulfilled/ }).waitFor({ timeout: 10000 }).catch(() => undefined)
   check('shipment: list row updated too', (await admin.getByRole('row', { name: /#1.*Fulfilled/ }).count()) === 1)
   await panel().getByRole('button', { name: 'Mark delivered' }).click()
   await panel().getByText('Delivered', { exact: true }).waitFor()
