@@ -78,6 +78,9 @@ await step('register', async () => {
   await page.waitForTimeout(400)
   check('register: an invalid store URL is blocked by the browser before any request', page.url().endsWith('/register'))
   await page.getByLabel('Store URL').fill(`aurora-${suffix}`)
+  // Sign-up starts on the rupee; this store sells in dollars, so the price checks below read $.
+  check('register: the currency choice starts on the Pakistani rupee', (await page.getByLabel('Currency your prices are in').inputValue()) === 'PKR')
+  await page.getByLabel('Currency your prices are in').selectOption('USD')
   await page.getByRole('button', { name: 'Create store' }).click()
   await page.waitForURL('**/admin/products')
   check('register: lands on the admin products page', true)
@@ -169,8 +172,9 @@ await step('orders nav and empty state work for a fresh store', async () => {
   await page.getByRole('link', { name: 'Orders' }).click()
   await page.getByText('No orders yet').waitFor()
   check('nav: Orders page opens from the sidebar', true)
-  const disabled = await page.getByText('Settings').first().evaluate((el) => el.tagName !== 'A')
-  check('nav: the not-yet-built Settings section is visibly disabled', disabled)
+  await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByRole('heading', { name: 'Settings' }).waitFor()
+  check('nav: the owner opens Settings from the sidebar, and the store sells in the currency chosen at sign-up', (await page.getByRole('region', { name: 'Currency' }).getByLabel('Currency').inputValue()) === 'USD')
 })
 
 check('no console errors or uncaught exceptions', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '))

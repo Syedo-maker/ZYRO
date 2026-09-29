@@ -49,6 +49,7 @@ These were added in later phases; the screen itself was designed in code.
 | Store branding | Phase 1 | store_branding_update, stores_get |
 | Plan and billing | Part A | billing_overview, billing_subscribe, billing_top_up, billing_portal, plans_list, store_domain_update |
 | Platform | Part A | platform_summary, platform_tenants |
+| Settings (store currency) | After Part C | store_currency_get, store_currency_update |
 
 ## Not called by any screen
 

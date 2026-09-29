@@ -17,11 +17,13 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Team & register', to: '/admin/team', enabled: true },
   { label: 'Reviews', to: '/admin/reviews', enabled: true },
   { label: 'Marketing', to: '/admin/marketing', enabled: true },
-  { label: 'Settings', to: '/admin/settings', enabled: false },
 ]
 
-/** Only the store owner spends money, and only a platform operator sees the platform view. */
-const OWNER_ITEM: NavItem = { label: 'Plan & billing', to: '/admin/billing', enabled: true }
+/** Only the store owner spends money or changes the store's settings, and only a platform operator sees the platform view. */
+const OWNER_ITEMS: NavItem[] = [
+  { label: 'Plan & billing', to: '/admin/billing', enabled: true },
+  { label: 'Settings', to: '/admin/settings', enabled: true },
+]
 const PLATFORM_ITEM: NavItem = { label: 'Platform', to: '/admin/platform', enabled: true }
 
 export function AdminLayout() {
@@ -32,7 +34,7 @@ export function AdminLayout() {
 
   const items = [
     ...NAV_ITEMS.filter((i) => i.enabled),
-    ...(activeStore?.role === 'owner' ? [OWNER_ITEM] : []),
+    ...(activeStore?.role === 'owner' ? OWNER_ITEMS : []),
     ...(user?.platformAdmin ? [PLATFORM_ITEM] : []),
     ...NAV_ITEMS.filter((i) => !i.enabled),
   ]

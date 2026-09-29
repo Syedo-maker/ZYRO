@@ -8,6 +8,8 @@ interface RegisterInput {
   password: string
   storeName: string
   storeSlug: string
+  /** The currency the store sells in; the server defaults to USD when it is left out. */
+  currency?: string
 }
 
 interface CustomerRegisterInput {

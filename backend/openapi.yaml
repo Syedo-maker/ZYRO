@@ -104,6 +104,8 @@ paths:
                     beyond that and would silently accept a different password.
                 storeName: { type: string, maxLength: 120 }
                 storeSlug: { type: string, pattern: "^[a-z0-9-]{3,50}$" }
+                currency:
+                  $ref: "#/components/schemas/StoreCurrency"
             examples:
               new_merchant:
                 value:
@@ -2744,6 +2746,69 @@ paths:
         "402": { $ref: "#/components/responses/PlanLimit" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: "Another store already uses that domain" }
+  /stores/{storeId}/currency:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [stores]
+      operationId: store_currency_get
+      summary: The store's currency, the choices, and whether it can still be changed
+      description: Owner-only. Used by the admin Settings page.
+      responses:
+        "200":
+          description: Current currency and choices
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [currency, locked, reason, options]
+                properties:
+                  currency: { $ref: "#/components/schemas/StoreCurrency" }
+                  locked: { type: boolean, description: "True once the store has an order, or while a shopper is part-way through paying." }
+                  reason: { type: [string, "null"], description: "Why it is locked, in words for the merchant; null when it is not." }
+                  options:
+                    type: array
+                    items:
+                      type: object
+                      required: [code, name]
+                      properties:
+                        code: { $ref: "#/components/schemas/StoreCurrency" }
+                        name: { type: string, example: Pakistani rupee }
+        "401": { description: "Not logged in" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      tags: [stores]
+      operationId: store_currency_update
+      summary: Change the currency the store sells in
+      description: |
+        Owner-only. Allowed until the store's first sale (online or at the register) and not while a shopper is
+        part-way through paying: prices are stored as plain numbers, and orders, refunds and reports keep the
+        currency they were taken in, so a later switch would misprice every product without anyone noticing.
+        Setting the currency the store already has is always accepted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currency]
+              properties:
+                currency: { $ref: "#/components/schemas/StoreCurrency" }
+      responses:
+        "200":
+          description: Updated; the store's public profile plus whether the currency is now locked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Store"
+                  - type: object
+                    properties:
+                      currencyLocked: { type: boolean }
+        "400": { description: "Not one of the listed currencies" }
+        "401": { description: "Not logged in" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Locked: the store has sold something, or a payment is in progress" }
   # ── GROWTH ADVISOR (Part C) ───────────────────────────────────────────
   /stores/{storeId}/advisor:
     parameters:
@@ -3163,6 +3228,11 @@ components:
         logoUrl: { type: string, format: uri }
         themeColor: { type: string }
         currency: { type: string, description: "The store's currency (ISO code), used to format prices." }
+
+    StoreCurrency:
+      type: string
+      description: "A currency a store can sell in (backend/src/lib/currencies.ts). All have two decimal places. Defaults to USD when left out at sign-up."
+      enum: [PKR, INR, BDT, LKR, NPR, AED, SAR, USD, GBP, EUR, CAD, AUD]
 
     StaffPermission:
       type: string
