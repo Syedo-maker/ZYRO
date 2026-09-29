@@ -104,7 +104,9 @@ try {
     }
   }
   const pageText = await page.locator('body').innerText()
-  check('stripe page: the shopper is asked to pay 27.50, the discounted total', /Pay\s\$27\.50/.test(pageText), pageText.replace(/\s+/g, ' ').slice(0, 160))
+  // Stripe's header layout varies by account ("Pay $27.50", or "Pay <account name> $27.50"), so the
+  // check is on the amounts: the discounted total is shown and the undiscounted one (33.00) is not.
+  check('stripe page: the shopper is asked to pay 27.50, the discounted total, never the undiscounted 33.00', /\$27\.50/.test(pageText) && !/\$33\.00/.test(pageText), pageText.replace(/\s+/g, ' ').slice(0, 160))
   await page.screenshot({ path: path.join(SHOTS, 'stripe-discount-1.png') })
 
   await page.locator('#email').fill('shopper@example.com')
