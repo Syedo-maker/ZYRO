@@ -67,7 +67,8 @@ export interface PlatformSummary {
   storesByPlan: Record<string, number>
   monthlyRecurringRevenue: number
   orders: number
-  aiUsageThisMonth: { generations: number; chatMessages: number }
+  ordersThisMonth: number
+  aiUsageThisMonth: { generations: number; chatMessages: number; inputTokens: number; outputTokens: number; cachedAnswers: number }
   economics: { id: string; priceUsd: number; worstCaseCostUsd: number; profitable: boolean }[]
 }
 
@@ -82,6 +83,10 @@ export interface PlatformTenantRow {
   products: number
   orders: number
   grossSales: number
+  refunds: number
+  ordersThisMonth: number
+  salesThisMonth: number
   aiGenerationsUsed: number
   aiChatMessagesUsed: number
+  aiTokensUsed: number
 }

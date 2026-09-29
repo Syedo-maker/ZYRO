@@ -2957,12 +2957,16 @@ components:
         stores: { type: integer }
         storesByPlan: { type: object, additionalProperties: { type: integer } }
         monthlyRecurringRevenue: { type: number, description: "In US dollars, from plans currently paid for." }
-        orders: { type: integer }
+        orders: { type: integer, description: "All time, from the monthly counters." }
+        ordersThisMonth: { type: integer, description: "This UTC month." }
         aiUsageThisMonth:
           type: object
           properties:
             generations: { type: integer }
             chatMessages: { type: integer }
+            inputTokens: { type: integer, description: "Tokens used by successful calls only." }
+            outputTokens: { type: integer }
+            cachedAnswers: { type: integer, description: "Requests answered from the AI cache: no call, no quota, no cost." }
         economics:
           type: array
           description: Each plan and pack, its price and its worst-case cost in US dollars.
@@ -2982,13 +2986,17 @@ components:
         slug: { type: string }
         currency: { type: string }
         plan: { type: string }
-        paidUntil: { type: [string, "null"], format: date-time,  }
+        paidUntil: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         products: { type: integer }
-        orders: { type: integer }
-        grossSales: { type: number, description: "In the store's own currency." }
+        orders: { type: integer, description: "All time, from the store's monthly counters." }
+        grossSales: { type: number, description: "All time, in the store's own currency." }
+        refunds: { type: number, description: "Money paid back, all time, in the store's own currency." }
+        ordersThisMonth: { type: integer }
+        salesThisMonth: { type: number }
         aiGenerationsUsed: { type: integer }
         aiChatMessagesUsed: { type: integer }
+        aiTokensUsed: { type: integer, description: "Input plus output tokens this month, successful calls only." }
     Error:
       description: RFC 7807 problem details.
       type: object

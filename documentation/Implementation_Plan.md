@@ -73,7 +73,7 @@ This document is a working plan, not a submission deliverable. It intentionally 
 
 **New parts (roadmap of 2026-09-26)** *(new, built after Phase 6 and before Phase 7. Detailed schema, endpoints, risks, estimates and viva answers are still to be written and approved; Part A was started on the team's instruction ahead of that. Each part is built on its own branch and merged by pull request.)*
 - [x] 🆕 **Part A: Revenue model.** Free, Pro and Business plans with limits; plan changes only from Stripe's verified webhook, falling back to Free on a failed renewal; limits with upgrade prompts; one-off AI top-up packs; orchestrator cost controls (model per task, prompt cap, cache); platform view of per-store totals. See `documentation/PartA_Revenue_Model.md`.
-- [ ] 🆕 Part B: Usage counters (order and sales counters updated at write time; AI usage per tenant per month)
+- [x] 🆕 **Part B: Usage counters.** Monthly orders, sales and refunds per store, written in the same transaction as each order, refund and return; AI tokens and cached answers per store per month (successful calls only); the platform view reads them. See `documentation/PartB_Usage_Counters.md`.
 - [ ] 🆕 Part C: AI Growth Advisor (weekly rules, then one short AI message; extends the business insights)
 - [ ] 🆕 Part D: AI Trend Scout (weekly trend reports per category, Pakistan and worldwide, with sources)
 - [ ] 🆕 Part E: AI Payment and Trust (COD, payment adapter, COD risk agent, screenshot verifier, courier reconciliation, payment nudge, payment error helper)

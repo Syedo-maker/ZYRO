@@ -4,6 +4,7 @@ import { getStripeGateway } from "../../lib/stripe";
 import { hasStorePermission } from "../../lib/permissions";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
+import { usageService } from "../usage/usage.service";
 import { orderInclude, toOrderView, toShopperOrderView } from "./order.presenter";
 import {
   INITIAL_SHIPMENT_STATUSES,
@@ -75,7 +76,7 @@ async function refundOrder(
       : null;
 
     for (const payment of payments) {
-      await tx.refund.create({
+      const refund = await tx.refund.create({
         data: {
           tenantId,
           orderId: order.id,
@@ -90,6 +91,7 @@ async function refundOrder(
           createdByUserId: userId,
         },
       });
+      await usageService.recordRefund(tx, refund);
     }
     await tx.payment.updateMany({
       where: { orderId: order.id, tenantId, status: "SUCCEEDED" },

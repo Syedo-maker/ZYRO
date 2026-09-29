@@ -193,6 +193,7 @@ model Tenant {
   updatedAt             DateTime @updatedAt
 
   aiTopUpPurchases AiTopUpPurchase[]
+  monthlyUsage     TenantMonthlyUsage[]
   posShifts        PosShift[]
   orderReturns     OrderReturn[]
   heldSales        HeldSale[]
@@ -659,6 +660,11 @@ model AiUsageQuota {
   chatMessagesUsed  Int      @default(0)
   generationsLimit  Int
   chatMessagesLimit Int
+  /// Tokens used by successful calls this month (Part B): what the store's AI actually cost.
+  inputTokens       Int      @default(0)
+  outputTokens      Int      @default(0)
+  /// Requests answered from the AI cache: no AI call, no quota, no cost.
+  cachedAnswers     Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -666,6 +672,29 @@ model AiUsageQuota {
 
   @@unique([tenantId, month])
   @@index([tenantId])
+}
+
+/// A store's running totals for one calendar month (UTC), kept up to date at write time (Part B):
+/// createOrder, whole-order refunds and item returns update it in the same transaction as the row
+/// they write, so it can never disagree with the orders table. The definitions match analytics:
+/// every order counts once (orders are only ever created paid), at its total; refunds and returns
+/// count in the month they are paid back. Read by the platform view and the Growth Advisor
+/// instead of adding up orders every time.
+model TenantMonthlyUsage {
+  id           String   @id @default(cuid())
+  tenantId     String
+  month        String // "YYYY-MM", UTC
+  onlineOrders Int      @default(0)
+  posOrders    Int      @default(0)
+  grossSales   Decimal  @default(0) @db.Decimal(14, 2)
+  refundCount  Int      @default(0)
+  refundTotal  Decimal  @default(0) @db.Decimal(14, 2)
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, month])
+  @@index([month])
 }
 
 /// One paid AI top-up pack. The unique Stripe session id is what makes crediting idempotent:

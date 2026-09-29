@@ -64,7 +64,8 @@ Cash on Delivery as an online method, a payment adapter so local gateways (JazzC
 | 4 and 5 | AI orchestrator and content tools; assistant, cart recovery, insights | done |
 | 6 | Recommendation service (Python) | done (photo editing stretch open) |
 | Part A | Revenue model | done |
-| Parts B to G | Usage counters, Growth Advisor, Trend Scout, Payment and Trust, search, voice and bargaining assistants | planned, effort estimates pending the approved plan |
+| Part B | Usage counters (monthly orders, sales, refunds and AI tokens per store) | done |
+| Parts C to G | Growth Advisor, Trend Scout, Payment and Trust, search, voice and bargaining assistants | planned, effort estimates pending the approved plan |
 | 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | last, not started |
 | 8 | Docker Compose, environment setup, final documentation, Gantt chart, Turnitin report | last, not started |
 
