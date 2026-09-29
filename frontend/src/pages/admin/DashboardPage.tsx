@@ -8,6 +8,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { SalesByDayChart } from '../../components/charts/SalesByDayChart'
 import { ChannelSplit, StatTile, TopProducts } from '../../components/charts/DashboardParts'
 import { AiUsageMeter } from './AiUsageMeter'
+import { GrowthTipCard } from './GrowthTipCard'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { upgradeHintOf } from '../../lib/billingApi'
 import { formatDate, formatMoney } from '../../lib/format'
@@ -128,6 +129,7 @@ export function DashboardPage() {
       </div>
 
       {error && <Alert>{error}</Alert>}
+      <GrowthTipCard storeId={activeStore.id} isOwner={activeStore.role === 'owner'} />
       <UpgradeNotice error={limitError} isOwner={activeStore.role === 'owner'} />
       {!data && !error && <Spinner label="Loading the dashboard" />}
 

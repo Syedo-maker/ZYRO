@@ -3,6 +3,7 @@ import { env } from "./config/env";
 import { connectMongo } from "./lib/mongo";
 import { startAiWorker } from "./lib/aiQueue";
 import { scheduleCartRecoveryScan, startCartRecoveryWorker } from "./lib/cartRecoveryQueue";
+import { scheduleAdvisor, startAdvisorWorker } from "./lib/advisorQueue";
 
 async function main() {
   await connectMongo();
@@ -12,6 +13,8 @@ async function main() {
   startAiWorker();
   startCartRecoveryWorker();
   await scheduleCartRecoveryScan();
+  startAdvisorWorker();
+  await scheduleAdvisor();
   app.listen(env.port, () => {
     console.log(`ZYRO API listening on http://localhost:${env.port}`);
   });

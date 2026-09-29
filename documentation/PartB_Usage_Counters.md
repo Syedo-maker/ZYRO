@@ -34,7 +34,7 @@ This existed since Phase 4 (`AiUsageQuota`, one row per store per month, a faile
 ## Who reads it
 
 - The **platform view** (Part A) now reads the counters instead of adding up every order on the platform: per store, all-time and this-month orders and sales, refunds, and AI tokens; platform-wide, orders this month and tokens used. This is what keeps that page fast as the platform grows.
-- The **Growth Advisor** (Part C) will read `usageService.history()` for trends such as "sales up more than 30 percent on last month" without scanning orders.
+- The **Growth Advisor** (Part C) compares rolling 30-day windows from analytics instead (more accurate for a weekly check than calendar months); `usageService.history()` remains available for monthly trends.
 
 ## Existing data
 

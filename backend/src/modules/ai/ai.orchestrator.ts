@@ -27,6 +27,12 @@ export interface GenerateInput {
    * (regenerate, "write another version", chat).
    */
   cache?: boolean;
+  /**
+   * Who pays. `store` (the default) spends the store's monthly allowance. `platform` is for features
+   * the platform runs on its own initiative (the Growth Advisor): no quota is reserved or spent and the
+   * store's token counters are not touched; the caller records the cost where the platform can see it.
+   */
+  billedTo?: "store" | "platform";
 }
 
 /**
@@ -48,6 +54,7 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
   const kind: AiUsageKind = input.kind ?? "generation";
   const model = modelFor(input.promptType);
   const maxTokens = input.maxTokens ?? 1024;
+  const platformPays = input.billedTo === "platform";
 
   // The cap covers the system text plus the caller's text; the caller's text is what gets cut
   // (the end of it: reviews are fed newest first, so the oldest go).
@@ -62,7 +69,7 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
     try {
       const hit = await getRedis().get(cacheKey);
       if (hit) {
-        await recordCachedAnswer(input.tenantId).catch((err: Error) => console.error("AI usage count failed:", err.message));
+        if (!platformPays) await recordCachedAnswer(input.tenantId).catch((err: Error) => console.error("AI usage count failed:", err.message));
         return JSON.parse(hit) as AiGenerateResult;
       }
     } catch (err) {
@@ -70,8 +77,8 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
     }
   }
 
-  const source = await reserveQuota(input.tenantId, kind);
-  if (!source) throw await quotaExhaustedError(input.tenantId, kind);
+  const source = platformPays ? null : await reserveQuota(input.tenantId, kind);
+  if (!platformPays && !source) throw await quotaExhaustedError(input.tenantId, kind);
 
   const job = await getAiQueue().add(
     input.promptType,
@@ -95,14 +102,14 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
   try {
     result = await job.waitUntilFinished(getAiQueueEvents(), env.ai.jobTimeoutMs);
   } catch (err) {
-    await releaseQuota(input.tenantId, kind, source); // give the reservation back, to where it came from; this attempt never happened
+    if (source) await releaseQuota(input.tenantId, kind, source); // give the reservation back, to where it came from; this attempt never happened
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
     // being unable to fulfil the request right now, not something the caller did wrong.
     throw Errors.serviceUnavailable(`AI generation failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   // Only a successful call reaches this point: its tokens are what the store's AI actually cost (Part B).
-  await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => console.error("AI usage count failed:", err.message));
+  if (!platformPays) await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => console.error("AI usage count failed:", err.message));
 
   if (cacheKey) {
     await getRedis()

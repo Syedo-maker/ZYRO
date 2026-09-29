@@ -25,6 +25,7 @@ import { cartRecoveryRouter } from "./modules/cart-recovery/cartRecovery.routes"
 import { insightsRouter } from "./modules/insights/insights.routes";
 import { billingRouter, plansRouter } from "./modules/billing/billing.routes";
 import { platformRouter } from "./modules/platform/platform.routes";
+import { advisorRouter } from "./modules/advisor/advisor.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 
 export const app = express();
@@ -71,6 +72,7 @@ v1.use("/stores/:storeId/assistant", assistantRouter);
 v1.use("/stores/:storeId/cart-recovery", cartRecoveryRouter);
 v1.use("/stores/:storeId/insights", insightsRouter);
 v1.use("/stores/:storeId/billing", billingRouter);
+v1.use("/stores/:storeId/advisor", advisorRouter);
 v1.use("/stores/:storeId", storeRouter);
 v1.use("/plans", plansRouter);
 v1.use("/platform", platformRouter);

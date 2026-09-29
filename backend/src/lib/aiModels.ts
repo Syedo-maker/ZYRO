@@ -16,6 +16,8 @@ const TIER_BY_PROMPT: Record<string, ModelTier> = {
   auto_tag: "fast",
   seo_metadata: "fast",
   chat: "fast",
+  // A two-to-four sentence tip from figures already worked out (Part C); paid by the platform.
+  growth_tip: "fast",
   // Customer-visible or merchant-published writing: the better model.
   product_description: "standard",
   review_summary: "standard",

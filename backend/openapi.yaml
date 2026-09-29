@@ -2744,6 +2744,89 @@ paths:
         "402": { $ref: "#/components/responses/PlanLimit" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: "Another store already uses that domain" }
+  # ── GROWTH ADVISOR (Part C) ───────────────────────────────────────────
+  /stores/{storeId}/advisor:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [insights]
+      operationId: advisor_get
+      summary: This week's growth tip, and whether tips are on
+      description: |
+        Owner, or staff with `analytics_read`. The tip shown is the latest from the last 7 days that has not been
+        dismissed. Tips come from a weekly job (Mondays 06:00 UTC) that checks the store's own totals with plain
+        rules and, only when something is worth saying, writes one short message: with the AI (paid by the
+        platform, never the store's allowance) or, when the AI is unavailable, from a template with the same figures.
+      responses:
+        "200":
+          description: Tip state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdvisorState" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      tags: [insights]
+      operationId: advisor_update
+      summary: Switch weekly tips on or off
+      description: Owner only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: Tip state after the change
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdvisorState" }
+        "400": { description: "enabled is not a boolean" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/advisor/check:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [insights]
+      operationId: advisor_check
+      summary: Run this week's check now
+      description: |
+        Owner, or staff with `analytics_read`. Still at most one tip a week: if the week already has one, it is
+        returned. `tip` is null when tips are off or nothing new stood out.
+      responses:
+        "200":
+          description: This week's tip
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tip:
+                    oneOf:
+                      - $ref: "#/components/schemas/GrowthTip"
+                      - type: "null"
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/advisor/tips/{tipId}/dismiss:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: tipId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [insights]
+      operationId: advisor_tip_dismiss
+      summary: Hide a tip ("Got it")
+      responses:
+        "204": { description: Hidden }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   # ── PLATFORM (Part A) ─────────────────────────────────────────────────
   /platform/summary:
     get:
@@ -2951,6 +3034,33 @@ components:
       required: [url]
       properties:
         url: { type: string, format: uri, description: "A Stripe-hosted page to send the browser to." }
+    GrowthTip:
+      type: object
+      required: [id, weekStart, message, source, topics, createdAt]
+      properties:
+        id: { type: string }
+        weekStart: { type: string, format: date, description: "Monday of the week, UTC." }
+        message: { type: string }
+        source: { type: string, enum: [ai, template], description: "ai: written by the AI from the figures. template: written from the same figures without the AI." }
+        topics:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string, enum: [best_seller_low_stock, festival, sales_up, sales_down, abandoned_carts, slow_movers, ai_quota_high, near_product_limit] }
+              kind: { type: string, enum: [praise, tip, upgrade] }
+        createdAt: { type: string, format: date-time }
+
+    AdvisorState:
+      type: object
+      required: [enabled, tip]
+      properties:
+        enabled: { type: boolean }
+        tip:
+          oneOf:
+            - $ref: "#/components/schemas/GrowthTip"
+            - type: "null"
+
     PlatformSummary:
       type: object
       properties:

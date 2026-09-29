@@ -193,6 +193,8 @@ The last two need something only you can provide. Every other gap is closed. Aft
 - **Build:** weekly job with cheap rules, then one AI message only when a rule fires; dashboard card; merchants can turn it off.
 - **Tests:** each rule fires on hand-made data and not on data that misses it; no AI call when no rule fires; the message is built from totals only (a test that no order, customer or product text is in the prompt); at most one per store per week; off means none; a store's tip never uses another store's numbers; the platform pays (its quota is not used).
 - **Done when:** a week of fake time produces the expected messages, and the AI is never handed personal data.
+- **Status (2026-09-29):** built; `advisor-rules` (15), `advisor` (15) and browser `partC-advisor` (12) pass, with the full gate. Weeks are simulated by passing later dates. "Viewed but not bought" is not built: there is no product-view data. See `PartC_Growth_Advisor.md`.
+- **Sign-off:** approved by ______ on ______
 
 ### Part D: AI Trend Scout
 - **Build:** weekly per-category reports from platform data and a trends source, shown as a dashboard card.

@@ -27,6 +27,7 @@ export const TENANT_SCOPED_MODELS = new Set([
   "AiBusinessInsight",
   "AiTopUpPurchase",
   "TenantMonthlyUsage",
+  "GrowthTip",
 ]);
 
 // Operations where merging `{ tenantId }` into `where`/`data` is safe and sufficient.
