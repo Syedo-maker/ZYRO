@@ -39,7 +39,7 @@ A suite name like `phase1` below means `backend/tests/integration/phase1.test.ts
 
 ---
 
-## Where things stand today (2026-09-26)
+## Where things stand (written 2026-09-26, updated 2026-09-29)
 
 Phases 0 to 6 and Part A are built and their tests pass. On 2026-09-26 the gaps first listed here were closed, on your instruction that there be none:
 
@@ -50,10 +50,10 @@ Phases 0 to 6 and Part A are built and their tests pass. On 2026-09-26 the gaps 
 | No phone or tablet walkthrough | `responsive` browser suite: every storefront, admin and register screen at 375 px and 768 px. It found and fixed real faults (Products and Marketing pages scrolled sideways on a phone) |
 | No screen to endpoint table | `documentation/Phase0_Traceability.md`, checked by `contract` and `contract-routes`. They found a promised endpoint the server never had (removed from the contract) and a wireframe card never built (cart-recovery performance, now built, with sales by category) |
 | Migrations on an empty database, tenant scoping of every table | Now automated: `migrations`, `tenant-scope` |
-| Real Stripe never run | Suite written (`npm run test:real -- stripe-billing`). **Blocked:** the sandbox key expired on 2026-09-26. Needs a new test key |
-| Real Anthropic API never run | Suite written (`npm run test:real -- anthropic`). **Blocked:** no key yet |
+| Real Stripe never run | **Passed 2026-09-29** with a new, claimed test-mode key: `stripe-billing` (5), and in the browser `stripe-real` (22) and `stripe-discount` (15) |
+| Real Anthropic API never run | **Passed 2026-09-29**: `anthropic` (3); a live run also wrote a product description, marketing copy and a growth tip |
 
-The last two need something only you can provide. Every other gap is closed. After that, the gates wait for your sign-off.
+**Update 2026-09-29: every gap is closed, and Phases 0 to 6 and Parts A, B and C are signed off.** Full gate at sign-off: 1,109 backend tests, 14 pytest, 12 browser suites with the test server, and all real-service suites above. Work merged since Part C and covered by that gate: AI text tidied (no em dashes, prices in the store's currency, PR #6), the store currency choice and Settings page (PR #7), and a Stripe browser-test fix (PR #8).
 
 ---
 
@@ -71,7 +71,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 
 **Tests:** `migrations` (a fresh schema gets every table), `tenant-scope` (every table with a `tenantId` is scoped), `contract` and `contract-routes` (the table, the contract and the server agree), `openapi.yaml` lint 0 errors.
 **Status today:** all pass. No gaps.
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ## Phase 1: Foundation (authentication, multi-tenancy, catalog)
 
@@ -84,7 +84,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 **Done when:** all pass, and a person can register, add a product with a picture and see it, with no console errors.
 
 **Status today:** all pass. No gaps.
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ## Phase 2: Commerce core, cart and checkout, orders and shipping
 
@@ -97,7 +97,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 **Done when:** all pass, and a shopper can buy, the merchant can ship and refund.
 
 **Status today:** all pass with Stripe faked. **Blocked:** the real-Stripe runs (browser `stripe-real`, 22 checks, and `npm run test:real -- stripe-billing`) need a new Stripe test key; the old sandbox expired on 2026-09-26.
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ## Phase 2.5: Point of sale
 
@@ -110,7 +110,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 **Done when:** all pass, and a shift can be opened, sales made, and the shift closed with a correct drawer count.
 
 **Status today:** all pass. No gaps.
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ## Phase 3: Commerce completeness (discounts, search, reviews, analytics, staff, storefront)
 
@@ -123,7 +123,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 **Done when:** all pass, and the dashboard figures match the orders.
 
 **Status today:** all pass. No gaps. (The Marketing page now also shows cart-recovery performance and sales by category, as its wireframe does.)
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ## Phase 4: AI orchestrator and content tools
 
@@ -136,7 +136,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 **Done when:** all pass.
 
 **Status today:** all pass with a fake AI. **Blocked:** the real Anthropic API has never been called; `npm run test:real -- anthropic` is written and waits for a key.
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ## Phase 5: Assistant, cart recovery, insights
 
@@ -149,7 +149,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 **Done when:** all pass.
 
 **Status today:** all pass with a fake AI and fake email. **Blocked:** real AI (same key as Phase 4). Real email needs a SendGrid key; until then the recovery job logs what it would have sent, as designed.
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ## Phase 6: Recommendation service (Python)
 
@@ -162,7 +162,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 **Done when:** all pass, and the real model has been tried once by hand.
 
 **Status today:** passing; the real model was tried. **Open item:** AI product photo editing (stretch) is not built.
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ## Part A: Revenue model (plans, billing, AI top-ups, cost controls, platform view)
 
@@ -174,7 +174,7 @@ The last two need something only you can provide. Every other gap is closed. Aft
 **Done when:** all pass, **and** billing has run once against a real Stripe sandbox.
 
 **Status today:** all pass; committed as `billing` (50), unit `plans` (14) and browser `partA-billing` (17). **Blocked:** real Stripe and real AI, as above.
-**Sign-off:** approved by ______ on ______
+**Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ---
 
@@ -187,14 +187,14 @@ The last two need something only you can provide. Every other gap is closed. Aft
 - **Tests:** an order (online or POS) increments exactly once; a refund is handled as decided; two simultaneous orders count as two; a cancelled or unpaid order does not count; counters equal a fresh recount from the orders table; store B's counters never change from store A's sales.
 - **Done when:** counters match a full recount on a database with mixed orders, and the platform view matches.
 - **Status (2026-09-28):** built; `usage-counters` (16) passes, with the full gate below. The refund decision: refunds and returns are counted separately (`refundCount`, `refundTotal`) in the month they are paid back, and net sales is gross minus refunds, the same as analytics. See `PartB_Usage_Counters.md`.
-- **Sign-off:** approved by ______ on ______
+- **Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ### Part C: AI Growth Advisor
 - **Build:** weekly job with cheap rules, then one AI message only when a rule fires; dashboard card; merchants can turn it off.
 - **Tests:** each rule fires on hand-made data and not on data that misses it; no AI call when no rule fires; the message is built from totals only (a test that no order, customer or product text is in the prompt); at most one per store per week; off means none; a store's tip never uses another store's numbers; the platform pays (its quota is not used).
 - **Done when:** a week of fake time produces the expected messages, and the AI is never handed personal data.
 - **Status (2026-09-29):** built; `advisor-rules` (15), `advisor` (15) and browser `partC-advisor` (12) pass, with the full gate. Weeks are simulated by passing later dates. "Viewed but not bought" is not built: there is no product-view data. See `PartC_Growth_Advisor.md`.
-- **Sign-off:** approved by ______ on ______
+- **Sign-off:** approved by Muhammad Ibrahim on 2026-09-29
 
 ### Part D: AI Trend Scout
 - **Build:** weekly per-category reports from platform data and a trends source, shown as a dashboard card.
@@ -241,6 +241,6 @@ Per-phase tests are done by now. This phase adds what only makes sense on the fi
 
 ## Decisions
 
-1. **Baseline sign-off.** Your answer (2026-09-26): no gaps. Every gap is closed except real Stripe and real AI, which wait for keys only you can provide. Once those two pass, Phases 0 to 6 and Part A are ready for your sign-off.
+1. **Baseline sign-off.** Your answer (2026-09-26): no gaps. Every gap is closed except real Stripe and real AI, which wait for keys only you can provide. Once those two pass, Phases 0 to 6 and Part A are ready for your sign-off. Both passed on 2026-09-29, and you approved Phases 0 to 6 and Parts A, B and C that day.
 2. **Test style from Part B on.** Your answer: as recommended, Jest and Supertest from the start, committed with each part.
 3. **Who approves.** Not answered; taken as you, until you say otherwise.
