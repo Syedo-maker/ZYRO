@@ -107,6 +107,7 @@ async function main() {
     const gen1 = await api("POST", `/stores/${A.storeId}/products/${mug}/ai-description/generate`, { token: A.token });
     check("description: generate returns a draft with the fake provider's text", gen1.status === 202 && gen1.json.status === "draft" && gen1.json.content === nextReply && gen1.json.editedByMerchant === false);
     check("description: the prompt includes what the merchant already entered (title, category, price)", /Ceramic Mug/.test(calls[calls.length - 1].prompt) && /kitchen/.test(calls[calls.length - 1].prompt) && /12\.50/.test(calls[calls.length - 1].prompt));
+    check("description: the price reaches the model in the store's currency (USD), not as a bare number", /Price: US\$12\.50/.test(calls[calls.length - 1].prompt));
     check("description: generating consumes one generation from quota", (await api("GET", `/stores/${A.storeId}/ai-usage`, { token: A.token })).json.generationsUsed === 1);
     check("product: aiDescriptionStatus is now draft, and the live description is unchanged until published", (await api("GET", `/stores/${A.storeId}/products/${mug}`)).json.aiDescriptionStatus === "draft" && (await api("GET", `/stores/${A.storeId}/products/${mug}`)).json.description === "");
 
@@ -163,10 +164,14 @@ async function main() {
     // ---- Marketing copy: per channel and tone, offer details only from the merchant, never stored ----
     const usedBeforeCopy = (await api("GET", `/stores/${A.storeId}/ai-usage`, { token: A.token })).json.generationsUsed as number;
     const copyUrl = `/stores/${A.storeId}/products/${mug}/marketing-copy`;
-    nextReply = "**Start your morning right** with our handmade Ceramic Mug.\nKeeps coffee warm for hours.\n#coffee #handmade";
+    // A Pakistani store: the price the model may repeat must say rupees. The model's em dash must not reach the merchant.
+    await prismaUnscoped.tenant.update({ where: { id: A.storeId }, data: { currency: "PKR" } });
+    nextReply = "**Start your morning right** with our handmade Ceramic Mug—it keeps coffee warm for hours — all day.\n#coffee #handmade";
     const social = await api("POST", copyUrl, { token: A.token, body: { channel: "social_post" } });
     check("marketing: a social post comes back cleaned of markdown emphasis, hashtags kept, with the default tone", social.status === 200 && social.json.channel === "social_post" && social.json.tone === "friendly" && !/\*/.test(social.json.text) && /#coffee #handmade/.test(social.json.text));
+    check("marketing: em dashes in the AI's reply are replaced with a plain dash before the merchant sees it", !social.json.text.includes("—") && /Ceramic Mug - it keeps coffee warm for hours - all day\./.test(social.json.text));
     const socialCall = calls[calls.length - 1];
+    check("marketing: in a PKR store the price reaches the model in rupees", /Price: Rs 12\.50/.test(socialCall.prompt));
     check("marketing: the prompt carries the product facts, and says no offer may be mentioned when the merchant gave none", /Ceramic Mug/.test(socialCall.prompt) && /kitchen/.test(socialCall.prompt) && /none \(do not mention any offer\)/.test(socialCall.prompt));
     check("marketing: the system prompt forbids inventing discounts or claims", /Never invent a discount/.test(socialCall.system) && /Tone: friendly/.test(socialCall.system));
     nextReply = "Subject: A new favourite mug\n\nOur handmade Ceramic Mug is 20% off this weekend. Shop now.";
@@ -258,6 +263,7 @@ declare([
   "description: before anything is generated, GET returns null (and costs nothing)",
   "description: generate returns a draft with the fake provider's text",
   "description: the prompt includes what the merchant already entered (title, category, price)",
+  "description: the price reaches the model in the store's currency (USD), not as a bare number",
   "description: generating consumes one generation from quota",
   "product: aiDescriptionStatus is now draft, and the live description is unchanged until published",
   "description: GET now returns the draft just generated, without spending another generation",
@@ -278,6 +284,8 @@ declare([
   "seo-metadata: a suggestion is never saved to the product by itself",
   "seo-metadata: an unparsable reply is a clean error",
   "marketing: a social post comes back cleaned of markdown emphasis, hashtags kept, with the default tone",
+  "marketing: em dashes in the AI's reply are replaced with a plain dash before the merchant sees it",
+  "marketing: in a PKR store the price reaches the model in rupees",
   "marketing: the prompt carries the product facts, and says no offer may be mentioned when the merchant gave none",
   "marketing: the system prompt forbids inventing discounts or claims",
   "marketing: an email keeps its Subject line, and the requested tone reaches the model",

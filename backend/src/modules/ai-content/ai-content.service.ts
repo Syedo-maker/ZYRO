@@ -3,6 +3,7 @@ import { Product, type ProductDocument } from "../../models/Product.model";
 import { AiGeneratedContent } from "../../models/AiGeneratedContent.model";
 import { ProductReview } from "../../models/ProductReview.model";
 import { Errors } from "../../errors/AppError";
+import { prisma } from "../../lib/prisma";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { productService } from "../products/product.service";
 import { MARKETING_CHANNELS, type MarketingCopyInput } from "./ai-content.validation";
@@ -46,8 +47,19 @@ async function requireProduct(storeId: string, productId: string): Promise<Hydra
   return doc;
 }
 
-function describeProduct(product: HydratedDocument<ProductDocument>): string {
-  const lines = [`Title: ${product.title}`, `Category: ${product.category}`, `Price: ${Number(product.price.toString()).toFixed(2)}`];
+/** The price as a shopper in this store sees it ("Rs 450.00", "$19.99"), so any price the AI repeats carries the right currency. */
+export function formatPrice(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-PK", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount).replace(/ /g, " "); // Intl's non-breaking space, as a plain one
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`; // a code Intl does not know still names the currency
+  }
+}
+
+async function describeProduct(storeId: string, product: HydratedDocument<ProductDocument>): Promise<string> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { currency: true } });
+  const price = formatPrice(Number(product.price.toString()), tenant?.currency ?? "USD");
+  const lines = [`Title: ${product.title}`, `Category: ${product.category}`, `Price: ${price}`];
   if (product.tags?.length) lines.push(`Tags: ${product.tags.join(", ")}`);
   if (product.description) lines.push(`Current description: ${product.description}`);
   return lines.join("\n");
@@ -75,7 +87,7 @@ async function runGeneration(storeId: string, productId: string) {
     tenantId: storeId,
     promptType: "product_description",
     system: DESCRIPTION_SYSTEM_PROMPT,
-    prompt: `Write a product description for this listing:\n${describeProduct(product)}`,
+    prompt: `Write a product description for this listing:\n${await describeProduct(storeId, product)}`,
     maxTokens: 400,
   });
 
@@ -237,7 +249,7 @@ export const aiContentService = {
         "Use only the product facts and offer details given below. Never invent a discount, price, " +
         "shipping promise, stock level, review or claim that is not given. Plain text, no markdown.",
       prompt:
-        `${describeProduct(product)}\n` +
+        `${await describeProduct(storeId, product)}\n` +
         (input.notes ? `Offer details from the merchant: ${input.notes}` : "Offer details from the merchant: none (do not mention any offer)."),
       maxTokens: spec.maxTokens,
     });
