@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { STORE_CURRENCY_CODES } from "../../lib/currencies";
 
 // Mirrors store_branding_update's request body in backend/openapi.yaml.
 export const updateBrandingSchema = z.object({
@@ -10,6 +11,9 @@ export const updateBrandingSchema = z.object({
     .optional(),
 });
 export type UpdateBrandingInput = z.infer<typeof updateBrandingSchema>;
+
+export const updateCurrencySchema = z.object({ currency: z.enum(STORE_CURRENCY_CODES) });
+export type UpdateCurrencyInput = z.infer<typeof updateCurrencySchema>;
 
 // A host name such as shop.example.com: lowercase letters, digits and hyphens in dot-separated
 // labels, at least two labels. No scheme, port, path or wildcard, so nothing but a plain host can

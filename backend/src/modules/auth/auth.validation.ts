@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_PASSWORD_BYTES } from "../../lib/password";
+import { STORE_CURRENCY_CODES } from "../../lib/currencies";
 
 // Mirrors the request bodies defined in backend/openapi.yaml under auth_register/auth_login.
 export const registerSchema = z.object({
@@ -14,8 +15,11 @@ export const registerSchema = z.object({
   storeSlug: z
     .string()
     .regex(/^[a-z0-9-]{3,50}$/, "Slug must be 3-50 lowercase letters, digits, or hyphens"),
+  /** The currency the store sells in (lib/currencies.ts). Optional so older clients keep working: they get US dollars, as before. */
+  currency: z.enum(STORE_CURRENCY_CODES).optional().default("USD"),
 });
-export type RegisterInput = z.infer<typeof registerSchema>;
+/** What register() accepts: the schema's input, so a caller that leaves out the currency gets the default. */
+export type RegisterInput = z.input<typeof registerSchema>;
 
 /**
  * A shopper's account: an ordinary user with no store. It works at every store on the platform;

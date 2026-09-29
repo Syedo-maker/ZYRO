@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { authErrorMessage } from '../lib/apiClient'
+import { DEFAULT_STORE_CURRENCY, STORE_CURRENCIES } from '../lib/currencies'
 
 function slugify(name: string): string {
   return name
@@ -22,6 +23,7 @@ export function RegisterPage() {
   const [storeName, setStoreName] = useState('')
   const [storeSlug, setStoreSlug] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
+  const [currency, setCurrency] = useState<string>(DEFAULT_STORE_CURRENCY)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -35,7 +37,7 @@ export function RegisterPage() {
     setError(null)
     setSubmitting(true)
     try {
-      await register({ email, password, storeName, storeSlug })
+      await register({ email, password, storeName, storeSlug, currency })
       navigate('/admin/products')
     } catch (err) {
       setError(authErrorMessage(err))
@@ -96,6 +98,24 @@ export function RegisterPage() {
               setStoreSlug(e.target.value)
             }}
           />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="currency" className="text-xs font-semibold text-text-secondary">
+              Currency your prices are in
+            </label>
+            <select
+              id="currency"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="h-11 rounded-[10px] border border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            >
+              {STORE_CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.name} ({c.code})
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-text-secondary">You can change it in Settings until your first sale.</span>
+          </div>
 
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 

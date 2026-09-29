@@ -46,6 +46,8 @@ The original scope listed POS as out of scope. It is built as a second sales cha
 
 Cash on Delivery as an online method, a payment adapter so local gateways (JazzCash, Easypaisa, Safepay, XPay) can be added, and manual bank or wallet transfer with a screenshot. Not built. Card payments through Stripe are built for shoppers' orders.
 
+**Store currency (built, 2026-09-29).** A merchant chooses the currency the store sells in at sign-up (the Pakistani rupee is preselected; Indian rupee, taka, Sri Lankan and Nepalese rupees, dirham, riyal, US dollar, pound, euro, Canadian and Australian dollars are offered), and can change it on the Settings page until the store's first sale; after that it is locked, because prices are stored as plain numbers and orders and reports keep the currency they were taken in. Prices are written the way the currency's home country writes them (Rs 450, ₹1,23,456, £12.00), and online card payments have a minimum per currency so Stripe never refuses a checkout at the last step. Plans and AI packs stay priced in US dollars. Tests: `currencies` (unit), `store-currency` (integration) and the `store-currency` browser suite.
+
 ## 6. New technologies
 
 - **Python 3.11 and FastAPI** (recommendation service), with `motor` (async MongoDB), NumPy (cosine similarity) and `fastembed` with the ONNX model `BAAI/bge-small-en-v1.5` (text embeddings, no PyTorch).

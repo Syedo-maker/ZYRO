@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { getRedis } from "../../lib/redis";
 import { getStripeGateway } from "../../lib/stripe";
+import { minChargeMinor } from "../../lib/currencies";
 import { env } from "../../config/env";
 import { Product } from "../../models/Product.model";
 import { Errors } from "../../errors/AppError";
@@ -14,9 +15,6 @@ import type { CreateSessionInput, QuoteInput } from "./checkout.validation";
 
 /** Stripe requires a Checkout Session to stay open for at least 30 minutes. */
 const SESSION_MINUTES = 31;
-
-/** Stripe cannot charge less than this (in the currency's smallest unit); a discount must not push an order below it. */
-const MIN_CHARGE_CENTS = 50;
 
 /**
  * Prices the shopper's cart from the live catalog and the store's settings. Used by both
@@ -109,9 +107,12 @@ export const checkoutService = {
     const { key, tenant, shipping, snapshot, discount, subtotalCents } = await priceCart(storeId, owner, input);
     const { lines, totals } = snapshot;
 
-    // A discount must never turn an order into one Stripe cannot charge (free, or under its minimum).
-    if (discount && totals.totalCents < MIN_CHARGE_CENTS) {
-      throw Errors.validation("After this discount the order total is too small to pay for online; remove the code or add more to your cart");
+    // Stripe refuses a card payment under its minimum (lib/currencies.ts), so say so here, before
+    // the shopper is sent to a payment page that would fail. A discount must never cause it either.
+    const minCents = minChargeMinor(tenant.currency);
+    if (totals.totalCents < minCents) {
+      if (discount) throw Errors.validation("After this discount the order total is too small to pay for online; remove the code or add more to your cart");
+      throw Errors.validation(`The smallest order that can be paid for online is ${(minCents / 100).toFixed(2)} ${tenant.currency}; add more to your cart`);
     }
 
     if (discount) {

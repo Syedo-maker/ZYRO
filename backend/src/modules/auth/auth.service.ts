@@ -43,7 +43,7 @@ export const authService = {
         data: { email: input.email, passwordHash },
       });
       const tenant = await tx.tenant.create({
-        data: { name: input.storeName, slug: input.storeSlug, ownerId: createdUser.id },
+        data: { name: input.storeName, slug: input.storeSlug, ownerId: createdUser.id, currency: input.currency ?? "USD" },
       });
       // Location is tenant-scoped, and no request-level tenant context exists yet at
       // registration, so open one for the store that was just created.

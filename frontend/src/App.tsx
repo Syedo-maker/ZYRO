@@ -12,6 +12,7 @@ import { CheckoutPage } from './pages/storefront/CheckoutPage'
 import { OrderConfirmationPage } from './pages/storefront/OrderConfirmationPage'
 import { TeamPage } from './pages/admin/TeamPage'
 import { BillingPage } from './pages/admin/BillingPage'
+import { SettingsPage } from './pages/admin/SettingsPage'
 import { PlatformPage } from './pages/admin/PlatformPage'
 import { DashboardPage } from './pages/admin/DashboardPage'
 import { MarketingPage } from './pages/admin/MarketingPage'
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="reviews" element={<ReviewsAdminPage />} />
             <Route path="team" element={<TeamPage />} />
             <Route path="billing" element={<BillingPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="platform" element={<PlatformPage />} />
           </Route>
 
