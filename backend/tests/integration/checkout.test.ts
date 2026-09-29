@@ -3,33 +3,36 @@
  * driven through the real HTTP API. Stripe's network calls (create session, refund) are
  * replaced by a recording fake; webhook signature verification uses the real Stripe SDK
  * code path with a test secret. Creates throwaway stores and removes them after.
- * Usage: npx tsx scripts/verify-checkout.ts   (Redis must be running on REDIS_URL)
+ * Run with: npm test -- checkout
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "false"; // these tests register many users quickly; verify-security.ts covers the limits
 process.env.STRIPE_SECRET_KEY = "sk_test_verifyonly";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_verifyonly";
 
-import type { AddressInfo } from "node:net";
 import Stripe from "stripe";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
-
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { getRedis, closeRedis } = await import("../src/lib/redis");
-  const { getStripeGateway, setStripeGateway } = await import("../src/lib/stripe");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { getRedis, closeRedis } = await import("../../src/lib/redis");
+  const { getStripeGateway, setStripeGateway } = await import("../../src/lib/stripe");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
 
   // Fake Stripe network calls; keep the real signature verification.
   const stripeCalls = { sessions: [] as any[], refunds: [] as { pi: string; key: string }[] };
@@ -67,7 +70,7 @@ async function main() {
       });
     }
     const res = await fetch(`${base}/webhooks/stripe`, { method: "POST", headers, body: payload });
-    return { status: res.status, json: await res.json() };
+    return { status: res.status, json: (await res.json()) as any };
   }
   const paidSession = (id: string, totalCents: number, extra: object = {}) => ({
     id,
@@ -246,8 +249,8 @@ async function main() {
     await api("POST", `/stores/${A.storeId}/checkout/session`, { guest, body: {} });
     const rec6 = await prismaUnscoped.checkoutSession.findFirst({ where: { tenantId: A.storeId, status: "PENDING" } });
     const sid6 = rec6!.stripeSessionId!;
-    const { createOrder } = await import("../src/modules/commerce/order.service");
-    const { tenantContext } = await import("../src/lib/tenantContext");
+    const { createOrder } = await import("../../src/modules/commerce/order.service");
+    const { tenantContext } = await import("../../src/lib/tenantContext");
     await tenantContext.run(A.storeId, () => createOrder({ tenantId: A.storeId, channel: "POS", items: [{ productId: p1, quantity: 3 }], payments: [{ method: "CASH", amount: 66 }] }));
     check("setup: a POS sale takes the last widgets while the shopper is paying", (await stockOf(A, p1)) === 0);
     const ordersBefore = await prismaUnscoped.order.count({ where: { tenantId: A.storeId } });
@@ -272,7 +275,7 @@ async function main() {
     const rec7 = await prismaUnscoped.checkoutSession.findFirst({ where: { tenantId: A.storeId, status: "PENDING", userId: shopper.json.user.id } });
     const paid7 = await sendEvent("checkout.session.completed", paidSession(rec7!.stripeSessionId!, rec7!.totalCents, { customer_details: { email: `shopper-${suffix}@example.com`, name: "Shopper" } }));
     const order7 = await prismaUnscoped.order.findFirst({ where: { tenantId: A.storeId, customerId: { not: null } }, orderBy: { createdAt: "desc" }, include: { customer: true } });
-    check("order: logged-in shopper is linked to their customer record", paid7.json.outcome === "fulfilled" && order7?.customer?.userId === shopper.json.user.id && order7.guestEmail === null);
+    check("order: logged-in shopper is linked to their customer record", paid7.json.outcome === "fulfilled" && order7?.customer?.userId === shopper.json.user.id && order7?.guestEmail === null);
 
     check("tenant isolation: store B has no checkout sessions or customers of store A", (await prismaUnscoped.checkoutSession.count({ where: { tenantId: B.storeId } })) === 0 && (await prismaUnscoped.customer.count({ where: { tenantId: B.storeId } })) === 0);
   } finally {
@@ -282,17 +285,77 @@ async function main() {
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "cart: no bearer token or guest id is rejected",
+  "cart: invalid bearer token is rejected, not treated as a guest",
+  "cart: a new guest cart is empty",
+  "cart: add item, subtotal from live price",
+  "cart: adding again accumulates quantity (2 + 2 = 4)",
+  "cart: adding beyond stock is rejected (409)",
+  "cart: update to exact quantity",
+  "cart: update beyond stock is rejected (409)",
+  "cart: unknown product is 404",
+  "cart: zero quantity fails validation",
+  "cart: Redis stores only productId to quantity, never prices",
+  "cart: has a TTL of up to 7 days",
+  "cart: a later price change shows immediately (price is never cached in the cart)",
+  "cart: store B cannot add store A's product",
+  "cart: same guest id in store B sees an empty cart",
+  "cart: remove item empties the cart",
+  "checkout: empty cart is rejected",
+  "checkout: a discount code that does not exist is refused (codes themselves are covered by verify-discounts.ts)",
+  "checkout: unknown shipping zone is 404",
+  "checkout: session created, returns Stripe URL",
+  "checkout: Stripe is sent line items + tax line + shipping that add up to the priced total (6000)",
+  "checkout: Stripe call carries no payment method list, only our ids",
+  "checkout: snapshot saved as PENDING with the total",
+  "checkout: Stripe is told which countries it may collect a shipping address for",
+  "checkout: success URL points at the storefront confirmation route",
+  "quote: same totals the session was priced with (subtotal 50, tax 5, shipping 5, total 60)",
+  "quote: saves nothing (still one checkout record)",
+  "quote: an empty cart is rejected",
+  "cart: response carries the store currency",
+  "store profile: public and includes the currency",
+  "session status: pending before payment, no order yet",
+  "session status: unknown session and another store's lookup are 404",
+  "webhook: missing signature is 400",
+  "webhook: wrong signature is 400 and creates nothing",
+  "webhook: paid session is fulfilled",
+  "order: ONLINE, PAID, number 1, total 60.00 as charged",
+  "order: line price is the snapshot (20), not the later catalog price (99)",
+  "order: subtotal 50, tax 5, shipping 5",
+  "order: one STRIPE payment with the payment intent id",
+  "order: the shipping address Stripe collected is saved on the order",
+  "session status: completed, with what the confirmation page shows",
+  "session status: exposes no internal ids or payment details",
+  "stock: deducted (widget 5 to 3, gadget 3 to 2)",
+  "customer: guest email became a tenant-scoped customer",
+  "cart: cleared after the order is created",
+  "webhook: replaying the same event is a no-op",
+  "webhook: the same event delivered twice at once creates exactly one order",
+  "stock: double delivery deducted only once (gadget 2 to 1)",
+  "webhook: unpaid (delayed payment method) does not create an order yet",
+  "webhook: a charged amount that differs from the priced cart is refused",
+  "webhook: async_payment_succeeded fulfils the order",
+  "webhook: unknown event types and unknown sessions are acknowledged and ignored",
+  "webhook: expired session is closed",
+  "setup: a POS sale takes the last widgets while the shopper is paying",
+  "webhook: stock gone after payment gives an automatic refund",
+  "webhook: no order was created and the record shows REFUNDED",
+  "session status: a refunded checkout tells the shopper so (no order)",
+  "webhook: a retry after the refund does not refund twice",
+  "cart: logged-in cart is separate from the guest cart",
+  "checkout: logged-in shopper's email is passed to Stripe",
+  "order: logged-in shopper is linked to their customer record",
+  "tenant isolation: store B has no checkout sessions or customers of store A",
+]);

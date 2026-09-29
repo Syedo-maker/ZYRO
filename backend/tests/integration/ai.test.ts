@@ -4,11 +4,21 @@
  * call to Anthropic, the same pattern verify-discounts.ts uses for Stripe), and the quota
  * system, driven through generate() directly and through GET /stores/:id/ai-usage over the
  * real HTTP API. Creates throwaway stores and users and removes them after.
- * Usage: npx tsx scripts/verify-ai.ts   (Redis must be running on REDIS_URL)
+ * Run with: npm test -- ai
  *
  * No Anthropic API key or network call is used here; see verify-ai-real.ts for the opt-in,
  * real-API check.
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "false";
 // Tight limits so quota exhaustion can be reached in a handful of calls instead of 50.
 process.env.AI_MONTHLY_GENERATIONS_LIMIT = "2";
@@ -18,29 +28,22 @@ process.env.AI_MONTHLY_CHAT_MESSAGES_LIMIT = "1";
 // (see the comment on AI_QUEUE_NAME in lib/aiQueue.ts).
 process.env.AI_QUEUE_NAME = `ai-generate-verify-${Date.now().toString(36)}`;
 
-import type { AddressInfo } from "node:net";
-
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
 
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { tenantContext } = await import("../src/lib/tenantContext");
-  const { setAiProvider } = await import("../src/lib/aiProvider");
-  const { startAiWorker, closeAiQueue } = await import("../src/lib/aiQueue");
-  const { generate } = await import("../src/modules/ai/ai.orchestrator");
-  const { getOrCreateQuota, currentMonth } = await import("../src/modules/ai/ai.quota.service");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { tenantContext } = await import("../../src/lib/tenantContext");
+  const { setAiProvider } = await import("../../src/lib/aiProvider");
+  const { startAiWorker, closeAiQueue } = await import("../../src/lib/aiQueue");
+  const { generate } = await import("../../src/modules/ai/ai.orchestrator");
+  const { getOrCreateQuota, currentMonth } = await import("../../src/modules/ai/ai.quota.service");
 
   await connectMongo();
   startAiWorker();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
   async function api(method: string, path: string, opts: { token?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
@@ -155,19 +158,33 @@ async function main() {
     for (const t of created.tenantIds) await prismaUnscoped.aiUsageQuota.deleteMany({ where: { tenantId: t } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeAiQueue();
   await closeRedis();
   const mongoose = (await import("mongoose")).default;
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "ai-usage: the current month's row is created on first read, with the configured defaults (2 generations, 1 chat message)",
+  "ai-usage: no token is 401, and staff without products_write is 403",
+  "generate: the job runs on the real queue/worker and returns the fake provider's text and model",
+  "generate: what was enqueued matches what was asked for (system and prompt reach the provider unchanged)",
+  "generate: a successful generation increments generationsUsed, and only that counter",
+  "generate: a provider failure rejects as a 503 (the API being unable to fulfil the request, not the caller's fault)",
+  "generate: a failed generation does NOT increment quota (still 1, not 2)",
+  "generate: the 3rd generation this month is refused with 402 once the limit (2) is reached",
+  "generate: quota is checked BEFORE enqueueing, so the refused call never reaches the provider",
+  "ai-usage: reflects the limit reached (2 of 2), and the row is not re-created by a refused call",
+  "generate: a chat-kind call succeeds and returns text",
+  "generate: chat increments chatMessagesUsed, and leaves generationsUsed alone (still 2)",
+  "generate: chat has its own limit (1), reached independently of the generations limit",
+  "ai-usage: another store starts fresh (0 used), unaffected by store A's usage or exhaustion",
+  "generate: store B can still generate even though store A is exhausted (separate [tenantId, month] rows)",
+  "quota row: keyed by [tenantId, month], with generations and chat tracked separately (Implementation_Plan.md Phase 4)",
+]);

@@ -1,4 +1,6 @@
+import { Types } from "mongoose";
 import { prisma } from "../../lib/prisma";
+import { Product } from "../../models/Product.model";
 import { getRedis } from "../../lib/redis";
 import type { SummaryQuery } from "./analytics.validation";
 
@@ -58,13 +60,42 @@ export function localDays(from: Date, to: Date, tzOffsetMinutes: number): string
   return days;
 }
 
+const MAX_CATEGORIES = 6;
+
+/**
+ * Revenue and units kept, per product category, largest first; anything past the sixth is summed
+ * into "Other". Orders do not record a category (it lives on the product in MongoDB), so a product's
+ * current category is used, and a product deleted since is counted under "Removed products".
+ */
+async function salesByCategory(tenantId: string, rows: { product_id: string; units: number; revenue: string }[]) {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.product_id).filter((id) => Types.ObjectId.isValid(id));
+  const docs = await Product.find({ storeId: tenantId, _id: { $in: ids } }).select("category");
+  const categoryOf = new Map(docs.map((d) => [d._id.toString(), d.category]));
+  const totals = new Map<string, { revenueCents: number; units: number }>();
+  for (const r of rows) {
+    const name = categoryOf.get(r.product_id) ?? "Removed products";
+    const t = totals.get(name) ?? { revenueCents: 0, units: 0 };
+    t.revenueCents += cents(r.revenue);
+    t.units += r.units;
+    totals.set(name, t);
+  }
+  const sorted = [...totals.entries()].sort((a, b) => b[1].revenueCents - a[1].revenueCents || a[0].localeCompare(b[0]));
+  const top = sorted.slice(0, MAX_CATEGORIES);
+  const rest = sorted.slice(MAX_CATEGORIES);
+  if (rest.length > 0) {
+    top.push(["Other", rest.reduce((s, [, t]) => ({ revenueCents: s.revenueCents + t.revenueCents, units: s.units + t.units }), { revenueCents: 0, units: 0 })]);
+  }
+  return top.map(([category, t]) => ({ category, revenue: money(t.revenueCents), unitsSold: t.units }));
+}
+
 async function compute(tenantId: string, from: Date, to: Date, tz: number) {
   // Bound as text and cast: the columns are timestamps without a zone that hold UTC, and this
   // avoids the database session's own time zone shifting the bounds.
   const fromIso = from.toISOString();
   const toIso = to.toISOString();
 
-  const [tenant, salesRows, refundRows, productRows, totalsRow, newCustomers] = await Promise.all([
+  const [tenant, salesRows, refundRows, productRows, totalsRow, newCustomers, perProductRows] = await Promise.all([
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { currency: true } }),
 
     prisma.$queryRaw<{ day: string; channel: string; orders: number; gross: string; discounts: string; tax: string; shipping: string }[]>`
@@ -127,7 +158,22 @@ async function compute(tenantId: string, from: Date, to: Date, tz: number) {
         AND EXISTS (SELECT 1 FROM "Payment" p WHERE p."orderId" = o."id" AND p."status" IN ('SUCCEEDED', 'REFUNDED'))`,
 
     prisma.customer.count({ where: { tenantId, createdAt: { gte: from, lt: to } } }),
+
+    // Every product sold (not only the top 10), for sales by category below. Same definition as topProducts.
+    prisma.$queryRaw<{ product_id: string; units: number; revenue: string }[]>`
+      SELECT oi."productId" AS product_id,
+             sum(oi."quantity" - oi."returnedQuantity")::int AS units,
+             COALESCE(sum(oi."lineTotal" * (oi."quantity" - oi."returnedQuantity")::numeric / oi."quantity"), 0)::text AS revenue
+      FROM "OrderItem" oi JOIN "Order" o ON o."id" = oi."orderId"
+      WHERE o."tenantId" = ${tenantId}
+        AND o."createdAt" >= ${fromIso}::timestamp AND o."createdAt" < ${toIso}::timestamp
+        AND o."status" NOT IN ('REFUNDED', 'CANCELLED', 'PENDING')
+        AND EXISTS (SELECT 1 FROM "Payment" p WHERE p."orderId" = o."id" AND p."status" IN ('SUCCEEDED', 'REFUNDED'))
+      GROUP BY oi."productId"
+      HAVING sum(oi."quantity" - oi."returnedQuantity") > 0`,
   ]);
+
+  const byCategory = await salesByCategory(tenantId, perProductRows);
 
   const days = localDays(from, to, tz);
   const perDay = new Map<string, Record<Channel, Bucket>>(days.map((d) => [d, { online: emptyBucket(), pos: emptyBucket() }]));
@@ -214,6 +260,7 @@ async function compute(tenantId: string, from: Date, to: Date, tz: number) {
       // Null when no unit of this product had a cost on record, rather than a misleading 0.
       productMargin: p.units_with_cost > 0 ? money(cents(p.margin)) : null,
     })),
+    byCategory,
     generatedAt: new Date(),
   };
 }

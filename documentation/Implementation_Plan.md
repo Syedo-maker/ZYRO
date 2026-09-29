@@ -17,7 +17,7 @@ This document is a working plan, not a submission deliverable. It intentionally 
 
 ## 0. Phase & Module Checklist
 
-Tracks build progress. One item is completed per session, in order, only when explicitly assigned. Check an item off only once its phase's exit criteria (or, for Testing/Deployment, its own bullet) is fully met.
+**Testing gates (2026-09-26): no phase begins until the previous phase has been tested and approved. What each phase must pass, and its done criteria, are in `documentation/Phase_Gates_Checklist.md`.** Tracks build progress. One item is completed per session, in order, only when explicitly assigned. Check an item off only once its phase's exit criteria (or, for Testing/Deployment, its own bullet) is fully met.
 
 **Phase 0: Analysis & Design**
 - [x] Database schema design (Prisma schema + Mongoose schemas); see `documentation/Phase0_Module1_Database_Schema_Design.md`

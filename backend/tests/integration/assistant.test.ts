@@ -5,8 +5,18 @@
  * accounting (the chatMessagesUsed counter, separate from generationsUsed), guest and signed-in
  * shoppers, transcripts persisted to MongoDB, and tenant isolation. A fake AI provider stands in
  * for the network call to Anthropic (the same pattern verify-ai-content.ts uses).
- * Usage: npx tsx scripts/verify-assistant.ts   (Redis must be running on REDIS_URL)
+ * Run with: npm test -- assistant
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "false";
 // Store A's own functional test makes several organic chat calls; store B gets its own quota
 // row (Implementation_Plan.md Phase 4: quota is per [tenantId, month]) and is used, untouched
@@ -17,29 +27,22 @@ process.env.AI_MONTHLY_CHAT_MESSAGES_LIMIT = "10";
 // (see the comment on AI_QUEUE_NAME in lib/aiQueue.ts).
 process.env.AI_QUEUE_NAME = `ai-generate-verify-${Date.now().toString(36)}`;
 
-import type { AddressInfo } from "node:net";
-
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
 
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { setAiProvider } = await import("../src/lib/aiProvider");
-  const { startAiWorker, closeAiQueue } = await import("../src/lib/aiQueue");
-  const { ChatTranscript } = await import("../src/models/ChatTranscript.model");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { setAiProvider } = await import("../../src/lib/aiProvider");
+  const { startAiWorker, closeAiQueue } = await import("../../src/lib/aiQueue");
+  const { ChatTranscript } = await import("../../src/models/ChatTranscript.model");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
   startAiWorker();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
   async function api(method: string, path: string, opts: { token?: string; guest?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
@@ -140,18 +143,36 @@ async function main() {
     await ChatTranscript.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeAiQueue();
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "chat: a guest gets a reply from the fake provider",
+  "chat: keyword-matched products are returned as real Product objects (mug titles, not the lamp)",
+  "chat: an out-of-stock match is still suggested, but shows 0 stock (never hidden or invented)",
+  "chat: the prompt given to the model lists the matched products with real prices, not invented ones",
+  "chat: this is a chat generation, so it spends chatMessagesUsed, not generationsUsed",
+  "transcript: both the shopper's message and the assistant's reply are logged to Mongo",
+  "transcript: a guest's conversation has no customerId, but does record the guest session id",
+  "transcript: expiresAt is set roughly 90 days out (a debugging aid, not a permanent record)",
+  "chat: the same conversation's prompt carries the earlier exchange as context",
+  "chat: a different conversationId starts with no prior context, even for the same guest",
+  "transcript: a signed-in shopper's conversation records their customer id, and no guest session id",
+  "chat: no token and no guest id is 400 (resolveCartOwner has nothing to identify the shopper with)",
+  "chat: a missing conversationId or an empty message is 400",
+  "chat: an unknown store is 404",
+  "isolation: store B has no products, so a matching question gets no suggestions, and B's quota is untouched by A's usage",
+  "isolation: store B can chat on its own quota, and sees none of A's products",
+  "isolation: the same conversationId in a different store is a different conversation (no cross-store context leak)",
+  "quota: the limit was actually reached",
+  "quota: a chat message past the monthly limit is refused with 402",
+  "quota: generations for the same store are untouched by chat exhaustion (separate counters)",
+]);

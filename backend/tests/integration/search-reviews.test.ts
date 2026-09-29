@@ -5,33 +5,35 @@
  * who may write one, verified purchases, ratings computed on read, editing and deleting your own,
  * merchant moderation and replies, cascade on product delete, and tenant isolation.
  * Creates throwaway stores and users and removes them after.
- * Usage: npx tsx scripts/verify-search-reviews.ts   (Redis and MongoDB must be running; run
- *        `npm run sync-indexes` once first so the product text index has its weights)
+ * Run with: npm test -- search-reviews
  */
-process.env.RATE_LIMIT_ENABLED = "false"; // many registrations in a row; verify-security.ts covers the limits
-import type { AddressInfo } from "node:net";
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
 }
 
+process.env.RATE_LIMIT_ENABLED = "false"; // many registrations in a row; verify-security.ts covers the limits
+
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { tenantContext } = await import("../src/lib/tenantContext");
-  const { createOrder } = await import("../src/modules/commerce/order.service");
-  const { displayName } = await import("../src/modules/reviews/review.service");
-  const { Product } = await import("../src/models/Product.model");
-  const { ProductReview } = await import("../src/models/ProductReview.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { tenantContext } = await import("../../src/lib/tenantContext");
+  const { createOrder } = await import("../../src/modules/commerce/order.service");
+  const { displayName } = await import("../../src/modules/reviews/review.service");
+  const { Product } = await import("../../src/models/Product.model");
+  const { ProductReview } = await import("../../src/models/ProductReview.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
 
   async function api(method: string, path: string, opts: { token?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -244,17 +246,101 @@ async function main() {
     await ProductReview.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "index: the product text index weighs title 10, category 3, description 1 (run `npm run sync-indexes` if this fails)",
+  "search: 'ceramic' finds the mug, the grinder and the notebook, with the title match first",
+  "search: 'mug' (also matching the plural in a description) ranks title matches above the description-only poster",
+  "search: the category is searched too ('kitchen' finds both mugs)",
+  "search: case does not matter",
+  "search: a partial word ('cer') falls back to a contains match and finds 'Ceramic Mug'",
+  "search: a partial word matches inside a title too ('rinde' finds 'Coffee Grinder')",
+  "search: regex characters are plain text, never a pattern (200, no results)",
+  "search: no match is an empty page, not an error",
+  "search: an empty search box is the same as browsing",
+  "search: an over-long query is 400",
+  "search: only this store's products are found (the other store's teapot never appears)",
+  "sort: price low to high and high to low",
+  "sort: by title, alphabetical",
+  "sort: newest first is the default (the last product added comes first)",
+  "sort: 'relevance' with no search means newest",
+  "sort: an unknown sort is 400",
+  "sort: prices sort as numbers, not text (9 before 10)",
+  "filter: by category",
+  "filter: price range is inclusive at both ends",
+  "filter: only a minimum, or only a maximum",
+  "filter: a minimum above the maximum, or a bad price, is 400",
+  "filter: in stock only leaves out the sold-out travel mug",
+  "filter: filters and search combine (mugs, in stock, under 15: only the Ceramic Mug and poster qualify by stock)",
+  "filter: every product in the answer has stock information",
+  "pagination: three pages of 10 cover all 30 products with no repeats",
+  "pagination: total is reported, and a page past the end is empty",
+  "pagination: a limit over 100 or a negative offset is 400",
+  "suggest: words that start with what was typed, sorted, with id and category",
+  "suggest: at most 8",
+  "suggest: matches the start of any word (gr finds 'Coffee Grinder'), ignoring case",
+  "suggest: a partial word in the middle does not match ('rinder' finds nothing)",
+  "suggest: an empty or missing query is 400, and regex characters are plain text",
+  "suggest: only this store's products",
+  "suggest: needs no sign-in, and the route is not mistaken for a product id",
+  "reviews: writing one needs a signed-in account (401)",
+  "reviews: the store's owner cannot review its own product (403)",
+  "reviews: nor can its staff, whatever their role (403)",
+  "reviews: an unknown or malformed product id is 404",
+  "reviews: a rating must be a whole number from 1 to 5",
+  "reviews: over-long title (100) or comment (2000) is 400",
+  "reviews: nothing was saved by the rejected attempts",
+  "reviews: a buyer's review is created (201) and marked as a verified purchase",
+  "reviews: the reviewer is shown as 'Sam O.', never by id or email",
+  "reviews: text is trimmed and control characters removed; markup is kept as plain text for the page to escape",
+  "reviews: a second review of the same product by the same person is 409",
+  "reviews: someone who never bought it can review, but without the verified badge; a single name is shown as is",
+  "reviews: an order that was refunded does not count as a purchase; no name means 'Customer'",
+  "reviews: a rating-only review (no text) is fine",
+  "names: display name rules",
+  "read: anyone can read the reviews (no sign-in): 3 reviews, average 4.00",
+  "read: the star breakdown",
+  "read: no reviewer id, email or status in the public list",
+  "read: a visitor who is not signed in gets no 'my review'",
+  "read: a signed-in reviewer gets their own review back",
+  "read: sort highest, lowest, newest, oldest",
+  "read: filter by stars, and the summary still describes all reviews",
+  "read: paging",
+  "read: a product with no reviews has no average (null) and a count of 0",
+  "catalog: the product carries its average rating and review count, computed on read",
+  "catalog: so does every card in a list (mug 4.0 / 3, travel mug none)",
+  "own: no body changes is 400, and someone with no review gets 404",
+  "own: editing keeps the rating and the unverified badge and changes only what was sent",
+  "own: the average follows the edit ((5 + 5 + 4) / 3 = 4.67)",
+  "own: nobody can edit or delete someone else's review (the URL only ever reaches your own)",
+  "own: deleting your review (204) removes it from the list and the average",
+  "own: deleting again is 404, and you can then write a new review",
+  "merchant: the owner sees every review with the product title and the reviewer's status",
+  "merchant: needs products_write: a cashier is 403, catalog staff and the owner are fine, another store's owner is 403, no token is 401",
+  "moderate: staff with products_write hide a review",
+  "moderate: a hidden review disappears from the page and from the count and average",
+  "moderate: the product's rating follows (catalog cards too)",
+  "moderate: the reviewer still sees their own review, marked hidden, and cannot post another",
+  "moderate: the merchant can filter to hidden reviews",
+  "moderate: the reviewer editing a hidden review does not bring it back",
+  "moderate: showing it again restores it",
+  "reply: the store can reply publicly, with the time",
+  "reply: shoppers see the reply, and the reviewer's own words are untouched",
+  "reply: removing it (null) clears it and the time",
+  "moderate: an empty change, a bad status and a too-long reply are 400",
+  "moderate: an unknown review is 404; another store's owner cannot touch it (403, and via their own path 404)",
+  "isolation: another store's shopper page shows none of these reviews, and its merchant list is empty",
+  "isolation: reviewing another store's product through your own store's path is 404",
+  "database: two reviews by one person for one product cannot exist even by direct insert",
+  "database: a rating of 6 or 2.5 cannot be stored",
+  "cascade: deleting a product deletes its reviews",
+]);

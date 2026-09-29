@@ -73,16 +73,19 @@ export function ProductsPage() {
   }
 
   return (
-    <div className="flex gap-8">
-      <div className="flex-1 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+    // Side by side on a wide screen; on a phone or tablet the form stacks above the list.
+    <div className="flex flex-col-reverse gap-8 lg:flex-row">
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-xl font-bold">Products</h1>
           <Button onClick={() => setPanel({ mode: 'create' })}>+ Add product</Button>
         </div>
 
         {error && <Alert>{error}</Alert>}
 
-        <div className="bg-white border border-border rounded-2xl overflow-hidden">
+        {/* The list scrolls sideways inside its own box on a narrow screen; the page never does. */}
+        <div className="relative bg-white border border-border rounded-2xl overflow-x-auto">
+         <div className="min-w-[560px]">
           <div className="grid grid-cols-[2fr_1fr_1fr_1fr_88px] gap-3 px-5 py-3 text-[11px] font-bold text-text-muted border-b border-border">
             <div>PRODUCT</div>
             <div>PRICE</div>
@@ -131,11 +134,12 @@ export function ProductsPage() {
               </div>
             </div>
           ))}
+         </div>
         </div>
       </div>
 
       {panel.mode !== 'closed' && (
-        <div className="w-[360px] shrink-0 bg-white border border-border rounded-2xl p-6 h-fit">
+        <div className="w-full shrink-0 bg-white border border-border rounded-2xl p-4 sm:p-6 h-fit lg:w-[360px]">
           <ProductForm
             key={panel.mode === 'edit' ? panel.product.id : 'new'}
             storeId={activeStore.id}

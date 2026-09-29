@@ -98,6 +98,8 @@ The role is `User.platformRole = SUPER_ADMIN`, read from the database on every r
 
 The four older backend check scripts that the new limits touched were adjusted, not weakened: two put their test store on the Business plan the way a paid checkout would (they need a 31-day report and several staff), and two switch the AI cache off (they repeat identical requests and count quota for each). No check was removed. The full backend regression (16 scripts) and all seven browser suites pass.
 
+**Update, 2026-09-26 (test gates):** Part A's own checks are now committed tests: `backend/tests/integration/billing.test.ts` (50), the unit tests `plans` and `aiModels`, and the browser suite `frontend/e2e/partA-billing.e2e.mjs` (17). The real-Stripe run is written (`npm run test:real -- stripe-billing`) and waits for a new Stripe test key.
+
 ## Deliberate limits
 
 - One currency (US dollars) for plan prices.

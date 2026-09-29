@@ -9,6 +9,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { formatDate, formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { discountsApi } from '../../lib/shopApi'
+import { MarketingInsights } from './MarketingInsights'
 import { storefrontApi } from '../../lib/storefrontApi'
 import type { DiscountCode, DiscountStatus } from '../../types/shop'
 
@@ -185,7 +186,9 @@ export function MarketingPage() {
       )}
 
       {codes && codes.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-white">
+        // `relative` keeps the screen-reader-only header text (absolutely positioned) inside the
+        // scroll box; without it, it escapes and makes the whole page scroll sideways on a phone.
+        <div className="relative overflow-x-auto rounded-2xl border border-border bg-white">
           <table className="w-full text-sm">
             <caption className="sr-only">Discount codes</caption>
             <thead>
@@ -222,6 +225,8 @@ export function MarketingPage() {
           </table>
         </div>
       )}
+
+      <MarketingInsights storeId={activeStore.id} />
 
       {creating && (
         <CreateDialog

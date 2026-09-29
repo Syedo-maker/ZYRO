@@ -6,8 +6,18 @@
  * exhaustion never destroying the last good write-up, permissions and tenant isolation. A fake
  * AI provider stands in for the network call to Anthropic. Creates throwaway stores and removes
  * them after.
- * Usage: npx tsx scripts/verify-insights.ts   (Redis must be running on REDIS_URL)
+ * Run with: npm test -- insights
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "false";
 process.env.AI_MONTHLY_GENERATIONS_LIMIT = "2";
 // Identical facts would otherwise be answered from the AI cache without spending quota; these checks are about quota.
@@ -17,28 +27,21 @@ process.env.AI_CACHE_SECONDS = "0";
 // (see the AI_QUEUE_NAME comment in lib/aiQueue.ts).
 process.env.AI_QUEUE_NAME = `ai-generate-verify-${Date.now().toString(36)}`;
 
-import type { AddressInfo } from "node:net";
-
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
 
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { closeRedis } = await import("../src/lib/redis");
-  const { setAiProvider } = await import("../src/lib/aiProvider");
-  const { startAiWorker, closeAiQueue } = await import("../src/lib/aiQueue");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { closeRedis } = await import("../../src/lib/redis");
+  const { setAiProvider } = await import("../../src/lib/aiProvider");
+  const { startAiWorker, closeAiQueue } = await import("../../src/lib/aiQueue");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
   startAiWorker();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
   async function api(method: string, path: string, opts: { token?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
@@ -86,8 +89,8 @@ async function main() {
     check("insights: a fresh store has no cached insight yet", JSON.stringify((await api("GET", `/stores/${A.storeId}/insights`, { token: A.token })).json) === JSON.stringify({ insight: null, stale: false }));
 
     // ---- Orders this week and last week, so the trend has a real comparison ----
-    const { tenantContext } = await import("../src/lib/tenantContext");
-    const { createOrder } = await import("../src/modules/commerce/order.service");
+    const { tenantContext } = await import("../../src/lib/tenantContext");
+    const { createOrder } = await import("../../src/modules/commerce/order.service");
     let pi = 0;
     const place = async (items: [string, number][], total: number, daysAgo: number) => {
       const order = await tenantContext.run(A.storeId, () =>
@@ -138,18 +141,32 @@ async function main() {
       await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     }
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeAiQueue();
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "insights: a fresh store has no cached insight yet",
+  "generate: returns the AI's write-up (202)",
+  "generate: the sales trend is a real +100% (20 this week vs 10 last week)",
+  "generate: Widget is named as a best seller with its real units and revenue",
+  "generate: Gadget appears low-stock (3 left, under the fallback threshold of 5)",
+  "generate: Gizmo also appears low-stock, from its own merchant-set threshold (50 left, but the floor is 60)",
+  "ai: the prompt names the real products and figures, not invented ones",
+  "quota: generating an insight spends one generation",
+  "get: returns the cached write-up, unchanged, without spending quota",
+  "get: not stale immediately after generating",
+  "get: reports stale once older than the staleness window (default 24h)",
+  "quota: a 3rd generation this month is refused with 402",
+  "quota: the last successful write-up is still served, not wiped out by the refused attempt",
+  "permissions: no token is 401",
+  "permissions: staff without analytics_read cannot view or generate (403)",
+  "isolation: store B has no insight, and its quota is untouched by store A",
+]);

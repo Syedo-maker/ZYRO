@@ -7,8 +7,18 @@
  * event CONVERTED once its shopper places an order, and the merchant-facing performance summary.
  * Fake AI and email gateways stand in for the real network calls (the same pattern
  * verify-discounts.ts uses for Stripe). Creates throwaway stores and users and removes them after.
- * Usage: npx tsx scripts/verify-cart-recovery.ts   (Redis must be running on REDIS_URL)
+ * Run with: npm test -- cart-recovery
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "false";
 process.env.AI_MONTHLY_GENERATIONS_LIMIT = "10";
 process.env.SENDGRID_API_KEY = "SG.verify-fake";
@@ -19,32 +29,25 @@ process.env.SENDGRID_FROM_EMAIL = "orders@verify.example";
 process.env.AI_QUEUE_NAME = `ai-generate-verify-${Date.now().toString(36)}`;
 process.env.CART_RECOVERY_QUEUE_NAME = `cart-recovery-verify-${Date.now().toString(36)}`;
 
-import type { AddressInfo } from "node:net";
-
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
 
 async function main() {
-  const { app } = await import("../src/app");
-  const { connectMongo } = await import("../src/lib/mongo");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { env } = await import("../src/config/env");
-  const { closeRedis, getRedis } = await import("../src/lib/redis");
-  const { setAiProvider } = await import("../src/lib/aiProvider");
-  const { setEmailGateway } = await import("../src/lib/email");
-  const { startAiWorker, closeAiQueue } = await import("../src/lib/aiQueue");
-  const { closeCartRecoveryQueue } = await import("../src/lib/cartRecoveryQueue");
-  const { cartRecoveryService } = await import("../src/modules/cart-recovery/cartRecovery.service");
-  const { Product } = await import("../src/models/Product.model");
+  const { app } = await import("../../src/app");
+  const { connectMongo } = await import("../../src/lib/mongo");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { env } = await import("../../src/config/env");
+  const { closeRedis, getRedis } = await import("../../src/lib/redis");
+  const { setAiProvider } = await import("../../src/lib/aiProvider");
+  const { setEmailGateway } = await import("../../src/lib/email");
+  const { startAiWorker, closeAiQueue } = await import("../../src/lib/aiQueue");
+  const { closeCartRecoveryQueue } = await import("../../src/lib/cartRecoveryQueue");
+  const { cartRecoveryService } = await import("../../src/modules/cart-recovery/cartRecovery.service");
+  const { Product } = await import("../../src/models/Product.model");
   const mongoose = (await import("mongoose")).default;
 
   await connectMongo();
   startAiWorker();
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const base = `${APP_ORIGIN}/api/v1`;
   async function api(method: string, path: string, opts: { token?: string; guest?: string; body?: unknown } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
@@ -182,8 +185,8 @@ async function main() {
     check("quota: once exhausted, an abandoned cart is skipped (no email, no event), not sent unpersonalized", emails.length === emailsBeforeExhausted && (await prismaUnscoped.cartRecoveryEvent.findFirst({ where: { tenantId: A.storeId, cartId: userCartKey(A.storeId, c5.userId) } })) === null);
 
     // ---- Conversion: placing an order after a SENT event marks it CONVERTED ----
-    const { tenantContext } = await import("../src/lib/tenantContext");
-    const { createOrder } = await import("../src/modules/commerce/order.service");
+    const { tenantContext } = await import("../../src/lib/tenantContext");
+    const { createOrder } = await import("../../src/modules/commerce/order.service");
     const custRecord = await prismaUnscoped.customer.create({ data: { tenantId: A.storeId, userId: c1.userId, email: c1.email, name: "C1" } });
     await tenantContext.run(A.storeId, () =>
       createOrder({ tenantId: A.storeId, channel: "ONLINE", customerId: custRecord.id, items: [{ productId: mug, quantity: 1 }], payments: [{ method: "STRIPE", amount: 12.5, stripePaymentIntentId: `pi_cr_${suffix}` }] })
@@ -213,19 +216,34 @@ async function main() {
       }
     }
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
-    server.close();
   }
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeCartRecoveryQueue();
   await closeAiQueue();
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "scan: a cart added moments ago is not recovered yet (still within the freshness window)",
+  "scan: an abandoned cart is emailed, and the event is logged as SENT",
+  "email: sent to the shopper's real account email, with a subject naming the store",
+  "email: the body is the AI's personalized text",
+  "ai: the prompt lists the real cart contents (2x Ceramic Mug), not invented items",
+  "scan: the same cart is not emailed twice within the cooldown window",
+  "scan: a guest's abandoned cart is skipped entirely (no email address exists for it)",
+  "scan: a cart that was emptied (not just aged) is not recovered",
+  "scan: an active discount code is recorded on the event and mentioned in the AI's prompt",
+  "scan: a failed send (SendGrid rejects it) logs nothing, so a later scan can retry",
+  "scan: the retry on the next scan succeeds",
+  "quota: store A's generations are now used up",
+  "quota: once exhausted, an abandoned cart is skipped (no email, no event), not sent unpersonalized",
+  "conversion: a SENT event becomes CONVERTED once its shopper places a paid order afterwards",
+  "performance: reports at least the converted shopper and the other sends, with a conversion rate",
+  "performance: no token is 401, and staff without analytics_read is 403",
+  "isolation: store B's performance is untouched by everything done to store A",
+]);

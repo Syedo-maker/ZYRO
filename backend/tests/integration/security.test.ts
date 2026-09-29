@@ -3,8 +3,18 @@
  * brute-force limits on login and registration, response headers, timing, password rules,
  * malformed requests, and startup safety. Uses tight limits and a private Redis key prefix
  * so it never disturbs (or is disturbed by) real counters. Creates and removes its own users.
- * Usage: npx tsx scripts/verify-security.ts
+ * Run with: npm test -- security
  */
+import { appFetch, APP_ORIGIN } from "../helpers/appFetch";
+import { createCheckRecorder, snapshotEnv } from "../helpers/checks";
+
+// Every environment variable this file sets is put back afterwards (see afterAll).
+const restoreEnv = snapshotEnv();
+const { check, run, declare } = createCheckRecorder();
+function exitScenario(code: number): never {
+  throw new Error(`The scenario stopped early (exit code ${code})`);
+}
+
 process.env.RATE_LIMIT_ENABLED = "true";
 process.env.RATE_LIMIT_PREFIX = `rl-test-${Date.now().toString(36)}:`;
 process.env.RATE_LIMIT_LOGIN_MAX = "5";
@@ -17,25 +27,18 @@ process.env.RATE_LIMIT_DISCOUNT_MAX = "5";
 process.env.RATE_LIMIT_REVIEW_MAX = "3";
 process.env.RATE_LIMIT_WINDOW_MINUTES = "15";
 
-import type { AddressInfo } from "node:net";
 import { spawnSync } from "node:child_process";
 
-let failures = 0;
-function check(name: string, ok: boolean, extra = "") {
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`);
-  if (!ok) failures++;
-}
-
 async function main() {
-  const { app } = await import("../src/app");
-  const { prismaUnscoped } = await import("../src/lib/prisma");
-  const { getRedis, closeRedis } = await import("../src/lib/redis");
-  const { connectMongo } = await import("../src/lib/mongo");
+  const { app } = await import("../../src/app");
+  const { prismaUnscoped } = await import("../../src/lib/prisma");
+  const { getRedis, closeRedis } = await import("../../src/lib/redis");
+  const { connectMongo } = await import("../../src/lib/mongo");
   const mongoose = (await import("mongoose")).default;
   await connectMongo();
 
-  const server = app.listen(0);
-  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const fetch = appFetch(app, [process.env.PUBLIC_URL ?? "http://localhost:5000"]);
+  const origin = APP_ORIGIN;
   const base = `${origin}/api/v1`;
 
   async function call(method: string, path: string, opts: { body?: unknown; raw?: string; headers?: Record<string, string> } = {}) {
@@ -163,7 +166,6 @@ async function main() {
     const redis = getRedis();
     const keys = await redis.keys(`${process.env.RATE_LIMIT_PREFIX}*`);
     if (keys.length) await redis.del(...keys);
-    server.close();
   }
 
   // ---- Startup safety (separate processes, because config is read at start) ----
@@ -181,15 +183,48 @@ async function main() {
   check("startup: production starts with a strong secret", strong.stdout.includes("STARTED"), (strong.stderr || "").split("\n")[0]);
   const dev = run({ NODE_ENV: "development", JWT_ACCESS_SECRET: "dev-only-secret" });
   check("startup: development still allows the simple dev secret", dev.stdout.includes("STARTED"));
-
-  console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) FAILED.`);
   await closeRedis();
   await mongoose.disconnect();
   await prismaUnscoped.$disconnect();
-  process.exit(failures === 0 ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+
+beforeAll(() => run(main), 900_000);
+afterAll(() => restoreEnv());
+
+declare([
+  "headers: X-Powered-By is gone (does not advertise Express)",
+  "headers: nosniff, frame protection and HSTS are set",
+  "headers: a Content-Security-Policy is set",
+  "headers: uploaded images can still be embedded by the storefront (cross-origin resource policy)",
+  "errors: malformed JSON is a 400 problem, not a 500",
+  "errors: an oversized body is a 413, not a 500",
+  "password: a normal password registers",
+  "password: over 72 bytes is rejected (bcrypt would silently ignore the rest)",
+  "password: the limit counts bytes, so 37 accented characters (74 bytes) are rejected",
+  "password: exactly 72 bytes is accepted",
+  "password: a 254+ character email is rejected",
+  "timing: an unknown email takes about as long as a wrong password (both run a full password check)",
+  "timing: responses are identical in shape",
+  "lockout: the 5th wrong password is still an ordinary 401",
+  "lockout: the 6th attempt is blocked with 429 and a problem+json body",
+  "lockout: Retry-After tells the client how long to wait (about 15 minutes)",
+  "lockout: even the correct password is refused while locked, so guessing cannot succeed",
+  "lockout: another account from the same address is unaffected",
+  "lockout: the lock is stored in Redis (survives a server restart)",
+  "lockout: successful logins never count against the limit (8 in a row all work)",
+  "credential stuffing: trying many different emails from one address gets blocked too",
+  "registration: a burst of sign-ups from one address is capped (429)",
+  "discount codes: five wrong guesses are each a plain 400",
+  "discount codes: the sixth wrong guess from one address is blocked (429) with a wait time",
+  "discount codes: a normal checkout request (no code) is never counted or blocked",
+  "discount codes: guessing through checkout counts against the same limit",
+  "reviews: a person's first three review writes in the hour are answered normally",
+  "reviews: the fourth is blocked (429) with a wait time, so review spam is slowed",
+  "reviews: reading reviews is never limited by it",
+  "resilience: normal read endpoints still work while auth is limited",
+  "startup: production refuses to start with the placeholder JWT secret",
+  "startup: production refuses a short JWT secret",
+  "startup: production starts with a strong secret",
+  "startup: development still allows the simple dev secret",
+]);
