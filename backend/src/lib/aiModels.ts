@@ -24,6 +24,9 @@ const TIER_BY_PROMPT: Record<string, ModelTier> = {
   marketing_copy: "standard",
   business_insights: "standard",
   cart_recovery: "standard",
+  // The weekly market report (Part D): once per market and category a week, paid by the platform, and it
+  // must follow a strict cite-every-line format, so the better model.
+  trend_report: "standard",
 };
 
 /** An unknown prompt type gets the standard model: quality first, so a new feature is never quietly given a weak one. */

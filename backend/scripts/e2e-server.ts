@@ -6,6 +6,7 @@
  *   /__fake-stripe/:id     stands in for Stripe's hosted payment page
  *   POST /__e2e/set-tax    { storeId, rate }  sets a store's tax rate
  *   POST /__e2e/billing    { storeId, kind, plan? | pack? }  completes a fake plan or AI pack payment
+ *   POST /__e2e/backdate-orders, /__e2e/set-currency, /__e2e/make-admin, /__e2e/trends-run   Trend Scout set-up
  *
  * These routes exist only in this script, never in the real app.
  * Usage: npx tsx scripts/e2e-server.ts   (listens on PORT, default 5000)
@@ -75,6 +76,14 @@ async function main() {
         ? prompt.split("\n").filter((l) => l.startsWith("- ")).map((l) => l.replace(/^- \[\w+\] /, "")).join(" ")
         : null;
       if (tipFacts !== null) return { text: `This week: ${tipFacts}`, model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+      // Trend Scout reports (Part D): each fact reworded as one line citing it, the format the real model is held to.
+      if (/weekly market trend report/.test(system)) {
+        const lines = prompt.split("\n").flatMap((l) => {
+          const m = /^(F\d+) \(source: .*?; date: \d{4}-\d{2}-\d{2}\): (.*)$/.exec(l);
+          return m ? [`${m[2]} [${m[1]}]`] : [];
+        });
+        return { text: lines.join("\n") || "NO_DATA", model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+      }
       const text = /promotional email/.test(system)
         ? `Subject: Fresh for the morning${offer && !/^none/.test(offer) ? `\n\nOur Ceramic Mug: ${offer}. Shop now.` : "\n\nOur Ceramic Mug is back. Shop now."}`
         : /advertising headlines/.test(system)
@@ -156,6 +165,26 @@ async function main() {
       return;
     }
     res.json({ outcome });
+  });
+  // Trend Scout (Part D). A report covers last week's sales from several stores, which a browser test
+  // cannot make through the app, so these place orders in time, set a test market, make an
+  // administrator, and run the week's reports limited to the test's own stores and market.
+  outer.post("/__e2e/backdate-orders", express.json(), async (req, res) => {
+    const { orderIds, at } = req.body as { orderIds: string[]; at: string };
+    const { count } = await prismaUnscoped.order.updateMany({ where: { id: { in: orderIds } }, data: { createdAt: new Date(at) } });
+    res.json({ count });
+  });
+  outer.post("/__e2e/set-currency", express.json(), async (req, res) => {
+    await prismaUnscoped.tenant.update({ where: { id: req.body.storeId }, data: { currency: String(req.body.currency) } });
+    res.json({ ok: true });
+  });
+  outer.post("/__e2e/make-admin", express.json(), async (req, res) => {
+    await prismaUnscoped.user.update({ where: { email: String(req.body.email) }, data: { platformRole: "SUPER_ADMIN" } });
+    res.json({ ok: true });
+  });
+  outer.post("/__e2e/trends-run", express.json(), async (req, res) => {
+    const { trendsService } = await import("../src/modules/trends/trends.service");
+    res.json(await trendsService.runWeek(new Date(), req.body as { tenantIds?: string[]; markets?: string[]; categories?: string[] }));
   });
   outer.use(app);
 

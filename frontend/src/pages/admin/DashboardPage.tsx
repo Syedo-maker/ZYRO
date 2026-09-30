@@ -9,6 +9,7 @@ import { SalesByDayChart } from '../../components/charts/SalesByDayChart'
 import { ChannelSplit, StatTile, TopProducts } from '../../components/charts/DashboardParts'
 import { AiUsageMeter } from './AiUsageMeter'
 import { GrowthTipCard } from './GrowthTipCard'
+import { MarketTrendsCard } from './MarketTrendsCard'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { upgradeHintOf } from '../../lib/billingApi'
 import { formatDate, formatMoney } from '../../lib/format'
@@ -172,6 +173,8 @@ export function DashboardPage() {
           )}
         </>
       )}
+
+      <MarketTrendsCard storeId={activeStore.id} />
 
       <AiUsageMeter storeId={activeStore.id} isOwner={activeStore.role === 'owner'} />
 

@@ -4,6 +4,7 @@ import { requireAuth } from "../../middleware/requireAuth.middleware";
 import { requireSuperAdmin } from "../../middleware/requireSuperAdmin.middleware";
 import { Errors } from "../../errors/AppError";
 import { platformService } from "./platform.service";
+import { platformTrendsRouter } from "../trends/trends.routes";
 
 // Mounted at /platform (see app.ts). Super administrators only; per-store totals, no customer data.
 export const platformRouter = Router();
@@ -35,3 +36,5 @@ const tenants: RequestHandler = async (req, res, next) => {
 
 platformRouter.get("/summary", summary);
 platformRouter.get("/tenants", tenants);
+// Part D: the Trend Scout's reports, Google Trends imports and "run now".
+platformRouter.use("/trends", platformTrendsRouter);

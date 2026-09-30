@@ -31,7 +31,7 @@ Every AI call goes through one orchestrator (provider adapter, job queue, monthl
 | Business insights (sales trend, best sellers, low stock, demand forecast) | built | `Phase5_AI_Business_Insights.md` |
 | Recommendation service: Python/FastAPI microservice, product embeddings, similar products, semantic search for the assistant | built | `Phase6_AI_Recommendation_Service.md` |
 | AI Growth Advisor (weekly tips from store totals, with a template fallback) | built | `PartC_Growth_Advisor.md` |
-| AI Trend Scout (trending products in Pakistan and worldwide, with sources) | planned | Part D |
+| AI Trend Scout (weekly market report per currency and category from anonymised platform sales and imported Google Trends data, every line cited) | built | `PartD_Trend_Scout.md` |
 | AI Payment and Trust module (COD risk, payment screenshot check, courier reconciliation, payment nudge, payment error helper) | planned | Part E |
 | Semantic search in the search bar; voice-note store manager; bargaining assistant; festival planner | planned, stretch | Parts F and G |
 | AI product photo editing | planned, stretch | Phase 6 |
@@ -68,7 +68,8 @@ Cash on Delivery as an online method, a payment adapter so local gateways (JazzC
 | Part A | Revenue model | done |
 | Part B | Usage counters (monthly orders, sales, refunds and AI tokens per store) | done |
 | Part C | AI Growth Advisor | done |
-| Parts D to G | Trend Scout, Payment and Trust, search, voice and bargaining assistants | planned, effort estimates pending the approved plan |
+| Part D | AI Trend Scout | done |
+| Parts E to G | Payment and Trust, search, voice and bargaining assistants | planned, effort estimates pending the approved plan |
 | 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | last, not started |
 | 8 | Docker Compose, environment setup, final documentation, Gantt chart, Turnitin report | last, not started |
 
