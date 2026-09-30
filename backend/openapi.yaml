@@ -2892,6 +2892,30 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ── TREND SCOUT (Part D) ──────────────────────────────────────────────
+  /stores/{storeId}/trends:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [insights]
+      operationId: trends_store_get
+      summary: This week's market trend reports for the store's main categories
+      description: |
+        Owner, or staff with `analytics_read`. The store's market is its currency; its categories are the (up to 3)
+        categories it has most products in. Each report is shared by every store in that market and category and is
+        written weekly (Mondays 05:00 UTC) from anonymised totals across stores and from imported public trends data.
+        A category's store figures are published only when at least 5 stores sold in it in both the week and the four
+        weeks before, and no single store made up more than 60% of them; otherwise it is `suppressed`. Every line cites
+        the numbered facts it rests on, and every fact has a source and a date. The exact number of stores is never shown.
+      responses:
+        "200":
+          description: The store's market and categories, each with its latest report (null before the first run)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StoreTrends" }
+        "401": { description: "Not logged in" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   # ── PLATFORM (Part A) ─────────────────────────────────────────────────
   /platform/summary:
     get:
@@ -2941,6 +2965,95 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformTenant" }
                   pagination: { $ref: "#/components/schemas/PaginationInfo" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /platform/trends:
+    get:
+      tags: [platform]
+      operationId: platform_trends_list
+      summary: The latest week's trend reports for every market and category
+      description: Super administrators only. Includes each report's store count, which merchants never see.
+      responses:
+        "200":
+          description: The week and its reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  weekStart: { type: [string, "null"], format: date }
+                  reports:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/TrendReport"
+                        - type: object
+                          properties:
+                            storeCount: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /platform/trends/imports:
+    get:
+      tags: [platform]
+      operationId: platform_trends_imports_list
+      summary: Recently imported trends files
+      description: Super administrators only. Newest first, at most 20.
+      responses:
+        "200":
+          description: The imports
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TrendImport" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [platform]
+      operationId: platform_trends_import
+      summary: Import a Google Trends "Interest over time" CSV for a market and category
+      description: |
+        Super administrators only. Google Trends has no self-serve API, so the file is downloaded from trends.google.com
+        and imported here; nothing is scraped. Up to 5 terms, values 0 to 100 ("<1" is read as 0.5), weekly or monthly
+        dates. The newest import per market and category is used by the next weekly run, if its last date is within 60 days.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [csv, market, category]
+              properties:
+                csv: { type: string, maxLength: 90000, description: "The file's text." }
+                market: { $ref: "#/components/schemas/StoreCurrency" }
+                category: { type: string, maxLength: 80, description: "Normalised on import: 'Home & Kitchen' becomes 'home and kitchen'." }
+                fileName: { type: string, maxLength: 200 }
+      responses:
+        "201":
+          description: Imported
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrendImport" }
+        "400": { description: "Not a Google Trends export (the reason is given), or a market that is not offered" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /platform/trends/run:
+    post:
+      tags: [platform]
+      operationId: platform_trends_run
+      summary: Write this week's trend reports now instead of waiting for Monday
+      description: Super administrators only. Still one report per market, category and week; existing ones are kept.
+      responses:
+        "200":
+          description: What the run did
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  weekStart: { type: string, format: date }
+                  reports: { type: integer }
+                  published: { type: integer }
+                  suppressed: { type: integer }
+                  noData: { type: integer }
+                  existing: { type: integer }
+                  failed: { type: integer }
         "403": { $ref: "#/components/responses/Forbidden" }
 
 components:
@@ -3125,6 +3238,76 @@ components:
           oneOf:
             - $ref: "#/components/schemas/GrowthTip"
             - type: "null"
+
+    TrendFact:
+      type: object
+      required: [id, kind, text, source, date]
+      properties:
+        id: { type: string, example: F1 }
+        kind: { type: string, enum: [platform, external], description: "platform: anonymised totals across stores. external: an imported source such as Google Trends." }
+        text: { type: string }
+        source: { type: string, example: "ZYRO sales across stores (anonymised)" }
+        date: { type: string, format: date, description: "The last date the fact covers." }
+        url: { type: string, format: uri, description: "Where to look the figure up, when there is such a page." }
+
+    TrendReport:
+      type: object
+      required: [id, market, category, name, weekStart, covers, status, source, lines, facts, createdAt]
+      properties:
+        id: { type: string }
+        market: { type: string, description: "The store currency the report is for." }
+        category: { type: string, description: "Normalised category name." }
+        name: { type: string, example: Home and kitchen }
+        weekStart: { type: string, format: date, description: "Monday the report was written for; it covers the 7 days before." }
+        covers:
+          type: object
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+        status: { type: string, enum: [published, no_data, suppressed], description: "suppressed: too few stores, or one store dominates, so no store figures." }
+        source: { type: string, enum: [ai, template, none], description: "ai: written by the AI and every line passed the checks. template: written from the facts. none: not published." }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              cites: { type: array, items: { type: string }, description: "The ids of the facts this line rests on." }
+        facts:
+          type: array
+          items: { $ref: "#/components/schemas/TrendFact" }
+        createdAt: { type: string, format: date-time }
+
+    StoreTrends:
+      type: object
+      required: [market, categories]
+      properties:
+        market: { type: string }
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              category: { type: string }
+              name: { type: string }
+              report:
+                oneOf:
+                  - $ref: "#/components/schemas/TrendReport"
+                  - type: "null"
+
+    TrendImport:
+      type: object
+      properties:
+        id: { type: string }
+        source: { type: string, example: google_trends_csv }
+        market: { type: string }
+        category: { type: string }
+        geo: { type: string, example: Pakistan }
+        terms: { type: array, items: { type: string } }
+        points: { type: integer, description: "Readings per term." }
+        periodEnd: { type: string, format: date }
+        fileName: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
 
     PlatformSummary:
       type: object

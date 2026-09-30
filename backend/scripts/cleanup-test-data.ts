@@ -28,10 +28,13 @@ async function main() {
 
   await p.tenant.deleteMany({ where: { id: { in: ids } } });
   const users = await p.user.deleteMany({ where: { OR: EMAIL_PREFIXES.map((e) => ({ email: { startsWith: e } })) } });
+  // Trend Scout (Part D) test reports: the test market XTS (reserved for testing), and imports whose category starts "e2e".
+  const reports = await p.trendReport.deleteMany({ where: { OR: [{ market: "XTS" }, { category: { startsWith: "e2e " } }] } });
+  const imports = await p.trendSignalImport.deleteMany({ where: { OR: [{ market: "XTS" }, { category: { startsWith: "e2e " } }] } });
 
   const left = { stores: await p.tenant.count(), users: await p.user.count() };
   console.log(
-    `Removed ${ids.length} test stores, ${users.count} test users, ${products.deletedCount} products, ${carts.length} carts. ` +
+    `Removed ${ids.length} test stores, ${users.count} test users, ${products.deletedCount} products, ${carts.length} carts, ${reports.count + imports.count} trend test rows. ` +
       `Remaining: ${left.stores} stores, ${left.users} users.`
   );
 

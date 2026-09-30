@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { formatPlanPrice, platformApi } from '../../lib/billingApi'
+import { TrendScoutPanel } from './TrendScoutPanel'
 import { formatDate, formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import type { PlatformSummary, PlatformTenantRow } from '../../types/billing'
@@ -186,6 +187,8 @@ export function PlatformPage() {
           </div>
         )}
       </section>
+
+      <TrendScoutPanel />
     </div>
   )
 }

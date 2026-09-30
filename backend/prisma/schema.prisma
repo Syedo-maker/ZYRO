@@ -724,6 +724,60 @@ model GrowthTip {
   @@index([tenantId, createdAt])
 }
 
+/// Part D, the Trend Scout: one weekly report per market and category, shared by every store that
+/// sells in that category. Platform data, not any store's own, so there is no tenantId: what goes in
+/// is anonymised first (a category needs enough stores, and no store may dominate it).
+model TrendReport {
+  id           String   @id @default(cuid())
+  /// The market is the store currency (PKR, GBP...): trends in one country say little about another,
+  /// and sales in different currencies cannot be added up.
+  market       String
+  /// Normalised category name ("home and kitchen"), as trends.service.ts's normaliseCategory makes it.
+  category     String
+  /// Monday of the week the report was written for (UTC), "YYYY-MM-DD"; it covers the 7 days before.
+  weekStart    String
+  /// "published", "no_data" (nothing to report) or "suppressed" (too few stores, or one store dominates).
+  status       String
+  /// The numbered facts the report was written from, each with its source and date. Every line of the
+  /// report cites these by id, so it can be traced back line by line.
+  facts        Json
+  /// The report: [{ text, cites: ["F1", ...] }]. Empty unless published.
+  lines        Json
+  /// "ai" when the AI wrote it and every line passed the checks; "template" otherwise; "none" when not published.
+  source       String
+  model        String?
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  /// How many distinct stores' sales went into it (never shown exactly to merchants; see trends.service.ts).
+  storeCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@unique([market, category, weekStart])
+  @@index([market, weekStart])
+}
+
+/// An external trends file imported by a platform administrator (Part D). The first source is a CSV
+/// downloaded from trends.google.com (Google Trends has no self-serve API); others can be added behind
+/// the same adapter (modules/trends/trends.sources.ts). The newest import per market and category is used.
+model TrendSignalImport {
+  id           String   @id @default(cuid())
+  /// Which adapter reads it, e.g. "google_trends_csv".
+  source       String
+  market       String
+  category     String
+  /// The region the data describes, as the file names it ("Pakistan").
+  geo          String
+  /// [{ term, points: [{ date: "YYYY-MM-DD", value }] }], values 0 to 100 as Google Trends gives them.
+  series       Json
+  /// The last date the file covers, "YYYY-MM-DD".
+  periodEnd    String
+  fileName     String?
+  importedById String
+  createdAt    DateTime @default(now())
+
+  @@index([market, category, createdAt])
+}
+
 /// One paid AI top-up pack. The unique Stripe session id is what makes crediting idempotent:
 /// Stripe can deliver the same webhook twice, and the second insert fails instead of crediting again.
 model AiTopUpPurchase {
