@@ -201,7 +201,7 @@ Phases 0 to 6 and Part A are built and their tests pass. On 2026-09-26 the gaps 
 - **Tests:** platform data is anonymised (no single store can be identified, and a category with too few stores is suppressed); every claim in a report carries a source and a date; the prompt forbids inventing trends and a test feeds it empty data and gets "no data", not invented trends; one report per category per week is shared; the data source can be swapped without touching the rest.
 - **Done when:** a report can be traced line by line to its input data.
 - **Status (2026-09-30):** built; `trends` unit (34), `trends` end to end (23) and browser `partD-trends` (15) pass, with the full gate. Anonymised means: at least 5 stores in both the week and the 4 weeks before, no store over 60% of a figure, the same per keyword, and a store-count band instead of the exact number. Google Trends is imported from its CSV download (no self-serve API exists; scraping is ruled out). Each report stores its numbered facts and, per line, the ids it cites. See `PartD_Trend_Scout.md`.
-- **Sign-off:** approved by ______ on ______
+- **Sign-off:** approved by Muhammad Ibrahim on 2026-09-30
 
 ### Part E: AI Payment and Trust
 - **Build:** Cash on Delivery, payment adapter for local gateways, manual transfer with a screenshot, COD risk score, screenshot verifier, courier reconciliation, payment nudge, payment error helper.
