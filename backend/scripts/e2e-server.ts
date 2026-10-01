@@ -76,6 +76,16 @@ async function main() {
         ? prompt.split("\n").filter((l) => l.startsWith("- ")).map((l) => l.replace(/^- \[\w+\] /, "")).join(" ")
         : null;
       if (tipFacts !== null) return { text: `This week: ${tipFacts}`, model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+      // Payment screenshots (Part E): the shape the real model is held to. It is given no order total,
+      // so it answers with a fixed readable receipt; the server's own checks decide what that means.
+      if (/payment receipt/.test(system)) {
+        return {
+          text: JSON.stringify({ readable: true, amount: 450, currency: "PKR", date: new Date().toISOString().slice(0, 10), reference: `TRX-${Date.now().toString(36)}`, bank: "Test Bank", sender: "Shopper", note: null }),
+          model: "fake-model-e2e",
+          inputTokens: 10,
+          outputTokens: 8,
+        };
+      }
       // Trend Scout reports (Part D): each fact reworded as one line citing it, the format the real model is held to.
       if (/weekly market trend report/.test(system)) {
         const lines = prompt.split("\n").flatMap((l) => {

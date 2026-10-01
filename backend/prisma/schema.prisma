@@ -57,6 +57,13 @@ enum PaymentMethod {
   CARD
   STRIPE
   OTHER
+  /// Part E: the shopper pays the courier in cash on delivery. The payment row exists from the
+  /// moment the order does, but stays PENDING until the merchant records the cash as collected.
+  COD
+  /// Part E: the shopper transfers the money themselves (bank or wallet) and uploads a screenshot.
+  BANK_TRANSFER
+  /// Part E: a local gateway (JazzCash, Easypaisa, ...) through the adapter in modules/payments.
+  GATEWAY
 }
 
 enum StockMovementType {
@@ -197,6 +204,11 @@ model Tenant {
   aiTopUpPurchases AiTopUpPurchase[]
   monthlyUsage     TenantMonthlyUsage[]
   growthTips       GrowthTip[]
+  paymentSettings  PaymentSettings?
+  codAssessments   CodAssessment[]
+  paymentProofs    PaymentProof[]
+  remittanceRuns   CodRemittanceRun[]
+  remittanceItems  CodRemittanceItem[]
   posShifts        PosShift[]
   orderReturns     OrderReturn[]
   heldSales        HeldSale[]
@@ -412,6 +424,9 @@ model Order {
   returns      OrderReturn[]
   shift        PosShift?     @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   shipment     Shipment?
+  codAssessment   CodAssessment?
+  paymentProofs   PaymentProof[]
+  remittanceItems CodRemittanceItem[]
 
   @@unique([tenantId, orderNumber])
   @@unique([tenantId, clientRequestId])
@@ -829,4 +844,161 @@ model AiBusinessInsight {
   updatedAt   DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ── Part E: payment and trust ───────────────────────────────────────────────────────────────
+
+/// Which ways a store lets shoppers pay, and the limits on them (Part E). One row per store,
+/// created on demand with safe defaults: card only, everything else off until the merchant turns
+/// it on and fills in what it needs.
+model PaymentSettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+
+  /// Cash on delivery. Off until the merchant turns it on.
+  codEnabled     Boolean  @default(false)
+  /// Smallest and largest order that may be paid cash on delivery, in the store currency. Null means no limit.
+  codMinAmount   Decimal? @db.Decimal(10, 2)
+  codMaxAmount   Decimal? @db.Decimal(10, 2)
+  /// Above this risk band COD is not offered at checkout: "none" offers it to everyone,
+  /// "high" hides it only from high-risk orders, "medium" from medium and high.
+  codBlockBand   String   @default("high")
+  /// A deposit asked for before a risky COD order is accepted, as a percentage of the total (0 = none).
+  codAdvancePercent Int   @default(0)
+
+  /// Manual bank or wallet transfer, with a screenshot the merchant checks.
+  bankTransferEnabled Boolean @default(false)
+  /// Shown to the shopper so they know where to send the money. No secrets: these are details a
+  /// merchant hands out anyway. Never an API credential.
+  bankAccountName     String?
+  bankAccountNumber   String?
+  bankName            String?
+  bankInstructions    String?
+
+  /// A local gateway through the adapter (modules/payments/gateways). Null means none chosen.
+  gatewayProvider String?
+  gatewayEnabled  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+/// What the COD Trust Agent decided about one order, kept so a merchant can always see why
+/// (Part E). The score is produced by plain rules (modules/payments/cod.risk.ts), never by the AI:
+/// `reasons` holds every rule that fired with its points, so the band can be explained line by line.
+model CodAssessment {
+  id       String  @id @default(cuid())
+  tenantId String
+  /// The order this is about, once it exists. An assessment is also made at checkout, before an order.
+  orderId  String? @unique
+  /// 0 (no concerns) to 100. Bands: under 35 low, 35 to 64 medium, 65 and over high.
+  score    Int
+  band     String
+  /// [{ code, points, detail }] - one entry per rule that fired, in the order they were applied.
+  reasons  Json
+  /// The inputs the rules were allowed to see, kept so an assessment can be recomputed and checked.
+  inputs   Json
+  /// What the store did with it: "allowed", "blocked" (COD not offered) or "advance_required".
+  outcome  String
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+}
+
+/// A COD delivery history signal shared across the platform (Part E). Holds a one-way hash of the
+/// shopper's phone number and nothing else that identifies anyone: no store, no order, no name, no
+/// readable phone number. Stores learn only "this number has refused deliveries before", never where.
+model CodPhoneSignal {
+  id        String   @id @default(cuid())
+  /// SHA-256 of the normalised phone number with a server-side pepper. Not reversible to a number.
+  phoneHash String   @unique
+  delivered Int      @default(0)
+  refused   Int      @default(0)
+  lastSeenAt DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+/// A shopper's proof that they transferred the money themselves (Part E). The AI reads the image
+/// and reports what it saw; the server compares that with the order and runs its own checks; the
+/// merchant accepts or rejects. The AI never accepts a payment.
+model PaymentProof {
+  id       String @id @default(cuid())
+  tenantId String
+  orderId  String
+  /// The uploaded screenshot.
+  imageUrl String
+  /// What the shopper typed in themselves.
+  declaredAmount    Decimal @db.Decimal(10, 2)
+  declaredReference String?
+  /// What the AI read from the image: { amount, currency, date, reference, bank, sender, readable }.
+  /// Null when the AI could not be reached; the merchant then checks the image unaided.
+  extracted Json?
+  /// [{ code, severity, detail }] - the server's own checks (amount matches, reference reused, ...).
+  findings  Json
+  /// "pending" until a human decides, then "accepted" or "rejected". Only a merchant moves it.
+  status    String  @default("pending")
+  /// Set when a merchant decides, never by the AI.
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  rejectionReason  String?
+  model            String?
+  createdAt        DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  /// The same transfer reference may be used once per store: a screenshot cannot be sent twice.
+  @@unique([tenantId, declaredReference])
+  @@index([tenantId, status])
+  @@index([orderId])
+}
+
+/// One import of a courier's cash-collected file, reconciled against the store's COD orders (Part E).
+model CodRemittanceRun {
+  id       String @id @default(cuid())
+  tenantId String
+  /// Which courier's file this is, as the merchant named it ("TCS", "Leopards").
+  courier  String
+  fileName String?
+  /// Totals, so a run can be summarised without reading every row.
+  rowCount     Int @default(0)
+  matchedCount Int @default(0)
+  problemCount Int @default(0)
+  /// The money the file says was collected, and the money the matched orders expected.
+  fileTotal    Decimal @default(0) @db.Decimal(12, 2)
+  matchedTotal Decimal @default(0) @db.Decimal(12, 2)
+  importedByUserId String
+  createdAt DateTime @default(now())
+
+  tenant Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  CodRemittanceItem[]
+
+  @@index([tenantId, createdAt])
+}
+
+/// One line of a courier file, and what reconciling it found (Part E).
+model CodRemittanceItem {
+  id       String @id @default(cuid())
+  runId    String
+  tenantId String
+  /// The order number as the courier's file gives it, and the amount it says was collected.
+  reference String
+  amount    Decimal @db.Decimal(10, 2)
+  /// The order it was matched to, when one was found.
+  orderId   String?
+  /// "matched", "amount_mismatch", "unknown_order", "duplicate_in_file" or "not_cod".
+  status    String
+  detail    String?
+
+  run    CodRemittanceRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([runId])
+  @@index([tenantId, status])
 }

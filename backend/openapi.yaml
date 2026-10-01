@@ -2892,6 +2892,378 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ── PAYMENT AND TRUST (Part E) ────────────────────────────────────────
+  /stores/{storeId}/payments/options:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [checkout]
+      operationId: payments_options
+      summary: Which ways this cart may be paid for
+      description: |
+        The shopper's cart, priced, with the methods this store offers. For cash on delivery the answer also
+        depends on this particular order: it is withheld when the store's limits exclude it, or when the COD
+        trust rules put the order above the band the store accepts. The shopper is never told a score or a
+        reason for a withheld option, only that it is not available.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LocalOrderRequest" }
+      responses:
+        "200":
+          description: The total and the available methods
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentOptions" }
+        "400": { description: "The cart is empty, or the details are not valid" }
+  /stores/{storeId}/payments/orders:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [checkout]
+      operationId: payments_place_order
+      summary: Place a cash-on-delivery or bank-transfer order
+      description: |
+        Writes the order through the same path as every other order: live prices, the same stock check, the
+        same discount redemption (strict, since nothing is paid yet). The order and its payment are both
+        PENDING: the money is owed, not received. Cash on delivery is scored again here rather than trusted
+        from the options call.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LocalOrderRequest" }
+      responses:
+        "201":
+          description: The order was placed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlacedLocalOrder" }
+        "400": { description: "The method is not offered, the cart is empty, or the details are not valid" }
+        "409": { description: "Not enough stock, or the discount code can no longer be used" }
+  /stores/{storeId}/payments/orders/{orderId}/proof-image:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/OrderId"
+    post:
+      tags: [checkout]
+      operationId: payments_proof_image
+      summary: Upload the screenshot of a transfer
+      description: |
+        No login: a shopper is a guest. What guards it is the order itself, which must exist in this store,
+        have been placed as a bank transfer and still be unpaid. JPEG, PNG or WebP, at most 5 MB.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string, format: uri }
+        "400": { description: "Not an image, or over 5 MB" }
+        "404": { description: "No unpaid bank-transfer order with that id in this store" }
+  /stores/{storeId}/payments/orders/{orderId}/proof:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/OrderId"
+    post:
+      tags: [checkout]
+      operationId: payments_submit_proof
+      summary: Send in the receipt for a transfer
+      description: |
+        The AI is asked only to read what is printed in the image; it is given no order total and no expected
+        reference, so it cannot be led into agreeing that a screenshot matches. The server then compares what
+        was read with the order and records the findings. The proof is always `pending`: the AI never accepts
+        a payment, and neither does this endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [imageUrl, declaredAmount]
+              properties:
+                imageUrl: { type: string, format: uri, description: "A URL returned by proof-image for this store." }
+                declaredAmount: { type: number }
+                declaredReference: { type: [string, "null"], maxLength: 64 }
+      responses:
+        "201":
+          description: Received, and waiting for the merchant
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentProof" }
+        "400": { description: "Not a bank-transfer order, or the image is not one uploaded to this store" }
+        "409": { description: "Already paid, a receipt is already waiting, or that reference is already used here" }
+    get:
+      tags: [checkout]
+      operationId: payments_proof_status
+      summary: Whether the receipt has been checked yet
+      description: For the shopper. Says only pending, accepted or rejected, and the merchant's reason when rejected; never the findings.
+      responses:
+        "200":
+          description: The state of the receipt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [none, pending, accepted, rejected] }
+                  submittedAt: { type: string, format: date-time }
+                  reason: { type: [string, "null"] }
+  /stores/{storeId}/payments/help:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [checkout]
+      operationId: payments_help
+      summary: Explain a failed payment, in English, Urdu or Roman Urdu
+      description: |
+        A known failure code is answered from a written table with no AI call. The AI is asked only for an
+        unknown code, and only to put the bank's own words into one sentence; the next step always comes from
+        the table. A sentence that claims the payment succeeded, promises a refund or carries a long number is
+        thrown away and the written answer is used instead.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, maxLength: 60, description: "insufficient_funds, wrong_pin, expired_session, cancelled_by_user, limit_exceeded, bank_declined, network_error, or anything else." }
+                providerMessage: { type: string, maxLength: 300 }
+                language: { type: string, enum: [en, ur, roman], default: en }
+      responses:
+        "200":
+          description: What to tell the shopper
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reason, nextStep, tryAnotherMethod, source]
+                properties:
+                  reason: { type: string }
+                  nextStep: { type: string }
+                  tryAnotherMethod: { type: boolean }
+                  source: { type: string, enum: [known, ai, fallback] }
+  /stores/{storeId}/payments/cod/pending:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [orders]
+      operationId: payments_cod_pending
+      summary: Cash-on-delivery orders still waiting for the courier's money
+      description: Owner, or staff with `orders_write`. Each one carries the trust score and every reason behind it.
+      responses:
+        "200":
+          description: The queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PendingCodOrder" }
+        "401": { description: "Not logged in" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /stores/{storeId}/payments/cod/orders/{orderId}/outcome:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/OrderId"
+    post:
+      tags: [orders]
+      operationId: payments_cod_outcome
+      summary: Record how a cash delivery ended
+      description: |
+        Owner, or staff with `orders_write`. "collected" is the only thing that marks a cash-on-delivery order
+        paid, and the amount must be the order's full total. "refused" cancels the order and puts the goods
+        back on the shelf. Either way a count is added to the platform-wide signal for that phone number.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome]
+              properties:
+                outcome: { type: string, enum: [collected, refused] }
+                amount: { type: number, description: "The cash collected; must equal the order total." }
+      responses:
+        "200":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderId: { type: string }
+                  orderNumber: { type: integer }
+                  outcome: { type: string }
+        "400": { description: "Not a cash-on-delivery order, or the amount is not the order total" }
+        "409": { description: "Already settled" }
+  /stores/{storeId}/payments/proofs:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [orders]
+      operationId: payments_proofs_list
+      summary: Payment screenshots waiting to be checked
+      description: Owner, or staff with `orders_write`.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, accepted, rejected] }
+      responses:
+        "200":
+          description: The screenshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PaymentProof" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /stores/{storeId}/payments/proofs/{proofId}/review:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: proofId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [orders]
+      operationId: payments_proof_review
+      summary: Accept or reject a payment screenshot
+      description: |
+        Owner, or staff with `orders_write`. The only place a bank-transfer payment becomes SUCCEEDED, and it
+        records which user decided. The AI never reaches this endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [accept, reject] }
+                reason: { type: string, maxLength: 500, description: "Shown to the shopper when rejecting." }
+      responses:
+        "200":
+          description: Decided
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentProof" }
+        "409": { description: "Already dealt with" }
+  /stores/{storeId}/payments/remittances:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [orders]
+      operationId: payments_remittances_list
+      summary: Past courier cash reconciliations
+      responses:
+        "200":
+          description: The runs, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RemittanceRun" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [orders]
+      operationId: payments_remittance_import
+      summary: Reconcile a courier's cash file against this store's orders
+      description: |
+        Owner, or staff with `orders_write`. The reader finds the order and amount columns by the headings
+        couriers actually use, and matches each line to an order. It reports only: importing a file never
+        marks an order paid.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courier, csv]
+              properties:
+                courier: { type: string, maxLength: 60 }
+                csv: { type: string, maxLength: 2000000 }
+                fileName: { type: string, maxLength: 200 }
+      responses:
+        "201":
+          description: Reconciled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RemittanceRun" }
+        "400": { description: "The order or amount column could not be found, or a row is unreadable" }
+  /stores/{storeId}/payments/remittances/{runId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: runId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [orders]
+      operationId: payments_remittance_get
+      summary: One reconciliation, line by line
+      responses:
+        "200":
+          description: The run and its lines
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RemittanceRun" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /stores/{storeId}/payments/settings:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [stores]
+      operationId: payments_settings_get
+      summary: Which ways the store takes money
+      description: Owner-only. Created with safe defaults the first time it is asked for, which is card only.
+      responses:
+        "200":
+          description: The settings, and the gateways that could be chosen
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings: { $ref: "#/components/schemas/PaymentSettings" }
+                  gateways:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        label: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      tags: [stores]
+      operationId: payments_settings_update
+      summary: Change which ways the store takes money
+      description: Owner-only. Bank details here are the ones a merchant hands out anyway; no API credential is ever stored in them.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaymentSettings" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentSettings" }
+        "400": { description: "A value is out of range, or the smallest COD order is above the largest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   # ── TREND SCOUT (Part D) ──────────────────────────────────────────────
   /stores/{storeId}/trends:
     parameters:
@@ -3073,6 +3445,12 @@ components:
       in: path
       required: true
       description: Tenant identifier. Every operation on a tenant-scoped resource must supply this explicitly.
+      schema: { type: string }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      description: An order in this store.
       schema: { type: string }
     ProductId:
       name: productId
@@ -3294,6 +3672,182 @@ components:
                 oneOf:
                   - $ref: "#/components/schemas/TrendReport"
                   - type: "null"
+
+    LocalOrderRequest:
+      type: object
+      required: [method, name, phone, address]
+      properties:
+        method: { type: string, enum: [cod, bank_transfer] }
+        name: { type: string, maxLength: 120 }
+        phone:
+          type: string
+          maxLength: 32
+          description: "Required: a courier carrying cash rings before delivering. Only checked for shape, never for who it belongs to."
+        email: { type: [string, "null"], format: email }
+        address:
+          type: object
+          required: [line1, city, country]
+          properties:
+            line1: { type: string, maxLength: 200 }
+            line2: { type: [string, "null"], maxLength: 200 }
+            city: { type: string, maxLength: 100 }
+            state: { type: [string, "null"], maxLength: 100 }
+            postalCode: { type: [string, "null"], maxLength: 32 }
+            country: { type: string, minLength: 2, maxLength: 2 }
+        shippingZoneId: { type: string }
+        discountCode: { type: string, maxLength: 64 }
+
+    PaymentOptions:
+      type: object
+      required: [currency, total, cod, bankTransfer]
+      properties:
+        currency: { type: string }
+        total: { type: number }
+        cod:
+          type: object
+          properties:
+            available: { type: boolean }
+            advanceAmount: { type: number, description: "A deposit this store asks for on a risky order; 0 when none." }
+            note: { type: [string, "null"], description: "Why it is not available, in words for the shopper. Never a score or a rule." }
+        bankTransfer:
+          type: object
+          properties:
+            available: { type: boolean }
+            accountName: { type: [string, "null"] }
+            accountNumber: { type: [string, "null"] }
+            bankName: { type: [string, "null"] }
+            instructions: { type: [string, "null"] }
+
+    PlacedLocalOrder:
+      type: object
+      required: [orderId, orderNumber, total, currency, method]
+      properties:
+        orderId: { type: string }
+        orderNumber: { type: integer }
+        total: { type: number }
+        currency: { type: string }
+        method: { type: string, enum: [cod, bank_transfer] }
+        payTo:
+          type: object
+          description: Where to send the money; only for a bank transfer.
+          properties:
+            accountName: { type: [string, "null"] }
+            accountNumber: { type: [string, "null"] }
+            bankName: { type: [string, "null"] }
+            instructions: { type: [string, "null"] }
+
+    CodRiskReason:
+      type: object
+      required: [code, points, detail]
+      properties:
+        code: { type: string, example: store_refusals }
+        points: { type: integer, description: "Added to the score; negative for good history. The reasons add up to the score exactly." }
+        detail: { type: string, description: "The reason in words, for the merchant." }
+
+    PendingCodOrder:
+      type: object
+      required: [orderId, orderNumber, total, currency, placedAt]
+      properties:
+        orderId: { type: string }
+        orderNumber: { type: integer }
+        total: { type: number }
+        currency: { type: string }
+        placedAt: { type: string, format: date-time }
+        shippingName: { type: [string, "null"] }
+        risk:
+          type: [object, "null"]
+          properties:
+            score: { type: integer, minimum: 0, maximum: 100 }
+            band: { type: string, enum: [low, medium, high] }
+            outcome: { type: string, enum: [allowed, blocked, advance_required] }
+            reasons:
+              type: array
+              items: { $ref: "#/components/schemas/CodRiskReason" }
+
+    ProofFinding:
+      type: object
+      required: [code, severity, detail]
+      properties:
+        code: { type: string, example: amount_mismatch }
+        severity: { type: string, enum: [ok, warning, problem] }
+        detail: { type: string }
+
+    PaymentProof:
+      type: object
+      required: [id, orderId, imageUrl, declaredAmount, findings, needsAttention, summary, status]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        imageUrl: { type: string, format: uri }
+        declaredAmount: { type: number, description: "What the shopper typed in." }
+        declaredReference: { type: [string, "null"] }
+        extracted:
+          type: [object, "null"]
+          description: What the AI read from the image. Evidence for the merchant, never a decision.
+          properties:
+            readable: { type: boolean }
+            amount: { type: [number, "null"] }
+            currency: { type: [string, "null"] }
+            date: { type: [string, "null"], format: date }
+            reference: { type: [string, "null"] }
+            bank: { type: [string, "null"] }
+            sender: { type: [string, "null"] }
+            note: { type: [string, "null"] }
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/ProofFinding" }
+        needsAttention: { type: boolean, description: "True when any finding is a problem." }
+        summary: { type: string }
+        status: { type: string, enum: [pending, accepted, rejected] }
+        rejectionReason: { type: [string, "null"] }
+        readBy: { type: [string, "null"], description: "Which model read the image, or null when none could." }
+        createdAt: { type: string, format: date-time }
+
+    RemittanceRun:
+      type: object
+      required: [id, courier, rowCount, matchedCount, problemCount, fileTotal, matchedTotal]
+      properties:
+        id: { type: string }
+        courier: { type: string }
+        fileName: { type: [string, "null"] }
+        rowCount: { type: integer }
+        matchedCount: { type: integer }
+        problemCount: { type: integer }
+        fileTotal: { type: number, description: "What the courier's file says it collected." }
+        matchedTotal: { type: number, description: "Of that, what matched an order exactly." }
+        readColumns:
+          type: object
+          description: The headings the reader settled on, so a merchant can see what it read.
+          properties:
+            reference: { type: string }
+            amount: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              reference: { type: string }
+              amount: { type: number }
+              orderId: { type: [string, "null"] }
+              status: { type: string, enum: [matched, amount_mismatch, unknown_order, duplicate_in_file, not_cod] }
+              detail: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+
+    PaymentSettings:
+      type: object
+      properties:
+        codEnabled: { type: boolean }
+        codMinAmount: { type: [string, "null"], description: "In the store currency; null for no limit." }
+        codMaxAmount: { type: [string, "null"] }
+        codBlockBand: { type: string, enum: [none, low, medium, high], description: "The risk band from which cash on delivery stops being offered." }
+        codAdvancePercent: { type: integer, minimum: 0, maximum: 90 }
+        bankTransferEnabled: { type: boolean }
+        bankAccountName: { type: [string, "null"] }
+        bankAccountNumber: { type: [string, "null"] }
+        bankName: { type: [string, "null"] }
+        bankInstructions: { type: [string, "null"] }
+        gatewayProvider: { type: [string, "null"] }
+        gatewayEnabled: { type: boolean }
 
     TrendImport:
       type: object

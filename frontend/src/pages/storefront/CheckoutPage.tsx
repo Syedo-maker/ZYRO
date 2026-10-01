@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import { useStore } from '../../context/StoreContext'
 import { Alert } from '../../components/ui/Alert'
@@ -10,6 +10,7 @@ import { formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { checkoutApi, storefrontApi } from '../../lib/storefrontApi'
 import type { Quote, ShippingZone } from '../../types/commerce'
+import { LocalPaymentSection, emptyDelivery, type DeliveryDetails, type PayMethod } from './LocalPaymentSection'
 
 function TotalsRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
@@ -27,6 +28,7 @@ export function CheckoutPage() {
   const [zoneId, setZoneId] = useState<string | undefined>()
   const [quote, setQuote] = useState<Quote | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
   const [paying, setPaying] = useState(false)
   // A discount code the shopper has typed and the server accepted; it stays until they remove it.
   const [codeInput, setCodeInput] = useState('')
@@ -86,6 +88,10 @@ export function CheckoutPage() {
       setApplying(false)
     }
   }
+
+  // Part E: a local method places the order here rather than sending the shopper to Stripe.
+  const [method, setMethod] = useState<PayMethod>('card')
+  const [delivery, setDelivery] = useState<DeliveryDetails>(emptyDelivery)
 
   async function handlePay() {
     setPaying(true)
@@ -156,10 +162,24 @@ export function CheckoutPage() {
             <h2 id="payment-heading" className="mb-3 text-xs font-bold text-brand">
               2. PAYMENT
             </h2>
-            <p className="rounded-[10px] border border-border bg-white px-4 py-3.5 text-[13px] leading-relaxed text-text-secondary">
-              You will enter your email, shipping address and card details on Stripe&apos;s secure payment page. ZYRO never sees or
-              stores your card number.
-            </p>
+            {method === 'card' && (
+              <p className="rounded-[10px] border border-border bg-white px-4 py-3.5 text-[13px] leading-relaxed text-text-secondary">
+                You will enter your email, shipping address and card details on Stripe&apos;s secure payment page. ZYRO never sees or
+                stores your card number.
+              </p>
+            )}
+            <div className={method === 'card' ? 'mt-3' : ''}>
+              <LocalPaymentSection
+                storeId={store.id}
+                method={method}
+                onMethodChange={setMethod}
+                delivery={delivery}
+                onDeliveryChange={setDelivery}
+                zoneId={zoneId}
+                code={code}
+                onPlaced={(order) => navigate(`/store/${store.id}/checkout/placed?order=${order.orderId}&method=${order.method}`)}
+              />
+            </div>
           </section>
         </div>
 
@@ -228,9 +248,11 @@ export function CheckoutPage() {
             !error && <Spinner label="Calculating total" />
           )}
 
-          <Button onClick={() => void handlePay()} disabled={!quote || paying} className="mt-2 h-[50px]">
-            {paying ? 'Redirecting to Stripe…' : quote ? `Pay ${formatMoney(quote.total, quote.currency)}` : 'Pay'}
-          </Button>
+          {method === 'card' && (
+            <Button onClick={() => void handlePay()} disabled={!quote || paying} className="mt-2 h-[50px]">
+              {paying ? 'Redirecting to Stripe…' : quote ? `Pay ${formatMoney(quote.total, quote.currency)}` : 'Pay'}
+            </Button>
+          )}
         </aside>
       </div>
     </div>

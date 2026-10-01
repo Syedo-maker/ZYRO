@@ -32,7 +32,7 @@ Every AI call goes through one orchestrator (provider adapter, job queue, monthl
 | Recommendation service: Python/FastAPI microservice, product embeddings, similar products, semantic search for the assistant | built | `Phase6_AI_Recommendation_Service.md` |
 | AI Growth Advisor (weekly tips from store totals, with a template fallback) | built | `PartC_Growth_Advisor.md` |
 | AI Trend Scout (weekly market report per currency and category from anonymised platform sales and imported Google Trends data, every line cited) | built | `PartD_Trend_Scout.md` |
-| AI Payment and Trust module (COD risk, payment screenshot check, courier reconciliation, payment nudge, payment error helper) | planned | Part E |
+| AI Payment and Trust module (COD risk, payment screenshot check, courier reconciliation, payment error helper in Urdu) | built | `PartE_Payment_And_Trust.md` |
 | Semantic search in the search bar; voice-note store manager; bargaining assistant; festival planner | planned, stretch | Parts F and G |
 | AI product photo editing | planned, stretch | Phase 6 |
 
@@ -42,9 +42,11 @@ Two deliberate deviations to state honestly: the recommendation service computes
 
 The original scope listed POS as out of scope. It is built as a second sales channel over the same catalog, inventory, customers, discounts and orders: cashier and manager accounts with permissions, product search and barcode lookup, split cash and card payments with change, shifts and cash-drawer counts, a cashier discount limit, held sales, printable receipts, item-level returns (stock goes back, cash comes out of the drawer), transaction history and a daily summary. Documents: `Phase2_5_Module8_POS_Backend.md`, `Phase2_5_POS_Frontend.md`, `Phase2_Commerce_Core_Foundation.md`.
 
-## 5. Payments: COD and local methods (planned: Part E)
+## 5. Payments: COD and local methods (built: Part E, 2026-10-01)
 
-Cash on Delivery as an online method, a payment adapter so local gateways (JazzCash, Easypaisa, Safepay, XPay) can be added, and manual bank or wallet transfer with a screenshot. Not built. Card payments through Stripe are built for shoppers' orders.
+Cash on Delivery and manual bank or wallet transfer are built as real order paths: the order holds stock from the moment it is placed, and its payment stays PENDING until a person records the money as received. A COD Trust Agent scores how likely a parcel is to be refused, using plain rules a merchant can read and argue with (the order's size, whether the shopper gave a reachable phone and a complete address, this store's own earlier cash deliveries to them, and a platform-wide count of refusals held against a one-way hash of the phone number), and never the shopper's name, area, gender or device. A payment screenshot verifier reads the receipt with a vision model, but is given no order total and no expected reference, so the comparison happens in code and only a merchant ever accepts a payment. A courier's cash file is reconciled line by line against the store's own orders and reports without changing anything. A payment-failure helper explains a refused payment in English, Urdu or Roman Urdu.
+
+The local gateway adapter (JazzCash, Easypaisa, Safepay, XPay) is built as a seam with one shared contract test every adapter must pass, plus a signed test provider. No real provider adapter ships, deliberately: those gateways publish their field names, hash formulas and sandbox URLs only to merchants with an account, and shipping code that has never run against the real thing would be guesswork. Card payments through Stripe remain built for shoppers' orders. Tests: `payments` and `gateways` (unit), `payments` (integration) and the `partE-payments` browser suite.
 
 **Store currency (built, 2026-09-29).** A merchant chooses the currency the store sells in at sign-up (the Pakistani rupee is preselected; Indian rupee, taka, Sri Lankan and Nepalese rupees, dirham, riyal, US dollar, pound, euro, Canadian and Australian dollars are offered), and can change it on the Settings page until the store's first sale; after that it is locked, because prices are stored as plain numbers and orders and reports keep the currency they were taken in. Prices are written the way the currency's home country writes them (Rs 450, ₹1,23,456, £12.00), and online card payments have a minimum per currency so Stripe never refuses a checkout at the last step. Plans and AI packs stay priced in US dollars. Tests: `currencies` (unit), `store-currency` (integration) and the `store-currency` browser suite.
 
@@ -69,7 +71,8 @@ Cash on Delivery as an online method, a payment adapter so local gateways (JazzC
 | Part B | Usage counters (monthly orders, sales, refunds and AI tokens per store) | done |
 | Part C | AI Growth Advisor | done |
 | Part D | AI Trend Scout | done |
-| Parts E to G | Payment and Trust, search, voice and bargaining assistants | planned, effort estimates pending the approved plan |
+| Part E | AI Payment and Trust | done |
+| Parts F and G | Search, voice and bargaining assistants | planned, effort estimates pending the approved plan |
 | 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | last, not started |
 | 8 | Docker Compose, environment setup, final documentation, Gantt chart, Turnitin report | last, not started |
 

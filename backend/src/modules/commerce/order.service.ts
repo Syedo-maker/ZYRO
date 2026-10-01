@@ -8,7 +8,7 @@ import { usageService } from "../usage/usage.service";
 import { calculateTotals, PricingDiscount, PricingResult } from "./pricing.service";
 
 export type OrderChannel = "ONLINE" | "POS";
-export type OrderPaymentMethod = "CASH" | "CARD" | "STRIPE" | "OTHER";
+export type OrderPaymentMethod = "CASH" | "CARD" | "STRIPE" | "OTHER" | "COD" | "BANK_TRANSFER" | "GATEWAY";
 
 export interface PricedLine {
   productId: string;
@@ -32,6 +32,11 @@ export interface ShippingAddress {
   state: string | null;
   postalCode: string | null;
   country: string | null;
+  /**
+   * The number the courier rings before delivering (Part E). Stripe does not collect one, so this is
+   * set only for orders placed through the local methods, where a courier carrying cash needs it.
+   */
+  phone?: string | null;
 }
 
 export interface CreateOrderInput {
@@ -69,14 +74,30 @@ export interface CreateOrderInput {
   redeem?: "strict" | "honour";
   /** Live pricing only. */
   shippingAmount?: number;
-  /** Payments already taken. Must add up to the order total exactly. */
+  /**
+   * The payments on this order. They must add up to the order total exactly, whether the money is
+   * already in hand or not: a cash-on-delivery order carries a PENDING payment for the full amount
+   * from the moment it exists, so the order's books balance and nothing can be quietly under-billed.
+   */
   payments: {
     method: OrderPaymentMethod;
     amount: number;
     /** Cash only: what the customer handed over (change is this minus `amount`). */
     tenderedAmount?: number;
     stripePaymentIntentId?: string;
+    /**
+     * Defaults to SUCCEEDED, which is every payment taken before the order exists. PENDING is for
+     * money promised but not yet collected (Part E: cash on delivery, and a bank transfer waiting
+     * for the merchant to check the screenshot).
+     */
+    status?: "SUCCEEDED" | "PENDING";
   }[];
+  /**
+   * What the order's own status should be. Defaults to COMPLETED for a POS sale and PAID for an
+   * online one, which is right when the money is already in. An order whose payment is still
+   * PENDING passes "PENDING" here, so it is never counted as paid.
+   */
+  status?: "PENDING" | "PAID" | "COMPLETED";
   stripeCheckoutSessionId?: string;
 }
 
@@ -187,7 +208,7 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
         guestEmail: input.guestEmail,
         shippingName: input.shipping?.name ?? undefined,
         shippingAddress: input.shipping ? { ...input.shipping.address } : undefined,
-        status: input.channel === "POS" ? "COMPLETED" : "PAID",
+        status: input.status ?? (input.channel === "POS" ? "COMPLETED" : "PAID"),
         subtotal: totals.subtotal,
         discountAmount: totals.discountAmount,
         taxAmount: totals.taxAmount,
@@ -220,7 +241,7 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
         amount: p.amount.toFixed(2),
         tenderedAmount: p.tenderedAmount === undefined ? undefined : p.tenderedAmount.toFixed(2),
         currency: tenant.currency,
-        status: "SUCCEEDED" as const,
+        status: p.status ?? ("SUCCEEDED" as const),
       })),
     });
 

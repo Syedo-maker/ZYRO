@@ -28,13 +28,19 @@ async function main() {
 
   await p.tenant.deleteMany({ where: { id: { in: ids } } });
   const users = await p.user.deleteMany({ where: { OR: EMAIL_PREFIXES.map((e) => ({ email: { startsWith: e } })) } });
+  // Part E: the platform-wide COD signals the browser tests leave behind. The table belongs to no
+  // store, so it is cleaned by the test phone numbers the suites use, hashed the same way the app does.
+  const { hashPhone } = await import("../src/modules/payments/payments.service");
+  const testPhoneHashes = ["03001234567", "03009998888", "03009999999"].map((n) => hashPhone(n)).filter((h): h is string => h !== null);
+  const signals = await p.codPhoneSignal.deleteMany({ where: { phoneHash: { in: testPhoneHashes } } });
+
   // Trend Scout (Part D) test reports: the test market XTS (reserved for testing), and imports whose category starts "e2e".
   const reports = await p.trendReport.deleteMany({ where: { OR: [{ market: "XTS" }, { category: { startsWith: "e2e " } }] } });
   const imports = await p.trendSignalImport.deleteMany({ where: { OR: [{ market: "XTS" }, { category: { startsWith: "e2e " } }] } });
 
   const left = { stores: await p.tenant.count(), users: await p.user.count() };
   console.log(
-    `Removed ${ids.length} test stores, ${users.count} test users, ${products.deletedCount} products, ${carts.length} carts, ${reports.count + imports.count} trend test rows. ` +
+    `Removed ${ids.length} test stores, ${users.count} test users, ${products.deletedCount} products, ${carts.length} carts, ${reports.count + imports.count} trend test rows, ${signals.count} COD signals. ` +
       `Remaining: ${left.stores} stores, ${left.users} users.`
   );
 

@@ -6,6 +6,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { storeSettingsApi, type CurrencySetting } from '../../lib/storeSettingsApi'
+import { PaymentMethodsPanel } from './PaymentMethodsPanel'
 
 /**
  * The owner's store settings. For now: the currency the store sells in. It can be changed until the
@@ -116,6 +117,8 @@ export function SettingsPage() {
           </form>
         )}
       </section>
+
+      <PaymentMethodsPanel storeId={activeStore.id} currency={setting.currency} />
     </div>
   )
 }

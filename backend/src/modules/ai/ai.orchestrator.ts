@@ -3,7 +3,7 @@ import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
 import { getAiQueue, getAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
 import type { AiGenerateResult } from "../../lib/aiProvider";
-import { modelFor } from "../../lib/aiModels";
+import { allowsImage, modelFor } from "../../lib/aiModels";
 import { getRedis } from "../../lib/redis";
 import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, type AiUsageKind } from "./ai.quota.service";
 
@@ -33,6 +33,13 @@ export interface GenerateInput {
    * store's token counters are not touched; the caller records the cost where the platform can see it.
    */
   billedTo?: "store" | "platform";
+  /**
+   * An image for the model to look at (Part E's payment screenshots). Only prompt types listed in
+   * lib/aiModels.ts as vision prompts may send one; anything else is a programming error and is
+   * refused here, so a picture can never be sent to the AI by accident. Never cached: two different
+   * screenshots would otherwise share one answer.
+   */
+  image?: { mediaType: "image/jpeg" | "image/png" | "image/webp"; data: string };
 }
 
 /**
@@ -56,13 +63,17 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
   const maxTokens = input.maxTokens ?? 1024;
   const platformPays = input.billedTo === "platform";
 
+  if (input.image && !allowsImage(input.promptType)) {
+    throw new Error(`promptType "${input.promptType}" is not allowed to send an image (see VISION_PROMPTS in lib/aiModels.ts)`);
+  }
+
   // The cap covers the system text plus the caller's text; the caller's text is what gets cut
   // (the end of it: reviews are fed newest first, so the oldest go).
   const room = Math.max(1000, env.ai.maxPromptChars - input.system.length);
   const prompt = input.prompt.length > room ? input.prompt.slice(0, room) : input.prompt;
 
   const cacheKey =
-    input.cache && env.ai.cacheSeconds > 0
+    input.cache && !input.image && env.ai.cacheSeconds > 0
       ? `ai:cache:${input.tenantId}:${createHash("sha256").update(JSON.stringify([input.promptType, model, input.system, prompt, maxTokens])).digest("hex")}`
       : undefined;
   if (cacheKey) {
@@ -90,6 +101,7 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
       system: input.system,
       prompt,
       maxTokens,
+      image: input.image,
     } satisfies AiJobData,
     {
       attempts: 3,

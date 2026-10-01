@@ -26,6 +26,8 @@ export interface AiJobData {
   system: string;
   prompt: string;
   maxTokens: number;
+  /** Part E's payment screenshots. Base64, so it rides in the job like any other field. */
+  image?: { mediaType: "image/jpeg" | "image/png" | "image/webp"; data: string };
 }
 
 let queue: Queue<AiJobData, AiGenerateResult> | undefined;
@@ -65,6 +67,7 @@ export function startAiWorker(): Worker<AiJobData, AiGenerateResult> {
           system: job.data.system,
           prompt: job.data.prompt,
           maxTokens: job.data.maxTokens,
+          image: job.data.image,
         });
       } catch (err) {
         // A bad request, an invalid key, or a model ZYRO isn't allowed to use will never

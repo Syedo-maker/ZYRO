@@ -15,7 +15,7 @@ Design-only files (no screen of their own) are marked as such: `NavigationFlow` 
 | CategoryListing.dc.html | Category and search results | products_list, products_categories, products_suggest |
 | ProductDetail.dc.html | Product page with reviews | products_get, reviews_list, reviews_create, reviews_update_mine, reviews_delete_mine, products_recommendations, cart_items_add |
 | Cart.dc.html | Cart | cart_get, cart_items_update, cart_items_remove, cart_merge |
-| Checkout.dc.html | Checkout | checkout_quote_create, discount_codes_validate, checkout_session_create |
+| Checkout.dc.html | Checkout, with cash on delivery and bank transfer (Part E) | checkout_quote_create, discount_codes_validate, checkout_session_create, payments_options, payments_place_order, payments_help |
 | OrderConfirmation.dc.html | Order confirmation | checkout_session_get, orders_get |
 | AIAssistant.dc.html | Shopping assistant chat | assistant_chat_send |
 | AdminCatalog.dc.html | Admin products and product form with AI tools | products_list, products_create, products_update, products_delete, uploads_image_create, ai_content_get, ai_content_generate, ai_content_update, ai_content_regenerate, ai_content_publish, ai_content_auto_tag, ai_content_seo_metadata, ai_content_marketing_copy, ai_content_review_summary_get, ai_content_review_summary_generate, ai_usage_get |
@@ -49,7 +49,9 @@ These were added in later phases; the screen itself was designed in code.
 | Store branding | Phase 1 | store_branding_update, stores_get |
 | Plan and billing | Part A | billing_overview, billing_subscribe, billing_top_up, billing_portal, plans_list, store_domain_update |
 | Platform, with the Trend Scout panel (Part D) | Part A | platform_summary, platform_tenants, platform_trends_list, platform_trends_imports_list, platform_trends_import, platform_trends_run |
-| Settings (store currency) | After Part C | store_currency_get, store_currency_update |
+| Settings (store currency, and ways to pay) | After Part C | store_currency_get, store_currency_update, payments_settings_get, payments_settings_update |
+| Order placed (cash on delivery or transfer, and sending in the receipt) | Part E | payments_proof_image, payments_submit_proof, payments_proof_status |
+| Payments (cash-on-delivery queue, screenshots, courier cash) | Part E | payments_cod_pending, payments_cod_outcome, payments_proofs_list, payments_proof_review, payments_remittances_list, payments_remittance_import, payments_remittance_get |
 
 ## Not called by any screen
 
