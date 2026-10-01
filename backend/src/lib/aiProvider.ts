@@ -11,6 +11,12 @@ export interface AiGenerateParams {
   /** The one piece of caller-supplied context (product fields, review text, ...). */
   prompt: string;
   maxTokens: number;
+  /**
+   * An image for the model to look at, sent alongside `prompt` (Part E's payment screenshots).
+   * `data` is base64 with no data-URI prefix. Only the models in lib/aiModels.ts that can see
+   * images may be asked for this; the orchestrator refuses it for the others.
+   */
+  image?: { mediaType: "image/jpeg" | "image/png" | "image/webp"; data: string };
 }
 
 export interface AiGenerateResult {
@@ -41,12 +47,15 @@ function createRealProvider(): AiProvider {
   const client = new Anthropic({ apiKey: anthropicApiKey });
 
   return {
-    async generate({ model, system, prompt, maxTokens }) {
+    async generate({ model, system, prompt, maxTokens, image }) {
+      const content: Anthropic.ContentBlockParam[] = image
+        ? [{ type: "image", source: { type: "base64", media_type: image.mediaType, data: image.data } }, { type: "text", text: prompt }]
+        : [{ type: "text", text: prompt }];
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
         system,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content }],
         // These are short answers: no reasoning tokens (they count against max_tokens and cost output price).
         ...directAnswerParams(model),
       });

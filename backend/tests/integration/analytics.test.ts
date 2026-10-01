@@ -209,16 +209,20 @@ async function main() {
     const range = resolveRange({});
     check("default: the window is the last 30 days ending on a five-minute mark", range.to.getTime() % 300000 === 0 && range.to.getTime() - range.from.getTime() === 30 * 86400000 && range.to.getTime() >= Date.now());
     await place("ONLINE", new Date().toISOString(), [[widget, 1]], 22);
+    // The scenario's 2026-09-01 order drifts out of a rolling 30-day window once that date is more
+    // than 30 days ago, so what the default window should contain is worked out, not hardcoded.
+    const sepOrderInRange = range.from.getTime() <= Date.parse("2026-09-01T00:00:00Z");
+    const defaultOrders = 1 + (sepOrderInRange ? 1 : 0);
     const first = await S("");
-    check("default: with no dates it reports the last 30 days and includes a sale made just now (and the Sep 1 order from the scenario, which falls in the last 30 days)", first.status === 200 && first.json.cached === false && first.json.totals.orders === 2 && first.json.totals.grossSales === 44 && first.json.range.days >= 30);
+    check("default: with no dates it reports the last 30 days and includes a sale made just now", first.status === 200 && first.json.cached === false && first.json.totals.orders === defaultOrders && first.json.totals.grossSales === 22 * defaultOrders && first.json.range.days >= 30, `orders=${first.json.totals.orders} expected=${defaultOrders}`);
     const cacheKey = `analytics:summary:${A.storeId}:${new Date(first.json.range.from).getTime()}:${new Date(first.json.range.to).getTime()}:0`;
     const ttl = await getRedis().ttl(cacheKey);
     check("cache: the first answer is stored in Redis for 5 minutes", ttl > 0 && ttl <= 300, `ttl=${ttl}`);
     await place("ONLINE", new Date().toISOString(), [[widget, 1]], 22);
     const second = await S("");
-    check("cache: the next request is served from the cache (same numbers, marked cached), so a sale a moment ago is not in it yet", second.json.cached === true && second.json.totals.orders === 2 && second.json.generatedAt === first.json.generatedAt);
+    check("cache: the next request is served from the cache (same numbers, marked cached), so a sale a moment ago is not in it yet", second.json.cached === true && second.json.totals.orders === defaultOrders && second.json.generatedAt === first.json.generatedAt);
     await getRedis().del(cacheKey);
-    check("cache: once the entry is gone (or after 5 minutes) fresh figures appear", (await S("")).json.totals.orders === 3);
+    check("cache: once the entry is gone (or after 5 minutes) fresh figures appear", (await S("")).json.totals.orders === defaultOrders + 1);
     const asAnalyst = await S("", analyst);
     check("cache: analysts share the store's cache entry", asAnalyst.json.cached === true);
     check("cache: another store's default request has its own entry and its own numbers", (await S("", B.token, B.storeId)).json.totals.orders === 0);
@@ -231,7 +235,7 @@ async function main() {
     const degraded = await S("");
     (redis as unknown as { get: unknown }).get = realGet;
     (redis as unknown as { set: unknown }).set = realSet;
-    check("cache: if Redis is down the dashboard still answers with fresh, correct figures", degraded.status === 200 && degraded.json.cached === false && degraded.json.totals.orders === 3);
+    check("cache: if Redis is down the dashboard still answers with fresh, correct figures", degraded.status === 200 && degraded.json.cached === false && degraded.json.totals.orders === defaultOrders + 1);
 
     // ---- Speed and correctness with thousands of orders ----
     const bulk = 3000;
@@ -309,7 +313,7 @@ declare([
   "validation: more than 366 days is 400, exactly 366 is fine",
   "validation: a bad date or an out-of-range time zone is 400",
   "default: the window is the last 30 days ending on a five-minute mark",
-  "default: with no dates it reports the last 30 days and includes a sale made just now (and the Sep 1 order from the scenario, which falls in the last 30 days)",
+  "default: with no dates it reports the last 30 days and includes a sale made just now",
   "cache: the first answer is stored in Redis for 5 minutes",
   "cache: the next request is served from the cache (same numbers, marked cached), so a sale a moment ago is not in it yet",
   "cache: once the entry is gone (or after 5 minutes) fresh figures appear",

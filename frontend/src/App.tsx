@@ -10,9 +10,11 @@ import { StorefrontHome } from './pages/storefront/StorefrontHome'
 import { CartPage } from './pages/storefront/CartPage'
 import { CheckoutPage } from './pages/storefront/CheckoutPage'
 import { OrderConfirmationPage } from './pages/storefront/OrderConfirmationPage'
+import { OrderPlacedPage } from './pages/storefront/OrderPlacedPage'
 import { TeamPage } from './pages/admin/TeamPage'
 import { BillingPage } from './pages/admin/BillingPage'
 import { SettingsPage } from './pages/admin/SettingsPage'
+import { PaymentsPage } from './pages/admin/PaymentsPage'
 import { PlatformPage } from './pages/admin/PlatformPage'
 import { DashboardPage } from './pages/admin/DashboardPage'
 import { MarketingPage } from './pages/admin/MarketingPage'
@@ -45,6 +47,7 @@ export default function App() {
             <Route path="reviews" element={<ReviewsAdminPage />} />
             <Route path="team" element={<TeamPage />} />
             <Route path="billing" element={<BillingPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="platform" element={<PlatformPage />} />
           </Route>
@@ -68,6 +71,7 @@ export default function App() {
             <Route path="cart" element={<CartPage />} />
             <Route path="checkout" element={<CheckoutPage />} />
             <Route path="checkout/success" element={<OrderConfirmationPage />} />
+            <Route path="checkout/placed" element={<OrderPlacedPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/admin/products" replace />} />

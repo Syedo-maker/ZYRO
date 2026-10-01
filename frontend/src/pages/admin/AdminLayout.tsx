@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/admin/dashboard', enabled: true },
   { label: 'Products', to: '/admin/products', enabled: true },
   { label: 'Orders', to: '/admin/orders', enabled: true },
+  { label: 'Payments', to: '/admin/payments', enabled: true },
   { label: 'Team & register', to: '/admin/team', enabled: true },
   { label: 'Reviews', to: '/admin/reviews', enabled: true },
   { label: 'Marketing', to: '/admin/marketing', enabled: true },

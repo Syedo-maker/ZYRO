@@ -26,6 +26,7 @@ import { insightsRouter } from "./modules/insights/insights.routes";
 import { billingRouter, plansRouter } from "./modules/billing/billing.routes";
 import { platformRouter } from "./modules/platform/platform.routes";
 import { advisorRouter } from "./modules/advisor/advisor.routes";
+import { paymentsRouter } from "./modules/payments/payments.routes";
 import { storeTrendsRouter } from "./modules/trends/trends.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 
@@ -75,6 +76,7 @@ v1.use("/stores/:storeId/insights", insightsRouter);
 v1.use("/stores/:storeId/billing", billingRouter);
 v1.use("/stores/:storeId/advisor", advisorRouter);
 v1.use("/stores/:storeId/trends", storeTrendsRouter);
+v1.use("/stores/:storeId/payments", paymentsRouter);
 v1.use("/stores/:storeId", storeRouter);
 v1.use("/plans", plansRouter);
 v1.use("/platform", platformRouter);

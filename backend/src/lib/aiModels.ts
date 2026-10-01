@@ -27,7 +27,20 @@ const TIER_BY_PROMPT: Record<string, ModelTier> = {
   // The weekly market report (Part D): once per market and category a week, paid by the platform, and it
   // must follow a strict cite-every-line format, so the better model.
   trend_report: "standard",
+  // Part E. Reading a payment screenshot is a careful look at a picture of money, so the better
+  // model; the Urdu failure message is short and templated, so the fast one.
+  payment_proof: "standard",
+  payment_help: "fast",
 };
+
+/**
+ * Which prompt types send the model an image (Part E's payment screenshots). Listed explicitly
+ * rather than allowed everywhere, so a prompt type cannot start sending pictures to the AI without
+ * that being a deliberate, reviewable change.
+ */
+const VISION_PROMPTS = new Set(["payment_proof"]);
+
+export const allowsImage = (promptType: string): boolean => VISION_PROMPTS.has(promptType);
 
 /** An unknown prompt type gets the standard model: quality first, so a new feature is never quietly given a weak one. */
 export const tierFor = (promptType: string): ModelTier => TIER_BY_PROMPT[promptType] ?? "standard";
