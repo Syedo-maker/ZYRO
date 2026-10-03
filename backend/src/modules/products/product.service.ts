@@ -8,6 +8,8 @@ import { planService } from "../billing/plan.service";
 import { inventoryService } from "../inventory/inventory.service";
 import { ratingsFor, reviewService } from "../reviews/review.service";
 import type { ProductInput, ListProductsQuery } from "./product.validation";
+import { forgetVocabulary, runLadder, semanticIds, type SearchOutcome } from "../search/search.service";
+import { normalise } from "../search/search.query";
 
 interface Rating {
   averageRating: number;
@@ -101,38 +103,60 @@ export const productService = {
       filter._id = { $in: rows.filter((r) => Types.ObjectId.isValid(r.productId)).map((r) => new Types.ObjectId(r.productId)) };
     }
 
+    // Part F: a typo or a Roman Urdu word is tried against the store's own vocabulary before
+    // giving up, so "ceramik" and "ketli" find something. No AI is involved at any rung.
     let effective: Record<string, unknown> = filter;
-    let mode: "none" | "text" | "partial" = "none";
+    let outcome: SearchOutcome | null = null;
+    /** For a semantic search: the order the service ranked them in, which `$in` does not preserve. */
+    let semanticOrder: string[] | null = null;
     if (query.q) {
-      const textFilter = { ...filter, $text: { $search: query.q } };
-      if ((await Product.countDocuments(textFilter)) > 0) {
-        effective = textFilter;
-        mode = "text";
+      outcome = await runLadder(storeId, query.q, filter, { exact: query.exact });
+      if (outcome.filter) {
+        effective = outcome.filter;
+      } else if (query.exact) {
+        effective = { ...filter, _id: { $in: [] } }; // taken literally: no meaning search either
       } else {
-        const contains = new RegExp(escapeRegex(query.q), "i");
-        effective = { ...filter, $or: [{ title: contains }, { category: contains }] };
-        mode = "partial";
+        // The words found nothing. Last resort: products that mean something like the query. The
+        // ids are re-filtered against this store below, so a wrong answer still cannot cross stores.
+        const ids = (await semanticIds(storeId, query.q))?.filter((id) => Types.ObjectId.isValid(id)) ?? [];
+        effective = ids.length > 0 ? { ...filter, _id: { $in: ids.map((id) => new Types.ObjectId(id)) } } : { ...filter, _id: { $in: [] } };
+        if (ids.length > 0) {
+          outcome = { ...outcome, step: "semantic" };
+          semanticOrder = ids;
+        }
       }
     }
 
     const wanted = query.sort ?? "relevance";
-    const ranked = mode === "text" && wanted === "relevance";
+    const ranked = Boolean(outcome?.ranked) && wanted === "relevance";
     const sort: Record<string, 1 | -1 | { $meta: "textScore" }> = ranked
       ? { score: { $meta: "textScore" }, _id: -1 }
       : wanted === "price_asc"
         ? { price: 1, _id: 1 }
         : wanted === "price_desc"
           ? { price: -1, _id: -1 }
-          : wanted === "title" || (mode === "partial" && wanted === "relevance")
+          : wanted === "title" || (outcome !== null && !outcome.ranked && wanted === "relevance")
             ? { title: 1, _id: 1 }
             : { createdAt: -1, _id: -1 };
 
+    // A semantic answer is already ranked by how close the meaning is, and `$in` does not keep that
+    // order, so those few results are ordered here instead. Any other sort the shopper picked wins.
+    const keepSemanticOrder = semanticOrder !== null && wanted === "relevance";
     const [docs, total] = await Promise.all([
-      Product.find(effective, ranked ? { score: { $meta: "textScore" } } : undefined)
-        .collation({ locale: "en", strength: 2 })
-        .sort(sort)
-        .skip(query.offset)
-        .limit(query.limit),
+      keepSemanticOrder
+        ? Product.find(effective)
+            .collation({ locale: "en", strength: 2 })
+            .then((found) => {
+              const rank = new Map(semanticOrder!.map((id, i) => [id, i]));
+              return found
+                .sort((a, b) => (rank.get(a._id.toString()) ?? Infinity) - (rank.get(b._id.toString()) ?? Infinity))
+                .slice(query.offset, query.offset + query.limit);
+            })
+        : Product.find(effective, ranked ? { score: { $meta: "textScore" } } : undefined)
+            .collation({ locale: "en", strength: 2 })
+            .sort(sort)
+            .skip(query.offset)
+            .limit(query.limit),
       Product.countDocuments(effective),
     ]);
 
@@ -142,6 +166,11 @@ export const productService = {
     return {
       data: docs.map((d) => toPublicProduct(d, stock.get(d._id.toString()) ?? 0, ratings.get(d._id.toString()))),
       pagination: { total, limit: query.limit, offset: query.offset },
+      // Only present for a search, and only when the words searched for were not the words typed,
+      // so the storefront can say "Showing results for ..." rather than quietly changing the query.
+      ...(outcome && (outcome.correctedTo || outcome.alsoSearched.length > 0 || outcome.step === "semantic")
+        ? { interpretation: { step: outcome.step, correctedTo: outcome.correctedTo, changes: outcome.changes, alsoSearched: outcome.alsoSearched } }
+        : {}),
     };
   },
 
@@ -156,10 +185,31 @@ export const productService = {
   },
 
   /** Search-box suggestions: products with a title word that starts with what was typed. */
+  /**
+   * Search-as-you-type. A prefix match first, because that is what someone half-way through a word
+   * wants. Only if nothing starts with what they typed does it try the full ladder, so a shopper who
+   * typed "ketli" or misspelt a word still sees suggestions instead of an empty box (Part F).
+   */
   async suggest(storeId: string, q: string) {
-    const startsWith = new RegExp(`(^|\\s)${escapeRegex(q)}`, "i");
-    const docs = await Product.find({ storeId, title: startsWith }).sort({ title: 1 }).limit(8).select("title category");
-    return docs.map((d) => ({ id: d._id.toString(), title: d.title, category: d.category }));
+    const present = (docs: { _id: Types.ObjectId; title: string; category: string }[]) =>
+      docs.map((d) => ({ id: d._id.toString(), title: d.title, category: d.category }));
+
+    // A query of only punctuation normalises to nothing. Without this guard the prefix pattern would
+    // be an empty one, which matches every title, so a shopper typing "(.*" would get the whole shop.
+    const cleaned = normalise(q);
+    if (!cleaned) return [];
+
+    const startsWith = new RegExp(`(^|\\s)${escapeRegex(cleaned)}`, "i");
+    const prefix = await Product.find({ storeId, title: startsWith }).sort({ title: 1 }).limit(8).select("title category");
+    if (prefix.length > 0) return present(prefix);
+
+    const outcome = await runLadder(storeId, q, { storeId });
+    if (!outcome.filter) return [];
+    const docs = await Product.find(outcome.filter, outcome.ranked ? { score: { $meta: "textScore" } } : undefined)
+      .sort(outcome.ranked ? { score: { $meta: "textScore" }, _id: -1 } : { title: 1 })
+      .limit(8)
+      .select("title category");
+    return present(docs);
   },
   async create(storeId: string, input: ProductInput, userId?: string) {
     const { stock, catalog } = splitInput(input);
@@ -182,6 +232,8 @@ export const productService = {
       throw err;
     }
     indexProductInBackground(storeId, doc._id.toString());
+    // A new product should be findable by a typo straight away, not after the word list expires.
+    void forgetVocabulary(storeId);
     return toPublicProduct(doc, stock);
   },
 
@@ -229,6 +281,7 @@ export const productService = {
 
     await setStock(storeId, productId, stock, "ADJUSTMENT", userId);
     indexProductInBackground(storeId, productId);
+    void forgetVocabulary(storeId);
     return toPublicProduct(doc, stock);
   },
 
@@ -238,6 +291,7 @@ export const productService = {
     if (result.deletedCount === 0) throw Errors.notFound("Product");
     // Reviews belong to the product: they go with it (unlike stock history, which past orders still need).
     await reviewService.removeForProduct(storeId, productId);
+    void forgetVocabulary(storeId);
     // Inventory rows and the stock ledger are deliberately kept: past orders and audits
     // still reference this product id.
   },

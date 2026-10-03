@@ -467,6 +467,12 @@ paths:
           in: query
           description: "relevance ranks search matches best first (newest when there is no `q`)."
           schema: { type: string, enum: [relevance, newest, price_asc, price_desc, title], default: relevance }
+        - name: exact
+          in: query
+          description: |
+            Take the words literally (Part F): no spelling correction, no Roman Urdu alternatives and no
+            search by meaning. Behind the "search for what I typed instead" link.
+          schema: { type: boolean, default: false }
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -482,6 +488,7 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/Product" }
                   pagination: { $ref: "#/components/schemas/PaginationInfo" }
+                  interpretation: { $ref: "#/components/schemas/SearchInterpretation" }
     post:
       tags: [catalog]
       operationId: products_create
@@ -3672,6 +3679,35 @@ components:
                 oneOf:
                   - $ref: "#/components/schemas/TrendReport"
                   - type: "null"
+
+    SearchInterpretation:
+      type: object
+      description: |
+        How a search was understood, when it was not taken literally (Part F). Present only when the words
+        searched for differed from the words typed, so a shopper is told rather than quietly given something
+        else. None of it involves the AI: it is a dictionary and an edit distance against the store's own words.
+      required: [step]
+      properties:
+        step:
+          type: string
+          enum: [exact, synonym, corrected, partial, semantic]
+          description: |
+            Which rung of the ladder answered. `exact` the words as typed; `synonym` the words plus known
+            meanings (Roman Urdu, spelling variants); `corrected` after fixing a typo against this store's own
+            vocabulary; `partial` a contains match; `semantic` nothing matched the words, so the recommendation
+            service found products close in meaning.
+        correctedTo: { type: [string, "null"], description: 'The whole query after spelling fixes, e.g. "ceramic mug".' }
+        changes:
+          type: array
+          items:
+            type: object
+            properties:
+              from: { type: string }
+              to: { type: string }
+        alsoSearched:
+          type: array
+          description: 'Extra words looked for, e.g. "kettle" for "ketli".'
+          items: { type: string }
 
     LocalOrderRequest:
       type: object

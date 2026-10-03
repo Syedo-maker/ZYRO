@@ -13,11 +13,29 @@ export interface ProductQuery {
   sort?: ProductSort
   limit?: number
   offset?: number
+  /** Take the words literally: no spelling fixes, no alternatives, no search by meaning (Part F). */
+  exact?: boolean
+}
+
+/**
+ * How a search was understood, when it was not taken literally (Part F). Present only when the words
+ * searched for differed from the words typed, so the shopper is told rather than quietly given
+ * something else.
+ */
+export interface SearchInterpretation {
+  /** exact and partial never appear here; those needed no explaining. */
+  step: 'corrected' | 'synonym' | 'semantic' | 'exact' | 'partial'
+  /** The whole query after spelling fixes, e.g. "ceramic mug". */
+  correctedTo: string | null
+  changes: { from: string; to: string }[]
+  /** Extra words looked for, e.g. "kettle" for "ketli". */
+  alsoSearched: string[]
 }
 
 export interface ProductPage {
   data: Product[]
   pagination: PaginationInfo
+  interpretation?: SearchInterpretation
 }
 
 export interface CategoryCount {

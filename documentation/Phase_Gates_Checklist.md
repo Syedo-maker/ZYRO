@@ -213,6 +213,8 @@ Phases 0 to 6 and Part A are built and their tests pass. On 2026-09-26 the gaps 
 ### Part F: Search
 - **Build:** keep keyword search independent of AI; optional semantic search.
 - **Tests:** keyword search works with no AI key and no quota; results never cross stores; semantic search (if built) returns nothing outside the store and degrades to keyword search when the service is down.
+- **Status (2026-10-03):** built; `search` unit (38), `search` end to end (28) and browser `partF-search` pass, and the 86 existing `search-reviews` checks still pass. Every test the gate asks for is written: the end-to-end suite's AI provider throws on every call, a test asserts the store's AI counters are unchanged by searching, and semantic search is proved to discard out-of-store ids and to fall back silently when the service is down. Beyond the gate: typo correction against each store's own vocabulary, a Roman Urdu dictionary, and an `exact=1` escape hatch so a shopper is never silently second-guessed. `find-skill` installed nothing: the MongoDB skill targets Atlas Search, which this self-hosted deployment refuses, and tells future sessions never to use `$text`, which is all this deployment has. See `PartF_Search.md`.
+- **Sign-off:** approved by ______ on ______
 
 ### Part G (stretch): voice-note manager, bargaining assistant, festival planner
 - **Tests (if built):** the bargaining assistant can never quote below the merchant's minimum, whatever the customer types (prompt-injection attempts included) and the final price is created on the server; a voice note only ever makes a draft the merchant must confirm.

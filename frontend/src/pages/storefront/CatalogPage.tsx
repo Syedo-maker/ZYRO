@@ -10,6 +10,8 @@ import { errorMessage } from '../../lib/ordersApi'
 import { catalogApi } from '../../lib/shopApi'
 import { useAddToCart } from '../../lib/useAddToCart'
 import type { Product } from '../../types/api'
+import type { SearchInterpretation } from '../../types/shop'
+import { SearchNote } from './SearchNote'
 import type { CategoryCount, ProductSort } from '../../types/shop'
 
 const PAGE_SIZE = 12
@@ -32,12 +34,13 @@ export function CatalogPage() {
   const { categories } = useOutletContext<{ categories: CategoryCount[] }>()
   const [params, setParams] = useSearchParams()
   const { addingId, message, addToCart } = useAddToCart()
-  const [result, setResult] = useState<{ products: Product[]; total: number } | null>(null)
+  const [result, setResult] = useState<{ products: Product[]; total: number; interpretation?: SearchInterpretation } | null>(null)
   const [error, setError] = useState<string | null>(null)
   // True while a new page of results is loading; the previous results stay on screen (dimmed) instead of blanking.
   const [loading, setLoading] = useState(true)
 
   const q = params.get('q') ?? ''
+  const exact = params.get('exact') === '1'
   const category = params.get('category') ?? ''
   const minPrice = params.get('minPrice') ?? ''
   const maxPrice = params.get('maxPrice') ?? ''
@@ -61,8 +64,9 @@ export function CatalogPage() {
         sort,
         limit: PAGE_SIZE,
         offset: (page - 1) * PAGE_SIZE,
+        exact: exact || undefined,
       })
-      .then((r) => !cancelled && setResult({ products: r.data, total: r.pagination.total }))
+      .then((r) => !cancelled && setResult({ products: r.data, total: r.pagination.total, interpretation: r.interpretation }))
       .catch((e) => !cancelled && setError(errorMessage(e)))
       .finally(() => !cancelled && setLoading(false))
     return () => {
@@ -212,6 +216,7 @@ export function CatalogPage() {
         <div className={`flex min-w-0 flex-1 flex-col gap-6 transition-opacity ${loading && result ? 'opacity-60' : ''}`} aria-busy={loading}>
           {message && <Alert tone={message.tone}>{message.text}</Alert>}
           {error && <Alert>{error}</Alert>}
+          {result && <SearchNote interpretation={result.interpretation} query={q} storeId={store.id} />}
           {result === null && !error && <ProductGridSkeleton count={PAGE_SIZE} />}
           {result?.products.length === 0 && (
             <div className="rounded-2xl border border-border bg-white px-6 py-12 text-center">

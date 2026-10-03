@@ -141,7 +141,9 @@ async function main() {
     check("suggest: words that start with what was typed, sorted, with id and category", sug.status === 200 && sug.json.map((s: { title: string }) => s.title).join() === "Ceramic Mug,Mugshot Poster,Travel Mug" && !!sug.json[0].id && sug.json[0].category === "kitchen");
     check("suggest: at most 8", (await api("GET", `/stores/${A.storeId}/products/suggest?q=fil`)).json.length === 8);
     check("suggest: matches the start of any word (gr finds 'Coffee Grinder'), ignoring case", (await api("GET", `/stores/${A.storeId}/products/suggest?q=GR`)).json[0].title === "Coffee Grinder");
-    check("suggest: a partial word in the middle does not match ('rinder' finds nothing)", (await api("GET", `/stores/${A.storeId}/products/suggest?q=rinder`)).json.length === 0);
+    // Part F: when nothing starts with what was typed, suggest falls back to the search ladder, so a
+    // partial word in the middle now does find something rather than leaving an empty box.
+    check("suggest: a word part in the middle falls back to the search ladder ('rinder' finds 'Coffee Grinder')", (await api("GET", `/stores/${A.storeId}/products/suggest?q=rinder`)).json[0]?.title === "Coffee Grinder");
     check("suggest: an empty or missing query is 400, and regex characters are plain text", (await api("GET", `/stores/${A.storeId}/products/suggest?q=`)).status === 400 && (await api("GET", `/stores/${A.storeId}/products/suggest`)).status === 400 && (await api("GET", `/stores/${A.storeId}/products/suggest?q=${encodeURIComponent("(.*")}`)).json.length === 0);
     check("suggest: only this store's products", (await api("GET", `/stores/${B.storeId}/products/suggest?q=mu`)).json.length === 0 && (await api("GET", `/stores/${B.storeId}/products/suggest?q=ce`)).json[0].title === "Ceramic Teapot");
     check("suggest: needs no sign-in, and the route is not mistaken for a product id", (await api("GET", `/stores/${A.storeId}/products/suggest?q=no`)).status === 200);
@@ -288,7 +290,7 @@ declare([
   "suggest: words that start with what was typed, sorted, with id and category",
   "suggest: at most 8",
   "suggest: matches the start of any word (gr finds 'Coffee Grinder'), ignoring case",
-  "suggest: a partial word in the middle does not match ('rinder' finds nothing)",
+  "suggest: a word part in the middle falls back to the search ladder ('rinder' finds 'Coffee Grinder')",
   "suggest: an empty or missing query is 400, and regex characters are plain text",
   "suggest: only this store's products",
   "suggest: needs no sign-in, and the route is not mistaken for a product id",
