@@ -33,6 +33,8 @@ export const TENANT_SCOPED_MODELS = new Set([
   "PaymentProof",
   "CodRemittanceRun",
   "CodRemittanceItem",
+  "VoiceNote",
+  "BargainSession",
 ]);
 
 // Operations where merging `{ tenantId }` into `where`/`data` is safe and sufficient.

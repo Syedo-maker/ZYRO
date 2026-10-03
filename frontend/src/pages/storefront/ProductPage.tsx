@@ -14,6 +14,7 @@ import { errorMessage } from '../../lib/ordersApi'
 import { catalogApi } from '../../lib/shopApi'
 import { useAddToCart } from '../../lib/useAddToCart'
 import type { Product } from '../../types/api'
+import { BargainWidget } from './BargainWidget'
 
 function stockNote(stock: number): { text: string; tone: string } {
   if (stock < 1) return { text: 'Sold out', tone: 'text-danger' }
@@ -151,6 +152,8 @@ export function ProductPage() {
               {product.stock < 1 ? 'Sold out' : addingId === product.id ? 'Adding...' : 'Add to cart'}
             </Button>
           </div>
+
+          <BargainWidget storeId={store.id} productId={product.id} currency={store.currency} />
         </div>
       </div>
 

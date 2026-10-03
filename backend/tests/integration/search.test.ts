@@ -91,6 +91,9 @@ beforeAll(async () => {
       return semanticAnswer.slice(0, limit).map((productId, i) => ({ productId, score: 1 - i * 0.01 }));
     },
     async embedProduct() {},
+    async transcribe(): Promise<never> {
+      throw new Error("this test never transcribes");
+    },
   });
 
   A = await merchant("a");
@@ -284,6 +287,9 @@ describe("semantic search: the last resort, and only that", () => {
         return [];
       },
       async embedProduct() {},
+      async transcribe(): Promise<never> {
+        throw new Error("this test never transcribes");
+      },
     });
     expect(titles(await S("ceramic"))).toContain("Ceramic Mug");
     expect(asked).toBe(false);

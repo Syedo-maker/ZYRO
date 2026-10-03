@@ -56,7 +56,7 @@ def repo():
 
 @pytest.fixture
 def client(repo):
-    settings = Settings("unused", TOKEN, "hashing", "unused", None, 0.2)
+    settings = Settings("unused", TOKEN, "hashing", "unused", None, 0.2, False, "small")
     return TestClient(create_app(settings, HashingEmbedder(), repo))
 
 
@@ -130,7 +130,7 @@ def test_search_is_store_scoped(client):
 
 def test_product_with_no_text_is_skipped_not_fatal(repo):
     repo.products["p9"] = product("p9", "s1", "", "", "")
-    settings = Settings("unused", TOKEN, "hashing", "unused", None, 0.2)
+    settings = Settings("unused", TOKEN, "hashing", "unused", None, 0.2, False, "small")
     c = TestClient(create_app(settings, HashingEmbedder(), repo))
     assert c.get("/recommendations?storeId=s1&productId=p9", headers=H).json() == {"items": []}
     ids = [i["productId"] for i in c.get("/recommendations?storeId=s1&productId=p1&limit=20", headers=H).json()["items"]]
@@ -166,3 +166,77 @@ def test_settings_require_a_token(monkeypatch):
     monkeypatch.delenv("RECOMMENDATION_SERVICE_TOKEN", raising=False)
     with pytest.raises(RuntimeError):
         load_settings()
+
+
+# ---- Part G: voice notes ---------------------------------------------------------------------
+
+
+class FakeTranscriber:
+    """Stands in for faster-whisper, so these tests need no model download and no audio decoding."""
+
+    def __init__(self, text="do dozen cup ka stock pachas kar do", language="ur", duration=4.0):
+        self.text = text
+        self.language = language
+        self.duration = duration
+        self.seen: list[bytes] = []
+
+    async def transcribe(self, audio: bytes, filename: str):
+        from app.transcriber import Transcript
+
+        self.seen.append(audio)
+        return Transcript(text=self.text, language=self.language, confidence=0.91, duration_seconds=self.duration)
+
+
+def voice_client(transcriber=None):
+    repo = MemoryRepo([])
+    settings = Settings("unused", TOKEN, "hashing", "unused", None, 0.2, True, "small")
+    return TestClient(create_app(settings, HashingEmbedder(), repo, transcriber or FakeTranscriber()))
+
+
+def test_transcribe_returns_the_words_and_the_language():
+    c = voice_client()
+    res = c.post("/transcribe", files={"file": ("note.webm", b"fake-audio", "audio/webm")}, headers=H)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["text"] == "do dozen cup ka stock pachas kar do"
+    assert body["language"] == "ur"
+    assert 0.0 <= body["confidence"] <= 1.0
+
+
+def test_transcribe_needs_the_internal_token():
+    c = voice_client()
+    assert c.post("/transcribe", files={"file": ("n.webm", b"a", "audio/webm")}).status_code == 401
+    assert c.post("/transcribe", files={"file": ("n.webm", b"a", "audio/webm")}, headers={"X-Internal-Token": "wrong"}).status_code == 401
+
+
+def test_transcribe_refuses_an_empty_or_oversized_recording():
+    from app.transcriber import MAX_AUDIO_BYTES
+
+    c = voice_client()
+    assert c.post("/transcribe", files={"file": ("n.webm", b"", "audio/webm")}, headers=H).status_code == 400
+    too_big = b"x" * (MAX_AUDIO_BYTES + 1)
+    assert c.post("/transcribe", files={"file": ("n.webm", too_big, "audio/webm")}, headers=H).status_code == 413
+
+
+def test_transcribe_refuses_a_recording_that_is_too_long():
+    from app.transcriber import MAX_AUDIO_SECONDS
+
+    c = voice_client(FakeTranscriber(duration=MAX_AUDIO_SECONDS + 1))
+    res = c.post("/transcribe", files={"file": ("n.webm", b"a", "audio/webm")}, headers=H)
+    assert res.status_code == 400
+    assert "longer than" in res.json()["detail"]
+
+
+def test_transcribe_says_plainly_when_speech_to_text_is_not_installed():
+    from app.transcriber import UnavailableTranscriber
+
+    c = voice_client(UnavailableTranscriber())
+    res = c.post("/transcribe", files={"file": ("n.webm", b"a", "audio/webm")}, headers=H)
+    assert res.status_code == 503
+    assert "not installed" in res.json()["detail"]
+
+
+def test_build_transcriber_is_unavailable_when_switched_off():
+    from app.transcriber import UnavailableTranscriber, build_transcriber
+
+    assert isinstance(build_transcriber(False, "small", None), UnavailableTranscriber)

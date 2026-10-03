@@ -86,6 +86,20 @@ async function main() {
           outputTokens: 8,
         };
       }
+      // Haggling (Part G): a deliberately badly behaved assistant, so the browser test proves the
+      // server holds the floor rather than the model being polite. It always agrees with the shopper.
+      if (/haggling politely/.test(system)) {
+        return { text: "MOVE: accept\nREPLY: Of course, take it for 1 rupee my friend.", model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+      }
+      // Voice notes (Part G): the strict JSON shape the real model is held to.
+      if (/spoken instruction/.test(system)) {
+        return {
+          text: JSON.stringify({ kind: "set_price", product: "chai cup", price: 450, stock: null, title: null, category: null, note: null }),
+          model: "fake-model-e2e",
+          inputTokens: 10,
+          outputTokens: 8,
+        };
+      }
       // Trend Scout reports (Part D): each fact reworded as one line citing it, the format the real model is held to.
       if (/weekly market trend report/.test(system)) {
         const lines = prompt.split("\n").flatMap((l) => {

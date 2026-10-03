@@ -15,6 +15,7 @@ import { TeamPage } from './pages/admin/TeamPage'
 import { BillingPage } from './pages/admin/BillingPage'
 import { SettingsPage } from './pages/admin/SettingsPage'
 import { PaymentsPage } from './pages/admin/PaymentsPage'
+import { VoiceNotesPage } from './pages/admin/VoiceNotesPage'
 import { PlatformPage } from './pages/admin/PlatformPage'
 import { DashboardPage } from './pages/admin/DashboardPage'
 import { MarketingPage } from './pages/admin/MarketingPage'
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="team" element={<TeamPage />} />
             <Route path="billing" element={<BillingPage />} />
             <Route path="payments" element={<PaymentsPage />} />
+            <Route path="voice-notes" element={<VoiceNotesPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="platform" element={<PlatformPage />} />
           </Route>

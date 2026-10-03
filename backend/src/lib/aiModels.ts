@@ -31,6 +31,10 @@ const TIER_BY_PROMPT: Record<string, ModelTier> = {
   // model; the Urdu failure message is short and templated, so the fast one.
   payment_proof: "standard",
   payment_help: "fast",
+  // Part G. Haggling is one word plus one sentence, and the server decides every number, so the
+  // fast model is plenty. Turning a voice note into a draft is a strict JSON shape, so the better one.
+  bargain: "fast",
+  voice_note: "standard",
 };
 
 /**

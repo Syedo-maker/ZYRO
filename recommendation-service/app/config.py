@@ -15,6 +15,10 @@ class Settings:
     cache_dir: str | None
     #: A search result must be at least this similar to the query to be returned at all.
     search_min_score: float
+    #: Part G: whether this service will transcribe voice notes, and which Whisper model to use.
+    #: Off by default, because turning it on downloads a model and uses real CPU time.
+    whisper_enabled: bool
+    whisper_model: str
 
 
 def load_settings() -> Settings:
@@ -34,4 +38,6 @@ def load_settings() -> Settings:
         model=os.environ.get("RECO_MODEL", "BAAI/bge-small-en-v1.5"),
         cache_dir=os.environ.get("RECO_MODEL_CACHE") or None,
         search_min_score=float(os.environ.get("RECO_SEARCH_MIN_SCORE", default_min)),
+        whisper_enabled=os.environ.get("WHISPER_ENABLED", "false").strip().lower() == "true",
+        whisper_model=os.environ.get("WHISPER_MODEL", "small").strip(),
     )

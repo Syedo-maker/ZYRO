@@ -1,10 +1,11 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { uploadsApi } from '../../lib/productsApi'
 import { upgradeHintOf } from '../../lib/billingApi'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { AiToolsPanel } from './AiToolsPanel'
+import { bargainApi } from '../../lib/voiceBargainApi'
 import type { Product, ProductInput } from '../../types/api'
 
 interface ProductFormProps {
@@ -19,6 +20,15 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [price, setPrice] = useState(initial?.price.toString() ?? '')
+  // The floor price is never on the public product endpoints, so it is fetched on its own here.
+  const [bargainMinPrice, setBargainMinPrice] = useState('')
+  useEffect(() => {
+    if (!initial) return
+    bargainApi
+      .settings(storeId, initial.id)
+      .then((s) => setBargainMinPrice(s.bargainMinPrice === null ? '' : String(s.bargainMinPrice)))
+      .catch(() => undefined)
+  }, [storeId, initial])
   const [stock, setStock] = useState(initial?.stock.toString() ?? '')
   const [category, setCategory] = useState(initial?.category ?? '')
   const [sku, setSku] = useState(initial?.sku ?? '')
@@ -60,6 +70,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         title,
         description,
         price: Number(price),
+        bargainMinPrice: bargainMinPrice.trim() === '' ? null : Number(bargainMinPrice),
         stock: Number(stock),
         sku: sku.trim() || undefined,
         barcode: barcode.trim() || undefined,
@@ -131,6 +142,22 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
       </div>
 
       <Input id="category" label="Category" required value={category} onChange={(e) => setCategory(e.target.value)} />
+
+      {/* Part G: the lowest price haggling may reach. Left empty, this product has a fixed price. */}
+      <div>
+        <Input
+          id="bargainMinPrice"
+          type="number"
+          step="0.01"
+          min="0"
+          label="Lowest price you will accept when haggling (optional)"
+          value={bargainMinPrice}
+          onChange={(e) => setBargainMinPrice(e.target.value)}
+        />
+        <p className="mt-1 text-xs text-text-secondary">
+          Leave this empty for a fixed price. Fill it in and shoppers can make an offer; the shop will never go below this number, and it is never shown to them.
+        </p>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Input id="sku" label="SKU (optional)" maxLength={100} value={sku} onChange={(e) => setSku(e.target.value)} />
