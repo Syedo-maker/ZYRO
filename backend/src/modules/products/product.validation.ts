@@ -34,6 +34,11 @@ export const listProductsQuerySchema = z
     maxPrice: z.preprocess(blankToUndefined, z.coerce.number().min(0).max(10_000_000).optional()),
     /** Only products with stock on hand. */
     inStock: z.preprocess(blankToUndefined, z.enum(["true", "false"]).optional()).transform((v) => v === "true"),
+    /**
+     * Take the search words literally (Part F): no spelling correction, no Roman Urdu alternatives
+     * and no search by meaning. Behind the "search for what I typed instead" link.
+     */
+    exact: z.preprocess(blankToUndefined, z.enum(["true", "false", "1", "0"]).optional()).transform((v) => v === "true" || v === "1"),
     /** `relevance` ranks search matches best first; without a search it means newest. */
     sort: z.preprocess(blankToUndefined, z.enum(PRODUCT_SORTS).optional()),
     limit: z.coerce.number().int().min(1).max(100).optional().default(20),

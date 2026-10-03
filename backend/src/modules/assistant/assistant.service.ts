@@ -82,7 +82,7 @@ const MAX_SUGGESTED = 5;
  * is not configured or is down, this is the plain keyword search it always was.
  */
 async function findRelevantProducts(storeId: string, message: string) {
-  const keyword = await productService.list(storeId, { q: message, limit: MAX_SUGGESTED, offset: 0, inStock: false });
+  const keyword = await productService.list(storeId, { q: message, limit: MAX_SUGGESTED, offset: 0, inStock: false, exact: false });
   if (keyword.data.length >= MAX_SUGGESTED) return keyword;
 
   let scored: ScoredProduct[] = [];

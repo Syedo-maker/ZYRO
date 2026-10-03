@@ -33,7 +33,8 @@ Every AI call goes through one orchestrator (provider adapter, job queue, monthl
 | AI Growth Advisor (weekly tips from store totals, with a template fallback) | built | `PartC_Growth_Advisor.md` |
 | AI Trend Scout (weekly market report per currency and category from anonymised platform sales and imported Google Trends data, every line cited) | built | `PartD_Trend_Scout.md` |
 | AI Payment and Trust module (COD risk, payment screenshot check, courier reconciliation, payment error helper in Urdu) | built | `PartE_Payment_And_Trust.md` |
-| Semantic search in the search bar; voice-note store manager; bargaining assistant; festival planner | planned, stretch | Parts F and G |
+| Search that forgives typos and understands Roman Urdu, with semantic search as a last resort | built | `PartF_Search.md` |
+| Voice-note store manager; bargaining assistant; festival planner | planned, stretch | Part G |
 | AI product photo editing | planned, stretch | Phase 6 |
 
 Two deliberate deviations to state honestly: the recommendation service computes embeddings locally (a small ONNX model) instead of through the orchestrator, because Anthropic has no embeddings API and no key was available (the model sits behind an interface so the orchestrator route can replace it); and platform-run AI features (Growth Advisor, Trend Scout, Payment and Trust) are to be paid by the platform, not taken from a merchant's AI quota.
@@ -72,7 +73,8 @@ The local gateway adapter (JazzCash, Easypaisa, Safepay, XPay) is built as a sea
 | Part C | AI Growth Advisor | done |
 | Part D | AI Trend Scout | done |
 | Part E | AI Payment and Trust | done |
-| Parts F and G | Search, voice and bargaining assistants | planned, effort estimates pending the approved plan |
+| Part F | Search (typo tolerance, Roman Urdu, semantic last resort) | done |
+| Part G | Voice notes, bargaining assistant, festival planner | planned, stretch |
 | 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | last, not started |
 | 8 | Docker Compose, environment setup, final documentation, Gantt chart, Turnitin report | last, not started |
 
