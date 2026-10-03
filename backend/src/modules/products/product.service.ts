@@ -52,8 +52,8 @@ async function aiDescriptionStatusOf(doc: HydratedDocument<ProductDocument>): Pr
 
 /** Splits the API payload into the catalog fields (MongoDB) and the stock target (Postgres). */
 function splitInput(input: ProductInput) {
-  const { stock, costPrice, ...rest } = input;
-  return { stock, catalog: { ...rest, ...(costPrice !== undefined ? { costPrice } : {}) } };
+  const { stock, costPrice, bargainMinPrice, ...rest } = input;
+  return { stock, catalog: { ...rest, ...(costPrice !== undefined ? { costPrice } : {}), ...(bargainMinPrice !== undefined ? { bargainMinPrice } : {}) } };
 }
 
 function isDuplicateKey(err: unknown): boolean {

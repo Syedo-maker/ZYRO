@@ -31,6 +31,8 @@ export interface Product {
   sku?: string | null
   barcode?: string | null
   taxable?: boolean
+  /** Part G: the lowest price the merchant will accept when haggling. Merchant-only; shoppers never see it. */
+  bargainMinPrice?: number | null
   category: string
   images: string[]
   /** Often filled from an AI auto-tag suggestion; the suggestion itself never writes here. */
@@ -52,6 +54,7 @@ export interface ProductInput {
   sku?: string
   barcode?: string
   taxable?: boolean
+  bargainMinPrice?: number | null
   category: string
   images?: string[]
   tags?: string[]

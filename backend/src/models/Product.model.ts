@@ -25,6 +25,12 @@ export interface ProductDocument {
   barcode?: string; // scanned at the POS
   taxable: boolean;
   costPrice?: Types.Decimal128; // enables margin analytics; never exposed to shoppers
+  /**
+   * Part G: the lowest price the merchant will accept when haggling. Never sent to a shopper and
+   * never put in an AI prompt: the bargaining assistant chooses a move, and the server works out the
+   * price from this. Absent means this product is not open to bargaining.
+   */
+  bargainMinPrice?: Types.Decimal128;
   category: string;
   /** Set by the merchant, often from an AI auto-tag suggestion (Phase 4, Module 6); never
    *  written by the AI tool itself, which only ever returns a suggestion to accept or edit. */
@@ -70,6 +76,7 @@ const productSchema = new Schema<ProductDocument>(
     barcode: { type: String, trim: true, maxlength: 100 },
     taxable: { type: Boolean, default: true },
     costPrice: { type: Schema.Types.Decimal128 },
+    bargainMinPrice: { type: Schema.Types.Decimal128 },
     category: { type: String, required: true, index: true },
     tags: {
       type: [String],

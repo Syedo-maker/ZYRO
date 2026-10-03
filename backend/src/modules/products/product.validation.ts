@@ -11,6 +11,8 @@ export const productInputSchema = z.object({
   barcode: z.string().trim().min(1).max(100).optional(),
   taxable: z.boolean().optional().default(true),
   costPrice: z.number().min(0).optional(),
+  /** Part G: the lowest price the merchant will accept when haggling. Absent means no haggling. */
+  bargainMinPrice: z.number().min(0).max(10_000_000).optional().nullable(),
   category: z.string().min(1),
   images: z.array(z.string().url()).max(10).optional().default([]),
   /** Often filled from an AI auto-tag suggestion (Phase 4, Module 6), but only once the
@@ -18,6 +20,10 @@ export const productInputSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(30)).max(10).optional().default([]),
   seoTitle: z.string().trim().max(70).optional(),
   seoDescription: z.string().trim().max(160).optional(),
+}).refine((v) => v.bargainMinPrice === undefined || v.bargainMinPrice === null || v.bargainMinPrice <= v.price, {
+  // A floor above the list price would mean haggling could only push the price up.
+  message: "The lowest price you will accept cannot be more than the price itself",
+  path: ["bargainMinPrice"],
 });
 export type ProductInput = z.infer<typeof productInputSchema>;
 

@@ -200,6 +200,9 @@ async function main() {
         return [{ productId: mug1, score: 0.9 }, { productId: bShoe, score: 0.8 }];
       },
       async embedProduct() {},
+      async transcribe(): Promise<never> {
+        throw new Error("this test never transcribes");
+      },
     });
     const sem = await chat("something to drink my morning brew from");
     const semTitles: string[] = sem.json.suggestedProducts.map((p: { title: string }) => p.title);
@@ -219,6 +222,9 @@ async function main() {
         throw new RecommendationUnavailableError("down");
       },
       async embedProduct() {
+        throw new RecommendationUnavailableError("down");
+      },
+      async transcribe(): Promise<never> {
         throw new RecommendationUnavailableError("down");
       },
     });

@@ -103,7 +103,7 @@ await step('create a product with an image', async () => {
   await page.getByRole('button', { name: '+ Add product' }).click()
   await page.getByLabel('Title', { exact: true }).fill('Trail Mug')
   await page.getByLabel('Description', { exact: true }).fill('Enamel camping mug')
-  await page.getByLabel('Price').fill('24.5')
+  await page.getByLabel('Price', { exact: true }).fill('24.5')
   await page.getByLabel('Stock').fill('6')
   await page.getByLabel('Category').fill('outdoors')
   await page.getByLabel('Product image file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
@@ -130,14 +130,14 @@ await step('create a product with an image', async () => {
 
 await step('edit and delete', async () => {
   await page.getByRole('button', { name: 'Edit Trail Mug' }).click()
-  await page.getByLabel('Price').fill('30')
+  await page.getByLabel('Price', { exact: true }).fill('30')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   await page.getByText('$30.00').waitFor()
   check('edit: the price change is saved and shown', true)
 
   await page.getByRole('button', { name: '+ Add product' }).click()
   await page.getByLabel('Title', { exact: true }).fill('Camp Stove')
-  await page.getByLabel('Price').fill('40')
+  await page.getByLabel('Price', { exact: true }).fill('40')
   await page.getByLabel('Stock').fill('3')
   await page.getByLabel('Category').fill('gear')
   await page.getByRole('button', { name: 'Save' }).click()

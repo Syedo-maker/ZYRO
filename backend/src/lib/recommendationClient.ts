@@ -12,6 +12,17 @@ export interface ScoredProduct {
   score: number;
 }
 
+/** What the Python service heard in a voice note (Part G). */
+export interface Transcription {
+  text: string;
+  language: string | null;
+  confidence: number;
+  durationSeconds: number;
+}
+
+/** Transcribing is slow next to a search, so it waits longer before giving up. */
+const TRANSCRIBE_TIMEOUT_MS = 60_000;
+
 export interface RecommendationClient {
   /** Products similar to `productId`, best first. Null when the service says the product is not in the store. */
   recommend(storeId: string, productId: string, limit: number): Promise<ScoredProduct[] | null>;
@@ -19,6 +30,12 @@ export interface RecommendationClient {
   search(storeId: string, query: string, limit: number): Promise<ScoredProduct[]>;
   /** Warm one product's vector after it was created or edited. */
   embedProduct(storeId: string, productId: string): Promise<void>;
+  /**
+   * Part G: a merchant's voice note as text. It lives on this client because the Python service is
+   * where the model runs: Anthropic's API does not accept audio, so this is the one AI-ish call in
+   * ZYRO that cannot go through the orchestrator.
+   */
+  transcribe(audio: Buffer, filename: string, mimeType: string): Promise<Transcription>;
 }
 
 /** The service is not configured, down, too slow, or answered with an error. Callers treat every
@@ -63,7 +80,36 @@ class HttpRecommendationClient implements RecommendationClient {
     const res = await this.request("/embed/product", { method: "POST", body: { storeId, productId } });
     if (!res.ok) throw new RecommendationUnavailableError(`Recommendation service answered ${res.status}`);
   }
+
+  async transcribe(audio: Buffer, filename: string, mimeType: string): Promise<Transcription> {
+    const form = new FormData();
+    form.append("file", new Blob([new Uint8Array(audio)], { type: mimeType }), filename);
+    let res: Response;
+    try {
+      // Transcribing takes seconds, not milliseconds, so it gets its own longer timeout rather than
+      // the short one the search calls use.
+      res = await fetch(`${this.baseUrl}/transcribe`, {
+        method: "POST",
+        headers: { "X-Internal-Token": this.token },
+        body: form,
+        signal: AbortSignal.timeout(TRANSCRIBE_TIMEOUT_MS),
+      });
+    } catch (err) {
+      throw new RecommendationUnavailableError(`Recommendation service unreachable: ${(err as Error).message}`);
+    }
+    if (res.status === 503) {
+      throw new RecommendationUnavailableError(`Speech to text is not switched on: ${((await res.json().catch(() => ({}))) as { detail?: string }).detail ?? ""}`);
+    }
+    if (!res.ok) {
+      const detail = ((await res.json().catch(() => ({}))) as { detail?: string }).detail;
+      throw new TranscriptionRefusedError(detail ?? `Recommendation service answered ${res.status}`);
+    }
+    return (await res.json()) as Transcription;
+  }
 }
+
+/** The service understood the request and refused it: too long, too big, or empty. The merchant is told why. */
+export class TranscriptionRefusedError extends Error {}
 
 /** What an unconfigured install uses: every call reports "unavailable", which callers already handle. */
 class UnconfiguredClient implements RecommendationClient {
@@ -79,6 +125,9 @@ class UnconfiguredClient implements RecommendationClient {
     return this.fail();
   }
   async embedProduct(): Promise<void> {
+    return this.fail();
+  }
+  async transcribe(): Promise<Transcription> {
     return this.fail();
   }
 }

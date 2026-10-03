@@ -2899,6 +2899,195 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ── VOICE NOTES AND BARGAINING (Part G) ───────────────────────────────
+  /stores/{storeId}/voice-notes:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [catalog]
+      operationId: voice_note_create
+      summary: Record a spoken instruction, as a draft to confirm
+      description: |
+        Requires `products_write`. The recording is transcribed by the Python service, not by Anthropic,
+        whose API does not accept audio at all. The words are then read into a proposed change.
+        **Nothing is applied here**: the note comes back as a draft the merchant must confirm, because
+        speech across Urdu, Roman Urdu and English is misheard often and prices are not changed on a maybe.
+        A note that could not be understood is still saved, with the words and the reason.
+        webm, ogg, mp3, m4a or wav, at most 10 MB and 120 seconds.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Transcribed, and drafted if it could be understood
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VoiceNote" }
+        "400": { description: "Not a recording, too large, too long, or empty" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { description: "Speech to text is not switched on for this server" }
+    get:
+      tags: [catalog]
+      operationId: voice_notes_list
+      summary: Recent voice notes
+      description: Requires `products_write`. Newest first, at most 50.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, applied, discarded] }
+      responses:
+        "200":
+          description: The notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/VoiceNote" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /stores/{storeId}/voice-notes/{noteId}/apply:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: noteId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [catalog]
+      operationId: voice_note_apply
+      summary: Confirm a draft, making the change
+      description: |
+        Requires `products_write`. The only place a voice note changes anything, and it goes through the
+        ordinary product endpoints, so every rule that applies to a typed change applies here too:
+        validation, plan limits, the search vocabulary and the recommendation index.
+      responses:
+        "200":
+          description: Applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+                  outcome: { type: string, description: "What changed, in words." }
+        "400": { description: "There is nothing to apply in this note" }
+        "409": { description: "Already applied or discarded" }
+  /stores/{storeId}/voice-notes/{noteId}/discard:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: noteId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [catalog]
+      operationId: voice_note_discard
+      summary: Throw a draft away
+      responses:
+        "204": { description: Discarded }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /stores/{storeId}/products/{productId}/bargain:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      tags: [catalog]
+      operationId: bargain_offer
+      summary: Whether this product can be haggled over
+      description: Public. True only when the merchant has set a lowest acceptable price on the product.
+      security: []
+      responses:
+        "200":
+          description: Whether haggling is open
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available: { type: boolean }
+    post:
+      tags: [catalog]
+      operationId: bargain_start
+      summary: Start haggling over this product
+      description: |
+        Public; a guest session is enough. The merchant's lowest price is copied into the conversation when
+        it opens, so a price change part-way through cannot move it, and it is never sent to the shopper
+        or to the AI.
+      security: []
+      responses:
+        "201":
+          description: The conversation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BargainTurn" }
+        "400": { description: "This product's price is not open to negotiation" }
+  /stores/{storeId}/products/{productId}/bargain/settings:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    get:
+      tags: [catalog]
+      operationId: bargain_settings_get
+      summary: The merchant's own floor price for this product
+      description: |
+        Requires `products_write`. The public product endpoints deliberately never return this: a shopper
+        who knew the lowest acceptable price would simply ask for it. The merchant's product form reads it
+        from here instead.
+      responses:
+        "200":
+          description: The floor price, or null when this product has a fixed price
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bargainMinPrice: { type: [number, "null"] }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /stores/{storeId}/products/{productId}/bargain/{sessionId}/turn:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+      - name: sessionId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [catalog]
+      operationId: bargain_turn
+      summary: Say something to the shop
+      description: |
+        Public. **The assistant cannot name a price.** It is given the listed price, the shop's current
+        offer and the number the shopper named, and replies with one word from a fixed list plus a
+        sentence; the server works out every price from the merchant's own floor and clamps it there.
+        A number the assistant puts in its own sentence is stripped before the shopper sees it, and an
+        unrecognised reply is read as holding firm. No prompt injection can reach a price, because there
+        is no channel through which the model can express one.
+        A struck deal creates a single-use, short-lived discount code: the only way the agreed price is payable.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: The shop's answer and its new price
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BargainTurn" }
+        "404": { description: "No such conversation for this shopper" }
+        "409": { description: "This conversation has finished or expired" }
+
   # ── PAYMENT AND TRUST (Part E) ────────────────────────────────────────
   /stores/{storeId}/payments/options:
     parameters:
@@ -3679,6 +3868,62 @@ components:
                 oneOf:
                   - $ref: "#/components/schemas/TrendReport"
                   - type: "null"
+
+    VoiceDraft:
+      type: object
+      description: A proposed change. It carries no field that could apply it; confirming is a separate call.
+      required: [kind, confidence, warnings]
+      properties:
+        kind: { type: string, enum: [set_price, set_stock, add_product] }
+        productId: { type: string }
+        productName: { type: string }
+        price: { type: number }
+        stock: { type: integer }
+        title: { type: string }
+        category: { type: string }
+        confidence: { type: number, minimum: 0, maximum: 1, description: "From the transcriber; low means read the words carefully." }
+        warnings:
+          type: array
+          description: Things to check before confirming, such as a big jump in price.
+          items: { type: string }
+
+    VoiceNote:
+      type: object
+      required: [id, transcript, status, createdAt]
+      properties:
+        id: { type: string }
+        transcript: { type: string, description: "What the transcriber heard." }
+        language: { type: [string, "null"], example: ur }
+        audioUrl: { type: string, format: uri }
+        draft:
+          oneOf:
+            - $ref: "#/components/schemas/VoiceDraft"
+            - type: "null"
+        summary: { type: [string, "null"], description: "The change in plain words, for the merchant to read." }
+        problem: { type: [string, "null"], description: "Why no draft could be made." }
+        status: { type: string, enum: [pending, applied, discarded] }
+        createdAt: { type: string, format: date-time }
+
+    BargainTurn:
+      type: object
+      required: [sessionId, productId, listPrice, offer, roundsLeft, status, reply, expiresAt]
+      properties:
+        sessionId: { type: string }
+        productId: { type: string }
+        listPrice: { type: number }
+        offer: { type: number, description: "What the shop will accept right now. Worked out by the server, never by the assistant." }
+        roundsLeft: { type: integer, description: "How many more times the shopper may push before the shop stops moving." }
+        status: { type: string, enum: [open, agreed, declined, expired] }
+        reply: { type: string, description: "The assistant's sentence, with any number it wrote stripped out." }
+        settled: { type: boolean }
+        deal:
+          type: object
+          description: Present once a price is agreed. The code is the only way that price is payable.
+          properties:
+            code: { type: string, example: BHAO1A2B3C4D }
+            price: { type: number }
+            expiresAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
 
     SearchInterpretation:
       type: object

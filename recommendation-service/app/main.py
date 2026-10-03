@@ -7,11 +7,12 @@ see which store, so `storeId` here is trusted input from an authenticated caller
 import hmac
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
 from .config import Settings, load_settings
 from .embedder import Embedder, build_embedder
+from .transcriber import MAX_AUDIO_BYTES, MAX_AUDIO_SECONDS, Transcriber, build_transcriber
 from .repository import MongoProductRepository, ProductRepository
 from .service import RecommendationService
 
@@ -35,6 +36,7 @@ def create_app(
     settings: Settings | None = None,
     embedder: Embedder | None = None,
     repo: ProductRepository | None = None,
+    transcriber: Transcriber | None = None,
 ) -> FastAPI:
     """Arguments exist so tests can inject an in-memory repository; production passes none."""
     settings = settings or load_settings()
@@ -42,6 +44,7 @@ def create_app(
     own_repo = repo is None
     repo = repo or MongoProductRepository(settings.mongodb_uri)
     service = RecommendationService(embedder, repo, settings.search_min_score)
+    transcriber = transcriber or build_transcriber(settings.whisper_enabled, settings.whisper_model, settings.cache_dir)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -85,5 +88,29 @@ def create_app(
     async def search(body: SearchBody):
         hits = await service.search(body.storeId, body.query, body.limit)
         return {"items": [{"productId": h.product_id, "score": h.score} for h in hits]}
+
+    @app.post("/transcribe", dependencies=[Depends(require_token)])
+    async def transcribe(file: UploadFile = File(...)):
+        """Part G: a merchant's voice note, as text. Anthropic does not accept audio, so this runs
+        locally with faster-whisper. Only Node calls it, and only for a store it has already
+        authorised; nothing about the store is needed here, because nothing is stored."""
+        audio = await file.read()
+        if not audio:
+            raise HTTPException(status_code=400, detail="The audio file is empty")
+        if len(audio) > MAX_AUDIO_BYTES:
+            raise HTTPException(status_code=413, detail=f"The recording is larger than {MAX_AUDIO_BYTES // (1024 * 1024)} MB")
+        try:
+            result = await transcriber.transcribe(audio, file.filename or "note.webm")
+        except RuntimeError as exc:
+            # Whisper is not installed or not enabled: a clear 503, so Node can say so plainly.
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        if result.duration_seconds > MAX_AUDIO_SECONDS:
+            raise HTTPException(status_code=400, detail=f"The recording is longer than {MAX_AUDIO_SECONDS} seconds")
+        return {
+            "text": result.text,
+            "language": result.language,
+            "confidence": result.confidence,
+            "durationSeconds": result.duration_seconds,
+        }
 
     return app

@@ -218,6 +218,8 @@ Phases 0 to 6 and Part A are built and their tests pass. On 2026-09-26 the gaps 
 
 ### Part G (stretch): voice-note manager, bargaining assistant, festival planner
 - **Tests (if built):** the bargaining assistant can never quote below the merchant's minimum, whatever the customer types (prompt-injection attempts included) and the final price is created on the server; a voice note only ever makes a draft the merchant must confirm.
+- **Status (2026-10-03):** built; `bargain` unit (25), `voice` unit (25), `bargain-voice` end to end (29), 6 new Python tests and browser `partG-voice-bargain` pass, with the full gate. Both tests the gate names are written and passing. The floor is not protected by instructing the model: the model is never given the floor and has **no way to write a number at all**, only one word from six, and the server computes and clamps every price. Six prompt-injection attempts are tested, including a fake `</system>` block and a claim of store ownership. Voice notes needed a speech-to-text provider because Anthropic's API accepts no audio; faster-whisper runs locally in the Python service, off by default. The season and festival planner was **not built**: Part C's Growth Advisor already delivers it, which is recorded rather than quietly skipped. See `PartG_Voice_And_Bargaining.md`.
+- **Sign-off:** approved by ______ on ______
 
 Each of B to G also has to pass G1 to G9.
 
