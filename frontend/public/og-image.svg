@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="ShopMind AI: add a product, see what Pakistan is actually searching for">
+  <!--
+    The link preview card. Drawn rather than photographed: it is a few kilobytes, stays sharp at any
+    size, and shows the actual feature (suggestions with their keyword attribution) instead of a
+    stock photo of somebody who does not use this product.
+  -->
+  <defs>
+    <clipPath id="card"><rect x="672" y="150" width="440" height="330" rx="18"/></clipPath>
+  </defs>
+
+  <rect width="1200" height="630" fill="#0B3B33"/>
+  <circle cx="1130" cy="70" r="190" fill="#E8703D" opacity="0.16"/>
+  <circle cx="300" cy="620" r="150" fill="#DDE3DB" opacity="0.08"/>
+
+  <text x="88" y="118" font-family="Plus Jakarta Sans, Segoe UI, sans-serif" font-size="28" font-weight="800" fill="#F4F3EE">
+    ShopMind<tspan fill="#E8703D"> AI</tspan>
+  </text>
+
+  <text x="88" y="236" font-family="Plus Jakarta Sans, Segoe UI, sans-serif" font-size="30" font-weight="700" fill="#E8703D" letter-spacing="3">
+    APNI DUKAAN ONLINE LAO
+  </text>
+
+  <text font-family="Plus Jakarta Sans, Segoe UI, sans-serif" font-size="56" font-weight="800" fill="#F4F3EE">
+    <tspan x="88" y="320">Add a product.</tspan>
+    <tspan x="88" y="384">See what Pakistan is</tspan>
+    <tspan x="88" y="448">actually searching for.</tspan>
+  </text>
+
+  <text x="88" y="516" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="25" fill="#F4F3EE" opacity="0.8">
+    A free online shop, with the AI built in.
+  </text>
+
+  <!-- A miniature of the real suggestion cards. -->
+  <g clip-path="url(#card)">
+    <rect x="672" y="150" width="440" height="330" rx="18" fill="#F4F3EE"/>
+    <text x="700" y="190" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="16" font-weight="600" fill="#0B3B33" opacity="0.6">Add product</text>
+    <rect x="952" y="170" width="132" height="28" rx="14" fill="#0B3B33"/>
+    <text x="1018" y="189" text-anchor="middle" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#F4F3EE">Write with AI</text>
+
+    <rect x="700" y="214" width="108" height="26" rx="13" fill="#DDE3DB"/>
+    <text x="754" y="232" text-anchor="middle" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" fill="#0B3B33">lawn suit</text>
+    <rect x="816" y="214" width="86" height="26" rx="13" fill="#DDE3DB"/>
+    <text x="859" y="232" text-anchor="middle" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" fill="#0B3B33">3 piece</text>
+    <rect x="910" y="214" width="84" height="26" rx="13" fill="#DDE3DB"/>
+    <text x="952" y="232" text-anchor="middle" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" fill="#0B3B33">summer</text>
+
+    <rect x="700" y="258" width="384" height="94" rx="12" fill="#FFFFFF"/>
+    <text x="718" y="290" font-family="Plus Jakarta Sans, Segoe UI, sans-serif" font-size="18" font-weight="700" fill="#0B3B33">Summer Lawn Suit, 3 Piece</text>
+    <text x="718" y="318" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" fill="#0B3B33" opacity="0.75">A light lawn suit for summer, cut as a</text>
+    <text x="718" y="338" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" fill="#A8481B">Uses popular searches: lawn suit, 3 piece</text>
+
+    <rect x="700" y="366" width="384" height="94" rx="12" fill="#FFFFFF"/>
+    <text x="718" y="398" font-family="Plus Jakarta Sans, Segoe UI, sans-serif" font-size="18" font-weight="700" fill="#0B3B33">Stitched Lawn Suit in Cotton</text>
+    <text x="718" y="426" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" fill="#0B3B33" opacity="0.75">Ready to wear, soft enough for hot</text>
+    <text x="718" y="446" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" fill="#A8481B">Uses popular searches: lawn suit</text>
+  </g>
+</svg>

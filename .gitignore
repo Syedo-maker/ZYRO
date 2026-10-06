@@ -42,3 +42,7 @@ frontend/e2e/shots/
 # Design canvas: generated/seeded output (regenerate from design/wireframes/*.dc.html + canvas.json);
 # the .dc.html source files and canvas.json themselves ARE tracked.
 design/wireframes/zyro-wireframes.html
+
+# Redis snapshot, written wherever redis-server is started from (the portable Redis in
+# tools/redis has no configured dir). Never part of the project.
+dump.rdb

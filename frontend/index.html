@@ -4,7 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZYRO</title>
+
+    <!--
+      Defaults for the whole app. The landing page replaces the title and description on mount and
+      puts them back when it unmounts (src/pages/landing/LandingPage.tsx), because a dashboard and
+      somebody's storefront should not be described as a marketing page.
+    -->
+    <title>ShopMind AI: a free online shop with AI built in</title>
+    <meta
+      name="description"
+      content="Open a free online shop and let AI write your product titles and descriptions from what shoppers are really searching for. Cash on delivery, counter sales and reports included."
+    />
+    <meta property="og:title" content="ShopMind AI: a free online shop with AI built in" />
+    <meta
+      property="og:description"
+      content="Open a free online shop and let AI write your product titles and descriptions from what shoppers are really searching for."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0B3B33" />
+
+    <!-- The landing page's heading font, fetched early so its hero does not reflow. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body>
     <div id="root"></div>

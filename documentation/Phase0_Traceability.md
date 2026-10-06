@@ -57,6 +57,7 @@ These were added in later phases; the screen itself was designed in code.
 | Public shop directory (/shop) | Issue 2 | stores_directory_list, stores_directory_categories, stores_get |
 | Public directory settings, inside Settings | Issue 2 | store_directory_listing_get, store_branding_update |
 | Write with AI, on the Add product form | Issue 1 | product_ideas_suggest, product_ideas_keywords, products_create |
+| Landing page (marketing homepage at /) | Landing page | demo_product_ideas, demo_product_ideas_examples, plans_list, stores_directory_list |
 
 ## Not called by any screen
 

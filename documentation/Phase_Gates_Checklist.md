@@ -243,6 +243,16 @@ Both also passed G1 to G9.
 
 ---
 
+## Landing page (2026-10-06)
+
+Requested after the role separation and before Phase 7, as new scope rather than a phase.
+
+- **Tests:** a visitor cannot spend any merchant's AI allowance and cannot run the demo's cost up without limit; nothing on the page claims a feature that does not exist or a number we do not have; no existing route breaks.
+- **Status (2026-10-06):** built. The demo is budgeted in four layers and the integration suite watches a real store's quota counters across the whole scenario to prove they never move. Prices are read from `GET /plans` rather than typed in, so the page cannot misstate what Stripe charges; the rupee figure is marked as a conversion at a stated rate. The brand palette is scoped to the page, with every contrast ratio measured and the brand orange restricted to large text because it measures 3.08 against white. Splitting the route tree cut the first-load bundle from 606 kB to 333 kB, and the three browser suites covering the admin, storefront and register routes were re-run to prove nothing broke. Covered by `demo-landing` (integration, 23) and the `landing` browser suite (45 checks). See `Landing_Page.md`.
+- **Sign-off:** approved by ______ on ______
+
+---
+
 ## Phase 7: Consolidation testing (what needs the whole system)
 
 Per-phase tests are done by now. This phase adds what only makes sense on the finished product:

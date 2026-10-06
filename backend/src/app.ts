@@ -27,6 +27,7 @@ import { billingRouter, plansRouter } from "./modules/billing/billing.routes";
 import { platformRouter } from "./modules/platform/platform.routes";
 import { advisorRouter } from "./modules/advisor/advisor.routes";
 import { paymentsRouter } from "./modules/payments/payments.routes";
+import { demoRouter } from "./modules/demo/demo.routes";
 import { directoryRouter } from "./modules/stores/directory.routes";
 import { ideasRouter } from "./modules/ideas/ideas.routes";
 import { voiceRouter } from "./modules/voice/voice.routes";
@@ -88,6 +89,8 @@ v1.use("/stores/:storeId/products/:productId/bargain", bargainRouter);
 // are not read as a store id.
 v1.use("/stores", directoryRouter);
 v1.use("/stores/:storeId", storeRouter);
+// The landing page's trending suggestions demo (public; budget enforced in demo.service.ts).
+v1.use("/demo", demoRouter);
 v1.use("/plans", plansRouter);
 v1.use("/platform", platformRouter);
 app.use("/api/v1", v1);
