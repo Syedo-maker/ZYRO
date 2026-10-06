@@ -10,6 +10,7 @@ import { ratingsFor, reviewService } from "../reviews/review.service";
 import type { ProductInput, ListProductsQuery } from "./product.validation";
 import { forgetVocabulary, runLadder, semanticIds, type SearchOutcome } from "../search/search.service";
 import { normalise } from "../search/search.query";
+import { recordSearchTerm } from "../search/search.terms";
 
 interface Rating {
   averageRating: number;
@@ -110,6 +111,9 @@ export const productService = {
     /** For a semantic search: the order the service ranked them in, which `$in` does not preserve. */
     let semanticOrder: string[] | null = null;
     if (query.q) {
+      // Counted for the keyword source behind AI product suggestions. Never awaited: a shopper's
+      // results do not wait on analytics, and nothing personal is stored (search.terms.ts).
+      recordSearchTerm(storeId, query.q, query.category);
       outcome = await runLadder(storeId, query.q, filter, { exact: query.exact });
       if (outcome.filter) {
         effective = outcome.filter;

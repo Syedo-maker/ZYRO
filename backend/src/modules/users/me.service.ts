@@ -1,5 +1,15 @@
 import { prismaUnscoped } from "../../lib/prisma";
 
+/**
+ * Which experience this user saw last, remembered so a returning visitor is not asked "shop or
+ * sell?" every time (Issue 2). It is a routing hint and nothing more: it decides which screen the
+ * browser opens on, never what the user is allowed to do. Permission is still worked out per
+ * request and per shop from Tenant.ownerId and StaffMember (see middleware/requireOwner and
+ * requirePermission), because the same person can own one shop and shop at another.
+ */
+export const EXPERIENCES = ["shopper", "owner"] as const;
+export type Experience = (typeof EXPERIENCES)[number];
+
 export interface MyStore {
   id: string;
   name: string;
@@ -14,7 +24,20 @@ export const meService = {
     const user = await prismaUnscoped.user.findUnique({ where: { id: userId } });
     if (!user) return null;
     // platformAdmin only decides whether the UI shows the platform view; the /platform routes check the role themselves.
-    return { id: user.id, email: user.email, name: user.name, platformAdmin: user.platformRole === "SUPER_ADMIN" };
+    // preferredExperience likewise only decides where the browser lands; see EXPERIENCES above.
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      platformAdmin: user.platformRole === "SUPER_ADMIN",
+      preferredExperience: (user.preferredExperience as Experience | null) ?? null,
+    };
+  },
+
+  /** Remembers the choice made on the landing screen. Grants nothing. */
+  async setPreferredExperience(userId: string, experience: Experience) {
+    const user = await prismaUnscoped.user.update({ where: { id: userId }, data: { preferredExperience: experience } });
+    return { preferredExperience: user.preferredExperience as Experience };
   },
 
   /**

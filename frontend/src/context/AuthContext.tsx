@@ -30,7 +30,9 @@ interface AuthContextValue {
   activeStore: MyStore | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (input: LoginInput) => Promise<void>
+  /** Returns the signed-in user's shops, so the caller can route straight away (Issue 2): context
+   *  state has not re-rendered yet at the moment login() resolves. */
+  login: (input: LoginInput) => Promise<{ user: User; stores: MyStore[] }>
   register: (input: RegisterInput) => Promise<void>
   /** A shopper's account: no store, works at every store. */
   registerCustomer: (input: CustomerRegisterInput) => Promise<void>
@@ -88,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [profile, mine] = await Promise.all([apiFetch<User>('/users/me'), apiFetch<MyStore[]>('/users/me/stores')])
     setUser(profile)
     setStores(mine)
+    return { user: profile, stores: mine }
   }
 
   async function register(input: RegisterInput) {

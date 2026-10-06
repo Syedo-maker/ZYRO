@@ -17,9 +17,16 @@
 ZYRO lets a merchant run an online store and a shop-floor register from one catalog, one
 inventory and one set of orders, with AI built in: product descriptions, tags and SEO text,
 marketing copy, review summaries, a shopping assistant, "products like this one", abandoned-cart
-emails and business insights. Each store is isolated from every other store. Stores start on a
+emails, business insights, and title and description suggestions built around what shoppers really
+search for. Each store is isolated from every other store. Stores start on a
 free plan and can move to Pro or Business (billed through Stripe); AI is capped per plan so its
 cost is known in advance.
+
+A visitor is asked at the front door whether they want to shop or open a store, and sees only that
+side: shoppers get a public shop directory, storefronts, baskets and order tracking, while owners get
+the dashboard, catalogue and AI tools. Nobody is a "shopper" or an "owner" in their login token,
+because one person can own one shop and buy from another; the server works out what they may do per
+request and per shop, so hiding a menu is never what protects a shop's data.
 
 Everything the AI writes is shown to the merchant first, AI never handles money, and every price
 and plan comes from the server. See `documentation/` for the scope, the plan and a design

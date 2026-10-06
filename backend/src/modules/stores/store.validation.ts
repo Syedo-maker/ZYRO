@@ -9,6 +9,10 @@ export const updateBrandingSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "themeColor must be a 6-digit hex color, e.g. #4F46E5")
     .optional(),
+  // Issue 2: both of these are about how the shop appears in the public directory at /shop.
+  // One line, because the directory shows a card and not a page.
+  description: z.string().trim().max(200).nullable().optional(),
+  listedInDirectory: z.boolean().optional(),
 });
 export type UpdateBrandingInput = z.infer<typeof updateBrandingSchema>;
 

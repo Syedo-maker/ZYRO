@@ -1,5 +1,7 @@
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { LandingPage } from './pages/Landing'
+import { ShopDirectoryPage } from './pages/shop/ShopDirectoryPage'
 import { LoginPage } from './pages/Login'
 import { RegisterPage } from './pages/Register'
 import { AdminLayout } from './pages/admin/AdminLayout'
@@ -76,8 +78,11 @@ export default function App() {
             <Route path="checkout/placed" element={<OrderPlacedPage />} />
           </Route>
 
-          <Route path="/" element={<Navigate to="/admin/products" replace />} />
-          <Route path="*" element={<Navigate to="/admin/products" replace />} />
+          {/* Issue 2: "/" used to send everybody to the merchant dashboard, which is wrong for a
+              shopper, who has no shop at all. It now asks, once, and remembers the answer. */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/shop" element={<ShopDirectoryPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

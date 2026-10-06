@@ -225,6 +225,24 @@ Each of B to G also has to pass G1 to G9.
 
 ---
 
+## Issues 1 and 2: AI product suggestions, and separate shopper and owner experiences
+
+Requested together on 2026-10-05, before Phase 7, as fixes rather than new parts.
+
+### Issue 2: a shopper and an owner see different products
+- **Tests:** a shopper is refused by the **server** on every owner endpoint, not merely shown a different menu; saying they prefer the owner experience grants them nothing; the public directory respects the owner's opt-out, leaves out shops with no real catalogue, and returns public fields only.
+- **Status (2026-10-05):** built. `/` asks once and remembers; `/shop` is a public directory; a signed-in shopper is bounced out of the admin shell; the admin shell and the storefront each have one marked way across. Roles stay out of the JWT and are derived per request and per shop, as decided, because one person can own one shop and be a customer of another. Covered by `roles-and-ideas` (integration, 44 checks) and the `roles-and-ideas` browser suite (33 checks). The "enforce it server-side through middleware" requirement is proved across the **whole** API rather than a sample: `role-enforcement` (integration, 108 tests) calls every endpoint the contract declares with no credentials at all and requires each one to turn the caller away. It found no holes, and one documentation defect, now fixed: six of Part E's shopper-facing endpoints were listed as needing a token when they deliberately do not. See `Roles_And_AI_Product_Ideas.md`.
+- **Sign-off:** approved by ______ on ______
+
+### Issue 1: AI product suggestions from real trending keywords
+- **Tests:** one press of "Suggest" is one AI call and **one** generation off the quota, not one per suggestion; a keyword the model claims but did not write is not shown to the merchant; the search log keeps nothing that identifies a person; a category with no data still gets suggestions and says so.
+- **Status (2026-10-05):** built. Keywords come from three real providers behind a replaceable adapter (cross-shop best-seller keywords, the Google Trends files Part D imported, and a new privacy-safe search count reported only once five different shops have seen a word), cached daily. The attribution shown to the merchant is verified server-side rather than trusted. Nothing is saved until the merchant saves the product. Covered by `ideas` (unit, 18), `search-terms` (unit, 18), `roles-and-ideas` (integration) and the browser suite. See `Roles_And_AI_Product_Ideas.md`.
+- **Sign-off:** approved by ______ on ______
+
+Both also passed G1 to G9.
+
+---
+
 ## Phase 7: Consolidation testing (what needs the whole system)
 
 Per-phase tests are done by now. This phase adds what only makes sense on the finished product:

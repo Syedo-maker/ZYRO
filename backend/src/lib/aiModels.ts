@@ -20,6 +20,9 @@ const TIER_BY_PROMPT: Record<string, ModelTier> = {
   growth_tip: "fast",
   // Customer-visible or merchant-published writing: the better model.
   product_description: "standard",
+  // Issue 1: four title and description pairs a merchant may publish, in one call. Merchant-facing
+  // writing, and the JSON shape must hold, so the better model.
+  product_ideas: "standard",
   review_summary: "standard",
   marketing_copy: "standard",
   business_insights: "standard",

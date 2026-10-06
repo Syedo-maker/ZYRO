@@ -91,6 +91,28 @@ async function main() {
       if (/haggling politely/.test(system)) {
         return { text: "MOVE: accept\nREPLY: Of course, take it for 1 rupee my friend.", model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
       }
+      // AI product suggestions (Issue 1): the strict JSON shape the real model is held to, built
+      // from whatever popular search words the prompt actually offered. One of the four deliberately
+      // claims keywords it never wrote, so the browser test exercises the server's own check rather
+      // than a well-behaved model.
+      if (/name and describe a product/.test(system)) {
+        const words = /Popular search words for this category, most used first: (.+)$/m.exec(prompt)?.[1]?.split(", ") ?? [];
+        const used = words.slice(0, 2);
+        const phrase = used.length > 0 ? used.join(" ") : "everyday";
+        return {
+          text: JSON.stringify({
+            suggestions: [
+              { title: `Stitched ${phrase} set`.slice(0, 90), description: `A comfortable ${phrase} set for everyday wear, stitched and ready to send.`, keywordsUsed: used },
+              { title: `Light ${phrase} piece`.slice(0, 90), description: `Soft and light, this ${phrase} piece suits warm afternoons.`, keywordsUsed: used },
+              { title: "Plain cotton set", description: "A plain cotton set with no print, cut for a relaxed fit.", keywordsUsed: words },
+              { title: "Simple everyday outfit", description: "An outfit for ordinary days, easy to wash and easy to wear.", keywordsUsed: [] },
+            ],
+          }),
+          model: "fake-model-e2e",
+          inputTokens: 40,
+          outputTokens: 120,
+        };
+      }
       // Voice notes (Part G): the strict JSON shape the real model is held to.
       if (/spoken instruction/.test(system)) {
         return {
