@@ -7,6 +7,7 @@ import { formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { storeSettingsApi, type CurrencySetting } from '../../lib/storeSettingsApi'
 import { PaymentMethodsPanel } from './PaymentMethodsPanel'
+import { DirectoryPanel } from './DirectoryPanel'
 
 /**
  * The owner's store settings. For now: the currency the store sells in. It can be changed until the
@@ -117,6 +118,8 @@ export function SettingsPage() {
           </form>
         )}
       </section>
+
+      <DirectoryPanel storeId={activeStore.id} />
 
       <PaymentMethodsPanel storeId={activeStore.id} currency={setting.currency} />
     </div>

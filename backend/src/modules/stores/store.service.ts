@@ -1,15 +1,28 @@
 import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
 import { planService } from "../billing/plan.service";
+import { Product } from "../../models/Product.model";
+import { MIN_PRODUCTS } from "./directory.service";
 import type { UpdateBrandingInput, UpdateCurrencyInput, UpdateDomainInput } from "./store.validation";
 
-const toPublicProfile = (t: { id: string; name: string; slug: string; logoUrl: string | null; themeColor: string | null; currency: string }) => ({
+const toPublicProfile = (t: {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  themeColor: string | null;
+  currency: string;
+  description: string | null;
+}) => ({
   id: t.id,
   name: t.name,
   slug: t.slug,
   logoUrl: t.logoUrl,
   themeColor: t.themeColor,
   currency: t.currency,
+  // Issue 2: the shop's own one-liner. Public because the storefront shows it; whether the shop is
+  // listed in the directory is NOT here, because that is the owner's setting and no shopper's business.
+  description: t.description,
 });
 
 export const storeService = {
@@ -21,7 +34,31 @@ export const storeService = {
 
   async updateBranding(storeId: string, input: UpdateBrandingInput) {
     const tenant = await prisma.tenant.update({ where: { id: storeId }, data: input });
-    return toPublicProfile(tenant);
+    // The owner is editing, so they see their directory setting back; a shopper reading
+    // getPublicProfile does not.
+    return { ...toPublicProfile(tenant), listedInDirectory: tenant.listedInDirectory };
+  },
+
+  /**
+   * Whether this shop appears in the public directory right now, and if not, why. The owner should
+   * not have to guess: a shop can be switched on and still be held back for having too few
+   * products (directory.service.ts), and that is worth saying out loud rather than failing quietly.
+   */
+  async directoryListing(storeId: string) {
+    const tenant = await prisma.tenant.findFirst({
+      where: { id: storeId },
+      select: { listedInDirectory: true, description: true },
+    });
+    if (!tenant) throw Errors.notFound("Store");
+
+    const products = await Product.countDocuments({ storeId });
+    const listed = tenant.listedInDirectory && products >= MIN_PRODUCTS;
+    let reason: string | null = null;
+    if (!tenant.listedInDirectory) reason = "Your shop is not listed because you have turned the directory listing off.";
+    else if (products < MIN_PRODUCTS)
+      reason = `Your shop will be listed once it has ${MIN_PRODUCTS} products; it has ${products} so far.`;
+
+    return { listedInDirectory: tenant.listedInDirectory, description: tenant.description, listed, productCount: products, minimumProducts: MIN_PRODUCTS, reason };
   },
 
   /**

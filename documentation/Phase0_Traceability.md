@@ -53,6 +53,10 @@ These were added in later phases; the screen itself was designed in code.
 | Order placed (cash on delivery or transfer, and sending in the receipt) | Part E | payments_proof_image, payments_submit_proof, payments_proof_status |
 | Voice notes (spoken changes, confirmed by the merchant) | Part G | voice_note_create, voice_notes_list, voice_note_apply, voice_note_discard |
 | Payments (cash-on-delivery queue, screenshots, courier cash) | Part E | payments_cod_pending, payments_cod_outcome, payments_proofs_list, payments_proof_review, payments_remittances_list, payments_remittance_import, payments_remittance_get |
+| Landing screen ("Shop" or "Start a store") | Issue 2 | users_me_preference_update, users_me_get |
+| Public shop directory (/shop) | Issue 2 | stores_directory_list, stores_directory_categories, stores_get |
+| Public directory settings, inside Settings | Issue 2 | store_directory_listing_get, store_branding_update |
+| Write with AI, on the Add product form | Issue 1 | product_ideas_suggest, product_ideas_keywords, products_create |
 
 ## Not called by any screen
 

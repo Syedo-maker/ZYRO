@@ -18,3 +18,33 @@ ZYRO's own operators can see per-store totals (plan, number of products and orde
 ## AI features in general
 
 Every AI feature sends the provider only what that feature needs (for example, a product's title and description to write its description). AI never handles payments or card data, and AI never decides a price or an amount.
+
+## What shoppers search for (AI product suggestions, 2026-10-05)
+
+When a shopper searches in a shop, ZYRO counts the words they searched for, so that the AI can
+suggest product names and descriptions built on what people are really looking for rather than on
+guesswork.
+
+- **What is stored: the words searched for, which shop, the category filter, and the date. Nothing
+  else.** No name, no account, no session, no device, no IP address, and no time of day.
+- A word is counted once per shop per day, however many times it is searched, so the count cannot be
+  used to follow one person through an afternoon.
+- Anything that looks like a way to contact or identify somebody is **not stored at all**: an email
+  address, a phone number in any of the ways people write one, or any run of seven or more digits
+  (which also covers order numbers, card numbers and national id numbers). Very short terms and
+  pasted sentences are not stored either.
+- These counts are only ever read across many shops at once, and a word is only reported once at
+  least five different shops have seen it. One shop can never read another shop's searches, and no
+  shop is ever named.
+
+## Your shop in the public directory (2026-10-05)
+
+Shoppers arriving at ZYRO without a shop in mind see a list of shops.
+
+- Only your **shop name, logo, theme colour, currency, category and the one line you write about
+  your shop** appear there. Nothing about your sales, orders, plan, staff or the people who run the
+  shop.
+- The category shown is worked out from what your own products are in; you do not enter it.
+- Listing is on by default and you can turn it off at any time from Settings ("List my store in the
+  public directory"). An unlisted shop still works normally for anyone who has its link.
+- A shop with fewer than three products is not listed, so half-finished shops are not advertised.

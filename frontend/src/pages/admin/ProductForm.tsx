@@ -5,6 +5,7 @@ import { uploadsApi } from '../../lib/productsApi'
 import { upgradeHintOf } from '../../lib/billingApi'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { AiToolsPanel } from './AiToolsPanel'
+import { WriteWithAi } from './WriteWithAi'
 import { bargainApi } from '../../lib/voiceBargainApi'
 import type { Product, ProductInput } from '../../types/api'
 
@@ -103,6 +104,28 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <h2 className="font-display text-base font-bold">{initial ? `Edit ${initial.title}` : 'Add product'}</h2>
+
+      {/* Issue 1: offered only when adding a product. An existing product already has a listing, and
+          the AI tools panel below it handles rewriting one. */}
+      {!initial && (
+        <WriteWithAi
+          storeId={storeId}
+          draft={{
+            title: title.trim() || undefined,
+            category: category.trim() || undefined,
+            description: description.trim() || undefined,
+            tags: tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean),
+            price: price.trim() === '' ? undefined : Number(price),
+          }}
+          onUse={(idea) => {
+            setTitle(idea.title)
+            setDescription(idea.description)
+          }}
+        />
+      )}
 
       <Input id="title" label="Title" required value={title} onChange={(e) => setTitle(e.target.value)} />
 

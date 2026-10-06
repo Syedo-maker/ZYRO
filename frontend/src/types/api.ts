@@ -6,6 +6,11 @@ export interface User {
   name: string | null
   /** True for a platform operator (can open the platform view). Only /users/me reports it. */
   platformAdmin?: boolean
+  /**
+   * Which experience this user last chose, "shopper" or "owner" (Issue 2). A routing hint only:
+   * what they may actually do is decided per request and per shop by the server, never by this.
+   */
+  preferredExperience?: 'shopper' | 'owner' | null
 }
 
 export interface Store {

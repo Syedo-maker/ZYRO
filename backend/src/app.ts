@@ -27,6 +27,8 @@ import { billingRouter, plansRouter } from "./modules/billing/billing.routes";
 import { platformRouter } from "./modules/platform/platform.routes";
 import { advisorRouter } from "./modules/advisor/advisor.routes";
 import { paymentsRouter } from "./modules/payments/payments.routes";
+import { directoryRouter } from "./modules/stores/directory.routes";
+import { ideasRouter } from "./modules/ideas/ideas.routes";
 import { voiceRouter } from "./modules/voice/voice.routes";
 import { bargainRouter } from "./modules/bargain/bargain.routes";
 import { storeTrendsRouter } from "./modules/trends/trends.routes";
@@ -80,7 +82,11 @@ v1.use("/stores/:storeId/advisor", advisorRouter);
 v1.use("/stores/:storeId/trends", storeTrendsRouter);
 v1.use("/stores/:storeId/payments", paymentsRouter);
 v1.use("/stores/:storeId/voice-notes", voiceRouter);
+v1.use("/stores/:storeId/product-ideas", ideasRouter);
 v1.use("/stores/:storeId/products/:productId/bargain", bargainRouter);
+// Public shop directory (Issue 2). Before the /stores/:storeId router, so "/" and "/categories"
+// are not read as a store id.
+v1.use("/stores", directoryRouter);
 v1.use("/stores/:storeId", storeRouter);
 v1.use("/plans", plansRouter);
 v1.use("/platform", platformRouter);

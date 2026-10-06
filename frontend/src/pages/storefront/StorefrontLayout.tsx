@@ -131,6 +131,11 @@ export function StorefrontLayout() {
                 <SearchBox storeId={store.id} />
               </div>
               <div className="ml-auto flex items-center gap-1">
+                {/* Issue 2: the way back out of this shop. Each shop is its own tenant with its own
+                    basket, so this leaves the shop rather than carrying anything across. */}
+                <Link to="/shop" className="rounded-[10px] px-3 py-2 text-sm font-semibold text-text hover:bg-bg">
+                  All shops
+                </Link>
                 <AccountLink storeId={store.id} />
                 <CartLink storeId={store.id} />
               </div>

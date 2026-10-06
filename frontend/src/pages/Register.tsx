@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { saveExperience } from '../lib/experience'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { authErrorMessage } from '../lib/apiClient'
@@ -38,6 +39,8 @@ export function RegisterPage() {
     setSubmitting(true)
     try {
       await register({ email, password, storeName, storeSlug, currency })
+      // Issue 2: they just opened a shop, so that is the experience they are in now.
+      await saveExperience('owner', true)
       navigate('/admin/products')
     } catch (err) {
       setError(authErrorMessage(err))

@@ -7,3 +7,4 @@ export const meRouter = Router();
 
 meRouter.get("/", requireAuth, meController.getProfile);
 meRouter.get("/stores", requireAuth, meController.listStores);
+meRouter.patch("/preference", requireAuth, meController.setPreference);

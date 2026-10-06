@@ -135,6 +135,13 @@ model User {
   passwordHash String
   name         String?
   platformRole PlatformRole @default(USER)
+  /**
+   * Which experience to open after signing in: "shopper" or "merchant". **Routing only, never
+   * authorization.** What someone may actually do is still worked out per request, per store, from
+   * Tenant.ownerId and StaffMember, because one person can own one shop and buy from another, and a
+   * merchant can own several shops. Null means: decide from whether they have any stores.
+   */
+  preferredExperience String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -197,6 +204,12 @@ model Tenant {
   customDomain          String?   @unique
   /// Weekly growth tips on the dashboard (Part C). The owner can switch them off.
   growthTipsEnabled     Boolean   @default(true)
+  /// Whether this shop appears in the public directory at /shop. On by default; the owner may opt out.
+  /// A shop with too few products is left out regardless, so empty and test shops never show.
+  listedInDirectory     Boolean   @default(true)
+  /// One line about the shop, shown beside its name in the public directory. Public by definition,
+  /// so the owner writes it knowing anyone can read it.
+  description           String?
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -211,6 +224,7 @@ model Tenant {
   remittanceItems  CodRemittanceItem[]
   voiceNotes       VoiceNote[]
   bargainSessions  BargainSession[]
+  searchTerms      SearchTermDaily[]
   posShifts        PosShift[]
   orderReturns     OrderReturn[]
   heldSales        HeldSale[]
@@ -1070,4 +1084,29 @@ model BargainSession {
 
   @@index([tenantId, status])
   @@index([tenantId, productId])
+}
+
+/// What shoppers searched for, counted per store, per day, per term (Issue 1's third keyword source).
+///
+/// **No user id, no session, no IP, and nothing that could identify a person.** A term is only stored
+/// after it has been normalised and checked: anything too short, or that looks like a phone number or
+/// an email address, is dropped rather than counted. Terms are only ever reported across stores and
+/// only once enough different stores have used them, the same rule Part D applies to sales.
+model SearchTermDaily {
+  id       String @id @default(cuid())
+  tenantId String
+  /// The normalised term, as search.query.ts writes it.
+  term     String
+  /// The category filter in force when it was searched, so keywords can be offered per category.
+  /// "all" when the shopper was searching the whole shop.
+  category String @default("all")
+  /// The day, "YYYY-MM-DD", so a term is one row per shop per day however often it is searched.
+  day      String
+  count    Int    @default(1)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, term, category, day])
+  @@index([category, day])
 }

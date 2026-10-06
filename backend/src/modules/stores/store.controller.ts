@@ -24,6 +24,15 @@ export const storeController = {
     }
   }) satisfies RequestHandler,
 
+  /** Issue 2: does my shop appear at /shop, and if not, why not. */
+  getDirectoryListing: (async (req, res, next) => {
+    try {
+      res.status(200).json(await storeService.directoryListing(req.params.storeId));
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
   getCurrency: (async (req, res, next) => {
     try {
       const store = await storeService.getPublicProfile(req.params.storeId);

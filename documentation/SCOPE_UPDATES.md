@@ -40,6 +40,8 @@ Every AI call goes through one orchestrator (provider adapter, job queue, monthl
 
 Two deliberate deviations to state honestly: the recommendation service computes embeddings locally (a small ONNX model) instead of through the orchestrator, because Anthropic has no embeddings API and no key was available (the model sits behind an interface so the orchestrator route can replace it); and platform-run AI features (Growth Advisor, Trend Scout, Payment and Trust) are to be paid by the platform, not taken from a merchant's AI quota.
 
+**AI product suggestions when adding a product (built, 2026-10-05).** On the Add product form the merchant chooses "Write it myself" or "Write with AI", and the AI offers four title and description pairs built around keywords real shoppers really use, naming under each suggestion which of those keywords it actually contains. The keywords come from three real sources behind a replaceable adapter: keywords from products selling across ZYRO shops (anonymised by Part D's rules), the Google Trends files a platform administrator imported in Part D, and a new privacy-safe count of what shoppers type into shop search boxes, which is only reported once at least five different shops have seen a word. No trend or search figure is ever invented, and a keyword the model claims but did not actually write is not shown to the merchant. One press of "Suggest" is one AI call and one generation off the shop's allowance, not one per suggestion, and nothing is saved until the merchant chooses and saves. Tests: `ideas` and `search-terms` (unit), `roles-and-ideas` (integration) and the `roles-and-ideas` browser suite. Documented in `Roles_And_AI_Product_Ideas.md`.
+
 ## 4. Point of sale (was out of scope, now built)
 
 The original scope listed POS as out of scope. It is built as a second sales channel over the same catalog, inventory, customers, discounts and orders: cashier and manager accounts with permissions, product search and barcode lookup, split cash and card payments with change, shifts and cash-drawer counts, a cashier discount limit, held sales, printable receipts, item-level returns (stock goes back, cash comes out of the drawer), transaction history and a daily summary. Documents: `Phase2_5_Module8_POS_Backend.md`, `Phase2_5_POS_Frontend.md`, `Phase2_Commerce_Core_Foundation.md`.
@@ -76,6 +78,7 @@ The local gateway adapter (JazzCash, Easypaisa, Safepay, XPay) is built as a sea
 | Part E | AI Payment and Trust | done |
 | Part F | Search (typo tolerance, Roman Urdu, semantic last resort) | done |
 | Part G | Voice notes and bargaining assistant (festival planner delivered by Part C) | done |
+| Issues 1 and 2 | Separate shopper and owner experiences; AI product suggestions from real trending keywords | done (2026-10-05) |
 | 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | last, not started |
 | 8 | Docker Compose, environment setup, final documentation, Gantt chart, Turnitin report | last, not started |
 

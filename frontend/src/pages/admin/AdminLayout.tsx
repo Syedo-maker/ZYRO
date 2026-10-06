@@ -1,4 +1,4 @@
-import { NavLink, Navigate, Outlet } from 'react-router-dom'
+import { Link, NavLink, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 interface NavItem {
@@ -29,10 +29,15 @@ const OWNER_ITEMS: NavItem[] = [
 const PLATFORM_ITEM: NavItem = { label: 'Platform', to: '/admin/platform', enabled: true }
 
 export function AdminLayout() {
-  const { isLoading, isAuthenticated, activeStore, user, logout } = useAuth()
+  const { isLoading, isAuthenticated, stores, activeStore, user, logout } = useAuth()
 
   if (isLoading) return null
   if (!isAuthenticated) return <Navigate to="/login" replace />
+  // Issue 2: being signed in is not the same as having a shop. A shopper has no shop to manage, and
+  // every panel here would show them an error, so they are sent to the shopper side instead. This
+  // is only about not showing somebody a useless screen: the server refuses them either way, which
+  // is what actually keeps a shop's data safe (requireOwner / requirePermission, per request).
+  if (stores.length === 0) return <Navigate to="/shop" replace />
 
   const items = [
     ...NAV_ITEMS.filter((i) => i.enabled),
@@ -90,6 +95,10 @@ export function AdminLayout() {
                 View storefront
               </a>
             )}
+            {/* Issue 2: one way across to the shopper side, for an owner who also buys things. */}
+            <Link to="/shop" className="text-sm font-semibold text-brand hover:text-brand-hover">
+              Browse shops
+            </Link>
             <span className="text-sm text-text-secondary">{user?.email}</span>
             <button onClick={() => void logout()} className="text-sm font-semibold text-brand hover:text-brand-hover">
               Log out

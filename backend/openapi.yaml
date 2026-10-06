@@ -229,6 +229,8 @@ paths:
     post:
       tags: [auth]
       operationId: auth_logout
+      # No token needed: it clears the refresh cookie, and logging out when not logged in is a harmless no-op.
+      security: []
       summary: Revoke the current refresh token
       description: |
         Deletes the server-side record backing the `refreshToken` cookie (so it can no
@@ -254,6 +256,42 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/User" }
+
+  /users/me/preference:
+    patch:
+      tags: [users]
+      operationId: users_me_preference_update
+      summary: Remember whether this user came to shop or to run a shop
+      description: |
+        A routing hint and nothing more: it decides which screen the browser opens on, never what
+        the caller is allowed to do. Authorization stays per request and per shop, worked out from
+        `Tenant.ownerId` and `StaffMember`, because one person can own one shop and be a customer
+        of another. Setting this to `owner` grants nothing: the owner endpoints still refuse a
+        caller who owns no shop.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [experience]
+              properties:
+                experience: { type: string, enum: [shopper, owner] }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [preferredExperience]
+                properties:
+                  preferredExperience: { type: string, enum: [shopper, owner] }
+        "400":
+          description: An experience other than shopper or owner
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /users/me/stores:
     get:
@@ -285,6 +323,56 @@ paths:
                           enum: [owner, staff]
 
   # ── STORES ────────────────────────────────────────────────────────────
+  /stores:
+    get:
+      tags: [stores]
+      operationId: stores_directory_list
+      summary: The public shop directory
+      description: |
+        Public: a shopper looking for somewhere to buy from has no account yet. Lists only shops
+        whose owner has left `listedInDirectory` on AND that have at least 3 products, so empty and
+        test shops never appear. Every field returned is information a shop already shows on its own
+        storefront; nothing about its orders, revenue, plan, staff or owner.
+      security: []
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 120 }, description: "Matches the shop name or its own description." }
+        - { name: category, in: query, schema: { type: string, maxLength: 120 }, description: "One of stores_directory_categories." }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 60, default: 24 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Listed shops, largest catalogue first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stores, total, limit, offset]
+                properties:
+                  stores:
+                    type: array
+                    items: { $ref: "#/components/schemas/DirectoryStore" }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+
+  /stores/categories:
+    get:
+      tags: [stores]
+      operationId: stores_directory_categories
+      summary: The categories the directory can be filtered by
+      description: "Public. The categories listed shops actually sell, worked out from their own products."
+      security: []
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [categories]
+                properties:
+                  categories: { type: array, items: { type: string } }
+
   /stores/{storeId}:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -320,12 +408,51 @@ paths:
                 name: { type: string, maxLength: 120 }
                 logoUrl: { type: string, format: uri }
                 themeColor: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+                description:
+                  type: [string, "null"]
+                  maxLength: 200
+                  description: "One public line about the shop, shown in the directory and on the storefront."
+                listedInDirectory:
+                  type: boolean
+                  description: "Whether the shop appears in the public directory at /shop. On by default."
       responses:
         "200":
           description: Updated
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Store" }
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Store"
+                  - type: object
+                    properties:
+                      listedInDirectory: { type: boolean, description: "Returned to the owner who is editing; never on the public profile." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/directory-listing:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [stores]
+      operationId: store_directory_listing_get
+      summary: Whether this shop appears in the public directory, and if not why
+      description: |
+        Owner-only. A shop can have the setting on and still be held back for having too few
+        products, so this says which it is rather than leaving the owner to wonder.
+      responses:
+        "200":
+          description: Listing status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [listedInDirectory, listed, productCount, minimumProducts]
+                properties:
+                  listedInDirectory: { type: boolean, description: "The owner's setting." }
+                  description: { type: [string, "null"] }
+                  listed: { type: boolean, description: "Whether it is actually appearing right now." }
+                  productCount: { type: integer }
+                  minimumProducts: { type: integer }
+                  reason: { type: [string, "null"], description: "Why it is not listed, in words for the merchant; null when it is." }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /stores/{storeId}/staff:
@@ -2899,6 +3026,122 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ── AI PRODUCT SUGGESTIONS (Issue 1) ──────────────────────────────────
+  /stores/{storeId}/product-ideas:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [ai]
+      operationId: product_ideas_suggest
+      summary: Four title and description suggestions for a product being added
+      description: |
+        Needs `products_write`, like creating the product itself.
+
+        **One request is one AI call and one generation off the store's monthly allowance**, not one
+        per suggestion: the model returns all four in a single reply. A used-up allowance answers 402
+        with the usual upgrade hint, and the form then keeps working by hand.
+
+        **Nothing is saved.** No product and no draft is written; the merchant picks one, edits it if
+        they like, and saves it through products_create.
+
+        The keywords offered to the model come from real data only (cross-shop best-seller keywords
+        anonymised by Part D's rules, imported Google Trends terms, and shoppers' own searches once
+        at least 5 different shops have seen a word). `keywordsUsed` on each suggestion is verified
+        server-side against both that list and the text the model actually wrote, so it is never the
+        model's own claim. When no source has data for the category, `trendDataAvailable` is false,
+        `notice` says so plainly, and the suggestions are built only on what the merchant entered.
+      requestBody:
+        required: true
+        description: "Whatever the merchant has typed so far. Every field is optional; an empty body is valid."
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 200 }
+                category: { type: string, maxLength: 120 }
+                description: { type: string, maxLength: 1500, description: "Notes for the AI, not a finished description." }
+                tags: { type: array, maxItems: 20, items: { type: string, maxLength: 40 } }
+                price: { type: number, minimum: 0 }
+      responses:
+        "200":
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [suggestions, trendDataAvailable, sources, model]
+                properties:
+                  suggestions:
+                    type: array
+                    maxItems: 4
+                    description: "Empty when the model's answer was unusable; the merchant is told to try again or write it themselves."
+                    items:
+                      type: object
+                      required: [title, description, keywordsUsed]
+                      properties:
+                        title: { type: string, maxLength: 90 }
+                        description: { type: string, maxLength: 420 }
+                        keywordsUsed:
+                          type: array
+                          items: { type: string }
+                          description: "The popular searches this suggestion really contains, checked server-side."
+                  trendDataAvailable: { type: boolean }
+                  sources:
+                    type: array
+                    items: { type: string, enum: [best_sellers, google_trends, shopper_searches] }
+                  notice: { type: [string, "null"], description: "Shown when there is no trend data for this category." }
+                  model: { type: string }
+        "402":
+          description: |
+            Monthly AI usage quota exhausted. The problem body carries an `upgrade` member and
+            `topUpAvailable`. The merchant can still write the listing by hand.
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Error"
+                  - type: object
+                    properties:
+                      upgrade: { $ref: "#/components/schemas/UpgradeHint" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/product-ideas/keywords:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [ai]
+      operationId: product_ideas_keywords
+      summary: The trending keywords for a category, with no AI call
+      description: |
+        Needs `products_write`. Costs nothing: it reads the blended keyword list, cached per market
+        and category for a day. The form shows this before the merchant decides whether to spend a
+        generation on suggestions.
+      parameters:
+        - { name: category, in: query, schema: { type: string, maxLength: 120 } }
+      responses:
+        "200":
+          description: Keywords, most used first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [keywords, sources, trendDataAvailable]
+                properties:
+                  keywords:
+                    type: array
+                    items:
+                      type: object
+                      required: [word, source]
+                      properties:
+                        word: { type: string }
+                        source: { type: string, enum: [best_sellers, google_trends, shopper_searches] }
+                  sources:
+                    type: array
+                    items: { type: string, enum: [best_sellers, google_trends, shopper_searches] }
+                  trendDataAvailable: { type: boolean, description: "False when no source had real data; the keyword list is then empty." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   # ── VOICE NOTES AND BARGAINING (Part G) ───────────────────────────────
   /stores/{storeId}/voice-notes:
     parameters:
@@ -3095,6 +3338,8 @@ paths:
     post:
       tags: [checkout]
       operationId: payments_options
+      # Shopper-facing (Part E): which ways this cart may be paid for.
+      security: []
       summary: Which ways this cart may be paid for
       description: |
         The shopper's cart, priced, with the methods this store offers. For cash on delivery the answer also
@@ -3119,6 +3364,8 @@ paths:
     post:
       tags: [checkout]
       operationId: payments_place_order
+      # Guest checkout (Part E): places a cash-on-delivery or bank-transfer order.
+      security: []
       summary: Place a cash-on-delivery or bank-transfer order
       description: |
         Writes the order through the same path as every other order: live prices, the same stock check, the
@@ -3145,6 +3392,8 @@ paths:
     post:
       tags: [checkout]
       operationId: payments_proof_image
+      # Shopper-facing (Part E): guarded by the order itself, which must exist in this store, be a bank transfer and be unpaid.
+      security: []
       summary: Upload the screenshot of a transfer
       description: |
         No login: a shopper is a guest. What guards it is the order itself, which must exist in this store,
@@ -3175,6 +3424,8 @@ paths:
     post:
       tags: [checkout]
       operationId: payments_submit_proof
+      # Shopper-facing (Part E): see payments_proof_image.
+      security: []
       summary: Send in the receipt for a transfer
       description: |
         The AI is asked only to read what is printed in the image; it is given no order total and no expected
@@ -3203,6 +3454,8 @@ paths:
     get:
       tags: [checkout]
       operationId: payments_proof_status
+      # Shopper-facing (Part E): says only whether the receipt has been checked, never the findings.
+      security: []
       summary: Whether the receipt has been checked yet
       description: For the shopper. Says only pending, accepted or rejected, and the merchant's reason when rejected; never the findings.
       responses:
@@ -3222,6 +3475,8 @@ paths:
     post:
       tags: [checkout]
       operationId: payments_help
+      # Shopper-facing (Part E): explains a failed payment to the shopper who hit it.
+      security: []
       summary: Explain a failed payment, in English, Urdu or Roman Urdu
       description: |
         A known failure code is answered from a written table with no AI call. The AI is asked only for an
@@ -4235,6 +4490,10 @@ components:
         email: { type: string, format: email }
         name: { type: string }
         platformAdmin: { type: boolean, description: "Only in the users_me_get answer: true for a platform operator, who may open the /platform routes." }
+        preferredExperience:
+          type: [string, "null"]
+          enum: [shopper, owner, null]
+          description: "Only in the users_me_get answer. Which experience to open on; never a permission (see users_me_preference_update)."
 
     Store:
       type: object
@@ -4246,6 +4505,24 @@ components:
         logoUrl: { type: string, format: uri }
         themeColor: { type: string }
         currency: { type: string, description: "The store's currency (ISO code), used to format prices." }
+        description:
+          type: [string, "null"]
+          description: "One public line about the shop, written by its owner. Shown on the storefront and in the directory."
+
+    DirectoryStore:
+      type: object
+      description: "A shop as the public directory shows it. Public information only."
+      required: [id, name, slug, currency, productCount]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        logoUrl: { type: [string, "null"], format: uri }
+        themeColor: { type: [string, "null"] }
+        currency: { type: string }
+        description: { type: [string, "null"], description: "The one line the owner wrote about the shop." }
+        category: { type: [string, "null"], description: "The category most of the shop's products are in; null when it sells a bit of everything." }
+        productCount: { type: integer }
 
     StoreCurrency:
       type: string

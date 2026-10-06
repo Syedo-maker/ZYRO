@@ -1,6 +1,9 @@
 import { RequestHandler } from "express";
-import { meService } from "./me.service";
+import { z } from "zod";
+import { EXPERIENCES, meService } from "./me.service";
 import { Errors } from "../../errors/AppError";
+
+const preferenceSchema = z.object({ experience: z.enum(EXPERIENCES) });
 
 export const meController = {
   getProfile: (async (req, res, next) => {
@@ -8,6 +11,17 @@ export const meController = {
       const profile = await meService.getProfile(req.userId!);
       if (!profile) return next(Errors.notFound("User"));
       res.status(200).json(profile);
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  /** Issue 2: remembers "shop" or "start a store" from the landing screen. A hint, not a role. */
+  setPreference: (async (req, res, next) => {
+    const parsed = preferenceSchema.safeParse(req.body);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      res.status(200).json(await meService.setPreferredExperience(req.userId!, parsed.data.experience));
     } catch (err) {
       next(err);
     }

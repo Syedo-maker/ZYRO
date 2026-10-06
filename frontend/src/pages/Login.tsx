@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { authErrorMessage } from '../lib/apiClient'
+import { landingPathFor, rememberedExperience } from '../lib/experience'
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -18,8 +19,9 @@ export function LoginPage() {
     setError(null)
     setSubmitting(true)
     try {
-      await login({ email, password })
-      navigate('/admin/products')
+      const session = await login({ email, password })
+      // Issue 2: a shopper logging in has no shop, so the dashboard is the wrong place to land.
+      navigate(landingPathFor({ hasStore: session.stores.length > 0, preference: session.user.preferredExperience ?? rememberedExperience() }))
     } catch (err) {
       setError(authErrorMessage(err))
     } finally {
@@ -66,6 +68,10 @@ export function LoginPage() {
           Don&apos;t have a store yet?{' '}
           <Link to="/register" className="text-brand font-semibold">
             Create one
+          </Link>{' '}
+          or{' '}
+          <Link to="/shop" className="text-brand font-semibold">
+            browse shops
           </Link>
         </p>
       </div>
