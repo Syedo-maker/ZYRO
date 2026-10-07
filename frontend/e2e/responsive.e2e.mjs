@@ -118,6 +118,16 @@ const heading = (page, name) => () => page.getByRole('heading', { name, exact: f
 const h1 = (page) => () => page.getByRole('heading', { level: 1 }).first().waitFor()
 
 for (const [width, height] of [[375, 740], [768, 1024]]) {
+  // ---- The way in, as a visitor with no account (added after this sweep was first written) ----
+  const visitor = await session(`visitor-${width}`, width, height)
+  const vp = visitor.page
+  await visit(vp, 'landing page', width, WEB, h1(vp))
+  // The landing page's navigation collapses, so the menu itself has to fit too.
+  await vp.getByRole('button', { name: /menu/i }).click()
+  await visit(vp, 'landing page with the menu open', width, null, () => vp.locator('#landing-mobile-menu').waitFor())
+  await visit(vp, 'shop directory', width, `${WEB}/shop`, h1(vp))
+  await visitor.ctx.close()
+
   // ---- Storefront, as a shopper ----
   const shop = await session(`shop-${width}`, width, height)
   const sp = shop.page
@@ -151,6 +161,17 @@ for (const [width, height] of [[375, 740], [768, 1024]]) {
   await visit(ap, 'admin marketing', width, `${WEB}/admin/marketing`, h1(ap))
   await visit(ap, 'admin plan and billing', width, `${WEB}/admin/billing`, h1(ap))
   await visit(ap, 'admin platform', width, `${WEB}/admin/platform`, () => ap.getByRole('region', { name: 'Stores' }).waitFor())
+  await visit(ap, 'admin payments', width, `${WEB}/admin/payments`, h1(ap))
+  await visit(ap, 'admin voice notes', width, `${WEB}/admin/voice-notes`, h1(ap))
+  await visit(ap, 'admin settings, with the directory panel', width, `${WEB}/admin/settings`, () => ap.getByRole('region', { name: 'Public directory' }).waitFor())
+
+  // The Add form, which carries the "Write with AI" panel. The Edit form checked above does not:
+  // an existing product already has a listing, so the panel is only offered when adding one.
+  await ap.goto(`${WEB}/admin/products`)
+  await ap.getByRole('button', { name: 'Add product' }).first().click()
+  await visit(ap, 'admin add product, with Write with AI', width, null, () => ap.getByRole('region', { name: /Name and describe/ }).waitFor())
+  await ap.getByRole('button', { name: 'Write with AI' }).click()
+  await visit(ap, 'admin add product, AI suggestions panel open', width, null, () => ap.getByRole('button', { name: /Suggest 4 options/ }).waitFor())
 
   // ---- Point of sale, as the owner ----
   // The first pass opens a shift; on the second the shift is still open and the register shows at once.
