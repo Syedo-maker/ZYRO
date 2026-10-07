@@ -233,11 +233,12 @@ rejects a query with no `storeId` filter.
 
 ### Findings worth fixing
 
-1. **The admin product list has no table semantics.** It is a grid of `<div>` elements with a header
-   row of `<div>`s. Visually it is a table, but a screen reader cannot navigate it as one: there is
-   no association between a cell and its column heading. Noticed while writing the golden path,
-   which could not select a row by role. Not a security hole, and not urgent, but it is the kind of
-   thing an accessibility reviewer would raise, and the fix is small.
+1. ~~**The admin product list has no table semantics.**~~ **Fixed 2026-10-07.** It was a grid of
+   `<div>` elements with a header row of `<div>`s: visually a table, but to a screen reader a flat
+   run of text with no association between a cell and its column. Noticed here because the golden
+   path could not select a row by role. It now carries `role="table"` and the matching row, header
+   and cell roles, the layout is unchanged, and the golden path selects rows by role. See
+   `Accessibility_Audit.md`.
 2. **`keywords.sources.ts` is the thinnest-covered module that matters** (70.2%). It is new, it feeds
    the AI, and its per-provider parsing deserves direct tests.
 3. **The Prisma CLI advisory stands**, as recorded above, pending a stable Prisma 8.
