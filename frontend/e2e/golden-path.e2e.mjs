@@ -69,7 +69,6 @@ async function step(name, page, fn) {
 
 const op = await session('owner')
 let storeId
-let productPrice
 
 // ---- 1. Sign up ---------------------------------------------------------------------------------
 
@@ -116,7 +115,6 @@ await step('add a product with the AI', op, async () => {
   await op.getByLabel('Stock', { exact: true }).fill('10')
   await op.getByRole('button', { name: /^(Save|Create)/ }).click()
   await op.getByText(`Golden Lawn Suit ${suffix}`).first().waitFor({ timeout: 20000 })
-  productPrice = 2500
   check('the product is saved and listed', await op.getByText(`Golden Lawn Suit ${suffix}`).first().isVisible())
   await op.screenshot({ path: path.join(SHOTS, 'golden-1-product.png') })
 })
@@ -225,10 +223,10 @@ await step('sell one at the counter', op, async () => {
 
 await step('one catalogue, one stock figure', op, async () => {
   await op.goto(`${WEB}/admin/products`)
-  // The product list is laid out with divs rather than a table, so there are no row roles to select.
-  // The edit button is the only element in the row carrying the product's name, so the row is
-  // reached through it.
-  const row = op.getByLabel(`Edit Golden Lawn Suit ${suffix}`).locator('xpath=../..')
+  // Selected by row role. The list is laid out with CSS grid, but it now carries table semantics, so
+  // a screen reader and this test can both find a row by what it is rather than by hunting for a
+  // button inside it. The accessibility audit is what prompted adding those roles.
+  const row = op.getByRole('row').filter({ hasText: `Golden Lawn Suit ${suffix}` }).first()
   await row.waitFor({ timeout: 20000 })
   // Ten to begin with, one sold online and one at the counter.
   check('the merchant sees one stock figure reduced by both sales', /\b8\b/.test(await row.innerText()), (await row.innerText()).replace(/\n/g, ' | '))
@@ -239,7 +237,6 @@ await step('one catalogue, one stock figure', op, async () => {
 await step('refund the online order', op, async () => {
   await op.goto(`${WEB}/admin/orders`)
   await op.getByRole('button', { name: '#1' }).click()
-  const panel = op.getByRole('complementary').or(op.locator('aside')).first()
   await op.getByRole('button', { name: 'Refund', exact: true }).waitFor({ timeout: 20000 })
   await op.getByRole('button', { name: 'Refund', exact: true }).click()
 
@@ -254,7 +251,7 @@ await step('refund the online order', op, async () => {
   await op.screenshot({ path: path.join(SHOTS, 'golden-5-refund.png') })
 
   await op.goto(`${WEB}/admin/products`)
-  const stockRow = op.getByLabel(`Edit Golden Lawn Suit ${suffix}`).locator('xpath=../..')
+  const stockRow = op.getByRole('row').filter({ hasText: `Golden Lawn Suit ${suffix}` }).first()
   await stockRow.waitFor({ timeout: 20000 })
   check('putting the items back in stock really put them back', /\b9\b/.test(await stockRow.innerText()), (await stockRow.innerText()).replace(/\n/g, ' | '))
 })

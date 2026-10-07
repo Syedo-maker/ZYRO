@@ -228,11 +228,22 @@ export function CatalogPage() {
             </div>
           )}
           {result && result.products.length > 0 && (
-            <ul className="grid grid-cols-2 gap-4 xl:grid-cols-3">
-              {result.products.map((p) => (
-                <ProductCard key={p.id} product={p} storeId={store.id} currency={store.currency} adding={addingId === p.id} onAdd={(x) => void addToCart(x)} />
-              ))}
-            </ul>
+            <section aria-labelledby="results-heading">
+              {/*
+               * The results need a heading of their own. Each product's title is an h3, and on a
+               * phone the filter panel's h2 is inside a closed drawer, so without this the page
+               * jumped straight from the h1 to an h3 and a screen reader user navigating by heading
+               * lost a level. Not shown, because the h1 above already says what this list is.
+               */}
+              <h2 id="results-heading" className="sr-only">
+                {result.total} {result.total === 1 ? 'product' : 'products'}
+              </h2>
+              <ul className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+                {result.products.map((p) => (
+                  <ProductCard key={p.id} product={p} storeId={store.id} currency={store.currency} adding={addingId === p.id} onAdd={(x) => void addToCart(x)} />
+                ))}
+              </ul>
+            </section>
           )}
           <Pagination page={page} pageCount={pageCount} hrefFor={hrefForPage} />
         </div>
