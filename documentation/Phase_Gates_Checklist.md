@@ -264,6 +264,8 @@ Per-phase tests are done by now. This phase adds what only makes sense on the fi
 - Performance check on a store with thousands of products.
 
 **Done when:** all pass and the numbers are written into the report.
+
+- **Status (2026-10-07):** done, with every number measured rather than estimated. Coverage 92.40% statements, 94.87% lines, 94.18% functions, 77.40% branches, now enforced as floors in `jest.config.js`. The golden path runs the whole journey through the real interface in 26 checks, and the stock figure proves the shared catalogue: 10, then 9 after the website sold one, 8 after the counter sold one, 9 again after the refund restocked it. The AI quota holds under 60 simultaneous callers, granting exactly the allowance and never letting a top-up balance go negative; the guard was temporarily removed to confirm the test has teeth, and the naive version granted 41 of 60 against a limit of 15. A shop with 5,000 products answers all ten measured operations within budget, worst case 73 ms. Mobile responsiveness now covers 32 screens at two widths in 65 checks, including every screen built after 2026-09-26. The security review found no vulnerability reachable by the running server and brought the Python service to zero outright; two non-blocking findings are recorded in the report. See `Phase7_Consolidation_Testing.md`.
 **Sign-off:** approved by ______ on ______
 
 ## Phase 8: Deployment and documentation

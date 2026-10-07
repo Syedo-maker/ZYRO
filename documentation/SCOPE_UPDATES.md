@@ -82,7 +82,7 @@ The local gateway adapter (JazzCash, Easypaisa, Safepay, XPay) is built as a sea
 | Part G | Voice notes and bargaining assistant (festival planner delivered by Part C) | done |
 | Issues 1 and 2 | Separate shopper and owner experiences; AI product suggestions from real trending keywords | done (2026-10-05) |
 | Landing page | Marketing homepage at `/` with a live, budget-capped demonstration of trending suggestions | done (2026-10-06) |
-| 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | last, not started |
+| 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | done (2026-10-07) |
 | 8 | Docker Compose, environment setup, final documentation, Gantt chart, Turnitin report | last, not started |
 
 The Gantt chart and the week estimates for Parts B to G are written after the team approves the detailed roadmap plan, so they are deliberately not filled in here.
