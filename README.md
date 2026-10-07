@@ -22,7 +22,11 @@ search for. Each store is isolated from every other store. Stores start on a
 free plan and can move to Pro or Business (billed through Stripe); AI is capped per plan so its
 cost is known in advance.
 
-A visitor is asked at the front door whether they want to shop or open a store, and sees only that
+The front door is a homepage explaining the product, with a working demonstration of the trending
+suggestions in its hero: type a product and see what the AI would write for it. The demo is capped
+so a visitor can never spend a merchant's AI allowance.
+
+From there a visitor chooses to shop or to open a store, and sees only that
 side: shoppers get a public shop directory, storefronts, baskets and order tracking, while owners get
 the dashboard, catalogue and AI tools. Nobody is a "shopper" or an "owner" in their login token,
 because one person can own one shop and buy from another; the server works out what they may do per

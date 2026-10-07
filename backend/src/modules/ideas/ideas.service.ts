@@ -20,7 +20,7 @@ import type { ProductIdeaInput } from "./ideas.validation";
  */
 
 /** How many pairs the merchant gets. Four fits the form without scrolling and gives a real choice. */
-const SUGGESTION_COUNT = 4;
+export const SUGGESTION_COUNT = 4;
 const MAX_TITLE = 90;
 const MAX_DESCRIPTION = 420;
 
@@ -48,6 +48,24 @@ function describeDraft(input: ProductIdeaInput, currency: string): string {
   if (input.tags?.length) lines.push(`Tags: ${input.tags.join(", ")}`);
   if (typeof input.price === "number") lines.push(`Price: ${currency} ${input.price.toFixed(2)}`);
   return lines.length > 0 ? lines.join("\n") : "The shop owner has not filled in any details yet.";
+}
+
+/**
+ * The exact prompt the real feature sends, exported so the landing page's demo asks the model the
+ * same question the merchant's form does. The demo differs in who pays for the call and how it is
+ * rationed, not in what is asked, so a visitor sees the real behaviour rather than a mock-up of it.
+ */
+export function buildIdeasPrompt() {
+  return {
+    system: SYSTEM_PROMPT,
+    prompt: (input: ProductIdeaInput, keywordSet: { keywords: { word: string }[]; empty: boolean }, currency: string) => {
+      const keywordLines = keywordSet.empty
+        ? "No popular search words are available for this category, so use none: write the best plain listing you can from the details above."
+        : `Popular search words for this category, most used first: ${keywordSet.keywords.map((k) => k.word).join(", ")}`;
+      // One call for all of them, so the merchant is charged one generation however many they read.
+      return `${describeDraft(input, currency)}\n\n${keywordLines}\n\nWrite ${SUGGESTION_COUNT} different title and description pairs.`;
+    },
+  };
 }
 
 interface RawSuggestion {
@@ -126,16 +144,12 @@ export const ideasService = {
     const category = normaliseCategory(input.category);
     const keywordSet = await trendingKeywords(market, category);
 
-    const keywordLines = keywordSet.empty
-      ? "No popular search words are available for this category, so use none: write the best plain listing you can from the details above."
-      : `Popular search words for this category, most used first: ${keywordSet.keywords.map((k) => k.word).join(", ")}`;
-
+    const { system, prompt } = buildIdeasPrompt();
     const result = await aiGenerate({
       tenantId: storeId,
       promptType: "product_ideas",
-      system: SYSTEM_PROMPT,
-      // One call for all four, so the merchant is charged one generation however many they read.
-      prompt: `${describeDraft(input, market)}\n\n${keywordLines}\n\nWrite ${SUGGESTION_COUNT} different title and description pairs.`,
+      system,
+      prompt: prompt({ ...input, category }, keywordSet, market),
       maxTokens: 1600,
     });
 

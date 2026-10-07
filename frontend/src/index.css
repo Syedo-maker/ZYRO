@@ -1,6 +1,6 @@
 /* A CSS @import is only valid before every other rule, and "tailwindcss" expands into
    thousands of rules, so the fonts import must come first or browsers silently drop it. */
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
 @import "tailwindcss";
 
 /*
@@ -14,6 +14,28 @@
 @theme {
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+
+  /*
+   * The marketing landing page only (src/pages/landing/). Deliberately a separate set: the app's
+   * own indigo tokens above dress forty-odd screens whose contrast was audited in Phase 0, and
+   * re-skinning those was not asked for. Nothing here is used outside the landing page.
+   *
+   * Measured with the sRGB relative-luminance formula, as the tokens above were:
+   *   cream on green   11.2   green on cream  11.2   green on sage  9.53   all comfortably AA
+   *   white on #E8703D  3.08  green on it     4.04   it on cream    2.77
+   *
+   * So the brand orange CANNOT carry small text anywhere: it is for large headings (3:1 suffices
+   * at 24px bold and above), borders, and the call-to-action band's background. Anything small or
+   * button-shaped uses the deeper terracotta below, which measures 5.24 on cream and 5.82 behind
+   * white text. Same accent family, readable.
+   */
+  --font-landing: "Plus Jakarta Sans", system-ui, sans-serif;
+  --color-lp-green: #0b3b33;
+  --color-lp-green-soft: #14524a;
+  --color-lp-cream: #f4f3ee;
+  --color-lp-sage: #dde3db;
+  --color-lp-accent: #e8703d;
+  --color-lp-accent-strong: #a8481b;
 
   --color-bg: oklch(98% 0.005 260);
   --color-surface: oklch(100% 0 0);
@@ -68,5 +90,18 @@ body {
   }
   body {
     background: white;
+  }
+}
+
+/* The landing page demo's suggestion cards, appearing one after another. Only ever applied through
+   Tailwind's motion-safe: variant, so a visitor who asked for less motion simply sees them. */
+@keyframes demoCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

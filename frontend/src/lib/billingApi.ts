@@ -1,5 +1,5 @@
 import { apiFetch, ApiError } from './apiClient'
-import type { BillingOverview, PlatformSummary, PlatformTenantRow, UpgradeHint } from '../types/billing'
+import type { BillingOverview, PlanInfo, PlatformSummary, PlatformTenantRow, TopUpPackInfo, UpgradeHint } from '../types/billing'
 import type { PaginationInfo } from '../types/api'
 
 /** Plans, subscriptions and AI top-up packs. Owner-only on the server; nothing here changes a plan by itself, only Stripe's confirmation does. */
@@ -9,6 +9,15 @@ export const billingApi = {
   subscribe: (storeId: string, plan: 'PRO' | 'BUSINESS') => apiFetch<{ url: string }>(`/stores/${storeId}/billing/subscribe`, { method: 'POST', body: { plan } }),
   topUp: (storeId: string, pack: string) => apiFetch<{ url: string }>(`/stores/${storeId}/billing/top-up`, { method: 'POST', body: { pack } }),
   portal: (storeId: string) => apiFetch<{ url: string }>(`/stores/${storeId}/billing/portal`, { method: 'POST' }),
+}
+
+/**
+ * The public plan catalogue (`GET /plans`): no token, because the landing page shows prices to
+ * people who have not signed up. Read from the server so the marketing page and the billing page
+ * can never disagree about what a plan costs.
+ */
+export const plansApi = {
+  list: async () => (await apiFetch<{ currency: string; plans: PlanInfo[]; topUpPacks: TopUpPackInfo[] }>('/plans')).plans,
 }
 
 /** Super administrators only: per-store totals, no customer data. */

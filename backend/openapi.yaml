@@ -2735,6 +2735,104 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  # ── LANDING PAGE DEMO ─────────────────────────────────────────────────
+  /demo/product-ideas/examples:
+    get:
+      tags: [ai]
+      operationId: demo_product_ideas_examples
+      summary: The product phrases the landing page demo offers as examples
+      description: |
+        Public. These are generated ahead of time by `scripts/seed-demo-ideas.ts` and cached, so
+        asking for one of them costs no AI call at all.
+      security: []
+      responses:
+        "200":
+          description: Example phrases
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [examples]
+                properties:
+                  examples:
+                    type: array
+                    items:
+                      type: object
+                      required: [phrase, category]
+                      properties:
+                        phrase: { type: string }
+                        category: { type: string }
+
+  /demo/product-ideas:
+    post:
+      tags: [ai]
+      operationId: demo_product_ideas
+      summary: Trending product suggestions for the landing page demo
+      description: |
+        Public, because the people this demo exists to convince have no account yet. It runs the
+        same prompt and the same keyword sources as `product_ideas_suggest`, so a visitor sees the
+        real feature rather than a mock-up of it.
+
+        **It can never spend a store's AI allowance.** The one call that gets through is billed to
+        the platform, so no quota is reserved, spent or recorded against any tenant. Its cost is
+        capped in four layers: prepared examples answered from a cache, a cache for any repeated
+        phrase, a per-visitor hourly cap AND a global daily cap across every visitor, and a timeout.
+
+        It never fails for an ordinary reason: a spent cap, an AI outage or a timeout all come back
+        as `200` with `origin: example` and a `note` saying so. A saved answer is never presented as
+        a fresh one. Nothing is written, and no number that could be read as a search volume is
+        returned: keywords are words only.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phrase]
+              properties:
+                phrase: { type: string, minLength: 2, maxLength: 60, description: "A product the visitor typed." }
+                category: { type: string, maxLength: 60 }
+      responses:
+        "200":
+          description: Suggestions, live or saved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [phrase, category, suggestions, keywords, trendDataAvailable, origin]
+                properties:
+                  phrase: { type: string }
+                  category: { type: string }
+                  suggestions:
+                    type: array
+                    maxItems: 3
+                    items:
+                      type: object
+                      required: [title, description, keywordsUsed]
+                      properties:
+                        title: { type: string }
+                        description: { type: string }
+                        keywordsUsed:
+                          type: array
+                          items: { type: string }
+                          description: "Verified on the server against both the keyword list and the text the model wrote."
+                  keywords:
+                    type: array
+                    items: { type: string }
+                    description: "Words only. The weights that order them are never sent, so nothing here can be read as a search volume."
+                  trendDataAvailable: { type: boolean }
+                  origin:
+                    type: string
+                    enum: [live, cached, example]
+                    description: "Where this answer came from, so the page can say so rather than implying it is fresh."
+                  note: { type: [string, "null"], description: "Why a saved example is being shown; null when it is not." }
+        "400":
+          description: A phrase shorter than 2 characters or longer than 60
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   # ── PLANS AND BILLING (Part A) ────────────────────────────────────────
   /plans:
     get:
