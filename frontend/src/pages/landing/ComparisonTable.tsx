@@ -25,7 +25,7 @@ export function ComparisonTable() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <h2 className="max-w-2xl font-landing text-3xl font-extrabold leading-tight text-lp-green sm:text-4xl">
-            Why ShopMind AI
+            Why ZYRO
           </h2>
           <p className="mt-4 max-w-2xl text-base text-lp-green/80">
             We have not named anyone, because platforms change their prices and we would rather be accurate than clever.
@@ -38,7 +38,7 @@ export function ComparisonTable() {
             {ROWS.map((row) => (
               <li key={row.feature} className="rounded-2xl border border-lp-green/10 bg-lp-cream p-5">
                 <h3 className="font-landing text-base font-bold text-lp-green">{row.feature}</h3>
-                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-lp-accent-strong">ShopMind AI</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-lp-accent-strong">ZYRO</p>
                 <p className="mt-1 text-sm text-lp-green/85">{row.ours}</p>
                 <p className="mt-3 text-xs font-bold uppercase tracking-wide text-lp-green/50">A typical platform</p>
                 <p className="mt-1 text-sm text-lp-green/65">{row.typical}</p>
@@ -48,14 +48,14 @@ export function ComparisonTable() {
 
           <div className="mt-9 hidden overflow-hidden rounded-2xl border border-lp-green/10 bg-lp-cream md:block">
             <table className="w-full border-collapse text-left">
-              <caption className="sr-only">ShopMind AI compared with a typical hosted store platform</caption>
+              <caption className="sr-only">ZYRO compared with a typical hosted store platform</caption>
               <thead>
                 <tr className="bg-lp-green text-lp-cream">
                   <th scope="col" className="px-5 py-4 font-landing text-sm font-bold">
                     Feature
                   </th>
                   <th scope="col" className="px-5 py-4 font-landing text-sm font-bold">
-                    ShopMind AI
+                    ZYRO
                   </th>
                   <th scope="col" className="px-5 py-4 font-landing text-sm font-bold text-lp-cream/75">
                     A typical hosted store platform

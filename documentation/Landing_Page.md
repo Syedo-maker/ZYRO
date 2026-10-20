@@ -1,4 +1,4 @@
-# The ShopMind AI Landing Page
+# The ZYRO Landing Page
 
 Built 2026-10-06, after the role separation work and before Phase 7. Branch `feature/landing-page`.
 

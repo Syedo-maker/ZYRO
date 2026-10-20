@@ -1,4 +1,4 @@
-// Browser test for the ShopMind AI landing page at "/".
+// Browser test for the ZYRO landing page at "/".
 //
 // What it proves: every section is present and in order; the live demo answers and labels where its
 // answer came from; the FAQ opens with a keyboard; the two calls to action lead to the right halves
@@ -63,7 +63,7 @@ await step('the page loads', page, async () => {
   check('"/" shows the landing page, not the dashboard', !page.url().includes('/admin'), page.url())
   check('there is exactly one h1', (await page.locator('h1').count()) === 1)
   check('the h1 leads with the trending idea', /searching for/i.test(await page.locator('h1').innerText()))
-  check('the page title is set for search engines', (await page.title()).includes('ShopMind AI'), await page.title())
+  check('the page title is set for search engines', (await page.title()).includes('ZYRO'), await page.title())
   const description = await page.locator('meta[name="description"]').getAttribute('content')
   check('a meta description is present', (description ?? '').length > 60)
   const og = await page.locator('meta[property="og:image"]').getAttribute('content')
@@ -80,7 +80,7 @@ await step('every section is present, in order', page, async () => {
   check('all five AI features are shown', (await page.locator('#features h3').count()) === 5, String(await page.locator('#features h3').count()))
   check('the commerce feature grid is there', /everything else a shop actually needs/i.test(order))
   check('how it works is there', /live in three steps/i.test(order))
-  check('the comparison is there', /why shopmind ai/i.test(order))
+  check('the comparison is there', /why zyro/i.test(order))
   check('pricing is there', /start free/i.test(order))
   check('trust is there', /safe/i.test(order))
   check('the FAQ is there', /questions, answered straight/i.test(order))
@@ -103,7 +103,16 @@ await step('the demo answers on load', page, async () => {
   check('the demo shows suggestions without the visitor doing anything', (await cards.count()) === 3, String(await cards.count()))
   check('it is labelled as trending in Pakistan', await demo.getByText('Trending in Pakistan').isVisible())
   const text = await demo.innerText()
-  check('at least one suggestion names the popular searches it uses', /Uses popular searches:/i.test(text))
+  // Whether keywords exist depends on what trend data the database holds, so the test checks the
+  // promise the page makes either way: if popular searches are shown, a suggestion cites the ones it
+  // uses; if there are none, the page says so plainly. What must never happen is neither: keywords
+  // quietly missing with no explanation.
+  const hasKeywords = /Popular searches:/i.test(text)
+  if (hasKeywords) {
+    check('a suggestion names the popular searches it uses', /Uses popular searches:/i.test(text))
+  } else {
+    check('with no trend data, the page says so plainly', /do not have trend data/i.test(text), text.slice(0, 160))
+  }
   check('it says where the answer came from', /prepared example|written just now|from the cache/i.test(text), text.slice(-120))
   check('no search volume or count is shown anywhere in the demo', !/\b\d+\s*(searches|monthly|per month|volume)\b/i.test(text))
 })

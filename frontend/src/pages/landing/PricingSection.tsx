@@ -35,7 +35,7 @@ function planPoints(plan: PlanInfo): string[] {
     `${plan.aiChatMessagesPerMonth.toLocaleString()} shop assistant messages a month`,
     `${plan.maxStaff} staff accounts besides you`,
     plan.analyticsMaxDays >= 366 ? 'A full year of reports' : `${plan.analyticsMaxDays} days of reports`,
-    plan.customDomain ? 'Your own domain (coming soon)' : 'Your shop on a ShopMind link',
+    plan.customDomain ? 'Your own domain (coming soon)' : 'Your shop on a ZYRO link',
   ]
 }
 

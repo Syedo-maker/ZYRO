@@ -15,7 +15,7 @@ const QUESTIONS: { q: string; a: string }[] = [
   },
   {
     q: 'How do the trending suggestions actually work?',
-    a: 'When you name a product, we look up the popular search words for that category from three real sources: words from products selling well across ShopMind shops, Google Trends data a platform administrator has imported, and what shoppers type into ShopMind search boxes. The AI is given that list and asked to write titles and descriptions around the fitting ones. Each suggestion then shows which of those words it genuinely contains, checked on our server rather than taken from the AI.',
+    a: 'When you name a product, we look up the popular search words for that category from three real sources: words from products selling well across ZYRO shops, Google Trends data a platform administrator has imported, and what shoppers type into ZYRO search boxes. The AI is given that list and asked to write titles and descriptions around the fitting ones. Each suggestion then shows which of those words it genuinely contains, checked on our server rather than taken from the AI.',
   },
   {
     q: 'Can one shop see another shop’s data through this?',
@@ -31,7 +31,7 @@ const QUESTIONS: { q: string; a: string }[] = [
   },
   {
     q: 'Can I use my own domain name?',
-    a: 'Not yet, honestly. The Business plan reserves a custom domain and you can save one, but serving your shop on it is still being built. Until then every shop runs on its own ShopMind link, which works perfectly well for sharing.',
+    a: 'Not yet, honestly. The Business plan reserves a custom domain and you can save one, but serving your shop on it is still being built. Until then every shop runs on its own ZYRO link, which works perfectly well for sharing.',
   },
   {
     q: 'Does it work on a phone?',

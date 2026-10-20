@@ -38,7 +38,7 @@ export function LandingFooter() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>
             <p className="font-landing text-lg font-extrabold text-lp-cream">
-              ShopMind<span className="text-lp-accent"> AI</span>
+              ZYRO
             </p>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-lp-cream/70">
               A free place for small businesses in Pakistan to sell online, with the AI built in rather than sold separately.
@@ -73,7 +73,7 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-12 flex flex-col gap-3 border-t border-lp-cream/15 pt-6 text-sm text-lp-cream/55 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} ShopMind AI</p>
+          <p>&copy; {new Date().getFullYear()} ZYRO</p>
           <p className="max-w-xl sm:text-right">
             A final year project by Muhammad Ibrahim and Syed Sikander Gillani, supervised by Mr. Saad Ilyas. Built as coursework, not as a
             registered company.
