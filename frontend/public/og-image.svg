@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="ShopMind AI: add a product, see what Pakistan is actually searching for">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="ZYRO: add a product, see what Pakistan is actually searching for">
   <!--
     The link preview card. Drawn rather than photographed: it is a few kilobytes, stays sharp at any
     size, and shows the actual feature (suggestions with their keyword attribution) instead of a
@@ -13,7 +13,7 @@
   <circle cx="300" cy="620" r="150" fill="#DDE3DB" opacity="0.08"/>
 
   <text x="88" y="118" font-family="Plus Jakarta Sans, Segoe UI, sans-serif" font-size="28" font-weight="800" fill="#F4F3EE">
-    ShopMind<tspan fill="#E8703D"> AI</tspan>
+    ZYRO
   </text>
 
   <text x="88" y="236" font-family="Plus Jakarta Sans, Segoe UI, sans-serif" font-size="30" font-weight="700" fill="#E8703D" letter-spacing="3">

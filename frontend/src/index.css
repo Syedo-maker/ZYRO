@@ -1,6 +1,4 @@
-/* A CSS @import is only valid before every other rule, and "tailwindcss" expands into
-   thousands of rules, so the fonts import must come first or browsers silently drop it. */
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
+/* Fonts are self-hosted (see src/fonts.ts), not imported from Google. */
 @import "tailwindcss";
 
 /*

@@ -46,7 +46,7 @@ export function LandingNav() {
     >
       <nav aria-label="Main" className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
         <Link to="/" className="font-landing text-lg font-extrabold text-lp-cream">
-          ShopMind<span className="text-lp-accent"> AI</span>
+          ZYRO
         </Link>
 
         <ul role="list" className="ml-6 hidden items-center gap-6 lg:flex">

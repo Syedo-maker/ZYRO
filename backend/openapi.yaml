@@ -3,18 +3,29 @@ info:
   title: ZYRO API
   summary: Multi-tenant e-commerce platform with built-in AI content generation and shopping assistant.
   description: |
-    This is the API contract draft for Phase 0, Module 3 of the ZYRO (ShopMind AI) implementation
-    plan. It consolidates the endpoints sketched per-phase in `documentation/Implementation_Plan.md`
-    into one consistent, code-gen-friendly contract so frontend and backend work (owned by different
-    students per the scope document's Section 12 module split) can proceed in parallel without
-    integration surprises.
+    The ZYRO API: online stores, a point-of-sale register, and the AI that writes listings, answers
+    shoppers and advises merchants, all on one commerce core. This document is the contract, and the
+    server is tested against it.
+
+    ## Versioning
+
+    The version lives in the path (`/api/v1`). Within a major version, changes are additive only:
+    new endpoints, new optional fields, new values a client should already tolerate. Removing or
+    renaming anything, or making an optional field required, ships as a new major version at a new
+    path, with the previous one kept running while clients move.
+
+    ## Errors
+
+    Every error is an RFC 9457 problem document (`application/problem+json`) with a stable `type`
+    URI, a human-readable `title` and `detail`, and the HTTP `status`. Some carry extra members, such
+    as `upgrade` on a plan-limit refusal. Clients should branch on `type`, never on the wording.
 
     ## Multi-tenancy
 
-    Every tenant-scoped resource is nested under `/stores/{storeId}/...`. `storeId` must always be
-    supplied explicitly, this mirrors the tenant-scoping design from Phase 0 Module 1 (Prisma
-    middleware and the Mongoose `tenantScopePlugin` both refuse a query with no tenant filter), so the
-    API surface makes the same requirement visible to callers rather than inferring it silently.
+    Every tenant-scoped resource is nested under `/stores/{storeId}/...`, and `storeId` is always
+    supplied explicitly. The data layer refuses any query that does not name its store, so the API
+    makes the same requirement visible to callers rather than inferring a store silently. Whether a
+    caller may act on a store is decided on every request, from who owns it and who is staff there.
 
     ## Auth model
 
@@ -22,9 +33,8 @@ info:
       a logged-in customer account.
     - `guestSession`: an opaque guest session id (issued on first cart interaction, carried in the
       `X-Guest-Session-Id` header). Storefront browsing, cart, and checkout endpoints accept either
-      `bearerAuth` OR `guestSession`, since Section 6 of the scope document requires guest checkout to
-      work without an account.
-  version: "0.1.0-draft"
+      `bearerAuth` OR `guestSession`, so a shopper can buy without creating an account.
+  version: "1.0.0"
 
 servers:
   - url: /api/v1

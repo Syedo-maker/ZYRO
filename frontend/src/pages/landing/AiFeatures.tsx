@@ -82,7 +82,7 @@ export function AiFeatures() {
         title="Trending suggestions, while you add the product"
         body="Name a product and the AI offers titles and descriptions built around the words shoppers are really using. Each suggestion shows which of those words it contains, so you can see where the wording came from instead of taking it on trust."
         points={[
-          'Keywords come from real data: what sells across ShopMind shops, imported Google Trends, and what shoppers search for here.',
+          'Keywords come from real data: what sells across ZYRO shops, imported Google Trends, and what shoppers search for here.',
           'A word is only used once several different shops have seen it, so no shop can read another shop’s data.',
           'If a category has no trend data yet, it says so plainly rather than making something up.',
           'Nothing is saved until you pick a suggestion and save the product. Edit any of it first.',

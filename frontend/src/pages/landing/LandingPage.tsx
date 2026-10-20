@@ -27,7 +27,7 @@ import { LandingFooter } from './LandingFooter'
  * The page sets its own document title and meta description on mount, because this is a single-page
  * app and index.html's tags are shared with the dashboard and the storefronts.
  */
-const TITLE = 'ShopMind AI: a free online shop for small businesses, with AI built in'
+const TITLE = 'ZYRO: a free online shop for small businesses, with AI built in'
 const DESCRIPTION =
   'Open a free online shop in Pakistan and let AI write your product titles and descriptions from what shoppers are really searching for. Cash on delivery, counter sales and reports included. No card needed.'
 

@@ -1,11 +1,13 @@
 # ZYRO
 
-> **ZYRO is the product name for ShopMind AI**, a free-to-start, AI-native, multi-tenant
-> Commerce and point-of-sale platform for small businesses, developed as a Final Year Project at
-> Shifa Tameer-e-Millat University. This repository is where all implementation work for the
-> project lives.
+> **ZYRO** is a free-to-start, AI-native, multi-tenant commerce and point-of-sale platform for
+> small businesses: an online store, a shop-floor register and the AI that runs alongside them, on
+> one catalogue, one inventory and one set of orders.
 
 ## Project
+
+Built as a Final Year Project at Shifa Tameer-e-Millat University, where it is registered under the
+academic title **ShopMind AI**.
 
 - **Muhammad Ibrahim**, BSAI-23F-0048
 - **Syed Sikander Gillani**, BSAI-23F-0062

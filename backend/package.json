@@ -2,7 +2,7 @@
     "name": "zyro-backend",
     "version": "0.1.0",
     "private": true,
-    "description": "ZYRO (ShopMind AI) backend API",
+    "description": "ZYRO backend API",
     "main": "dist/index.js",
     "scripts": {
         "dev": "tsx watch src/index.ts",
