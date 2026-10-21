@@ -4,6 +4,7 @@ import { normaliseCategory } from "../trends/trends.aggregate";
 import { trendingKeywords } from "../ideas/keywords.sources";
 import { buildIdeasPrompt, creditedKeywords, parseSuggestions, SUGGESTION_COUNT } from "../ideas/ideas.service";
 import { DEMO_EXAMPLES, findExample, nearestExample, normaliseDemoPhrase, type DemoExample } from "./demo.examples";
+import { logger } from "../../lib/logger";
 
 /**
  * The landing page's trending-suggestions demo.
@@ -193,7 +194,7 @@ async function generateLive(phrase: string, category: string): Promise<DemoResul
       note: null,
     };
   } catch (err) {
-    console.error(`[demo] could not generate suggestions for ${phrase}: ${(err as Error).message}`);
+    logger.error(`[demo] could not generate suggestions for ${phrase}: ${(err as Error).message}`);
     return null;
   }
 }

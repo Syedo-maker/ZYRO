@@ -45,8 +45,8 @@ export function OrderPlacedPage() {
     setBusy(true)
     setError(null)
     try {
-      const url = await paymentsApi.uploadProofImage(store.id, orderId, file)
-      await paymentsApi.submitProof(store.id, orderId, { imageUrl: url, declaredAmount: Number(amount), declaredReference: reference.trim() || undefined })
+      const { key } = await paymentsApi.uploadProofImage(store.id, orderId, file)
+      await paymentsApi.submitProof(store.id, orderId, { imageKey: key, declaredAmount: Number(amount), declaredReference: reference.trim() || undefined })
       setStatus(await paymentsApi.proofStatus(store.id, orderId))
     } catch (err) {
       setError(errorMessage(err, 'Could not send your receipt.'))

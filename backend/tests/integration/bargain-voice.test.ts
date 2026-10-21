@@ -99,6 +99,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   setRecommendationClient(undefined);
+  // The recordings this suite stored (local driver).
+  const { env } = await import("../../src/config/env");
+  for (const t of created.tenantIds) (await import("node:fs")).rmSync((await import("node:path")).resolve(env.storage.privateDir, "voice", t), { recursive: true, force: true });
   await Product.deleteMany({ storeId: { $in: created.tenantIds } });
   for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
   for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
@@ -338,6 +341,21 @@ describe("a voice note only ever makes a draft", () => {
     expect((await sendVoice(A.storeId, cashier.json.accessToken)).status).toBe(403);
     expect((await api("GET", `/stores/${A.storeId}/voice-notes`, { token: cashier.json.accessToken })).status).toBe(403);
     expect((await api("GET", `/stores/${A.storeId}/voice-notes`)).status).toBe(401);
+  });
+
+  it("a recording is private: the merchant gets a signed link, and nothing else reaches it", async () => {
+    const recorded = await sendVoice(A.storeId, A.token);
+    expect(recorded.status).toBe(201);
+    const listed = (await api("GET", `/stores/${A.storeId}/voice-notes`, { token: A.token })).json as { id: string; audioUrl: string }[];
+    const link = new URL(listed.find((n) => n.id === recorded.json.id)!.audioUrl);
+    expect(link.searchParams.get("signature")).toBeTruthy();
+    const played = await request(app).get(link.pathname + link.search);
+    expect(played.status).toBe(200);
+    expect(played.headers["content-type"]).toMatch(/^audio\/webm/);
+    const key = link.pathname.replace("/api/v1/files/", "");
+    expect(key).toMatch(new RegExp(`^voice/${A.storeId}/`));
+    expect((await request(app).get(link.pathname)).status).toBe(404);
+    expect((await request(app).get(`/uploads/${key}`)).status).toBe(404);
   });
 
   it("a file that is not a recording is refused", async () => {

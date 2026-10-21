@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import express, { ErrorRequestHandler } from "express";
+import { pinoHttp } from "pino-http";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -34,6 +36,10 @@ import { voiceRouter } from "./modules/voice/voice.routes";
 import { bargainRouter } from "./modules/bargain/bargain.routes";
 import { storeTrendsRouter } from "./modules/trends/trends.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
+import { filesRouter } from "./modules/files/files.routes";
+import { logger } from "./lib/logger";
+import { isDraining, readiness } from "./lib/lifecycle";
+import { requestTimeout } from "./middleware/timeout.middleware";
 
 export const app = express();
 
@@ -46,6 +52,29 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
 app.use(cors({ origin: env.corsOrigin, credentials: true }));
 
+// One structured line per request, with an id that is also sent back as X-Request-Id: a merchant
+// who reports a problem can quote it, and it finds the exact line in Log Analytics. An id sent in by
+// a trusted caller (the ingress, another service) is kept so one request can be followed across
+// services. The path is logged without its query string, which can hold a signed file link.
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req, res) => {
+      const incoming = req.headers["x-request-id"];
+      const id = typeof incoming === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(incoming) ? incoming : randomUUID();
+      res.setHeader("X-Request-Id", id);
+      return id;
+    },
+    serializers: {
+      req: (req) => ({ id: req.id, method: req.method, path: String(req.url).split("?")[0] }),
+      res: (res) => ({ status: res.statusCode }),
+    },
+    customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? "error" : "info"),
+    autoLogging: { ignore: (req) => req.url === "/health" || req.url === "/ready" },
+  })
+);
+app.use(requestTimeout);
+
 // Registered before express.json(): Stripe signs the exact bytes it sends, so this route
 // needs the raw body. Server-to-server, so CORS does not apply to it.
 app.post("/api/v1/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookController);
@@ -53,11 +82,25 @@ app.post("/api/v1/webhooks/stripe", express.raw({ type: "application/json" }), s
 app.use(express.json());
 app.use(cookieParser());
 
-// Served images from uploads_image_create: binary lives on disk, only the URL is
-// ever persisted to a database (Implementation_Plan.md Phase 1).
-app.use("/uploads", express.static(env.uploadsDir));
+// Public files (product images) on the local driver. Only the public area is ever served here:
+// receipts and voice notes live in a separate folder and go through /api/v1/files with a signed
+// link (lib/storage.ts). On Azure, images are served by Blob Storage itself and this stays empty.
+// `nosniff` comes from helmet above, and the CSP stops any file being run as a page.
+app.use(
+  "/uploads",
+  express.static(env.uploadsDir, {
+    dotfiles: "deny",
+    index: false,
+    setHeaders: (res) => res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox"),
+  })
+);
 
-app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
+// Liveness and readiness (lib/lifecycle.ts explains why they are two different questions).
+app.get("/health", (_req, res) => res.status(200).json({ status: isDraining() ? "draining" : "ok" }));
+app.get("/ready", async (_req, res) => {
+  const result = await readiness();
+  res.status(result.ready ? 200 : 503).json({ status: result.ready ? "ready" : isDraining() ? "draining" : "not ready", checks: result.checks });
+});
 
 const v1 = express.Router();
 v1.use(apiLimiter);
@@ -92,6 +135,7 @@ v1.use("/stores/:storeId", storeRouter);
 // The landing page's trending suggestions demo (public; budget enforced in demo.service.ts).
 v1.use("/demo", demoRouter);
 v1.use("/plans", plansRouter);
+v1.use("/files", filesRouter);
 v1.use("/platform", platformRouter);
 app.use("/api/v1", v1);
 
@@ -105,7 +149,13 @@ app.use((req, res) => {
 });
 
 // Must be declared with 4 params for Express to treat it as an error handler.
-const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+  // The request already had its answer (it timed out, say, and the handler finished late). Nothing
+  // more can be sent; Express's own handler closes the connection.
+  if (res.headersSent) {
+    req.log.warn({ err: { message: (err as Error).message } }, "error after the response was sent");
+    return next(err);
+  }
   if (err instanceof AppError) {
     res.status(err.status).type("application/problem+json").json(err.toProblem());
     return;
@@ -125,11 +175,13 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
 
-  console.error(err);
+  req.log.error({ err }, "unhandled error");
   res.status(500).type("application/problem+json").json({
     type: "https://zyro.dev/errors/internal",
     title: "Internal server error",
     status: 500,
+    // Something to quote to support; it finds this exact failure in the logs.
+    requestId: req.id,
   });
 };
 app.use(errorHandler);

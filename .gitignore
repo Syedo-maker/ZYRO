@@ -46,3 +46,6 @@ design/wireframes/zyro-wireframes.html
 # Redis snapshot, written wherever redis-server is started from (the portable Redis in
 # tools/redis has no configured dir). Never part of the project.
 dump.rdb
+
+# Private uploads (receipts, voice notes) on the local storage driver. Never served statically.
+backend/uploads-private/

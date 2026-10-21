@@ -188,6 +188,14 @@ async function main() {
     check("upload: a PNG is accepted and a URL returned", up.status === 201 && typeof up.json.url === "string" && up.json.url.endsWith(".png"));
     const served = await fetch(up.json.url.startsWith("http") ? up.json.url : origin + up.json.url);
     check("upload: the returned URL actually serves the image", served.status === 200 && (served.headers.get("content-type") ?? "").includes("image/png"));
+    // The type is read from the bytes. A web page declared as a PNG and named .html used to be stored
+    // as .html and served from the API's origin: stored cross-site scripting.
+    const pageForm = new FormData(); pageForm.append("file", new Blob(["<html><script>alert(1)</script></html>"], { type: "image/png" }), "evil.html");
+    check("upload: a web page that claims to be a PNG is rejected with 400", (await call("POST", `/stores/${A.storeId}/uploads/images`, { token: A.token, form: pageForm })).status === 400);
+    const renamed = new FormData(); renamed.append("file", new Blob([png], { type: "image/png" }), "evil.html");
+    const renamedUp = await call("POST", `/stores/${A.storeId}/uploads/images`, { token: A.token, form: renamed });
+    check("upload: a real PNG sent as .html is stored and served as .png", renamedUp.status === 201 && renamedUp.json.url.endsWith(".png"));
+    check("upload: served uploads can never run as a page", (served.headers.get("content-security-policy") ?? "").includes("sandbox"));
     const textForm = new FormData(); textForm.append("file", new Blob(["hello"], { type: "text/plain" }), "note.txt");
     check("upload: a non-image is rejected with 400, not a 500", (await call("POST", `/stores/${A.storeId}/uploads/images`, { token: A.token, form: textForm })).status === 400);
     const bigForm = new FormData(); bigForm.append("file", new Blob([Buffer.alloc(5 * 1024 * 1024 + 10)], { type: "image/png" }), "big.png");

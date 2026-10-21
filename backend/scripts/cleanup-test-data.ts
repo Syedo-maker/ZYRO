@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 import { connectMongo } from "../src/lib/mongo";
 import { prismaUnscoped as p } from "../src/lib/prisma";
 import { getRedis, closeRedis } from "../src/lib/redis";
+import { getStorage } from "../src/lib/storage";
 
 const SLUG_PREFIXES = ["e2e-", "p1-", "vo-", "verify-", "smoke-", "aurora-"];
 const EMAIL_PREFIXES = ["e2e-", "p1e2e-", "p1sec-", "p1-", "sec-", "vo-", "verify-", "smoke-", "shopper-", "stripe-"];
@@ -27,6 +28,9 @@ async function main() {
   if (carts.length) await getRedis().del(...carts);
 
   await p.tenant.deleteMany({ where: { id: { in: ids } } });
+  // Their uploaded files too: product images, receipts and voice notes (lib/storage.ts).
+  const storage = getStorage();
+  for (const id of ids) await storage.removeStore(id);
   const users = await p.user.deleteMany({ where: { OR: EMAIL_PREFIXES.map((e) => ({ email: { startsWith: e } })) } });
   // Part E: the platform-wide COD signals the browser tests leave behind. The table belongs to no
   // store, so it is cleaned by the test phone numbers the suites use, hashed the same way the app does.

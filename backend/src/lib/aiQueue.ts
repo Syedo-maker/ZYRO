@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { Queue, QueueEvents, UnrecoverableError, Worker, type Job } from "bullmq";
 import { getBullRedis } from "./redis";
 import { getAiProvider, type AiGenerateResult } from "./aiProvider";
+import { logger } from "./logger";
 
 /**
  * BullMQ queues are a Redis-global resource, not a per-process one: any worker in any process
@@ -80,7 +81,7 @@ export function startAiWorker(): Worker<AiJobData, AiGenerateResult> {
     },
     { connection: getBullRedis(), concurrency: 4 }
   );
-  worker.on("error", (err) => console.error("AI worker error:", err.message));
+  worker.on("error", (err) => logger.error({ err: err.message }, "AI worker error"));
   return worker;
 }
 
