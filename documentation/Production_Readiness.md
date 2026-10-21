@@ -11,8 +11,8 @@ afterwards. Each phase ends with a test gate.
 | 0 | Groundwork: skills, baseline | done |
 | 1 | Rebrand ShopMind AI to ZYRO | done |
 | 2 | One design system for the whole platform | done |
-| 3 | Production hardening | done, awaiting review; recommendation image still to build (network) |
-| 4 | Whole-system workflow tests | |
+| 3 | Production hardening | done, awaiting review |
+| 4 | Whole-system workflow tests | done, awaiting review |
 | 5 | Azure deployment structure | |
 | 6 | Smoke tests on a local production stack | |
 | 7 | Documentation and handover | |
@@ -490,3 +490,129 @@ build pipeline in Phase 5, and in any case before Phase 6's smoke tests, which n
 
 Test data was removed afterwards (10 stores and 17 users remain, all real), together with the files
 the deleted test stores had uploaded. `cleanup-test-data.ts` now deletes a store's files with it.
+
+---
+
+## Phase 4: Whole-system tests
+
+The suites before this phase tested each module well, mostly one at a time. This phase tests the
+seams: what the frontend asks for against what the server offers, what the server sends against
+what the contract promises, the workflows against each other, and every request against the
+services it depends on failing.
+
+### Every response checked against the contract
+
+`tests/helpers/conformance.ts` runs inside every integration test file (a Jest setup file). Every
+JSON response the API sends in any test is checked against `openapi.yaml`: a success must be a
+documented status for that operation and match its schema (required fields, types, formats, allowed
+values), and every error must be an RFC 9457 problem document. A path the contract does not describe
+is a violation too. The file fails, naming each violation.
+
+It runs on the requests the suite already makes, which cover every module, so the contract is
+checked against real scenarios rather than samples written for the purpose.
+
+**Its first full run found 24 distinct violations, from two causes. The server was right both
+times; the contract was wrong:**
+
+- **Fields documented as always-strings that are `null` when unset**: a user's name (optional at
+  sign-up), a store's logo and colour, a product's SKU, barcode and SEO text. A client generated from
+  the contract would have crashed on the first product without a SKU. `Product` is now listed in full
+  rather than built on `ProductInput`, because a request never sends `null` but a response does.
+- **Payment methods.** The contract listed only the register's (`cash`, `card`, `stripe`,
+  `other`), but orders also carry cash on delivery, bank transfer and gateway payments. Every order
+  paid any of those ways broke the documented shape.
+
+The run also writes `coverage/conformance.jsonl`, a record of which operations the suite exercised.
+
+### Every frontend call checked against the contract
+
+`tests/unit/ui-contract.test.ts` reads the frontend's source with the TypeScript compiler, finds
+every call to `apiFetch` (133 of them), works out the method and path each one requests, including
+paths built by helper functions, and checks that `openapi.yaml` documents exactly that operation.
+All 133 do.
+
+With the existing route test (every documented operation exists in the server), the three now hold
+each other in place: the pages, the contract and the server cannot drift apart unnoticed.
+
+### Journeys across every kind of user
+
+`tests/integration/journeys.test.ts` runs one day in one shop, with every kind of person who uses
+ZYRO, one after another, and checks the invariants between them after every step:
+
+| Who | What they do |
+|---|---|
+| Owner | Sets up payments, two products, a clerk and a cashier |
+| Guest shopper | Buys two cups by cash on delivery, without an account |
+| Signed-in shopper | Buys the shawl by bank transfer and sends in the receipt |
+| Clerk (`orders_write`) | Checks and accepts the receipt, records the delivery cash; is refused a refund and the register |
+| Cashier (`pos_sell`) | Opens the drawer, sells a cup in the shop, closes with no difference; is refused the dashboard |
+| Owner | Reads the dashboard, refunds the shawl with restock |
+| Another owner | Sees none of it |
+| Platform admin | Sees the store in the platform totals, and no customer data |
+
+The invariants: stock always equals what was stocked, less what was sold and not returned, across
+the online shop and the register together; every order adds up (items, less discount, plus tax and
+shipping, equals the total); the dashboard's gross and net sales equal the orders and refunds; a
+refund is never given twice; nothing reaches another store.
+
+**It found a defect.** A signed-in shopper's first cash-on-delivery or bank-transfer order was
+attached to no customer at all. A card payment creates the store's customer record and links it to
+the shopper's account; the cash and transfer path only looked for an existing one. So the shopper's
+order was missing from their own "My orders", and the merchant had no customer record for them.
+Orders now create or link the customer exactly as card payments do. (The cash-on-delivery risk
+check still uses only a customer that already existed, so a brand-new record cannot vouch for
+itself.)
+
+### When a dependency hangs
+
+`tests/integration/dependency-failures.test.ts` makes each outside service hang, the worst kind of
+outage because nothing fails, it just never answers, and checks the request still ends with
+something a person can act on:
+
+| Hangs | What the person gets |
+|---|---|
+| The AI provider | A 503 problem within the job timeout, and the store's AI allowance is not charged |
+| The recommendation service (a server that accepts and never replies) | The product page loads, without recommendations, in under 1.5 s |
+| Stripe | Checkout answers with the request-timeout 503 instead of hanging |
+
+Auditing every outbound call for this found three with no limit of their own:
+
+- **Anthropic.** The SDK waits up to 10 minutes. The API stops waiting after 60 seconds, but the
+  worker kept the slot busy long after nobody was waiting. Now 25 seconds, one retry.
+- **Stripe.** The SDK's 80 seconds a try, plus retries, could outlast the API's own 90-second limit,
+  so a slow Stripe would have surfaced as a generic timeout. Now 20 seconds, one retry; Stripe calls
+  carry idempotency keys, so a retry never charges twice.
+- **SendGrid** had no limit at all. Now 10 seconds; the next scan tries again.
+
+### Test mistakes, so they are not mistaken for findings
+
+Building the journey also turned up three things that looked like defects and were not: order
+statuses are lowercase in the API (`paid`, not `PAID`); collecting the cash for a delivery takes the
+order straight to `completed`; and the dashboard is served from a five-minute cache that labels its
+answer `cached`. The journey now checks that label instead of expecting a figure that is deliberately
+up to five minutes old.
+
+### The coverage floor, and a test that ended the run
+
+The first gate run failed the coverage floor for functions (91.41% against 92%). The gap was Phase
+3's: the shutdown sequence and the Azure Blob driver were proven against real containers, but no Jest
+test ran them. Rather than lower the floor, two suites were added: the shutdown sequence, driven by
+calling the handler a signal would call (Windows cannot deliver SIGTERM), and the Azure driver
+against the Azurite emulator, including that a read-only link cannot overwrite a receipt.
+
+The next run stopped early: a shutdown test let its shutdown finish after the test, and the real
+`process.exit` ended Jest itself. The run reported success, because it was cut off rather than
+failed. The test now waits for its shutdown, and the gate checks for that message as well as the
+totals.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Backend suite | 51 suites, 1,769 tests, all passing, nothing cut short |
+| Response conformance | every JSON response in every suite matches `openapi.yaml` (after the 24 contract fixes above) |
+| Frontend calls | all 133 are documented operations |
+| Journeys | 9 of 9 steps, every invariant holding |
+| Dependency failures | 4 of 4 |
+| Azure Blob driver, against Azurite | 5 of 5 |
+| Coverage | 91.29% statements, 75.72% branches, 92.00% functions, 94.11% lines: every floor met (90, 75, 92, 92) |

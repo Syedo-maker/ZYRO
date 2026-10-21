@@ -9,6 +9,7 @@ import { discountService, type ResolvedDiscount } from "../discounts/discount.se
 import { createOrder, type OrderSnapshot, type PricedLine } from "../commerce/order.service";
 import { cartKey, type CartOwner } from "../cart/cart.service";
 import { paymentsService, type CodRiskSubject } from "./payments.service";
+import { customerService } from "../customers/customer.service";
 import type { PlaceLocalOrderInput } from "./payments.validation";
 
 /**
@@ -151,10 +152,25 @@ export const localCheckoutService = {
       outcome = offer.outcome ?? "allowed";
     }
 
+    // The order belongs to a customer of this store, created on the shopper's first order and linked
+    // to their account when they are signed in, exactly as a card payment does (stripe.webhook.ts).
+    // Without it a shopper's first cash-on-delivery or bank-transfer order was attached to no one:
+    // missing from their "My orders" and from the store's customers. (The risk score above uses
+    // only a customer that already existed, so a new one cannot vouch for itself.)
+    const orderCustomerId = await prisma.$transaction((tx) =>
+      customerService.findOrCreate(tx, {
+        tenantId: storeId,
+        userId: owner.kind === "user" ? owner.id : undefined,
+        email: input.email ?? undefined,
+        name: input.name,
+        phone: input.phone,
+      })
+    );
+
     const order = await createOrder({
       tenantId: storeId,
       channel: "ONLINE",
-      customerId: customerId ?? undefined,
+      customerId: orderCustomerId ?? customerId ?? undefined,
       guestEmail: input.email ?? undefined,
       shipping: {
         name: input.name,
