@@ -12,3 +12,6 @@ backend/prisma/migrations/**/*.sql text eol=lf
 Dockerfile text eol=lf
 *.dockerignore text eol=lf
 .dockerignore text eol=lf
+
+# Read by nginx inside the Linux web image.
+frontend/nginx/* text eol=lf

@@ -1,0 +1,48 @@
+# The web container: serves the built site and forwards /api to the API, so the browser sees one
+# origin. That is what lets the httpOnly, SameSite=lax login cookie work, exactly as the Vite dev
+# server's proxy does locally. ${API_UPSTREAM} is filled in at start (nginx's template step), for
+# example http://ca-zyro-prod-api on Azure or http://api:5000 in docker compose.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    # A voice note may be 10 MB; a little headroom for the form around it.
+    client_max_body_size 12m;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok";
+    }
+
+    location /api/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        # Each hop appends who it heard from; the API counts the hops (TRUST_PROXY) to find the visitor.
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id $http_x_request_id;
+        # Longer than the API's own 90-second limit, so the API, which knows what went wrong,
+        # always answers first.
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+
+    # Built files carry a content hash in their names, so they never change: cache for a year.
+    location /assets/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Everything else is the single-page app; index.html is always revalidated so a release shows at once.
+    location / {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri $uri/ /index.html;
+    }
+}
