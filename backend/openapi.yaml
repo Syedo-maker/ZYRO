@@ -4646,7 +4646,7 @@ components:
       properties:
         id: { type: string }
         email: { type: string, format: email }
-        name: { type: string }
+        name: { type: [string, "null"], description: "Null when the person never gave one." }
         platformAdmin: { type: boolean, description: "Only in the users_me_get answer: true for a platform operator, who may open the /platform routes." }
         preferredExperience:
           type: [string, "null"]
@@ -4660,8 +4660,8 @@ components:
         id: { type: string }
         name: { type: string }
         slug: { type: string }
-        logoUrl: { type: string, format: uri }
-        themeColor: { type: string }
+        logoUrl: { type: [string, "null"], format: uri }
+        themeColor: { type: [string, "null"], description: "The merchant's colour, #RRGGBB. Storefronts adjust it for contrast; see the frontend's lib/brandTheme.ts." }
         currency: { type: string, description: "The store's currency (ISO code), used to format prices." }
         description:
           type: [string, "null"]
@@ -4746,18 +4746,34 @@ components:
         seoDescription: { type: string, maxLength: 160, description: "Meta description for the storefront product page." }
 
     Product:
-      allOf:
-        - $ref: "#/components/schemas/ProductInput"
-        - type: object
-          required: [id, storeId]
-          properties:
-            id: { type: string }
-            storeId: { type: string }
-            averageRating: { type: [number, "null"], description: "Mean of the published reviews, two decimals; null when there are none. Computed on read." }
-            reviewCount: { type: integer, description: "Published reviews." }
-            aiDescriptionStatus:
-              type: [string, "null"]
-              enum: [draft, published, null]
+      description: |
+        A product as the API returns it. The same fields as ProductInput, except that sku, barcode,
+        seoTitle and seoDescription are null when the merchant has not set them (a request leaves them
+        out; it never sends null). Listed in full rather than built on ProductInput, because a schema
+        composed with allOf would still apply ProductInput's "must be a string" to those four.
+      type: object
+      required: [id, storeId, title, price, stock, category]
+      properties:
+        id: { type: string }
+        storeId: { type: string }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        price: { type: number, minimum: 0 }
+        stock: { type: integer, minimum: 0, description: "On-hand quantity at the default location (see ProductInput)." }
+        sku: { type: [string, "null"], maxLength: 100 }
+        barcode: { type: [string, "null"], maxLength: 100 }
+        taxable: { type: boolean }
+        costPrice: { type: number, minimum: 0, description: "Merchant-only; absent for shoppers." }
+        category: { type: string }
+        images: { type: array, items: { type: string, format: uri }, maxItems: 10 }
+        tags: { type: array, items: { type: string, maxLength: 30 }, maxItems: 10 }
+        seoTitle: { type: [string, "null"], maxLength: 70 }
+        seoDescription: { type: [string, "null"], maxLength: 160 }
+        averageRating: { type: [number, "null"], description: "Mean of the published reviews, two decimals; null when there are none. Computed on read." }
+        reviewCount: { type: integer, description: "Published reviews." }
+        aiDescriptionStatus:
+          type: [string, "null"]
+          enum: [draft, published, null]
       examples:
         - id: prod_01HXYZ
           storeId: store_01ABCD
@@ -4961,7 +4977,7 @@ components:
             type: object
             properties:
               id: { type: string }
-              method: { type: string, enum: [cash, card, stripe, other] }
+              method: { type: string, enum: [cash, card, stripe, other, cod, bank_transfer, gateway], description: "cod is cash on delivery; bank_transfer a transfer the shopper makes and proves with a receipt; gateway a local payment gateway." }
               amount: { type: number, description: "What was applied to the order (for cash, without the change)." }
               tenderedAmount: { type: [number, "null"], description: Cash only; what the customer handed over. }
               changeGiven: { type: [number, "null"], description: Cash only; tendered minus amount. }
@@ -4978,7 +4994,7 @@ components:
               id: { type: string }
               paymentId: { type: string }
               amount: { type: number }
-              method: { type: string, enum: [cash, card, stripe, other] }
+              method: { type: string, enum: [cash, card, stripe, other, cod, bank_transfer, gateway], description: "cod is cash on delivery; bank_transfer a transfer the shopper makes and proves with a receipt; gateway a local payment gateway." }
               reason: { type: [string, "null"] }
               restocked: { type: boolean }
               createdAt: { type: string, format: date-time }

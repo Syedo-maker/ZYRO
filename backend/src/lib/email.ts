@@ -23,6 +23,9 @@ function createRealGateway(): EmailGateway {
     async send({ to, subject, text }) {
       const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
+        // A recovery email is not worth holding a worker for: give up after 10 s and let the next
+        // scan try again.
+        signal: AbortSignal.timeout(10_000),
         headers: { Authorization: `Bearer ${sendgridApiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: to }] }],

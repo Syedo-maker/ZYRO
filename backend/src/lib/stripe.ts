@@ -94,7 +94,11 @@ function createRealGateway(): StripeGateway {
     throw Errors.serviceUnavailable("Stripe is not configured (set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET)");
   }
   // One client instance per process; the API key is never set globally.
-  const stripe = new Stripe(secretKey);
+  // The SDK's own defaults (80 s a try, then retries) could outlast the API's 90 s request limit,
+  // so a slow Stripe would surface as a generic timeout. 20 s and one retry (Stripe requests carry
+  // idempotency keys, so a retry never charges twice) keeps the worst case near 40 s, with Stripe's
+  // own error message.
+  const stripe = new Stripe(secretKey, { timeout: 20_000, maxNetworkRetries: 1 });
 
   /**
    * Stripe applies a discount through a Coupon object. A fixed-amount coupon is fully
