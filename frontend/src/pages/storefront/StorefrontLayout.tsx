@@ -150,7 +150,11 @@ export function StorefrontLayout() {
           <footer className="border-t border-border bg-surface">
             <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-text-secondary sm:px-10">
               <span>{store.name}, powered by ZYRO</span>
-              <span>Secure checkout by Stripe</span>
+              <span className="flex flex-wrap gap-x-4">
+                <span>Secure checkout by Stripe</span>
+                <Link to="/privacy" className="underline underline-offset-2 hover:text-text">Privacy</Link>
+                <Link to="/terms" className="underline underline-offset-2 hover:text-text">Terms</Link>
+              </span>
             </div>
           </footer>
           <AssistantWidget storeId={store.id} currency={store.currency} />

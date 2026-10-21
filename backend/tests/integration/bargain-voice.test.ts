@@ -120,7 +120,12 @@ describe("the floor price holds against anything the customer types", () => {
   it("a conversation starts at the listed price, and never mentions the floor", async () => {
     const session = await startBargain(`guest-${suffix}-a`);
     expect(session).toMatchObject({ listPrice: 1000, offer: 1000, status: "open" });
-    expect(JSON.stringify(session)).not.toMatch(/700|floor|minimum/i);
+    // Checked field by field, ids aside: the raw JSON matched /700/ whenever a random session id
+    // contained those digits (one did: "...c7000...").
+    const exposed = Object.entries(session as Record<string, unknown>)
+      .filter(([key]) => !/id$/i.test(key))
+      .filter(([, value]) => /700|floor|minimum/i.test(String(value)));
+    expect(exposed).toEqual([]);
   });
 
   it.each([
@@ -241,7 +246,17 @@ describe("a struck deal is created on the server", () => {
 
   it("the floor is never sent to a shopper, on any endpoint", async () => {
     const product = await api("GET", `/stores/${A.storeId}/products/${cup.id}`);
-    expect(JSON.stringify(product.json)).not.toMatch(/bargainMinPrice|700/);
+    // Checked as data, not as text: searching the raw JSON for "700" failed whenever a random id
+    // happened to contain those digits (it did: a store id with "...o70012...").
+    const values: unknown[] = [];
+    const walk = (v: unknown, key = ""): void => {
+      if (key === "bargainMinPrice") values.push("bargainMinPrice field present");
+      if (v && typeof v === "object") for (const [k, inner] of Object.entries(v)) walk(inner, k);
+      else values.push(v);
+    };
+    walk(product.json);
+    expect(values).not.toContain("bargainMinPrice field present");
+    expect(values.filter((v) => v === 700 || v === "700" || v === "700.00")).toEqual([]);
   });
 });
 

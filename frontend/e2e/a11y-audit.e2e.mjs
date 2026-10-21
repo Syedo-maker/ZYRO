@@ -362,6 +362,8 @@ for (const [width, height] of [[375, 812], [1440, 900]]) {
     ['shop directory', `${WEB}/shop`],
     ['merchant sign in', `${WEB}/login`],
     ['merchant sign up', `${WEB}/register`],
+    ['terms of service', `${WEB}/terms`],
+    ['privacy policy', `${WEB}/privacy`],
     ['storefront home', `${WEB}/store/${storeId}`],
     ['storefront catalog', `${WEB}/store/${storeId}/products`],
     ['storefront cart', `${WEB}/store/${storeId}/cart`],
