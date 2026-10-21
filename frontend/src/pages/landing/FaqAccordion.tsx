@@ -45,17 +45,17 @@ const QUESTIONS: { q: string; a: string }[] = [
 
 export function FaqAccordion() {
   return (
-    <section id="faq" className="bg-lp-cream py-16 lg:py-24">
+    <section id="faq" className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="font-landing text-3xl font-extrabold leading-tight text-lp-green sm:text-4xl">Questions, answered straight</h2>
+          <h2 className="font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">Questions, answered straight</h2>
         </Reveal>
 
         <div className="mt-9 flex flex-col gap-3">
           {QUESTIONS.map((item, i) => (
             <Reveal key={item.q} delayMs={Math.min(i, 4) * 60}>
-              <details className="group rounded-2xl border border-lp-green/12 bg-white px-5 py-4 open:border-lp-green/30">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-landing text-base font-bold text-lp-green focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lp-green">
+              <details className="group rounded-2xl border border-border bg-surface px-5 py-4 open:border-border-input">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-bold text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
                   {item.q}
                   <svg
                     width="20"
@@ -71,7 +71,7 @@ export function FaqAccordion() {
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-lp-green/80">{item.a}</p>
+                <p className="mt-3 text-sm leading-relaxed text-text-secondary">{item.a}</p>
               </details>
             </Reveal>
           ))}

@@ -112,7 +112,7 @@ export function VoiceNotesPage() {
 
       {notice && <Alert tone={notice.tone === 'info' ? 'info' : notice.tone}>{notice.text}</Alert>}
 
-      <section aria-label="Record" className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Record" className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-5">
         {recording ? (
           <Button onClick={stopRecording} className="h-12">
             Stop and send
@@ -128,7 +128,7 @@ export function VoiceNotesPage() {
         </p>
       </section>
 
-      <section aria-label="Waiting for you" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Waiting for you" className="rounded-2xl border border-border bg-surface p-5">
         <h2 className="font-display text-base font-bold">Waiting for you to confirm</h2>
         {pending.length === 0 ? (
           <p className="mt-2 text-sm text-text-secondary">Nothing is waiting.</p>
@@ -175,7 +175,7 @@ export function VoiceNotesPage() {
       </section>
 
       {past.length > 0 && (
-        <section aria-label="Past notes" className="rounded-2xl border border-border bg-white p-5">
+        <section aria-label="Past notes" className="rounded-2xl border border-border bg-surface p-5">
           <h2 className="font-display text-base font-bold">Earlier notes</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {past.map((n) => (

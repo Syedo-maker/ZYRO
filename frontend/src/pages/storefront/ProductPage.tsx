@@ -53,7 +53,7 @@ export function ProductPage() {
 
   if (notFound) {
     return (
-      <div className="rounded-2xl border border-border bg-white px-6 py-16 text-center">
+      <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
         <h1 className="font-display text-xl font-bold">Product not found</h1>
         <p className="mt-2 text-sm text-text-secondary">It may have been removed.</p>
         <Link to={`/store/${store.id}/products`} className="mt-4 inline-block text-sm font-semibold text-brand">
@@ -84,7 +84,7 @@ export function ProductPage() {
 
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
         <div className="flex flex-col gap-3">
-          <div className="aspect-square overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
             {product.images[image] ? (
               <img src={product.images[image]} alt={product.title} className="h-full w-full object-cover" />
             ) : (

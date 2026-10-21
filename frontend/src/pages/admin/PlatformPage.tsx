@@ -15,7 +15,7 @@ const PAGE = 15
 
 function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-white p-5">
+    <div className="rounded-2xl border border-border bg-surface p-5">
       <p className="text-xs font-semibold text-text-secondary">{label}</p>
       <p className="mt-1 font-display text-2xl font-bold">{value}</p>
       {note && <p className="mt-1 text-xs text-text-secondary">{note}</p>}
@@ -82,7 +82,7 @@ export function PlatformPage() {
             <Tile label="AI used this month" value={`${summary.aiUsageThisMonth.generations + summary.aiUsageThisMonth.chatMessages}`} note={`${summary.aiUsageThisMonth.generations} generations, ${summary.aiUsageThisMonth.chatMessages} replies, ${(summary.aiUsageThisMonth.inputTokens + summary.aiUsageThisMonth.outputTokens).toLocaleString()} tokens, ${summary.aiUsageThisMonth.cachedAnswers} answered from cache`} />
           </section>
 
-          <section aria-label="Plan economics" className="rounded-2xl border border-border bg-white p-5">
+          <section aria-label="Plan economics" className="rounded-2xl border border-border bg-surface p-5">
             <h2 className="font-display text-base font-bold">Are the prices above the worst case cost?</h2>
             <p className="mt-1 text-xs text-text-secondary">
               Each plan and pack against the most it could cost in a month if every AI call used its full size limit, plus servers and Stripe fees. Real cost is far lower.
@@ -115,7 +115,7 @@ export function PlatformPage() {
         </>
       )}
 
-      <section aria-label="Stores" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Stores" className="rounded-2xl border border-border bg-surface p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display text-base font-bold">Stores</h2>
           <form onSubmit={search} className="flex gap-2">
@@ -124,7 +124,7 @@ export function PlatformPage() {
               placeholder="Store name or address"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-10 rounded-[10px] border border-border bg-white px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-10 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
             <Button type="submit" variant="secondary" className="h-10">
               Search

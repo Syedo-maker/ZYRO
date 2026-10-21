@@ -109,7 +109,12 @@ async function buyOnStripe({ card = '4242424242424242', qty = 2, beforePay } = {
   if (await state.count()) await state.selectOption('CA').catch(() => undefined)
   await page.locator('#shippingPostalCode').fill('94080')
   // Stripe lists the payment methods it offers for this buyer; the card fields appear after choosing Card.
-  await page.locator('input[type="radio"]').first().check({ force: true, timeout: 10000 })
+  // Choose Card where a person clicks it: on the word "Card". Stripe's page is not ours and changes. It
+  // drew the payment methods as radio inputs; by 2026-10 each is a row whose click target is a
+  // transparent "Pay with card" button stretched over it, which has no box of its own for a locator to
+  // click. `force` skips only the check that the label is the topmost element; the mouse still lands
+  // on the label's position, where that button receives it, exactly as for a person.
+  await page.locator('#payment-method-label-card').click({ force: true, timeout: 10000 })
   await page.locator('#cardNumber').waitFor({ timeout: 15000 })
   await page.locator('#cardNumber').pressSequentially(card, { delay: 30 })
   await page.locator('#cardExpiry').pressSequentially('1234', { delay: 30 })

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { buttonStyles } from '../../components/ui/Button'
 import { useCart } from '../../context/CartContext'
 import { useStore } from '../../context/StoreContext'
 import { Alert } from '../../components/ui/Alert'
@@ -30,12 +31,12 @@ export function CartPage() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-white px-6 py-16 text-center">
+      <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
         <h1 className="font-display text-xl font-bold">Your cart is empty</h1>
         <p className="mt-2 text-sm text-text-secondary">Add something you like and it will show up here.</p>
         <Link
           to={`/store/${store.id}`}
-          className="mt-6 inline-flex h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover"
+          className={buttonStyles({ className: 'mt-6' })}
         >
           Continue shopping
         </Link>
@@ -64,7 +65,7 @@ export function CartPage() {
           ))}
         </ul>
 
-        <aside className="flex w-full flex-col gap-4 rounded-[14px] border border-border bg-white p-6 lg:w-80" aria-label="Order summary">
+        <aside className="flex w-full flex-col gap-4 rounded-[14px] border border-border bg-surface p-6 lg:w-80" aria-label="Order summary">
           <h2 className="text-[15px] font-bold">Order summary</h2>
 
           <div className="h-px bg-border" />
@@ -79,7 +80,7 @@ export function CartPage() {
           ) : (
             <Link
               to={`/store/${store.id}/checkout`}
-              className="inline-flex h-12 items-center justify-center rounded-[10px] bg-brand text-sm font-semibold text-white hover:bg-brand-hover"
+              className={buttonStyles({ size: 'lg', className: 'text-sm' })}
             >
               Proceed to checkout
             </Link>

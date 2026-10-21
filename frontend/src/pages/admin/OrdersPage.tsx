@@ -104,7 +104,7 @@ export function OrdersPage() {
     <div className="flex flex-col gap-6">
       <h1 className="font-display text-xl font-bold">Orders</h1>
 
-      <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white lg:flex-row">
+      <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface lg:flex-row">
         <div className="min-w-0 flex-1">
           <div role="tablist" aria-label="Order status" className="flex gap-1 overflow-x-auto px-4 pt-3">
             {TABS.map((t) => (
@@ -130,7 +130,7 @@ export function OrdersPage() {
               placeholder="Search by order number or email"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="h-10 min-w-[220px] flex-1 rounded-[10px] border border-border px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-10 min-w-[220px] flex-1 rounded-[10px] border border-border-input px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
             <select
               aria-label="Sales channel"
@@ -139,7 +139,7 @@ export function OrdersPage() {
                 setChannel(e.target.value as SalesChannel | '')
                 setOffset(0)
               }}
-              className="h-10 rounded-[10px] border border-border bg-white px-3 text-sm"
+              className="h-10 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             >
               <option value="">All channels</option>
               <option value="online">Online</option>

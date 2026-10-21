@@ -179,7 +179,7 @@ export function MarketingPage() {
       {codes === null && !error && <Spinner label="Loading discount codes" />}
 
       {codes?.length === 0 && (
-        <div className="rounded-2xl border border-border bg-white px-6 py-14 text-center">
+        <div className="rounded-2xl border border-border bg-surface px-6 py-14 text-center">
           <h2 className="font-display text-base font-bold">No discount codes yet</h2>
           <p className="mt-1 text-sm text-text-secondary">Create a code to run a sale or thank a customer.</p>
         </div>
@@ -188,7 +188,7 @@ export function MarketingPage() {
       {codes && codes.length > 0 && (
         // `relative` keeps the screen-reader-only header text (absolutely positioned) inside the
         // scroll box; without it, it escapes and makes the whole page scroll sideways on a phone.
-        <div className="relative overflow-x-auto rounded-2xl border border-border bg-white">
+        <div className="relative overflow-x-auto rounded-2xl border border-border bg-surface">
           <table className="w-full text-sm">
             <caption className="sr-only">Discount codes</caption>
             <thead>

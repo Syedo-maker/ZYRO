@@ -23,7 +23,7 @@ export function ProductCard({
 }) {
   const soldOut = product.stock < 1
   return (
-    <li className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white">
+    <li className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface">
       <Link to={`/store/${storeId}/products/${product.id}`} className="group flex flex-1 flex-col gap-2 p-3 outline-offset-[-2px]">
         <div className="relative aspect-[4/3] overflow-hidden rounded-[10px] bg-bg">
           {product.images[0] ? (

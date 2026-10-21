@@ -14,7 +14,7 @@ const STATUS: Record<TrendReport['status'], { label: string; tone: 'success' | '
   no_data: { label: 'No data', tone: 'neutral' },
 }
 
-const fieldClass = 'h-11 rounded-[10px] border border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+const fieldClass = 'h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
 
 /**
  * The Trend Scout on the platform page (Part D): import a Google Trends file, run the week's reports
@@ -74,7 +74,7 @@ export function TrendScoutPanel() {
   }
 
   return (
-    <section aria-label="Trend Scout" className="flex flex-col gap-5 rounded-2xl border border-border bg-white p-5">
+    <section aria-label="Trend Scout" className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-base font-bold">Trend Scout</h2>

@@ -13,7 +13,7 @@ export function CartItemRow({ item, currency, busy, onSetQuantity, onRemove }: C
   const overStock = item.quantity > item.availableStock
 
   return (
-    <li className="flex gap-3 rounded-[14px] border border-border bg-white p-3 sm:gap-4 sm:p-4">
+    <li className="flex gap-3 rounded-[14px] border border-border bg-surface p-3 sm:gap-4 sm:p-4">
       <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[10px] bg-bg sm:h-[84px] sm:w-[84px]">
         {item.imageUrl && <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />}
       </div>

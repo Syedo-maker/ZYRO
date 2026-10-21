@@ -138,7 +138,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
           rows={3}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="rounded-[10px] border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="rounded-[10px] border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
       </div>
 

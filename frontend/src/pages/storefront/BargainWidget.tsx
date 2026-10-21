@@ -68,7 +68,7 @@ export function BargainWidget({ storeId, productId, currency, onDeal }: { storeI
 
   if (!session) {
     return (
-      <section aria-label="Bargaining" className="rounded-[10px] border border-border bg-white p-4">
+      <section aria-label="Bargaining" className="rounded-[10px] border border-border bg-surface p-4">
         <h2 className="text-[13px] font-semibold">Think the price could be better?</h2>
         <p className="mt-1 text-xs text-text-secondary">Have a word with the shop, the way you would in the bazaar.</p>
         <Button variant="secondary" className="mt-3 h-10" disabled={busy} onClick={() => void open()}>
@@ -82,7 +82,7 @@ export function BargainWidget({ storeId, productId, currency, onDeal }: { storeI
   const done = session.status !== 'open'
 
   return (
-    <section aria-label="Bargaining" className="flex flex-col gap-3 rounded-[10px] border border-border bg-white p-4">
+    <section aria-label="Bargaining" className="flex flex-col gap-3 rounded-[10px] border border-border bg-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[13px] font-semibold">Making an offer</h2>
         <p className="text-xs text-text-secondary">

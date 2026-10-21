@@ -70,7 +70,7 @@ export function SettingsPage() {
       {error && <Alert>{error}</Alert>}
       {saved && <Alert tone="success">{saved}</Alert>}
 
-      <section aria-label="Currency" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Currency" className="rounded-2xl border border-border bg-surface p-5">
         <h2 className="font-display text-base font-bold">Currency</h2>
         <p className="mt-1 text-sm text-text-secondary">
           The currency your prices are in, everywhere: your online store, the register, receipts and reports. For example, a product
@@ -97,7 +97,7 @@ export function SettingsPage() {
                   setChoice(e.target.value)
                   setSaved(null)
                 }}
-                className="h-11 rounded-[10px] border border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
               >
                 {setting.options.map((o) => (
                   <option key={o.code} value={o.code}>

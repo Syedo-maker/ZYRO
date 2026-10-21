@@ -87,13 +87,16 @@ await step('landing screen', visitor, async () => {
   await visitor.goto(WEB)
   await visitor.waitForLoadState('networkidle')
   check('a new visitor is asked what they want to do, not sent to the dashboard', !visitor.url().includes('/admin'), visitor.url())
-  check('both choices are offered', await visitor.getByRole('heading', { name: 'Shop', exact: true }).isVisible())
-  check('and so is opening a store', await visitor.getByRole('heading', { name: 'Start a store' }).isVisible())
+  // The chooser screen this first checked was replaced by the landing page; its hero offers the same
+  // two choices as links.
+  const hero = visitor.getByRole('main')
+  check('both choices are offered', await hero.getByRole('link', { name: 'Shop now' }).first().isVisible())
+  check('and so is opening a store', await hero.getByRole('link', { name: 'Start your store free' }).first().isVisible())
   await visitor.screenshot({ path: path.join(SHOTS, 'roles-landing.png') })
 })
 
 await step('choosing to shop', visitor, async () => {
-  await visitor.getByRole('button', { name: 'Start shopping' }).click()
+  await visitor.getByRole('main').getByRole('link', { name: 'Shop now' }).first().click()
   await visitor.waitForURL('**/shop')
   check('choosing to shop opens the shop directory', visitor.url().endsWith('/shop'))
   const card = visitor.getByRole('listitem').filter({ hasText: `E2E Roles ${suffix}` })

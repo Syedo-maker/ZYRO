@@ -60,7 +60,7 @@ export function MarketTrendsCard({ storeId }: { storeId: string }) {
   const week = data.categories.find((c) => c.report)?.report?.covers
 
   return (
-    <section aria-label="Market trends" className="rounded-2xl border border-border bg-white p-5">
+    <section aria-label="Market trends" className="rounded-2xl border border-border bg-surface p-5">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-base font-bold">Market trends</h2>
         <p className="text-xs text-text-secondary">

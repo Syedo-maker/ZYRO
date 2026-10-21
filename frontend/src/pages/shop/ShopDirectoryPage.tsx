@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert } from '../../components/ui/Alert'
+import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
+import { brandStyle } from '../../lib/brandTheme'
 import { directoryApi } from '../../lib/directoryApi'
 import { errorMessage } from '../../lib/ordersApi'
 import type { DirectoryStore } from '../../types/directory'
@@ -51,7 +53,7 @@ export function ShopDirectoryPage() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <header className="border-b border-border bg-white">
+      <header className="border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-4 lg:px-8">
           <Link to="/" className="font-display text-xl font-bold">
             ZYRO
@@ -81,7 +83,7 @@ export function ShopDirectoryPage() {
                 id="directory-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="h-11 rounded-[10px] border border-border bg-white px-3 text-sm"
+                className="h-11 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
               >
                 <option value="">All categories</option>
                 {categories.map((c) => (
@@ -91,9 +93,9 @@ export function ShopDirectoryPage() {
                 ))}
               </select>
             </div>
-            <button type="submit" className="inline-flex h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">
+            <Button type="submit">
               Search
-            </button>
+            </Button>
           </form>
         </section>
 
@@ -106,7 +108,7 @@ export function ShopDirectoryPage() {
         )}
 
         {stores !== null && stores.length === 0 && (
-          <div role="status" className="rounded-2xl border border-border bg-white px-6 py-12 text-center">
+          <div role="status" className="rounded-2xl border border-border bg-surface px-6 py-12 text-center">
             <h2 className="font-display text-lg font-semibold">No shops to show yet</h2>
             <p className="mt-2 text-sm text-text-secondary">
               {submitted || category
@@ -119,15 +121,15 @@ export function ShopDirectoryPage() {
         {stores !== null && stores.length > 0 && (
           <ul role="list" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {stores.map((store) => (
-              <li key={store.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-5">
+              <li key={store.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
                 <div className="flex items-center gap-3">
                   {store.logoUrl ? (
                     <img src={store.logoUrl} alt="" className="h-10 w-10 rounded-[10px] object-cover" />
                   ) : (
                     <span
                       aria-hidden="true"
-                      className="flex h-10 w-10 items-center justify-center rounded-[10px] text-sm font-bold text-white"
-                      style={{ backgroundColor: store.themeColor ?? '#4F46E5' }}
+                      className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand text-sm font-bold text-on-brand"
+                      style={brandStyle(store.themeColor)}
                     >
                       {store.name.slice(0, 1).toUpperCase()}
                     </span>

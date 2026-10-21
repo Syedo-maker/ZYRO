@@ -68,12 +68,12 @@ export function WriteWithAi({ storeId, draft, onUse }: WriteWithAiProps) {
         <h3 id="write-with-ai-heading" className="text-sm font-semibold">
           Name and describe this product
         </h3>
-        <div role="group" aria-label="How to write this listing" className="flex gap-1 rounded-[10px] border border-border bg-white p-1">
+        <div role="group" aria-label="How to write this listing" className="flex gap-1 rounded-[10px] border border-border bg-surface p-1">
           <button
             type="button"
             aria-pressed={mode === 'manual'}
             onClick={() => setMode('manual')}
-            className={`rounded-[8px] px-3 py-1.5 text-xs font-semibold ${mode === 'manual' ? 'bg-brand text-white' : 'text-text-secondary hover:text-text'}`}
+            className={`rounded-[8px] px-3 py-1.5 text-xs font-semibold ${mode === 'manual' ? 'bg-brand text-on-brand' : 'text-text-secondary hover:text-text'}`}
           >
             Write it myself
           </button>
@@ -81,7 +81,7 @@ export function WriteWithAi({ storeId, draft, onUse }: WriteWithAiProps) {
             type="button"
             aria-pressed={mode === 'ai'}
             onClick={() => setMode('ai')}
-            className={`rounded-[8px] px-3 py-1.5 text-xs font-semibold ${mode === 'ai' ? 'bg-brand text-white' : 'text-text-secondary hover:text-text'}`}
+            className={`rounded-[8px] px-3 py-1.5 text-xs font-semibold ${mode === 'ai' ? 'bg-brand text-on-brand' : 'text-text-secondary hover:text-text'}`}
           >
             Write with AI
           </button>
@@ -146,7 +146,7 @@ export function WriteWithAi({ storeId, draft, onUse }: WriteWithAiProps) {
               {ideas.notice && <p className="text-xs text-text-muted">{ideas.notice}</p>}
               <ul role="list" className="flex flex-col gap-3">
                 {ideas.suggestions.map((idea, i) => (
-                  <li key={`${idea.title}-${i}`} className="flex flex-col gap-2 rounded-[10px] border border-border bg-white p-3">
+                  <li key={`${idea.title}-${i}`} className="flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-3">
                     <p className="text-sm font-semibold">{idea.title}</p>
                     <p className="text-sm text-text-secondary">{idea.description}</p>
                     {idea.keywordsUsed.length > 0 && (

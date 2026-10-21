@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { buttonStyles } from '../../components/ui/Button'
 import { Reveal } from './Reveal'
 
 /**
@@ -10,26 +11,26 @@ import { Reveal } from './Reveal'
  */
 export function FinalCta() {
   return (
-    <section className="bg-lp-accent py-16 lg:py-20">
+    <section className="bg-accent-display py-16 lg:py-20">
       <div className="mx-auto w-full max-w-4xl px-4 text-center sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="font-landing text-3xl font-extrabold leading-tight text-lp-green sm:text-[2.6rem]">
+          <h2 className="font-display text-3xl font-extrabold leading-tight text-text sm:text-[2.6rem]">
             Your shop could be online tonight.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl font-landing text-lg font-semibold text-lp-green">
+          <p className="mx-auto mt-4 max-w-xl font-display text-lg font-semibold text-text">
             Free to start, no card, and the AI is already included.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               to="/register"
-              className="inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-lp-green px-7 font-landing text-base font-bold text-lp-cream transition-transform hover:bg-lp-green-soft motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-green sm:w-auto"
+              className={buttonStyles({ variant: 'primary', size: 'lg', className: 'w-full px-7 font-display font-bold transition-transform motion-safe:hover:-translate-y-0.5 sm:w-auto' })}
             >
               Start your store free
             </Link>
             <Link
               to="/shop"
-              className="inline-flex h-12 w-full items-center justify-center rounded-[10px] border-2 border-lp-green px-7 font-landing text-base font-bold text-lp-green transition-colors hover:bg-lp-green hover:text-lp-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-green sm:w-auto"
+              className={buttonStyles({ variant: 'outline', size: 'lg', className: 'w-full px-7 font-display font-bold sm:w-auto' })}
             >
               I came to shop
             </Link>

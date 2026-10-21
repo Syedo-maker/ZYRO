@@ -31,7 +31,7 @@ function windows(days: number) {
 
 function Card({ title, children, wide }: { title: string; children: React.ReactNode; wide?: boolean }) {
   return (
-    <section className={`rounded-2xl border border-border bg-white p-5 ${wide ? 'lg:col-span-2' : ''}`} aria-label={title}>
+    <section className={`rounded-2xl border border-border bg-surface p-5 ${wide ? 'lg:col-span-2' : ''}`} aria-label={title}>
       <h2 className="mb-4 font-display text-base font-bold">{title}</h2>
       {children}
     </section>
@@ -108,7 +108,7 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div role="group" aria-label="Period" className="flex overflow-hidden rounded-[10px] border border-border bg-white">
+          <div role="group" aria-label="Period" className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
             {PERIODS.map((d) => (
               <button
                 key={d}
@@ -117,7 +117,7 @@ export function DashboardPage() {
                   setDays(d)
                 }}
                 aria-pressed={days === d}
-                className={`h-10 px-4 text-sm font-semibold ${days === d ? 'bg-brand text-white' : 'hover:bg-bg'}`}
+                className={`h-10 px-4 text-sm font-semibold ${days === d ? 'bg-brand text-on-brand' : 'hover:bg-bg'}`}
               >
                 {d} days
               </button>
@@ -144,7 +144,7 @@ export function DashboardPage() {
           </section>
 
           {t.orders === 0 && t.refunds.count === 0 ? (
-            <p className="rounded-2xl border border-border bg-white px-6 py-12 text-center text-sm text-text-secondary">
+            <p className="rounded-2xl border border-border bg-surface px-6 py-12 text-center text-sm text-text-secondary">
               No sales in the last {days} days yet. Sales from your online store and your register will appear here.
             </p>
           ) : (
@@ -178,7 +178,7 @@ export function DashboardPage() {
 
       <AiUsageMeter storeId={activeStore.id} isOwner={activeStore.role === 'owner'} />
 
-      <section aria-label="Recent orders" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Recent orders" className="rounded-2xl border border-border bg-surface p-5">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="font-display text-base font-bold">Recent orders</h2>
           <Link to="/admin/orders" className="text-sm font-semibold text-brand hover:text-brand-hover">

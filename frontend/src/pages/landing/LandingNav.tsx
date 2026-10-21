@@ -40,12 +40,12 @@ export function LandingNav() {
     // transparent background would put cream text on the page's cream and make the whole nav
     // invisible until the visitor scrolled. Scrolling only adds the blur and the shadow.
     <header
-      className={`sticky top-0 z-50 bg-lp-green transition-shadow duration-300 ${
+      className={`sticky top-0 z-50 bg-inverse transition-shadow duration-300 ${
         scrolled || open ? 'shadow-lg shadow-black/20 backdrop-blur-sm' : ''
       }`}
     >
       <nav aria-label="Main" className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
-        <Link to="/" className="font-landing text-lg font-extrabold text-lp-cream">
+        <Link to="/" className="font-display text-lg font-extrabold text-on-inverse">
           ZYRO
         </Link>
 
@@ -54,7 +54,7 @@ export function LandingNav() {
             <li key={l.href}>
               <a
                 href={l.href}
-                className="rounded text-sm font-medium text-lp-cream/80 transition-colors hover:text-lp-cream focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lp-cream"
+                className="rounded text-sm font-medium text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-on-inverse"
               >
                 {l.label}
               </a>
@@ -65,13 +65,13 @@ export function LandingNav() {
         <div className="ml-auto hidden items-center gap-3 lg:flex">
           <Link
             to="/login"
-            className="rounded-[10px] px-3 py-2 text-sm font-semibold text-lp-cream/90 transition-colors hover:text-lp-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-cream"
+            className="rounded-[10px] px-3 py-2 text-sm font-semibold text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
           >
             Log in
           </Link>
           <Link
             to="/register"
-            className="rounded-[10px] bg-lp-cream px-4 py-2 text-sm font-bold text-lp-green transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-cream"
+            className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
           >
             Start free
           </Link>
@@ -82,7 +82,7 @@ export function LandingNav() {
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls="landing-mobile-menu"
-          className="ml-auto rounded-[10px] p-2 text-lp-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lp-cream lg:hidden"
+          className="ml-auto rounded-[10px] p-2 text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse lg:hidden"
         >
           <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -92,20 +92,20 @@ export function LandingNav() {
       </nav>
 
       {open && (
-        <div id="landing-mobile-menu" className="border-t border-lp-cream/15 lg:hidden">
+        <div id="landing-mobile-menu" className="border-t border-on-inverse/15 lg:hidden">
           <ul role="list" className="mx-auto flex w-full max-w-6xl flex-col px-4 py-2 sm:px-6">
             {LINKS.map((l) => (
               <li key={l.href}>
-                <a onClick={() => setOpen(false)} href={l.href} className="block rounded px-2 py-3 text-sm font-medium text-lp-cream/90">
+                <a onClick={() => setOpen(false)} href={l.href} className="block rounded px-2 py-3 text-sm font-medium text-on-inverse-secondary">
                   {l.label}
                 </a>
               </li>
             ))}
             <li className="mt-1 flex gap-3 px-2 pb-3 pt-2">
-              <Link to="/login" onClick={() => setOpen(false)} className="rounded-[10px] border border-lp-cream/40 px-4 py-2 text-sm font-semibold text-lp-cream">
+              <Link to="/login" onClick={() => setOpen(false)} className="rounded-[10px] border border-on-inverse-muted px-4 py-2 text-sm font-semibold text-on-inverse">
                 Log in
               </Link>
-              <Link to="/register" onClick={() => setOpen(false)} className="rounded-[10px] bg-lp-cream px-4 py-2 text-sm font-bold text-lp-green">
+              <Link to="/register" onClick={() => setOpen(false)} className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text">
                 Start free
               </Link>
             </li>

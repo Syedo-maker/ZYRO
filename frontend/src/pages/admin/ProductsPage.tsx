@@ -84,7 +84,7 @@ export function ProductsPage() {
         {error && <Alert>{error}</Alert>}
 
         {/* The list scrolls sideways inside its own box on a narrow screen; the page never does. */}
-        <div className="relative bg-white border border-border rounded-2xl overflow-x-auto">
+        <div className="relative bg-surface border border-border rounded-2xl overflow-x-auto">
          {/*
            * Laid out with CSS grid rather than a <table>, so the roles below are what tell a screen
            * reader this is tabular data: without them a cell is read as a bare number with no idea
@@ -150,7 +150,7 @@ export function ProductsPage() {
       </div>
 
       {panel.mode !== 'closed' && (
-        <div className="w-full shrink-0 bg-white border border-border rounded-2xl p-4 sm:p-6 h-fit lg:w-[360px]">
+        <div className="w-full shrink-0 bg-surface border border-border rounded-2xl p-4 sm:p-6 h-fit lg:w-[360px]">
           <ProductForm
             key={panel.mode === 'edit' ? panel.product.id : 'new'}
             storeId={activeStore.id}

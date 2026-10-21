@@ -41,7 +41,7 @@ export function GrowthTipCard({ storeId, isOwner }: { storeId: string; isOwner: 
 
   if (!state.enabled) {
     return isOwner ? (
-      <section aria-label="Growth tips" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white px-5 py-4">
+      <section aria-label="Growth tips" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-5 py-4">
         <p className="text-sm text-text-secondary">Weekly growth tips are switched off.</p>
         <Button variant="secondary" className="h-9 px-4 text-xs" disabled={busy !== null} onClick={() => void act('on', () => advisorApi.setEnabled(storeId, true))}>
           Switch tips on

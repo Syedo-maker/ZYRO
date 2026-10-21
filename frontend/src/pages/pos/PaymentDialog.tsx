@@ -129,7 +129,7 @@ export function PaymentDialog({ quote, onClose, onCompleted }: { quote: PosQuote
                     step="0.01"
                     value={r.amount}
                     onChange={(e) => update(r.id, { amount: e.target.value })}
-                    className="h-12 rounded-[10px] border border-border px-3.5 text-base tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                    className="h-12 rounded-[10px] border border-border-input px-3.5 text-base tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 {r.method === 'cash' && (
@@ -146,7 +146,7 @@ export function PaymentDialog({ quote, onClose, onCompleted }: { quote: PosQuote
                       value={r.tendered}
                       onChange={(e) => update(r.id, { tendered: e.target.value })}
                       placeholder={r.amount}
-                      className="h-12 rounded-[10px] border border-border px-3.5 text-base tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                      className="h-12 rounded-[10px] border border-border-input px-3.5 text-base tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
                     />
                   </div>
                 )}

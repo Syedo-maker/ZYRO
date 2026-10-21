@@ -87,7 +87,7 @@ export function OrderPlacedPage() {
           )}
         </>
       ) : (
-        <form onSubmit={send} aria-label="Send your receipt" className="flex flex-col gap-3 rounded-[10px] border border-border bg-white p-4">
+        <form onSubmit={send} aria-label="Send your receipt" className="flex flex-col gap-3 rounded-[10px] border border-border bg-surface p-4">
           <h2 className="text-[13px] font-semibold">Send your receipt</h2>
           <p className="text-xs text-text-secondary">
             Transfer the money using the details the shop gave you, then upload a screenshot of the receipt so they can confirm your order.

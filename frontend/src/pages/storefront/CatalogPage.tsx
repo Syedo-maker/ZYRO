@@ -135,7 +135,7 @@ export function CatalogPage() {
             id="sort"
             value={sorts.includes(sort) ? sort : sorts[0]}
             onChange={(e) => update({ sort: e.target.value })}
-            className="h-11 rounded-[10px] border border-border bg-white px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           >
             {sorts.map((s) => (
               <option key={s} value={s}>
@@ -147,7 +147,7 @@ export function CatalogPage() {
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-        <details className="rounded-2xl border border-border bg-white lg:w-60 lg:shrink-0 lg:[&>summary]:hidden" open={typeof window !== 'undefined' && window.innerWidth >= 1024}>
+        <details className="rounded-2xl border border-border bg-surface lg:w-60 lg:shrink-0 lg:[&>summary]:hidden" open={typeof window !== 'undefined' && window.innerWidth >= 1024}>
           <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Filters{filtered ? ' (active)' : ''}</summary>
           <div className="flex flex-col gap-6 px-4 pb-4 pt-1 lg:pt-4">
             {categories.length > 0 && (
@@ -188,12 +188,12 @@ export function CatalogPage() {
                   <label className="sr-only" htmlFor="minPrice">
                     Minimum price
                   </label>
-                  <input id="minPrice" name="minPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Min" defaultValue={minPrice} className="h-10 w-full rounded-[10px] border border-border px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+                  <input id="minPrice" name="minPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Min" defaultValue={minPrice} className="h-10 w-full rounded-[10px] border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
                   <span aria-hidden="true">-</span>
                   <label className="sr-only" htmlFor="maxPrice">
                     Maximum price
                   </label>
-                  <input id="maxPrice" name="maxPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Max" defaultValue={maxPrice} className="h-10 w-full rounded-[10px] border border-border px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+                  <input id="maxPrice" name="maxPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Max" defaultValue={maxPrice} className="h-10 w-full rounded-[10px] border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
                 </div>
               </fieldset>
               <label className="flex items-center gap-2 text-sm">
@@ -219,7 +219,7 @@ export function CatalogPage() {
           {result && <SearchNote interpretation={result.interpretation} query={q} storeId={store.id} />}
           {result === null && !error && <ProductGridSkeleton count={PAGE_SIZE} />}
           {result?.products.length === 0 && (
-            <div className="rounded-2xl border border-border bg-white px-6 py-12 text-center">
+            <div className="rounded-2xl border border-border bg-surface px-6 py-12 text-center">
               <h2 className="font-display text-base font-bold">Nothing found</h2>
               <p className="mt-1 text-sm text-text-secondary">{q ? `No products match "${q}"` : 'No products match these filters'}. Try a shorter word or fewer filters.</p>
               <Link to={`/store/${store.id}/products`} className="mt-4 inline-block text-sm font-semibold text-brand">

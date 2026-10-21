@@ -44,25 +44,25 @@ function PricingCard({ plan, featured }: { plan: PlanInfo; featured: boolean }) 
   return (
     <div
       className={`flex h-full flex-col gap-5 rounded-2xl border p-6 ${
-        featured ? 'border-lp-green bg-lp-green text-lp-cream shadow-xl shadow-black/10' : 'border-lp-green/15 bg-white text-lp-green'
+        featured ? 'border-text bg-inverse text-on-inverse shadow-xl shadow-black/10' : 'border-border bg-surface text-text'
       }`}
     >
       <div>
         <div className="flex items-center gap-2">
-          <h3 className="font-landing text-xl font-extrabold">{plan.name}</h3>
-          {featured && <span className="rounded-full bg-lp-accent px-2.5 py-0.5 text-xs font-bold text-lp-green">Most popular</span>}
+          <h3 className="font-display text-xl font-extrabold">{plan.name}</h3>
+          {featured && <span className="rounded-full bg-accent-display px-2.5 py-0.5 text-xs font-bold text-text">Most popular</span>}
         </div>
 
         <p className="mt-4 flex flex-wrap items-baseline gap-x-2">
-          <span className="font-landing text-4xl font-extrabold">{free ? 'Free' : `$${plan.priceCents / 100}`}</span>
-          {!free && <span className={featured ? 'text-sm text-lp-cream/70' : 'text-sm text-lp-green/60'}>per month</span>}
+          <span className="font-display text-4xl font-extrabold">{free ? 'Free' : `$${plan.priceCents / 100}`}</span>
+          {!free && <span className={featured ? 'text-sm text-on-inverse-muted' : 'text-sm text-text-muted'}>per month</span>}
         </p>
         {!free && (
-          <p className={`mt-1 text-sm ${featured ? 'text-lp-cream/70' : 'text-lp-green/60'}`}>
+          <p className={`mt-1 text-sm ${featured ? 'text-on-inverse-muted' : 'text-text-muted'}`}>
             {approxPkr(plan.priceCents)} a month, at Rs {PKR_PER_USD} to the dollar
           </p>
         )}
-        {free && <p className={`mt-1 text-sm ${featured ? 'text-lp-cream/70' : 'text-lp-green/60'}`}>No card needed. No time limit.</p>}
+        {free && <p className={`mt-1 text-sm ${featured ? 'text-on-inverse-muted' : 'text-text-muted'}`}>No card needed. No time limit.</p>}
       </div>
 
       <ul role="list" className="flex flex-1 flex-col gap-2.5">
@@ -71,23 +71,23 @@ function PricingCard({ plan, featured }: { plan: PlanInfo; featured: boolean }) 
             <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="mt-0.5 shrink-0">
               <path
                 d="M4 10.4l3.4 3.4L16 5.6"
-                stroke={featured ? '#E8703D' : '#0B3B33'}
+                className={featured ? 'stroke-accent-display' : 'stroke-brand'}
                 strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
-            <span className={featured ? 'text-lp-cream/85' : 'text-lp-green/80'}>{point}</span>
+            <span className={featured ? 'text-on-inverse-secondary' : 'text-text-secondary'}>{point}</span>
           </li>
         ))}
       </ul>
 
       <Link
         to="/register"
-        className={`inline-flex h-11 items-center justify-center rounded-[10px] font-landing text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
+        className={`inline-flex h-11 items-center justify-center rounded-[10px] font-display text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
           featured
-            ? 'bg-lp-cream text-lp-green outline-lp-cream hover:bg-white'
-            : 'bg-lp-green text-lp-cream outline-lp-green hover:bg-lp-green-soft'
+            ? 'bg-bg text-text outline-on-inverse hover:bg-surface'
+            : 'bg-inverse text-on-inverse outline-ring hover:bg-brand-hover'
         }`}
       >
         {free ? 'Start free' : `Choose ${plan.name}`}
@@ -107,20 +107,20 @@ export function PricingSection() {
   }, [])
 
   return (
-    <section id="pricing" className="bg-lp-cream py-16 lg:py-24">
+    <section id="pricing" className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-landing text-3xl font-extrabold leading-tight text-lp-green sm:text-4xl">
+          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
             Start free. Pay only when it is worth it.
           </h2>
-          <p className="mt-4 max-w-2xl text-base text-lp-green/80">
+          <p className="mt-4 max-w-2xl text-base text-text-secondary">
             Every plan includes the AI, the counter sales and everything in the list above. Paid plans raise the limits. Plans are billed
             in US dollars through Stripe; the rupee figures are an approximation at the rate shown.
           </p>
         </Reveal>
 
         {plans === null ? (
-          <p className="mt-10 text-sm text-lp-green/70">
+          <p className="mt-10 text-sm text-text-muted">
             Plan prices are loading. If they do not appear,{' '}
             <Link to="/register" className="font-semibold underline">
               start free
@@ -140,7 +140,7 @@ export function PricingSection() {
         )}
 
         <Reveal delayMs={140}>
-          <p className="mt-6 text-sm text-lp-green/70">
+          <p className="mt-6 text-sm text-text-muted">
             Run out of AI for the month? Carry on without it, wait for the reset, or buy a one-off pack. Nothing stops working and nothing
             is charged automatically.
           </p>
