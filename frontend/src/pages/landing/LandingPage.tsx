@@ -1,7 +1,4 @@
 import { useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
-import { landingPathFor, rememberedExperience } from '../../lib/experience'
 import { LandingNav } from './LandingNav'
 import { Hero } from './Hero'
 import { ProblemSection } from './ProblemSection'
@@ -20,9 +17,11 @@ import { LandingFooter } from './LandingFooter'
  * The front door at "/".
  *
  * This replaced the plain "Shop or start a store?" screen: the two questions it asked are now the
- * hero's two buttons, inside a page that actually explains what the product is. The role handling
- * behind them is unchanged, so a signed-in visitor still never sees this page: whether they have a
- * shop decides where they go, not a stored preference (see lib/experience.ts).
+ * hero's two buttons, inside a page that actually explains what the product is.
+ *
+ * Everyone sees it, signed in or not: it is the product's front page, and an owner may want to read
+ * the pricing or send it to someone. A signed-in visitor gets one button in the navigation to where
+ * they belong instead of "Log in" (LandingNav.tsx); whether they have a shop decides which.
  *
  * The page sets its own document title and meta description on mount, because this is a single-page
  * app and index.html's tags are shared with the dashboard and the storefronts.
@@ -67,15 +66,7 @@ function useLandingMeta() {
 }
 
 export function LandingPage() {
-  const { isLoading, isAuthenticated, stores, user } = useAuth()
   useLandingMeta()
-
-  if (isLoading) return null
-
-  // Signed in already: there is nothing to sell them. Having a shop decides where they belong.
-  if (isAuthenticated) {
-    return <Navigate to={landingPathFor({ hasStore: stores.length > 0, preference: user?.preferredExperience ?? rememberedExperience() })} replace />
-  }
 
   return (
     <div className="min-h-screen bg-bg font-sans">
