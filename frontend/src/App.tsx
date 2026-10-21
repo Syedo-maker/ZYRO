@@ -28,6 +28,8 @@ const PlatformPage = lazy(() => import('./pages/admin/PlatformPage').then((m) =>
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const MarketingPage = lazy(() => import('./pages/admin/MarketingPage').then((m) => ({ default: m.MarketingPage })))
 const ReviewsAdminPage = lazy(() => import('./pages/admin/ReviewsAdminPage').then((m) => ({ default: m.ReviewsAdminPage })))
+const TermsPage = lazy(() => import('./pages/legal/TermsPage').then((m) => ({ default: m.TermsPage })))
+const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
 const StorefrontLayout = lazy(() => import('./pages/storefront/StorefrontLayout').then((m) => ({ default: m.StorefrontLayout })))
 const StorefrontHome = lazy(() => import('./pages/storefront/StorefrontHome').then((m) => ({ default: m.StorefrontHome })))
 const CartPage = lazy(() => import('./pages/storefront/CartPage').then((m) => ({ default: m.CartPage })))
@@ -58,6 +60,8 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
 
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="products" replace />} />

@@ -15,7 +15,7 @@ afterwards. Each phase ends with a test gate.
 | 4 | Whole-system workflow tests | done, awaiting review |
 | 5 | Azure deployment structure | done, awaiting review (nothing deployed) |
 | 6 | Smoke tests on a local production stack | done, awaiting review |
-| 7 | Documentation and handover | |
+| 7 | Documentation and handover | done, awaiting review |
 
 ## Decisions taken before starting
 
@@ -793,3 +793,112 @@ which is the proof that nothing is downloaded at start any more.
 | Whole stack stopped (`docker compose stop`) | every service exited 0, in 1.8 seconds |
 | Recommendation image, no network | both models load |
 | Backend suites touching the file links | 4 suites, 201 tests, all passing |
+
+---
+
+## Phase 7: Documentation and handover
+
+### What was written
+
+| Document | For | What it holds |
+|---|---|---|
+| `README.md` | Anyone opening the repository | The product first; running it three ways (developer, local production stack, Azure); tests; a map of the documentation |
+| `documentation/Architecture.md` | Engineers | A diagram of the system, each part, where data lives and why, one request end to end, environments, testing layers |
+| `documentation/adr/` | Engineers, later | Eight decisions that would be expensive to reverse, each with context, alternatives and consequences |
+| `documentation/Deployment_Runbook.md` | The owners, on deployment day | Phase 5; the order of operations onto Azure |
+| `documentation/Operations_Runbook.md` | Whoever is on call | Where to look, queries, alerts to set up, what to do for each kind of failure, rotating secrets, restoring the database, the reviewer's checklist |
+| `/terms`, `/privacy` (pages in the app) | Merchants and shoppers | The Terms of Service and the Privacy Policy |
+
+### The Terms of Service and the Privacy Policy
+
+Both are pages in the app, linked from the landing page footer, the sign-up form ("By creating a
+store you agree to...") and every storefront's footer. Who runs ZYRO and how to reach them come from
+one constant (`frontend/src/lib/legal.ts`), which the footer now uses too, so the three can never
+disagree. They carry the details the site already published: the two of you, and the contact email
+already in the footer. Nothing was invented.
+
+The Privacy Policy was written from the code, not from a template, and checked against it. That
+check removed three overstatements from the first draft: it had said no IP address is ever held (the
+rate limiter holds one for its window, at most an hour), that backups expire within 14 days (true for
+PostgreSQL, not necessarily for Atlas), and that email is sent only when a shop switches it on (no
+such switch was confirmed). It states plainly what a reader would want to know and might not expect:
+bank-transfer receipts are read by an AI provider; voice notes are transcribed on ZYRO's own servers
+and only the text goes to AI; shoppers' order details are held for the shop, which is the seller.
+
+**They need a qualified review before launch.** They are written to be accurate and readable, not by
+a lawyer. Three things in them are commitments the owners make by publishing: answering data requests
+within 30 days, telling merchants before a change that affects them, and the choice of Pakistani law.
+
+### Found on the way
+
+**The first CI run on GitHub with MongoDB working** (after Phase 6's fix) passed 49 of 51 backend
+suites. The two that failed relied on the developer's own `backend/.env` for Stripe settings, which a
+clean CI machine does not have: one written in Phase 4, one older. Both now set test-only values
+themselves, and were re-run locally with `.env` hidden and every Stripe, AI and email key removed.
+
+**Two flaky checks.** Two final full runs each failed one bargaining test: both checked that a
+product's floor price (700) never reaches a shopper by searching raw JSON for the text "700", and each
+run happened to produce a random id containing those digits (a store id with "...o70012...", a session
+id with "...c7000..."). They would have failed at random, whatever the code did. Both now check the
+values themselves, ids aside.
+
+**One hang that did not come back.** In one full run the dependency-failure suite's AI test timed out
+after 120 seconds, which its own 3-second request limit should make impossible. It passed in four runs
+of the suite alone, in a run of the exact sequence of suites that preceded it, and in every full run
+before and since. Its cause was not found, and this record does not pretend otherwise. Each request in
+that suite now has its own 15-second limit, so if it ever happens again the failure names the call that
+stalled.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Accessibility audit, with the two new pages | **0 findings** across 44 screen visits, 1,832 text elements measured |
+| Browser suites touching the footer and sign-up | `landing` 54, `phase1-auth-catalog` 25, `golden-path` 27, `responsive` 65, `partE-payments` 19: all passing |
+| Frontend type check, build, lint | pass; lint 37 warnings, 0 errors |
+| Final full backend run, every fix in | **51 suites, 1,769 tests, all passing**; coverage 92.32% statements, 77.31% branches, 93.60% functions, 94.80% lines |
+| The three suites CI failed, run with `.env` hidden and no keys | all passing |
+
+---
+
+## Where the programme ends
+
+| Phase | Pull request | State |
+|---|---|---|
+| 1. Rebrand to ZYRO | #20 | open, awaiting the owners' review |
+| 2. One design system | #21 | open; the owners' screenshot review is part of its gate |
+| 3. Production hardening | #22 | open |
+| 4. Whole-system tests | #23 | open |
+| 5. Azure deployment structure | #24 | open; nothing deployed |
+| 6. Local production stack and smoke test | #25 | open |
+| 7. Documentation and handover | this branch | open |
+
+Each pull request is stacked on the one before and is merged in order, by the owners.
+
+### Defects found and fixed across the programme
+
+Not counting test mistakes, which are recorded where they happened:
+
+1. Stored cross-site scripting through uploads (Phase 3).
+2. The MongoDB connection string, with its password on Atlas, logged at every start (Phase 3).
+3. Receipts (names, bank details) in a public folder; uploads on a disk that containers discard (Phase 3).
+4. Migration drift that made `prisma migrate dev` demand a database reset (Phase 3).
+5. 51 buttons rendering larger than their screens asked for (Phase 2).
+6. Every form field's border too faint to see (1.31:1) and 29 kinds of landing text below 4.5:1 (Phase 2).
+7. The merchant's colour stored but never shown (Phase 2).
+8. 24 places where the API contract did not match the server (Phase 4).
+9. A signed-in shopper's first cash or transfer order missing from their own orders (Phase 4).
+10. Outbound calls to Anthropic, Stripe and SendGrid without time limits (Phase 4).
+11. A sign-in that would not have survived a reload on two domains, caught before deployment (Phase 5).
+12. A security policy that blocked the site's own fonts and file images (Phase 6).
+13. Tests relying on a developer's own `.env`, and a test that failed at random (Phase 7).
+
+### Still open, for the owners
+
+- **Merge** pull requests #19 to #26, in order.
+- **Review** the Phase 2 before/after screenshots.
+- **Decide** what the footer says about who runs ZYRO, and have the Terms and Privacy Policy
+  reviewed by someone qualified, with the operator's legal name filled in (`frontend/src/lib/legal.ts`).
+- **Choose** the Azure subscription and region, and say go; then `Deployment_Runbook.md` from step 0.
+- **Upgrade Prisma to 7** in its own change, to clear the one accepted audit advisory.
+- **Delete the old Anthropic key** in the Anthropic console (rolled on 2026-10-20).
