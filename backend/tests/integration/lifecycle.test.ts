@@ -97,6 +97,18 @@ describe("private file links", () => {
     expect(verifyFileLink(key, Number(past.searchParams.get("expires")), past.searchParams.get("signature")!)).toBe(false);
   });
 
+  it("a link can be rewritten to the address browsers use (a CDN, or the emulator from the host), keeping its signature", async () => {
+    const { rebaseUrl } = await import("../../src/lib/storage");
+    const signed = "http://azurite:10000/devstoreaccount1/private/receipts/s/0f8fad5b-d9cb-469f-a165-70867728950e.png?sv=1&sig=abc";
+    expect(rebaseUrl(signed, "http://azurite:10000/devstoreaccount1/", "http://localhost:10000/devstoreaccount1")).toBe(
+      "http://localhost:10000/devstoreaccount1/private/receipts/s/0f8fad5b-d9cb-469f-a165-70867728950e.png?sv=1&sig=abc"
+    );
+    expect(rebaseUrl("https://acct.blob.core.windows.net/public/a.png", "https://acct.blob.core.windows.net/", "https://files.zyro.pk")).toBe("https://files.zyro.pk/public/a.png");
+    // Unset, or a link from somewhere else: untouched.
+    expect(rebaseUrl(signed, "http://azurite:10000/devstoreaccount1", undefined)).toBe(signed);
+    expect(rebaseUrl("https://elsewhere.example/x", "https://acct.blob.core.windows.net", "https://files.zyro.pk")).toBe("https://elsewhere.example/x");
+  });
+
   it("only keys of our own shape are accepted, so nothing can point outside the storage area", async () => {
     const { isStorageKey } = await import("../../src/lib/storage");
     expect(isStorageKey("voice/abc/0f8fad5b-d9cb-469f-a165-70867728950e.webm")).toBe(true);
