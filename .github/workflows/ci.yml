@@ -19,7 +19,11 @@ concurrency:
 jobs:
   backend:
     name: Backend (1,700+ tests, contract conformance, coverage floors)
-    runs-on: ubuntu-24.04
+    # Not 24.04: MongoDB 8.0 refuses to start on Linux 6.19 or newer (MongoDB SERVER-121912), the
+    # kernel GitHub's 24.04 runners moved to in October 2026; the first CI run failed on exactly
+    # that. 22.04 runs an older kernel. Move back once MongoDB ships the fix. Production uses Atlas
+    # and is not affected.
+    runs-on: ubuntu-22.04
     timeout-minutes: 40
     services:
       postgres:

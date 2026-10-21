@@ -1,0 +1,18 @@
+# Sent with every page and file. Kept in one file because nginx drops a server's add_header lines
+# in any location that adds its own, so each location includes this instead. A template, so that
+# ${FILES_ORIGIN} is filled in at start: where uploaded files are served from when that is not HTTPS
+# (the Blob Storage emulator on http://localhost:10000 in docker compose). Empty on Azure, where
+# Blob Storage is HTTPS and already covered. Named .inc so nginx's default `conf.d/*.conf` include
+# never loads it at the wrong level.
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+# The microphone is for merchants' voice notes; nothing else on the page may use a device.
+add_header Permissions-Policy "camera=(), geolocation=(), payment=(), microphone=(self)" always;
+# Scripts only from ZYRO itself (the build has no inline script). Inline style attributes are
+# allowed because React sets some (the storefront's brand colour, chart widths). Images and voice
+# recordings may come from Blob Storage over HTTPS (and a merchant's logo may be any HTTPS address);
+# a recording in progress is a blob: URL. Fonts may be data: URLs, because the build inlines the
+# smallest font files into the stylesheet (the smoke test found this blocked).
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: ${FILES_ORIGIN}; media-src 'self' blob: https: ${FILES_ORIGIN}; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;

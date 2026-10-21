@@ -14,7 +14,7 @@ afterwards. Each phase ends with a test gate.
 | 3 | Production hardening | done, awaiting review |
 | 4 | Whole-system workflow tests | done, awaiting review |
 | 5 | Azure deployment structure | done, awaiting review (nothing deployed) |
-| 6 | Smoke tests on a local production stack | |
+| 6 | Smoke tests on a local production stack | done, awaiting review |
 | 7 | Documentation and handover | |
 
 ## Decisions taken before starting
@@ -717,3 +717,79 @@ cleaned in the same layer, was a false positive: the cleanup is in the same `RUN
 | `actionlint` | **not run**: its image could not be downloaded (the same network failures as Phase 3) |
 | Images | web, api (and worker), migrate and the recommendation service all build; the recommendation image loads both its models with networking switched off |
 | A real `azd provision` | **not run, deliberately**: nothing is created in Azure until the owners say so |
+
+---
+
+## Phase 6: Smoke tests on a local production stack
+
+### The stack
+
+`compose.yaml` runs ZYRO on one machine the way Azure runs it: the same four images, `NODE_ENV=production`,
+the web container as the only door to the API, the worker in its own container, migrations as a
+one-off container before the API starts, PostgreSQL 17, MongoDB 8, Redis 7 with eviction off (as on
+Azure Managed Redis), and Blob Storage through the Azurite emulator. Every secret in it is a
+throwaway for that machine.
+
+```sh
+docker compose up -d --build      # then http://localhost:8080
+node frontend/e2e/smoke.e2e.mjs   # the smoke test
+docker compose down -v            # remove it all, data included
+```
+
+### The smoke test
+
+`frontend/e2e/smoke.e2e.mjs` goes through the front door only, as a visitor would, and checks what
+only the assembled system can show: every container healthy and migrations completed first; the
+security headers; the API answering through the proxy with a request id; a merchant staying signed
+in across a reload (the reason the site and the API share one origin); a product image served by
+Blob Storage; a receipt stored privately, opened by a signed link and refused without one; the
+recommendation service answering; a real browser with no script errors and nothing blocked by the
+security policy; and the API restarting with its data intact after a clean shutdown. The same script
+runs against any deployment with `BASE=https://<site>`.
+
+### What it found
+
+The first run failed three checks, and **two were real defects in Phase 5's security policy**, the
+kind that only show in a real browser against the real images:
+
+- **The site's fonts were blocked.** The build inlines the smallest font files into the stylesheet
+  as `data:` URLs, and the policy allowed fonts from the site itself only. Fixed: `font-src 'self' data:`.
+- **Receipts and product images could not load locally.** The policy allowed images from any HTTPS
+  address (right for Azure, where Blob Storage is HTTPS), but the emulator serves plain HTTP. The
+  policy is now a template with a `FILES_ORIGIN` setting for where files come from when it is not
+  HTTPS; it is empty on Azure.
+
+One more fix came from making the stack work at all: **file links need two addresses** when the API
+and the browser reach storage differently (inside Docker the API sees `azurite:10000`, the browser
+`localhost:10000`). `AZURE_STORAGE_PUBLIC_URL` now rewrites the address in the links the API hands
+out; a SAS signature does not cover the host, so they stay valid. The same setting is how a CDN or a
+custom files domain will be put in front of Blob Storage later.
+
+The third failure was the test's own: it asked whether the web container was healthy seconds after
+restarting it. It now waits for health checks to settle. It also no longer counts the 401 the
+sign-in page correctly receives when it asks whether a session already exists; script errors and
+blocked content still fail it.
+
+### CI's first run
+
+Opening the Phase 5 pull request ran the new CI on GitHub for the first time. The frontend, Python
+and image jobs passed. The backend job failed before running a test: **MongoDB 8.0 refuses to start
+on Linux 6.19 or newer** (MongoDB's issue SERVER-121912), the kernel GitHub's Ubuntu 24.04 runners
+had just moved to. The backend job now runs on Ubuntu 22.04, with a note to move back once MongoDB
+ships the fix. Production uses MongoDB Atlas and is not affected.
+
+### The recommendation image, at last
+
+The connection that failed in Phase 3 recovered, and the image built: 2.97 GB with 525 MB of models.
+Run with networking switched off entirely, it loads both the embedding model and the speech model,
+which is the proof that nothing is downloaded at start any more.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Smoke test against the production images | **31 of 31** |
+| Containers | all nine up; every health check passing; migrations exited 0 before the API started |
+| Whole stack stopped (`docker compose stop`) | every service exited 0, in 1.8 seconds |
+| Recommendation image, no network | both models load |
+| Backend suites touching the file links | 4 suites, 201 tests, all passing |

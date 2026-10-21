@@ -56,6 +56,10 @@ export const env = {
       accountUrl: process.env.AZURE_STORAGE_ACCOUNT_URL,
       /** A user-assigned managed identity's client id; unset for a system-assigned one. */
       clientId: process.env.AZURE_CLIENT_ID,
+      /** Where browsers fetch files from, when that differs from where the API reaches storage: a
+       *  CDN or custom domain in front of Blob Storage, or the emulator's address as seen from the
+       *  host. Links are rewritten to it; a SAS signature does not cover the host, so they still work. */
+      publicBaseUrl: process.env.AZURE_STORAGE_PUBLIC_URL,
       publicContainer: process.env.AZURE_STORAGE_PUBLIC_CONTAINER ?? "public",
       privateContainer: process.env.AZURE_STORAGE_PRIVATE_CONTAINER ?? "private",
     },
