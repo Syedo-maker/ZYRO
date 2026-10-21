@@ -7,3 +7,8 @@ backend/prisma/migrations/**/*.sql text eol=lf
 # The shell scripts that run inside Linux containers must stay LF too, or they fail with
 # "bad interpreter" when built from a Windows checkout.
 *.sh text eol=lf
+
+# Dockerfiles are read by Linux builders; keep them LF so a Windows checkout builds the same image.
+Dockerfile text eol=lf
+*.dockerignore text eol=lf
+.dockerignore text eol=lf
