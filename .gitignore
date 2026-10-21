@@ -49,3 +49,8 @@ dump.rdb
 
 # Private uploads (receipts, voice notes) on the local storage driver. Never served statically.
 backend/uploads-private/
+
+# azd keeps each environment's settings, including secrets, in .azure/<environment>/. Only the
+# deployment plan is part of the project.
+.azure/*
+!.azure/deployment-plan.md

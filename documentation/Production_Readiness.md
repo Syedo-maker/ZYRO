@@ -13,7 +13,7 @@ afterwards. Each phase ends with a test gate.
 | 2 | One design system for the whole platform | done |
 | 3 | Production hardening | done, awaiting review |
 | 4 | Whole-system workflow tests | done, awaiting review |
-| 5 | Azure deployment structure | |
+| 5 | Azure deployment structure | done, awaiting review (nothing deployed) |
 | 6 | Smoke tests on a local production stack | |
 | 7 | Documentation and handover | |
 
@@ -616,3 +616,104 @@ totals.
 | Dependency failures | 4 of 4 |
 | Azure Blob driver, against Azurite | 5 of 5 |
 | Coverage | 91.29% statements, 75.72% branches, 92.00% functions, 94.11% lines: every floor met (90, 75, 92, 92) |
+
+---
+
+## Phase 5: The Azure deployment structure
+
+**Nothing has been created in Azure, and nothing has been deployed.** This phase is the structure:
+the templates, the images and the pipeline, ready for the owners to run when they decide.
+
+### The folder structure
+
+| Path | What it is |
+|---|---|
+| `azure.yaml` | The Azure Developer CLI project: four services (web, api, worker, reco) and a pre-deploy hook that runs migrations |
+| `infra/main.bicep`, `infra/main.parameters.json` | One environment (staging or production), switched by `isProduction` |
+| `infra/modules/*.bicep` | Monitoring, identities, registry, Key Vault, storage, PostgreSQL, Redis, and the apps |
+| `infra/scripts/release.sh` | A no-downtime release with automatic rollback, used by the pipeline |
+| `infra/scripts/migrate.sh`, `.ps1` | Migrations for a manual `azd deploy` |
+| `frontend/Dockerfile`, `frontend/nginx/` | The web image: the built site, and the one door to the API |
+| `.github/workflows/ci.yml` | Every push and pull request: all tests against real databases, the frontend, the Python service, every image |
+| `.github/workflows/deploy.yml` | Staging on every green `main`; production on a person's approval |
+| `.azure/deployment-plan.md` | The decisions, as the Azure skills require |
+| `documentation/Deployment_Runbook.md` | The order of operations, for the owners |
+| `documentation/Azure_Cost_Estimate.md` | What it costs, per environment |
+
+### What runs where
+
+| Part | Azure service | Notes |
+|---|---|---|
+| web | Container Apps, public | Serves the site; forwards `/api` to the API |
+| api | Container Apps, **internal only** | Reached through web; blue-green revisions |
+| worker | Container Apps, no ingress | Scales on the AI queue's length |
+| reco | Container Apps, internal only | Kept warm (model loading) |
+| migrate | Container Apps job | One run per release, before the new API takes traffic |
+| PostgreSQL | Flexible Server 17 | TLS required; admits only Azure services |
+| MongoDB | MongoDB Atlas, same region | The decision of 2026-10-20 |
+| Redis | Azure Managed Redis | No eviction; one endpoint (BullMQ needs both) |
+| Files | Storage account | `public` and `private` containers; no account keys |
+| Secrets | Key Vault | Apps read them by managed identity; nothing in configuration |
+| Telemetry | Log Analytics, Application Insights | |
+
+### One change to the approved plan, and why
+
+The plan of 2026-10-20 named **Static Web Apps** for the frontend. Writing the templates showed it
+would break sign-in: the refresh token is an `httpOnly`, `SameSite=lax` cookie on the API's origin,
+so with the site and the API on two different Azure domains the browser would not send it, and
+merchants would be signed out on every reload. The site and the API must share one origin, as they
+already do in development through the Vite proxy.
+
+The frontend is therefore a small nginx container that serves the site and forwards `/api` to the
+API over the environment's private network. Two further gains: the API has no public address of its
+own, and the proxy's timeout is set to outlast the API's longest legitimate wait. The decision and
+its reasoning are recorded in `.azure/deployment-plan.md`.
+
+### Security, by construction
+
+- **No keys anywhere in configuration.** Two user-assigned managed identities (one for the API side,
+  one for the recommendation service) pull images, read secrets and use storage. The storage account
+  refuses account keys outright; private file links are signed with a user delegation key.
+- **Every secret in Key Vault**, read through Key Vault references; an optional integration (Stripe,
+  Anthropic, SendGrid) is wired in only when its secret is supplied.
+- **The API is not on the internet.** Only the web app is.
+- **The site sends a strict Content-Security-Policy** (scripts only from ZYRO itself, no framing),
+  HSTS, and a permissions policy that allows the microphone (voice notes) and nothing else.
+- **The pipeline has no Azure password.** It signs in with OpenID Connect, one identity per
+  environment, each with access to its own resource group only.
+
+### Releases
+
+`infra/scripts/release.sh`, run by the pipeline for each environment:
+
+1. Pin traffic to what is live.
+2. Run migrations with the new build. If they fail, stop; nothing new is running.
+3. Update the worker and the recommendation service.
+4. Start new revisions of the API and the site with no traffic, and wait until they are healthy.
+   Their readiness checks the databases, Redis and storage.
+5. Move traffic, then smoke-test the live site.
+6. On any failure from step 3: move traffic back to the previous revisions (seconds, no rebuild),
+   restore the previous worker and recommendation images, and fail the release.
+
+Production receives the **exact images staging tested**, copied between registries, never rebuilt.
+Migrations must be backward compatible with the release before, because the old revisions keep
+serving during a release and after a rollback.
+
+### The vibe-ship audit
+
+The `vibe-ship` audit of the images found no critical or high issue. It asked for a `HEALTHCHECK`
+in the backend and recommendation service images, which both now have (the backend's serves the API
+and the worker from one image, so the URL is configurable). Its one low finding, an apt cache not
+cleaned in the same layer, was a false positive: the cleanup is in the same `RUN`, on the next line.
+
+### Validation
+
+| Check | Result |
+|---|---|
+| `bicep build` (Bicep CLI 0.48.1) | compiles, **0 warnings**; every resource type and API version recognised, including Azure Managed Redis |
+| `bicep lint` | clean |
+| Workflows and `azure.yaml` | parse |
+| Release and migration scripts | `bash -n` syntax check passes |
+| `actionlint` | **not run**: its image could not be downloaded (the same network failures as Phase 3) |
+| Images | web, api (and worker), migrate and the recommendation service all build; the recommendation image loads both its models with networking switched off |
+| A real `azd provision` | **not run, deliberately**: nothing is created in Azure until the owners say so |
