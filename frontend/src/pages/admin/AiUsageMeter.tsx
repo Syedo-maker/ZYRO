@@ -36,7 +36,7 @@ export function AiUsageMeter({ storeId, isOwner = false }: { storeId: string; is
   if (!usage) return null
   const credits = usage.topUpGenerations + usage.topUpChatMessages
   return (
-    <section aria-label="AI usage this month" className="rounded-2xl border border-border bg-white p-5">
+    <section aria-label="AI usage this month" className="rounded-2xl border border-border bg-surface p-5">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-base font-bold">
           AI usage this month <span className="ml-1 text-xs font-semibold text-text-secondary">{usage.plan} plan</span>

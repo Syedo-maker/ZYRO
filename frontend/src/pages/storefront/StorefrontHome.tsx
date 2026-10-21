@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
+import { buttonStyles } from '../../components/ui/Button'
 import { useStore } from '../../context/StoreContext'
 import { Alert } from '../../components/ui/Alert'
 import { ProductCard } from '../../components/storefront/ProductCard'
@@ -36,12 +37,12 @@ export function StorefrontHome() {
 
   return (
     <div className="flex flex-col gap-10">
-      <section aria-labelledby="home-heading" className="flex flex-col items-start gap-4 rounded-2xl border border-border bg-white px-6 py-10 sm:px-10">
+      <section aria-labelledby="home-heading" className="flex flex-col items-start gap-4 rounded-2xl border border-border bg-surface px-6 py-10 sm:px-10">
         <h1 id="home-heading" className="font-display text-3xl font-bold sm:text-4xl">
           {store.name}
         </h1>
         <p className="max-w-xl text-sm text-text-secondary">Browse the latest arrivals or jump straight to a category. Checkout is secure and you do not need an account to buy.</p>
-        <Link to={`/store/${store.id}/products`} className="inline-flex h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">
+        <Link to={`/store/${store.id}/products`} className={buttonStyles()}>
           Shop all products
         </Link>
       </section>
@@ -60,7 +61,7 @@ export function StorefrontHome() {
         </div>
         {products === null && !loadError && <ProductGridSkeleton count={4} />}
         {products?.length === 0 && (
-          <p className="rounded-2xl border border-border bg-white px-6 py-12 text-center text-sm text-text-secondary">This store has no products yet. Please check back soon.</p>
+          <p className="rounded-2xl border border-border bg-surface px-6 py-12 text-center text-sm text-text-secondary">This store has no products yet. Please check back soon.</p>
         )}
         <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {products?.map((p) => (
@@ -81,7 +82,7 @@ export function StorefrontHome() {
               <li key={c.name}>
                 <Link
                   to={`/store/${store.id}/products?category=${encodeURIComponent(c.name)}`}
-                  className="flex h-full flex-col gap-1 rounded-2xl border border-border bg-white p-4 hover:border-brand"
+                  className="flex h-full flex-col gap-1 rounded-2xl border border-border bg-surface p-4 hover:border-brand"
                 >
                   <span className="text-sm font-semibold">{c.name}</span>
                   <span className="text-xs text-text-secondary">

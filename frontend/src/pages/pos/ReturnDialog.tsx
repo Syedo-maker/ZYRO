@@ -155,7 +155,7 @@ export function ReturnDialog({ sale, onClose, onReturned }: { sale: Sale; onClos
             maxLength={500}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="h-11 rounded-[10px] border border-border px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-[10px] border border-border-input px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           />
         </div>
 

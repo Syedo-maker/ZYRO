@@ -7,7 +7,7 @@ const DAYS = 30
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section aria-label={title} className="rounded-2xl border border-border bg-white p-5">
+    <section aria-label={title} className="rounded-2xl border border-border bg-surface p-5">
       <h2 className="mb-4 font-display text-base font-bold">{title}</h2>
       {children}
     </section>

@@ -176,3 +176,131 @@ reported token usage, and nothing about the key's value was printed.
   not resolve, but they should sit on a domain ZYRO controls. Settled when the production domain is
   chosen in Phase 5.
 
+---
+
+## Phase 2: One design system for the whole platform
+
+### Where it started
+
+The platform had two colour systems that never met. The landing page used a private palette of its
+own (dark green, cream, orange, terracotta), and the other 72 screens used an indigo palette. A
+merchant who signed up on the green landing page arrived in an indigo dashboard: it looked like two
+products.
+
+### What it is now
+
+One set of design tokens in `frontend/src/index.css`, in three layers:
+
+1. **Primitives**: the raw palette (`--zyro-green-900`, `--zyro-terracotta-700` and so on). They are
+   deliberately kept out of Tailwind's theme, so no utility like `bg-green-900` exists and no
+   component can reach past what a colour is for to its value.
+2. **Semantic tokens**: what a colour is for (page, card, text, brand, accent, the dark surface,
+   success, warning, danger, AI). Every screen uses these. The names are the ones the app was already
+   built on, so re-theming 72 screens was a change to one file, not to 72.
+3. **Components**: the variant maps in `components/ui/`, built only from semantic tokens.
+
+The landing page's 181 private colour classes were moved onto the same tokens and the private
+palette was deleted. The eight hard-coded colours (in landing illustrations and two directory
+fallbacks) became tokens; no hex colour remains in any component. The typefaces are Plus Jakarta Sans
+for headings and IBM Plex Sans for text, everywhere, and the ZYRO wordmark is one component
+(`Wordmark.tsx`) instead of being typed out separately in each place.
+
+### Buttons
+
+`components/ui/Button.tsx` has one set of variants for every surface: primary, accent, secondary,
+danger, ghost, inverse, outline-inverse and outline, in three sizes. `buttonStyles()` gives the same
+classes to links that look like buttons (Start free, Go to checkout), which must stay links for the
+router and for screen readers. Every button now has the same visible keyboard focus outline.
+
+Building it found a defect. A screen that wanted a smaller button passed its own height, such as
+`h-10`, but the button already carried `h-11`. When two classes set the same property, the
+stylesheet's order decides, not the order they are written in, and Tailwind orders them numerically,
+so `h-11` always won (confirmed in the built CSS). **51 buttons** asked for 32, 36 or 40 px and all
+rendered at 44 px, and the same happened to their padding. A caller's own height, padding, text size,
+weight or focus colour now replaces the default, so those buttons are now the size their screens
+asked for. That is a visible change, and it shows in the before/after screenshots.
+
+### Every pairing measured
+
+Each colour pairing was worked out with the WCAG formula before it was written, and the numbers are
+recorded in the stylesheet's header. Two rules followed from them:
+
+1. **No text hierarchy by opacity.** The landing page made secondary text by fading its green to 60%,
+   and that measured 3.6 to 4.2:1, which fails. Each tier of text is now a real colour, measured on
+   each surface it appears on.
+2. **The brand orange is never text.** It measures 2.77:1 on the page. It is used for fills and
+   decoration; accent-coloured text is terracotta (5.78:1) on light surfaces and a lighter orange
+   (4.99:1) on the dark one.
+
+### Merchant colours on storefronts
+
+A storefront wears its merchant's own colour; the platform around it stays ZYRO's. The colour tokens
+are CSS variables that every utility reads at run time, so a storefront sets four of them on its root
+element (`lib/brandTheme.ts`) and everything inside it changes.
+
+A merchant can pick any colour, including a pale yellow that white text would vanish on (1.4:1). So
+the colour is deepened, keeping its hue, only as far as needed for text on it and brand-coloured text
+around it to reach 4.5:1. A colour that already passes is used exactly as chosen. This was checked
+against 5,010 colours (ten chosen, 5,000 random): none fell below 4.5:1, and 29% were used unchanged.
+A new browser test, `e2e/brand-theme.e2e.mjs`, proves it in a real browser: a deep colour is used
+as-is, a pale one is deepened and passes, a shop with no colour wears ZYRO's green, and the merchant's
+dashboard keeps ZYRO's green.
+
+Before this phase, the merchant's colour was stored and could be set in settings, but no storefront
+ever showed it.
+
+### The audit had been blind to colour
+
+The accessibility audit reported zero findings while text-contrast failures sat on the landing page,
+because it never measured colour. It now measures what the browser paints: every text element's
+colour against its real background (translucent layers composited), with the large-text threshold,
+and every form field's border against what surrounds it (WCAG 1.4.11). It also runs with reduced
+motion, because the landing page's scroll animations had hidden half the page from it.
+
+Its first honest run found **127 failures**:
+
+- **Every form field in the product**: input borders measured 1.31:1 against the 3:1 that tells
+  anyone a field is there. Fields now use a border token that measures 3.51:1 on a card.
+- **29 kinds of landing text** made with opacity, from 3.6 to 4.2:1. All now use real colour tiers.
+
+The audit's own shop now uses the pale yellow, so every storefront screen it visits is also a test
+of the merchant-colour adjustment.
+
+### Tests that had gone stale
+
+Running every browser suite for this gate found three that were failing for reasons that had nothing
+to do with ZYRO's code, and fixed them:
+
+- **`phase1-auth-catalog`** checked that Space Grotesk loads. This phase replaced it with Plus Jakarta
+  Sans, so the check now asserts that.
+- **`roles-and-ideas`** looked for a "Shop / Start a store" chooser on `/`. That screen was replaced
+  by the landing page in an earlier piece of work (commit b3bb90a), before this programme, and the
+  suite was never updated. It now checks the landing page's two equivalent links and follows "Shop
+  now" into the directory.
+- **`stripe-discount` and `stripe-real`** selected a payment method on Stripe's own hosted page by
+  its radio input. Stripe has since redrawn that page: each payment method is a row whose click
+  target is a transparent button laid over it. Both suites now click where a person clicks, on the
+  word "Card". Both were run against real Stripe in test mode, with the webhook forwarder, and pass.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Accessibility audit, now measuring colour | 0 findings across 40 screen visits, 1,640 text elements measured; the audit's storefront uses a pale yellow merchant colour |
+| Merchant colour browser test (new) | 6 of 6 |
+| Merchant colour derivation | 5,010 colours, none below 4.5:1 |
+| Browser suites against the test server | all 18 pass: 577 checks |
+| Password protection suite (rate limiting on) | 5 of 5 |
+| Real Stripe suites (test mode, webhook forwarder) | `stripe-discount` 15 of 15, `stripe-real` 22 of 22 |
+| Backend tests touching store branding | 124 of 124 |
+| Type check and production build | pass |
+| Lint | 37 warnings (baseline 39), 0 errors |
+| Hard-coded colours in components | none |
+| Before/after screenshots | 21 screens at 375 px and 1440 px, `frontend/e2e/shots/visual/compare.html`, for the owners' review |
+
+Bundle: the entry script is 334.44 kB (102.65 kB gzipped), against 333.58 kB at the baseline. The
+stylesheet is 73.45 kB, of which 21.47 kB is the 30 `@font-face` rules added in Phase 1 when the
+fonts were self-hosted; the styles themselves are 51.98 kB, about 2 kB smaller than at the baseline.
+
+Test data was removed afterwards with `cleanup-test-data.ts`; what remains is 10 stores and 17 users,
+all real (the tenth, `anu`, was created on 2026-10-18, before this programme).

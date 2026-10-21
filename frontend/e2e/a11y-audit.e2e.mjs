@@ -29,6 +29,7 @@ const suffix = Date.now().toString(36)
 const password = 'password123'
 const findings = []
 let screensChecked = 0
+let textElementsChecked = 0
 
 async function api(method, p, { token, body } = {}) {
   const res = await fetch(API + p, {
@@ -121,6 +122,94 @@ const AUDIT = (minTarget) => {
       el: describe(el),
     })
   }
+
+  // ---- Colour contrast: text (WCAG 1.4.3) and the borders that identify a field (WCAG 1.4.11) -------
+  /*
+   * Added after this audit reported zero findings while three text-contrast failures sat on the
+   * landing page, worked out by hand. It never measured colour at all. It does now, and it measures
+   * what the browser actually paints: every colour, whatever form CSS wrote it in (oklch, color-mix,
+   * an opacity modifier), is resolved to sRGB by drawing it on a canvas, and a translucent background
+   * is composited over whatever lies behind it, ancestor by ancestor.
+   */
+  const ctx = (() => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 1
+    return c.getContext('2d', { willReadFrequently: true })
+  })()
+  const rgba = (css) => {
+    ctx.clearRect(0, 0, 1, 1)
+    ctx.fillStyle = '#000'
+    ctx.fillStyle = css
+    ctx.fillRect(0, 0, 1, 1)
+    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data
+    return [r, g, b, a / 255]
+  }
+  const over = ([r, g, b, a], [br, bg, bb]) => [r * a + br * (1 - a), g * a + bg * (1 - a), b * a + bb * (1 - a)]
+  const lum = ([r, g, b]) => {
+    const f = (c) => ((c /= 255) <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+  }
+  const contrast = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m)
+    return (x + 0.05) / (y + 0.05)
+  }
+  /** The opaque colour behind an element: translucent backgrounds composited up the ancestor chain. */
+  const backdrop = (el) => {
+    const layers = []
+    for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+      const c = rgba(getComputedStyle(n).backgroundColor)
+      if (c[3] > 0) {
+        layers.push(c)
+        if (c[3] >= 1) break
+      }
+    }
+    let base = [255, 255, 255]
+    for (const layer of layers.reverse()) base = over(layer, base)
+    return base
+  }
+  const hex = ([r, g, b]) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
+  const decorative = (el) => el.closest('[aria-hidden="true"], .sr-only, [inert]') !== null
+
+  const textOwners = new Set()
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: (t) => (t.nodeValue.trim().length > 1 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+  })
+  for (let t = walker.nextNode(); t; t = walker.nextNode()) textOwners.add(t.parentElement)
+
+  let textChecked = 0
+  for (const el of textOwners) {
+    if (!el || !visible(el) || decorative(el)) continue
+    if (el.closest('button:disabled, [aria-disabled="true"], input:disabled, select:disabled')) continue
+    const cs = getComputedStyle(el)
+    const size = parseFloat(cs.fontSize)
+    const weight = parseInt(cs.fontWeight, 10) || 400
+    const large = size >= 24 || (size >= 18.66 && weight >= 700)
+    const need = large ? 3 : 4.5
+    const bg = backdrop(el)
+    const fg = over(rgba(cs.color), bg)
+    const ratio = contrast(fg, bg)
+    textChecked += 1
+    if (ratio + 0.005 < need) {
+      out.push({
+        kind: 'text-contrast',
+        detail: `${ratio.toFixed(2)}:1, needs ${need} (${Math.round(size)}px ${weight}${large ? ', large' : ''}) ${hex(fg)} on ${hex(bg)}`,
+        el: describe(el),
+      })
+    }
+  }
+
+  for (const el of document.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):not([type=range]), select, textarea')) {
+    if (!visible(el) || decorative(el)) continue
+    const cs = getComputedStyle(el)
+    if (parseFloat(cs.borderTopWidth) === 0) continue
+    const outside = backdrop(el.parentElement)
+    const border = over(rgba(cs.borderTopColor), outside)
+    const ratio = contrast(border, outside)
+    if (ratio + 0.005 < 3) {
+      out.push({ kind: 'field-boundary-contrast', detail: `border ${ratio.toFixed(2)}:1, needs 3 (WCAG 1.4.11) ${hex(border)} on ${hex(outside)}`, el: describe(el) })
+    }
+  }
+  out.push({ kind: '_stats', detail: String(textChecked), el: '' })
 
   // ---- Images ------------------------------------------------------------------------------------
   for (const img of document.querySelectorAll('img')) {
@@ -216,7 +305,10 @@ async function tabFocusAudit(page, label, width, steps = 25) {
 async function audit(page, label, width, minTarget) {
   await page.waitForLoadState('networkidle').catch(() => undefined)
   await page.waitForTimeout(400)
-  const found = await page.evaluate(AUDIT, minTarget)
+  const raw = await page.evaluate(AUDIT, minTarget)
+  const stats = raw.find((f) => f.kind === '_stats')
+  textElementsChecked += stats ? Number(stats.detail) : 0
+  const found = raw.filter((f) => f.kind !== '_stats')
   await tabFocusAudit(page, label, width)
   screensChecked += 1
   const seen = new Set()
@@ -242,6 +334,14 @@ if (reg.status !== 201) {
 }
 const token = reg.json.accessToken
 const storeId = (await api('GET', '/users/me/stores', { token })).json[0].id
+// The shop wears a pale yellow, the hardest kind of merchant colour: white text on it measures 1.4:1.
+// Storefronts deepen a colour like this until it passes (lib/brandTheme.ts), so every storefront
+// screen below is also the test that they do.
+const branding = await api('PATCH', `/stores/${storeId}/branding`, { token, body: { themeColor: '#FFD400' } })
+if (branding.status !== 200) {
+  console.log('setup failed: branding', branding.status, JSON.stringify(branding.json))
+  process.exit(1)
+}
 for (const [title, price] of [['Ceramic Chai Cup', 450], ['Lawn Suit Three Piece', 2500], ['Handmade Khussa', 1800]]) {
   await api('POST', `/stores/${storeId}/products`, { token, body: { title, price, stock: 12, category: 'home and kitchen' } })
 }
@@ -249,7 +349,10 @@ for (const [title, price] of [['Ceramic Chai Cup', 450], ['Lawn Suit Three Piece
 console.log('\nAuditing. Each line lists what was found on that screen.\n')
 
 for (const [width, height] of [[375, 812], [1440, 900]]) {
-  const ctx = await browser.newContext({ viewport: { width, height } })
+  // reducedMotion: the landing page's scroll animations hold below-the-fold content at opacity 0
+  // until it is scrolled to. Without this the audit skipped all of it as invisible, which is how
+  // two contrast failures in the pricing and call-to-action sections went unreported.
+  const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' })
   const page = await ctx.newPage()
   const minTarget = 24 // WCAG 2.2 Target Size (Minimum) for web
 
@@ -315,7 +418,7 @@ await browser.close()
 const byKind = {}
 for (const f of findings) (byKind[f.kind] ||= []).push(f)
 
-console.log(`\n${'='.repeat(78)}\nFINDINGS: ${findings.length} across ${screensChecked} screen visits\n${'='.repeat(78)}`)
+console.log(`\n${'='.repeat(78)}\nFINDINGS: ${findings.length} across ${screensChecked} screen visits (${textElementsChecked} text elements measured for contrast)\n${'='.repeat(78)}`)
 for (const [kind, list] of Object.entries(byKind).sort((a, b) => b[1].length - a[1].length)) {
   console.log(`\n${kind} (${list.length})`)
   const unique = new Map()

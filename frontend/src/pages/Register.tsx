@@ -51,7 +51,7 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white border border-border rounded-2xl p-8 flex flex-col gap-5">
+      <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-8 flex flex-col gap-5">
         <div>
           <div className="font-display text-2xl font-bold">ZYRO</div>
           <h1 className="font-display text-lg font-semibold mt-4">Create your store</h1>
@@ -109,7 +109,7 @@ export function RegisterPage() {
               id="currency"
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="h-11 rounded-[10px] border border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             >
               {STORE_CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>

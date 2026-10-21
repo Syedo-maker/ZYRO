@@ -70,7 +70,7 @@ function Register() {
         onNotice={setNotice}
       />
 
-      <aside aria-label="Current sale" className="bg-white border-l border-border flex flex-col lg:min-h-0">
+      <aside aria-label="Current sale" className="bg-surface border-l border-border flex flex-col lg:min-h-0">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="font-display text-base font-bold">
             Current sale {itemCount > 0 && <span className="text-text-secondary font-medium">({itemCount} items)</span>}
@@ -340,7 +340,7 @@ function ProductPane({
             }
           }}
           placeholder="Barcode, SKU or product name"
-          className="h-14 rounded-[10px] border border-border bg-white px-4 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="h-14 rounded-[10px] border border-border-input bg-surface px-4 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
         <div className="min-h-5 text-sm" role="status" aria-live="polite">
           {notice && <span className="font-medium text-text-secondary">{notice}</span>}
@@ -364,7 +364,7 @@ function ProductPane({
                     searchRef.current?.focus()
                   }}
                   disabled={out}
-                  className="w-full h-full text-left rounded-xl border border-border bg-white p-3 flex flex-col gap-1 hover:border-brand disabled:opacity-60 disabled:hover:border-border"
+                  className="w-full h-full text-left rounded-xl border border-border bg-surface p-3 flex flex-col gap-1 hover:border-brand disabled:opacity-60 disabled:hover:border-border"
                 >
                   {p.image ? (
                     <img src={p.image} alt="" className="h-20 w-full object-cover rounded-lg mb-1" />

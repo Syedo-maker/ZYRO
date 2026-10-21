@@ -102,14 +102,14 @@ export function SearchBox({ storeId }: { storeId: string }) {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="h-11 w-full rounded-l-[10px] border border-r-0 border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="h-11 w-full rounded-l-[10px] border border-r-0 border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
-        <button type="submit" className="h-11 rounded-r-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover">
+        <button type="submit" className="h-11 rounded-r-[10px] bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover">
           Search
         </button>
       </form>
       {showList && (
-        <ul id={listId} role="listbox" aria-label="Suggestions" className="absolute inset-x-0 top-12 z-20 overflow-hidden rounded-[10px] border border-border bg-white">
+        <ul id={listId} role="listbox" aria-label="Suggestions" className="absolute inset-x-0 top-12 z-20 overflow-hidden rounded-[10px] border border-border bg-surface">
           {suggestions.map((s, i) => (
             <li
               key={s.id}

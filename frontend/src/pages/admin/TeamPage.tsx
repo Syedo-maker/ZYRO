@@ -142,7 +142,7 @@ export function TeamPage() {
       <UpgradeNotice error={limitError} />
       {message && <Alert tone="success">{message}</Alert>}
 
-      <section aria-labelledby="staff-heading" className="bg-white border border-border rounded-2xl">
+      <section aria-labelledby="staff-heading" className="bg-surface border border-border rounded-2xl">
         <h2 id="staff-heading" className="font-display text-base font-bold px-5 pt-5">
           Staff
         </h2>
@@ -169,7 +169,7 @@ export function TeamPage() {
         )}
       </section>
 
-      <form onSubmit={add} aria-labelledby="add-heading" className="bg-white border border-border rounded-2xl p-5 flex flex-col gap-4">
+      <form onSubmit={add} aria-labelledby="add-heading" className="bg-surface border border-border rounded-2xl p-5 flex flex-col gap-4">
         <h2 id="add-heading" className="font-display text-base font-bold">
           Add a cashier or manager
         </h2>
@@ -208,7 +208,7 @@ export function TeamPage() {
         </div>
       </form>
 
-      <form onSubmit={saveLimit} aria-labelledby="limit-heading" className="bg-white border border-border rounded-2xl p-5 flex flex-col gap-4">
+      <form onSubmit={saveLimit} aria-labelledby="limit-heading" className="bg-surface border border-border rounded-2xl p-5 flex flex-col gap-4">
         <h2 id="limit-heading" className="font-display text-base font-bold">
           Cashier discount limit
         </h2>

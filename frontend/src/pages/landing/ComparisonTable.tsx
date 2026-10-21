@@ -21,13 +21,13 @@ const ROWS: { feature: string; ours: string; typical: string }[] = [
 
 export function ComparisonTable() {
   return (
-    <section className="bg-lp-sage py-16 lg:py-24">
+    <section className="bg-subtle py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-landing text-3xl font-extrabold leading-tight text-lp-green sm:text-4xl">
+          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
             Why ZYRO
           </h2>
-          <p className="mt-4 max-w-2xl text-base text-lp-green/80">
+          <p className="mt-4 max-w-2xl text-base text-text-secondary">
             We have not named anyone, because platforms change their prices and we would rather be accurate than clever.
           </p>
         </Reveal>
@@ -36,40 +36,40 @@ export function ComparisonTable() {
           {/* Phone: cards. A six-row, three-column table is unreadable at 375px. */}
           <ul role="list" className="mt-9 flex flex-col gap-4 md:hidden">
             {ROWS.map((row) => (
-              <li key={row.feature} className="rounded-2xl border border-lp-green/10 bg-lp-cream p-5">
-                <h3 className="font-landing text-base font-bold text-lp-green">{row.feature}</h3>
-                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-lp-accent-strong">ZYRO</p>
-                <p className="mt-1 text-sm text-lp-green/85">{row.ours}</p>
-                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-lp-green/50">A typical platform</p>
-                <p className="mt-1 text-sm text-lp-green/65">{row.typical}</p>
+              <li key={row.feature} className="rounded-2xl border border-border bg-bg p-5">
+                <h3 className="font-display text-base font-bold text-text">{row.feature}</h3>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-accent">ZYRO</p>
+                <p className="mt-1 text-sm text-text-secondary">{row.ours}</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-text-muted">A typical platform</p>
+                <p className="mt-1 text-sm text-text-muted">{row.typical}</p>
               </li>
             ))}
           </ul>
 
-          <div className="mt-9 hidden overflow-hidden rounded-2xl border border-lp-green/10 bg-lp-cream md:block">
+          <div className="mt-9 hidden overflow-hidden rounded-2xl border border-border bg-bg md:block">
             <table className="w-full border-collapse text-left">
               <caption className="sr-only">ZYRO compared with a typical hosted store platform</caption>
               <thead>
-                <tr className="bg-lp-green text-lp-cream">
-                  <th scope="col" className="px-5 py-4 font-landing text-sm font-bold">
+                <tr className="bg-inverse text-on-inverse">
+                  <th scope="col" className="px-5 py-4 font-display text-sm font-bold">
                     Feature
                   </th>
-                  <th scope="col" className="px-5 py-4 font-landing text-sm font-bold">
+                  <th scope="col" className="px-5 py-4 font-display text-sm font-bold">
                     ZYRO
                   </th>
-                  <th scope="col" className="px-5 py-4 font-landing text-sm font-bold text-lp-cream/75">
+                  <th scope="col" className="px-5 py-4 font-display text-sm font-bold text-on-inverse-muted">
                     A typical hosted store platform
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {ROWS.map((row, i) => (
-                  <tr key={row.feature} className={i % 2 === 1 ? 'bg-lp-sage/35' : ''}>
-                    <th scope="row" className="w-[22%] px-5 py-4 align-top font-landing text-sm font-bold text-lp-green">
+                  <tr key={row.feature} className={i % 2 === 1 ? 'bg-subtle/35' : ''}>
+                    <th scope="row" className="w-[22%] px-5 py-4 align-top font-display text-sm font-bold text-text">
                       {row.feature}
                     </th>
-                    <td className="w-[39%] px-5 py-4 align-top text-sm text-lp-green/85">{row.ours}</td>
-                    <td className="px-5 py-4 align-top text-sm text-lp-green/65">{row.typical}</td>
+                    <td className="w-[39%] px-5 py-4 align-top text-sm text-text-secondary">{row.ours}</td>
+                    <td className="px-5 py-4 align-top text-sm text-text-muted">{row.typical}</td>
                   </tr>
                 ))}
               </tbody>

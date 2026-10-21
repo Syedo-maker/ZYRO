@@ -57,7 +57,7 @@ export function RefundDialog({ order, storeId, open, onClose, onRefunded }: Refu
             onChange={(e) => setReason(e.target.value)}
             maxLength={500}
             rows={3}
-            className="rounded-[10px] border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="rounded-[10px] border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           />
         </div>
 

@@ -55,7 +55,7 @@ export function DirectoryPanel({ storeId }: { storeId: string }) {
   if (!listing) return error ? <Alert>{error}</Alert> : <Spinner label="Loading your directory settings" />
 
   return (
-    <section aria-label="Public directory" className="rounded-2xl border border-border bg-white p-5">
+    <section aria-label="Public directory" className="rounded-2xl border border-border bg-surface p-5">
       <h2 className="font-display text-base font-bold">Public directory</h2>
       <p className="mt-1 text-sm text-text-secondary">
         Shoppers who arrive at ZYRO without a shop in mind see a list of shops. Only your shop name, logo, category and the line below are shown there.
@@ -89,7 +89,7 @@ export function DirectoryPanel({ storeId }: { storeId: string }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Hand-made pottery from Multan, fired in small batches."
-            className="rounded-[10px] border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="rounded-[10px] border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           />
           <p className="text-xs text-text-muted">{200 - description.length} characters left. Anyone can read this.</p>
         </div>
