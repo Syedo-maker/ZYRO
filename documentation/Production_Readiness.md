@@ -858,6 +858,7 @@ stalled.
 | Frontend type check, build, lint | pass; lint 37 warnings, 0 errors |
 | Final full backend run, every fix in | **51 suites, 1,769 tests, all passing**; coverage 92.32% statements, 77.31% branches, 93.60% functions, 94.80% lines |
 | The three suites CI failed, run with `.env` hidden and no keys | all passing |
+| **CI on GitHub** (pull request #26, a clean machine with no secrets) | **all four jobs pass**: backend (every test, the contract checks, the coverage floors), frontend, Python, and every production image |
 
 ---
 
