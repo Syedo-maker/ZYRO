@@ -10,8 +10,8 @@ afterwards. Each phase ends with a test gate.
 |---|---|---|
 | 0 | Groundwork: skills, baseline | done |
 | 1 | Rebrand ShopMind AI to ZYRO | done |
-| 2 | One design system for the whole platform | |
-| 3 | Production hardening | |
+| 2 | One design system for the whole platform | done |
+| 3 | Production hardening | done, awaiting review; recommendation image still to build (network) |
 | 4 | Whole-system workflow tests | |
 | 5 | Azure deployment structure | |
 | 6 | Smoke tests on a local production stack | |
@@ -304,3 +304,189 @@ fonts were self-hosted; the styles themselves are 51.98 kB, about 2 kB smaller t
 
 Test data was removed afterwards with `cleanup-test-data.ts`; what remains is 10 stores and 17 users,
 all real (the tenth, `anu`, was created on 2026-10-18, before this programme).
+
+---
+
+## Phase 3: Production hardening
+
+Everything in this phase is about what happens when ZYRO runs on servers it does not control:
+containers that restart, move and scale, dependencies that blink, and logs read by someone other
+than the person who wrote the code.
+
+### Files: off the container's disk, and receipts made private
+
+**Before:** every upload (product images, bank-transfer receipts, voice notes) was written to the
+API container's own disk and served from one public `/uploads` folder. In a container, that disk is
+thrown away on every restart, so every image and receipt would have disappeared within days. And a
+receipt, which carries the shopper's name and bank details, was readable by anyone who had or guessed
+its address.
+
+**Now:** `src/lib/storage.ts` stores files behind one interface with two drivers:
+
+- **Azure Blob Storage** in production. Product images go in a `public` container (anyone may read a
+  single image; nobody may list them) with a one-year cache. Receipts and voice notes go in a
+  `private` container with no public access at all.
+- **The local disk** for development, with private files in a separate folder that is never served.
+
+The database now stores a **key** for a private file, never an address. Each time a merchant opens
+their receipts or voice notes, the API signs a fresh link that works for an hour: a Blob Storage SAS
+link in production (signed with the API's managed identity, so no storage key exists anywhere in its
+configuration), or an HMAC-signed link on the local driver. A key names its store, and a receipt can
+only be submitted for the store it was uploaded to.
+
+The API refuses to start in production with the local driver, rather than lose files quietly.
+
+`scripts/move-private-uploads.ts` moves receipts and voice notes uploaded before this change into
+private storage and rewrites their rows. It reports first and changes nothing without `--apply`, and
+running it again does nothing. It was proved on a throwaway store: the row was rewritten to a private
+key, the file moved, the public copy deleted, and a row whose file was missing left untouched.
+
+### A security hole found on the way
+
+Uploads were saved under the extension of the file name the client sent, and checked only against
+the content type the client declared. Both are chosen by whoever sends the request. So a web page
+named `page.html`, declared as `image/png`, was stored as `.html` and served from the API's own
+address: **stored cross-site scripting** on the same origin as the login cookie, which is enough to
+take over an account.
+
+An upload's type now comes from its first bytes (JPEG, PNG and WebP signatures), and its extension
+from that type alone. Anything else is refused. Every file the API serves also carries a sandboxing
+Content-Security-Policy, so whatever is in it can never run as a page. Tests send exactly that page
+and check it is refused, and that a real PNG sent under a `.html` name is stored as `.png`.
+
+### Every request ends
+
+- **A backstop timeout.** A request not answered within 90 seconds gets a `503` with `Retry-After`.
+  The longest legitimate wait is an AI generation (60 seconds), which has its own, shorter limit
+  and answers first. The message does not say "nothing happened": a slow order may still complete
+  after the answer, so the client is told to check before repeating it.
+- **Node's own limits** close connections that never finish sending a request, and keep idle
+  connections open longer than the load balancer does, so it never reuses one the API has closed.
+
+### Starting and stopping cleanly
+
+- **Two probes, deliberately different.** `/health` (liveness) checks nothing outside the process.
+  `/ready` (readiness) checks PostgreSQL, MongoDB, Redis and storage, each within two seconds, and
+  names any that fails. If liveness checked the database, one database blip would make Azure
+  restart every API container at once, turning a short outage into a long one. Optional services
+  (the AI provider, Stripe, the recommendation service) are not in readiness, because the API is
+  built to keep working without them.
+- **Graceful shutdown.** On SIGTERM, which Azure sends before stopping a container, readiness turns
+  false so no new traffic arrives; the server finishes the requests in flight; workers finish the
+  job they are running; then queues, Redis, MongoDB and PostgreSQL close, buffered telemetry is sent,
+  and the process exits with code 0, all within 25 seconds (Azure allows 30).
+- **Crashes.** An error nobody caught is logged in full and the process exits, so the platform starts
+  a clean replacement rather than leaving a half-broken process serving requests.
+- **A busy port** used to crash with a stack trace. It now exits with one line: the port is in use,
+  and another ZYRO API is probably running.
+
+### The workers in their own process
+
+The AI generation, abandoned-cart, Growth Advisor and Trend Scout workers ran inside the API, so
+they could not scale or restart on their own, and a burst of AI work competed with shoppers'
+requests. They now have their own entry point, `src/worker.ts` (`npm run start:worker`), with its
+own health endpoint. The same image runs either one. On a developer's machine they still run inside
+the API, so one command starts everything. The schedules are registered under fixed ids, so two
+replicas starting together still produce one run per period.
+
+### Logs and telemetry
+
+- **Structured logs.** Every log line is JSON on stdout (readable text on a developer's machine), the
+  format Azure Container Apps sends to Log Analytics. Every request gets a line with its method,
+  path, status and duration, and an id that is also returned as `X-Request-Id` (and in the body of an
+  unexpected `500`), so a merchant can quote it and support can find that exact request.
+- **Nothing secret in a log.** Authorization headers, cookies and guest session ids are redacted at
+  the source, and request paths are logged without their query string, which can hold a signed link.
+  A defect found here: **the API logged the full MongoDB connection string at every start.** On
+  MongoDB Atlas that string contains the database password, which would have been copied into Azure's
+  logs. Only the host is logged now, and a test checks it.
+- **Application Insights**, through the Azure Monitor OpenTelemetry distro: requests, dependencies
+  (HTTP, MongoDB, Redis) and exceptions, with the API and the worker named separately. It is off
+  unless its connection string is set, so development and tests send nothing anywhere.
+
+### The migration drift
+
+The development database recorded different checksums from the migration files for 8 of its 18
+migrations, which made `prisma migrate dev` demand a full reset (deleting all data). Two causes:
+
+- **Line endings (6 migrations).** Git on Windows had checked them out with CRLF line endings after
+  they were applied as LF. A new `.gitattributes` makes migration files LF on every machine, so this
+  cannot recur, and nothing needed changing in the database.
+- **Edited after applying (2 migrations, plus a failed first attempt of a third).** Before touching
+  anything, the committed migrations were replayed into a throwaway shadow database and compared
+  with the real one: **the schemas are identical.** Only the recorded checksums were stale, so those
+  three rows were updated to match. `prisma migrate dev` now reports no drift.
+
+This was the development database only. A production database is created from the committed files,
+which now have the same bytes on every machine.
+
+### Container images
+
+There were none. Now:
+
+- **Backend** (`backend/Dockerfile`): one multi-stage image for the API and the worker, on Node 24,
+  running as a non-root user, with production dependencies only; and a separate `migrate` target that
+  applies migrations and exits, so the running API never carries the Prisma CLI.
+- **Recommendation service** (`recommendation-service/Dockerfile`): the embedding model and the
+  Whisper speech-to-text model are **downloaded when the image is built**, and the service runs with
+  Hugging Face switched off. Before, every container start downloaded the models again, started
+  slowly, and could not start at all while Hugging Face was unreachable. Its dependencies are now
+  pinned, and the test tools moved to `requirements-dev.txt`.
+
+### Accepted for now
+
+- **One advisory in a development tool.** `npm audit` reports a high-severity issue in
+  `deepmerge-ts`, used by the Prisma CLI to merge its own configuration. It is a stack overflow on a
+  self-referencing object, and ZYRO never passes untrusted input there. The fix needs Prisma 7, a
+  major upgrade that deserves its own change and test run, so it is recorded here rather than done
+  inside this phase.
+- **`faster-whisper` was never installed in the local Python environment**, so on this machine voice
+  notes have only ever been transcribed by the test fake. The production image includes it.
+
+### Tested against the production image
+
+The backend image was run the way Azure will run it: the API and the worker as two containers from
+the same image, beside PostgreSQL 17, MongoDB 8, Redis 7 (the major version Azure Managed Redis
+runs) and the Azurite Blob Storage emulator, with migrations applied to an empty database by the
+`migrate` image first. 20 checks, all passing:
+
+| Check | Result |
+|---|---|
+| Migrations on an empty PostgreSQL 17 | all 18 applied |
+| `/health` and `/ready` | 200; readiness names PostgreSQL, MongoDB, Redis and storage, all ok |
+| Product image | stored in the public container, served by Blob Storage with a one-year cache |
+| A web page posing as a PNG | refused |
+| Receipt | stored in the private container; its SAS link opens it; without the signature Blob Storage answers 403; submitted by key and read back; the merchant's list carries a fresh link that works |
+| Worker | runs separately, and its three schedules are registered in Redis; the API started without workers |
+| Logs | JSON lines, with no connection string, account key or password anywhere in them |
+| Redis stopped | `/ready` 503 naming Redis; `/health` still 200; readiness recovered by itself when Redis returned |
+| SIGTERM (`docker stop`) | API and worker both logged "shutting down" then "shutdown complete" and exited with code 0, in 0.6 s and 1.2 s |
+
+In the first of these runs, storage also reported failing in the instant Redis was stopped (it timed
+out at two seconds). Four further probes with Redis down showed only Redis failing, so it is recorded
+here as seen once and not reproduced.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Backend test suite | 46 suites, 1,740 tests, all passing (baseline 45 and 1,725; the new suite is `lifecycle.test.ts`) |
+| Production image, end to end | 20 of 20 (above) |
+| Browser suites touching the changes | `partE-payments` 19, `partG-voice-bargain` 16, `phase1-auth-catalog` 25, `golden-path` 27: all passing |
+| Contract test | 135 operations answered by the server |
+| Python service tests | 20 of 20 |
+| Migration drift | `prisma migrate dev` reports none; replayed migrations match the database exactly |
+| A second API on a busy port | exits with code 1 and one plain line |
+| Frontend type check, build, lint | pass; lint 37 warnings, 0 errors |
+| **Recommendation service image** | **not built.** See below. |
+
+**The recommendation service image could not be built on this machine.** Both attempts failed while
+downloading Python packages: name lookups for `files.pythonhosted.org` failed repeatedly, and the
+second attempt ended with a download that failed pip's integrity check (it had been cut short).
+Downloading the same packages directly on this machine, outside Docker, failed the same way for 15
+minutes. The connection, not the Dockerfile, is the cause, and the Dockerfile now retries slow
+downloads. The image will be built and its models checked when the connection allows, or by the
+build pipeline in Phase 5, and in any case before Phase 6's smoke tests, which need it.
+
+Test data was removed afterwards (10 stores and 17 users remain, all real), together with the files
+the deleted test stores had uploaded. `cleanup-test-data.ts` now deletes a store's files with it.

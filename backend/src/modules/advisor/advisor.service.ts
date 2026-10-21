@@ -11,6 +11,7 @@ import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { planService } from "../billing/plan.service";
 import { upcomingFestivals } from "./festivals";
 import { chooseTopics, evaluateRules, type AdvisorFacts, type FiredRule, type RuleKey } from "./advisor.rules";
+import { logger } from "../../lib/logger";
 
 /**
  * The Growth Advisor (Part C, extending the Phase 5 business insights). Once a week it checks each
@@ -210,7 +211,7 @@ export const advisorService = {
         else outcome.quiet++;
       } catch (err) {
         outcome.failed++;
-        console.error(`[advisor] store ${t.id}: ${(err as Error).message}`);
+        logger.error(`[advisor] store ${t.id}: ${(err as Error).message}`);
       }
     }
     return outcome;

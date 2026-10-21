@@ -6,6 +6,7 @@ import { cartService, type CartOwner } from "../cart/cart.service";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { getEmailGateway } from "../../lib/email";
 import { AppError } from "../../errors/AppError";
+import { logger } from "../../lib/logger";
 
 /**
  * Module 7 (remaining): Abandoned-Cart Recovery (Implementation_Plan.md Phase 5). A BullMQ
@@ -161,7 +162,7 @@ export const cartRecoveryService = {
       try {
         if ((await recoverOne(parsed.storeId, parsed.userId, key)) === "sent") sent++;
       } catch (err) {
-        console.error(`Cart recovery: failed on ${key}:`, err instanceof Error ? err.message : err);
+        logger.error({ err: err instanceof Error ? err.message : String(err) }, "cart recovery failed for one cart");
       }
     }
     const converted = await markConversions();

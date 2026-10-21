@@ -9,6 +9,7 @@ import { aggregate, displayCategory, normaliseCategory, DEFAULT_OPTIONS, type Ag
 import { buildFacts, buildPrompt, checkLines, reportWeek, templateLines, SYSTEM_PROMPT, type Fact, type ReportLine } from "./trends.report";
 import { getTrendSources } from "./trends.sources";
 import { parseGoogleTrendsCsv, TrendsFileError } from "./trends.csv";
+import { logger } from "../../lib/logger";
 
 /**
  * The Trend Scout (Part D). Once a week, for every market (store currency) and category, it adds up
@@ -94,7 +95,7 @@ async function externalFacts(market: string, category: string, weekStart: string
     getTrendSources().map((s) =>
       s.factsFor(market, category, weekStart).catch((err: Error) => {
         // One source failing never stops the report; its facts are simply missing this week.
-        console.error(`[trends] source ${s.id} failed for ${market}/${category}: ${err.message}`);
+        logger.error(`[trends] source ${s.id} failed for ${market}/${category}: ${err.message}`);
         return [];
       })
     )
@@ -191,7 +192,7 @@ export const trendsService = {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") outcome.existing++;
         else {
           outcome.failed++;
-          console.error(`[trends] ${market}/${category}: ${(err as Error).message}`);
+          logger.error(`[trends] ${market}/${category}: ${(err as Error).message}`);
         }
       }
     }

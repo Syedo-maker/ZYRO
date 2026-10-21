@@ -20,6 +20,21 @@ info:
     URI, a human-readable `title` and `detail`, and the HTTP `status`. Some carry extra members, such
     as `upgrade` on a plan-limit refusal. Clients should branch on `type`, never on the wording.
 
+    Every response carries an `X-Request-Id` header (an id the caller sent is kept when it is 8 to 64
+    letters, digits, `-` or `_`). An unexpected server error also returns it as `requestId`; quoting it
+    finds that exact request in the logs.
+
+    No request is left hanging. One that has not been answered within 90 seconds gets a `503` of type
+    `https://zyro.dev/errors/request-timeout` with `Retry-After`. The work may still complete after that
+    answer, so a client should check the outcome (for example, whether the order exists) before repeating
+    a request that changes something.
+
+    ## Files
+
+    Product images are public: their URL is permanent and may be cached. Payment receipts and voice
+    notes are private. The API stores only a key for them, and every time one is shown it hands out a
+    signed link that works for an hour; a client should use the link it was given and never store it.
+
     ## Multi-tenancy
 
     Every tenant-scoped resource is nested under `/stores/{storeId}/...`, and `storeId` is always
@@ -2844,6 +2859,31 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
 
   # ── PLANS AND BILLING (Part A) ────────────────────────────────────────
+  /files/{area}/{storeId}/{fileName}:
+    get:
+      tags: [stores]
+      operationId: files_private_get
+      # The signed link is the permission (see the Files section above).
+      security: []
+      summary: Open a private file through a signed link
+      description: |
+        Where a signed link to a receipt or voice note points when files are kept on the server's own
+        disk. Never built by a client: links come from the API, already signed. In production files are
+        in Azure Blob Storage and links point there instead. A missing, altered or expired link gets the
+        same 404 as a file that does not exist.
+      parameters:
+        - { name: area, in: path, required: true, schema: { type: string, enum: [receipts, voice] } }
+        - { name: storeId, in: path, required: true, schema: { type: string } }
+        - { name: fileName, in: path, required: true, schema: { type: string } }
+        - { name: expires, in: query, required: true, schema: { type: integer }, description: "Unix time, in seconds." }
+        - { name: signature, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: "The file, cached privately by the browser for no longer than the link lasts."
+          content:
+            image/*: { schema: { type: string, format: binary } }
+            audio/*: { schema: { type: string, format: binary } }
+        "404": { description: "No such file, or the link is not genuine or has expired" }
   /plans:
     get:
       tags: [billing]
@@ -3516,14 +3556,18 @@ paths:
                 file: { type: string, format: binary }
       responses:
         "201":
-          description: Uploaded
+          description: |
+            Stored privately (a receipt carries names and account numbers). `key` is what to submit with
+            the receipt; `url` is a signed link, valid for an hour, so the page can show the image.
           content:
             application/json:
               schema:
                 type: object
+                required: [key, url]
                 properties:
+                  key: { type: string, example: "receipts/clx0store/0f8fad5b-d9cb-469f-a165-70867728950e.png" }
                   url: { type: string, format: uri }
-        "400": { description: "Not an image, or over 5 MB" }
+        "400": { description: "Not a JPEG, PNG or WebP image (judged by its content, not its name), or over 5 MB" }
         "404": { description: "No unpaid bank-transfer order with that id in this store" }
   /stores/{storeId}/payments/orders/{orderId}/proof:
     parameters:
@@ -3546,9 +3590,15 @@ paths:
           application/json:
             schema:
               type: object
-              required: [imageUrl, declaredAmount]
+              required: [declaredAmount]
+              description: One of `imageKey` (preferred) or `imageUrl` is required.
               properties:
-                imageUrl: { type: string, format: uri, description: "A URL returned by proof-image for this store." }
+                imageKey: { type: string, description: "The `key` returned by proof-image for this store." }
+                imageUrl:
+                  type: string
+                  format: uri
+                  deprecated: true
+                  description: The `url` returned by proof-image. Accepted for older clients; send `imageKey`.
                 declaredAmount: { type: number }
                 declaredReference: { type: [string, "null"], maxLength: 64 }
       responses:
@@ -4257,7 +4307,7 @@ components:
         id: { type: string }
         transcript: { type: string, description: "What the transcriber heard." }
         language: { type: [string, "null"], example: ur }
-        audioUrl: { type: string, format: uri }
+        audioUrl: { type: string, format: uri, description: "A signed link to the recording, valid for an hour." }
         draft:
           oneOf:
             - $ref: "#/components/schemas/VoiceDraft"
@@ -4422,7 +4472,7 @@ components:
       properties:
         id: { type: string }
         orderId: { type: string }
-        imageUrl: { type: string, format: uri }
+        imageUrl: { type: string, format: uri, description: "A signed link to the receipt, valid for an hour." }
         declaredAmount: { type: number, description: "What the shopper typed in." }
         declaredReference: { type: [string, "null"] }
         extracted:

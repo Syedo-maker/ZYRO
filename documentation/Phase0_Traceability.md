@@ -50,7 +50,7 @@ These were added in later phases; the screen itself was designed in code.
 | Plan and billing | Part A | billing_overview, billing_subscribe, billing_top_up, billing_portal, plans_list, store_domain_update |
 | Platform, with the Trend Scout panel (Part D) | Part A | platform_summary, platform_tenants, platform_trends_list, platform_trends_imports_list, platform_trends_import, platform_trends_run |
 | Settings (store currency, and ways to pay) | After Part C | store_currency_get, store_currency_update, payments_settings_get, payments_settings_update |
-| Order placed (cash on delivery or transfer, and sending in the receipt) | Part E | payments_proof_image, payments_submit_proof, payments_proof_status |
+| Order placed (cash on delivery or transfer, and sending in the receipt) | Part E | payments_proof_image, payments_submit_proof, payments_proof_status, files_private_get |
 | Voice notes (spoken changes, confirmed by the merchant) | Part G | voice_note_create, voice_notes_list, voice_note_apply, voice_note_discard |
 | Payments (cash-on-delivery queue, screenshots, courier cash) | Part E | payments_cod_pending, payments_cod_outcome, payments_proofs_list, payments_proof_review, payments_remittances_list, payments_remittance_import, payments_remittance_get |
 | Landing screen ("Shop" or "Start a store") | Issue 2 | users_me_preference_update, users_me_get |

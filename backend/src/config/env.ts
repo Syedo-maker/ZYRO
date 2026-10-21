@@ -21,6 +21,14 @@ if (isProduction && (jwtAccessSecret.length < 32 || /replace-with|dev-only|chang
   throw new Error("JWT_ACCESS_SECRET must be a random string of at least 32 characters in production");
 }
 
+const storageDriver = process.env.STORAGE_DRIVER === "azure" ? "azure" : "local";
+// A container's disk is thrown away whenever it restarts or moves, so in production every upload
+// would vanish within days. Refuse to start rather than lose merchants' files quietly; a deployment
+// that really does have a persistent disk (a single VM) can say so explicitly.
+if (isProduction && storageDriver === "local" && process.env.ALLOW_LOCAL_STORAGE_IN_PRODUCTION !== "true") {
+  throw new Error("STORAGE_DRIVER must be 'azure' in production (or set ALLOW_LOCAL_STORAGE_IN_PRODUCTION=true on a host with a persistent disk)");
+}
+
 export const env = {
   isProduction,
   port: Number(process.env.PORT ?? 5000),
@@ -29,7 +37,49 @@ export const env = {
   mongoUri: required("MONGODB_URI"),
   uploadsDir: process.env.UPLOADS_DIR ?? "uploads",
   publicUrl: process.env.PUBLIC_URL ?? "http://localhost:5000",
+  // Where uploaded files live (lib/storage.ts). Product images are public; payment receipts and
+  // voice notes are private and only ever handed out as short-lived signed links.
+  storage: {
+    driver: storageDriver as "local" | "azure",
+    /** The local driver's private area. Never served as static files. */
+    privateDir: process.env.PRIVATE_UPLOADS_DIR ?? "uploads-private",
+    /** How long a signed link to a private file works. Long enough for a merchant to review a
+     *  page of receipts, short enough that a link copied out of the dashboard soon stops working. */
+    privateLinkSeconds: num("PRIVATE_FILE_LINK_SECONDS", 60 * 60),
+    /** Signs the local driver's private links. Derived from the JWT secret when not set, under its
+     *  own label, so the two are never interchangeable. */
+    signingSecret: process.env.FILE_SIGNING_SECRET ?? `zyro-file-links:${jwtAccessSecret}`,
+    azure: {
+      /** For the Azurite emulator, or an account key. Takes precedence over the account URL. */
+      connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING,
+      /** https://<account>.blob.core.windows.net, used with the container app's managed identity. */
+      accountUrl: process.env.AZURE_STORAGE_ACCOUNT_URL,
+      /** A user-assigned managed identity's client id; unset for a system-assigned one. */
+      clientId: process.env.AZURE_CLIENT_ID,
+      publicContainer: process.env.AZURE_STORAGE_PUBLIC_CONTAINER ?? "public",
+      privateContainer: process.env.AZURE_STORAGE_PRIVATE_CONTAINER ?? "private",
+    },
+  },
   redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
+  // How the process starts and stops (lib/lifecycle.ts).
+  lifecycle: {
+    /** Every request is answered within this, or it gets a 503. The longest legitimate wait is an
+     *  AI generation (AI_JOB_TIMEOUT_MS, 60 s), so this sits above it. */
+    requestTimeoutMs: num("REQUEST_TIMEOUT_MS", 90_000),
+    /** Time to finish in-flight work after SIGTERM. Below Container Apps' default 30 s, so the
+     *  process exits by itself rather than being killed. */
+    shutdownGraceMs: num("SHUTDOWN_GRACE_MS", 25_000),
+    /** Each dependency in the readiness probe must answer within this. */
+    readinessTimeoutMs: num("READINESS_TIMEOUT_MS", 2_000),
+  },
+  // The background jobs (AI generations, cart recovery, the weekly advisor and trend reports).
+  // In production they run in their own container (src/worker.ts), so they scale and restart apart
+  // from the API; on a developer's machine they run inside the API so one command starts everything.
+  workers: {
+    inProcess: process.env.RUN_WORKERS_IN_API ? process.env.RUN_WORKERS_IN_API === "true" : !isProduction,
+    /** The worker container's own health endpoint. */
+    healthPort: Number(process.env.WORKER_HEALTH_PORT ?? 5001),
+  },
   cartTtlSeconds: Number(process.env.CART_TTL_SECONDS ?? 7 * 24 * 60 * 60),
   // How many reverse proxies sit in front of the API (0 = none). Needed so rate limits see
   // each visitor's real IP instead of the proxy's; leave at 0 when clients connect directly.

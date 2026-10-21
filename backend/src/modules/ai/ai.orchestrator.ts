@@ -6,6 +6,7 @@ import type { AiGenerateResult } from "../../lib/aiProvider";
 import { allowsImage, modelFor } from "../../lib/aiModels";
 import { getRedis } from "../../lib/redis";
 import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, type AiUsageKind } from "./ai.quota.service";
+import { logger } from "../../lib/logger";
 
 export interface GenerateInput {
   tenantId: string;
@@ -80,12 +81,12 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
     try {
       const hit = await getRedis().get(cacheKey);
       if (hit) {
-        if (!platformPays) await recordCachedAnswer(input.tenantId).catch((err: Error) => console.error("AI usage count failed:", err.message));
+        if (!platformPays) await recordCachedAnswer(input.tenantId).catch((err: Error) => logger.error({ err: err.message, tenantId: input.tenantId }, "AI usage count failed"));
         const cached = JSON.parse(hit) as AiGenerateResult;
         return { ...cached, text: tidyText(cached.text) }; // an answer cached before tidyText existed is tidied too
       }
     } catch (err) {
-      console.error("AI cache read failed:", (err as Error).message); // a cache problem only costs a real call
+      logger.warn({ err: (err as Error).message }, "AI cache read failed"); // a cache problem only costs a real call
     }
   }
 
@@ -123,12 +124,12 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
   }
 
   // Only a successful call reaches this point: its tokens are what the store's AI actually cost (Part B).
-  if (!platformPays) await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => console.error("AI usage count failed:", err.message));
+  if (!platformPays) await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => logger.error({ err: err.message, tenantId: input.tenantId }, "AI usage count failed"));
 
   if (cacheKey) {
     await getRedis()
       .set(cacheKey, JSON.stringify(result), "EX", env.ai.cacheSeconds)
-      .catch((err: Error) => console.error("AI cache write failed:", err.message));
+      .catch((err: Error) => logger.warn({ err: err.message }, "AI cache write failed"));
   }
   return result;
 }
@@ -136,8 +137,10 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
 /**
  * House style for everything the AI writes: no em dashes (the project's writing rule). The model
  * uses them freely, so every answer is tidied here, in the one place all AI features pass through,
- * rather than in each prompt. "word—word" and "word — word" both become "word - word".
+ * rather than in each prompt. An em dash (U+2014), with or without spaces around it, becomes " - ".
  */
+const EM_DASH = new RegExp(`[ \\t]*${String.fromCharCode(0x2014)}[ \\t]*`, "g");
+
 export function tidyText(text: string): string {
-  return text.replace(/[ \t]*—[ \t]*/g, " - ");
+  return text.replace(EM_DASH, " - ");
 }

@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { Product } from "../../models/Product.model";
 import { getRedis } from "../../lib/redis";
 import type { SummaryQuery } from "./analytics.validation";
+import { logger } from "../../lib/logger";
 
 /**
  * Sales analytics for one store, computed on demand from Postgres with aggregate queries and
@@ -276,14 +277,14 @@ export const analyticsService = {
       const hit = await getRedis().get(key);
       if (hit) return { ...JSON.parse(hit), cached: true };
     } catch (err) {
-      console.error("Analytics cache read failed:", (err as Error).message);
+      logger.warn({ err: (err as Error).message }, "analytics cache read failed");
     }
 
     const result = await compute(tenantId, from, to, tz);
     try {
       await getRedis().set(key, JSON.stringify(result), "EX", CACHE_SECONDS);
     } catch (err) {
-      console.error("Analytics cache write failed:", (err as Error).message);
+      logger.warn({ err: (err as Error).message }, "analytics cache write failed");
     }
     return { ...result, cached: false };
   },

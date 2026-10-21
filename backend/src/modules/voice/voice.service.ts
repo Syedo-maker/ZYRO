@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { Types } from "mongoose";
 import { prisma } from "../../lib/prisma";
+import { linkFor } from "../../lib/storage";
 import { Errors } from "../../errors/AppError";
 import { Product } from "../../models/Product.model";
 import { getRecommendationClient, RecommendationUnavailableError, TranscriptionRefusedError } from "../../lib/recommendationClient";
@@ -73,7 +74,7 @@ export const voiceService = {
   async list(storeId: string, status?: string) {
     const notes = await prisma.voiceNote.findMany({ where: { tenantId: storeId, ...(status ? { status } : {}) }, orderBy: { createdAt: "desc" }, take: 50 });
     const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { currency: true } });
-    return notes.map((n) => present(n, tenant?.currency ?? "PKR"));
+    return Promise.all(notes.map((n) => present(n, tenant?.currency ?? "PKR")));
   },
 
   /**
@@ -168,13 +169,14 @@ async function save(
 
 type NoteRow = Prisma.VoiceNoteGetPayload<object>;
 
-function present(note: NoteRow, currency: string) {
+async function present(note: NoteRow, currency: string) {
   const draft = (note.draft as unknown as VoiceDraft) ?? null;
   return {
     id: note.id,
     transcript: note.transcript,
     language: note.language,
-    audioUrl: note.audioUrl,
+    /** A signed link that works for an hour; the stored value is a private storage key. */
+    audioUrl: await linkFor(note.audioUrl),
     draft,
     /** The change in plain words, for the merchant to read before confirming. */
     summary: draft ? describeDraft(draft, currency) : null,

@@ -6,6 +6,7 @@ import { productService } from "../products/product.service";
 import { getRecommendationClient, RecommendationUnavailableError, type ScoredProduct } from "../../lib/recommendationClient";
 import { ChatTranscript, type ChatRole } from "../../models/ChatTranscript.model";
 import type { CartOwner } from "../cart/cart.service";
+import { logger } from "../../lib/logger";
 
 /**
  * Module 3: AI Shopping Assistant (Implementation_Plan.md Phase 5). Built entirely on
@@ -90,7 +91,7 @@ async function findRelevantProducts(storeId: string, message: string) {
     scored = await getRecommendationClient().search(storeId, message, MAX_SUGGESTED);
   } catch (err) {
     if (!(err instanceof RecommendationUnavailableError) || !/not configured/.test(err.message)) {
-      console.warn(`[assistant] semantic search unavailable, using keyword matches only: ${(err as Error).message}`);
+      logger.warn(`[assistant] semantic search unavailable, using keyword matches only: ${(err as Error).message}`);
     }
   }
   const have = new Set(keyword.data.map((p) => p.id));
