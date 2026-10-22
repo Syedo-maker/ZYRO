@@ -67,7 +67,13 @@ try {
   // ---- The owner makes them a manager
   await role.selectOption('manager')
   await o.page.getByText(`${staffEmail} is now a manager.`, { exact: false }).waitFor()
-  check('team: the owner changes the role from the dropdown, and it is confirmed', (await role.inputValue()) === 'manager')
+  // The list is fetched again after the change; give it a moment to show the saved role.
+  let shown = ''
+  for (let i = 0; i < 25 && shown !== 'manager'; i++) {
+    shown = await role.inputValue()
+    if (shown !== 'manager') await o.page.waitForTimeout(200)
+  }
+  check('team: the owner changes the role from the dropdown, and it is confirmed', shown === 'manager', shown)
 
   // ---- Same session, next page: the catalogue is theirs now
   await s.page.goto(`${WEB}/admin/products`)
@@ -83,11 +89,17 @@ try {
   check('manager: the dashboard shows the store\'s AI allowance', true)
   check('manager: billing stays the owner\'s (not in their sidebar)', (await s.page.locator('aside a', { hasText: 'Plan & billing' }).count()) === 0)
 
-  // ---- Email sending is not set up: the Marketing page says so
+  // ---- The Marketing page says "Email sending is not set up" exactly when it is not
+  const emailOn = (await api('GET', `/stores/${storeId}/cart-recovery/performance`, { token: reg.json.accessToken })).json.emailConfigured
   await o.page.goto(`${WEB}/admin/marketing`)
+  await o.page.getByText('Abandoned-cart recovery').waitFor({ timeout: 15000 })
   const notice = o.page.getByRole('status').filter({ hasText: 'Email sending is not set up' })
-  await notice.waitFor({ timeout: 15000 })
-  check('marketing: "Email sending is not set up", and that no AI allowance is used meanwhile', /Nothing is used from your AI allowance/.test(await notice.innerText()))
+  if (emailOn) {
+    check('marketing: with email set up, no "not set up" notice', (await notice.count()) === 0)
+  } else {
+    await notice.waitFor({ timeout: 15000 })
+    check('marketing: "Email sending is not set up", and that no AI allowance is used meanwhile', /Nothing is used from your AI allowance/.test(await notice.innerText()))
+  }
   check('no script errors', o.problems.length === 0 && s.problems.length === 0, [...o.problems, ...s.problems][0])
 } catch (err) {
   check('browser journey', false, err.message.split('\n')[0])
