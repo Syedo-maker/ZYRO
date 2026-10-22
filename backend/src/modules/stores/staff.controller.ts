@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { staffService } from "./staff.service";
-import { createStaffSchema } from "./staff.validation";
+import { createStaffSchema, updateStaffRoleSchema } from "./staff.validation";
 import { Errors } from "../../errors/AppError";
 
 export const staffController = {
@@ -19,6 +19,16 @@ export const staffController = {
     try {
       const staffMember = await staffService.create(parsed.data);
       res.status(201).json(staffMember);
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  updateRole: (async (req, res, next) => {
+    const parsed = updateStaffRoleSchema.safeParse(req.body);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      res.status(200).json(await staffService.updateRole(req.params.staffId, parsed.data));
     } catch (err) {
       next(err);
     }

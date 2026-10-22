@@ -44,7 +44,7 @@ These were added in later phases; the screen itself was designed in code.
 |---|---|---|
 | Merchant sign up and sign in | Phase 1 | auth_register, auth_login, auth_refresh, auth_logout, users_me_get, users_me_stores_list |
 | Customer sign up, sign in, My account and order | Phase 3 | auth_register_customer, auth_login, orders_mine, orders_get |
-| Team and register settings | Phase 2.5 | store_staff_list, store_staff_create, store_staff_delete, pos_session, pos_settings_update |
+| Team and register settings | Phase 2.5 | store_staff_list, store_staff_create, store_staff_update_role, store_staff_delete, pos_session, pos_settings_update |
 | Reviews moderation | Phase 3 | reviews_moderation_list, reviews_moderate |
 | Store branding | Phase 1 | store_branding_update, stores_get |
 | Plan and billing | Part A | billing_overview, billing_subscribe, billing_top_up, billing_portal, plans_list, store_domain_update |

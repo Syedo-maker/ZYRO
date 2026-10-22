@@ -504,17 +504,23 @@ paths:
     post:
       tags: [stores]
       operationId: store_staff_create
-      summary: Invite a staff account with scoped permissions
-      description: Owner-only. Permissions gate access to specific routes (Section 6/7.2 role-based access).
+      summary: Invite a staff account with a role
+      description: |
+        Owner-only. Give a `role`: `cashier` (the register) or `manager` (the register, refunds, any
+        discount, analytics, orders, and the catalogue: products, stock, categories and the AI tools).
+        Billing, staff, plans and AI packs, and store settings stay with the owner whatever the role.
+        An explicit `permissions` list is still accepted from callers written before roles, and is
+        ignored when a role is given.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [email, permissions]
+              required: [email]
               properties:
                 email: { type: string, format: email }
+                role: { $ref: "#/components/schemas/StaffRole" }
                 name:
                   type: string
                   maxLength: 120
@@ -529,17 +535,18 @@ paths:
                 permissions:
                   type: array
                   items: { $ref: "#/components/schemas/StaffPermission" }
+                  description: "For callers written before roles. Either this or `role` is required."
             examples:
-              catalog_staff:
+              manager:
                 value:
                   email: jordan@auroragoods.example
-                  permissions: [products_write]
+                  role: manager
               new_cashier:
                 value:
                   email: riley@auroragoods.example
                   name: Riley Chen
                   password: a-starting-password
-                  permissions: [pos_sell]
+                  role: cashier
       responses:
         "201":
           description: Staff account created
@@ -547,7 +554,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/StaffMember" }
         "400":
-          description: Invalid email, empty or unknown permissions (names are lowercase), a too-short or too-long password, or a password sent for an email that already has an account
+          description: Invalid email, no role (or permissions), an unknown role or permission (names are lowercase), a too-short or too-long password, or a password sent for an email that already has an account
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -570,6 +577,35 @@ paths:
         in: path
         required: true
         schema: { type: string }
+    patch:
+      tags: [stores]
+      operationId: store_staff_update_role
+      summary: Change a staff member's role
+      description: |
+        Owner-only, so a staff member can change neither their own role nor anyone else's. The owner
+        has no staff record and cannot be changed here. Takes effect on that person's next request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: "#/components/schemas/StaffRole" }
+      responses:
+        "200":
+          description: The staff member with the new role
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StaffMember" }
+        "400":
+          description: No role, or an unknown one
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [stores]
       operationId: store_staff_delete
@@ -4712,13 +4748,22 @@ components:
       type: string
       enum: [products_write, orders_write, discounts_write, analytics_read, pos_sell, inventory_write, refunds]
 
+    StaffRole:
+      type: string
+      enum: [cashier, manager]
+      description: "cashier: the register. manager: the register, refunds, any discount, analytics, orders, and the catalogue (products, stock, categories, AI tools)."
+
     StaffMember:
       type: object
-      required: [id, userId, permissions]
+      required: [id, userId, role, permissions]
       properties:
         id: { type: string }
         userId: { type: string }
         email: { type: string, format: email }
+        role:
+          type: string
+          enum: [cashier, manager, custom]
+          description: "The role these permissions are; custom when they match neither (an explicit list given through the API)."
         permissions:
           type: array
           items: { $ref: "#/components/schemas/StaffPermission" }
