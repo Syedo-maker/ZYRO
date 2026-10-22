@@ -1,4 +1,11 @@
-import "dotenv/config";
+import path from "node:path";
+import { config as loadDotenv } from "dotenv";
+
+// Settings come from backend/.env, by path, whichever folder the process was started from (the repo
+// root, backend/, or a script's own folder). Variables already set in the environment win, which is
+// how containers and Azure pass theirs; no .env file is shipped there. Secrets in it (the AI, Stripe
+// and email keys) are read here only, and never logged.
+loadDotenv({ path: path.resolve(__dirname, "../../.env") });
 
 function required(name: string): string {
   const value = process.env[name];
@@ -173,6 +180,8 @@ export const env = {
   // Transactional email (recovery emails only, so far). Optional at startup, like Stripe and the
   // AI orchestrator: the scan job runs and logs "would have sent" without a real send until set.
   email: {
+    /** Which provider lib/email.ts sends through; each names the settings it needs there. */
+    provider: (process.env.EMAIL_PROVIDER ?? "sendgrid").trim().toLowerCase(),
     sendgridApiKey: process.env.SENDGRID_API_KEY,
     fromEmail: process.env.SENDGRID_FROM_EMAIL,
   },

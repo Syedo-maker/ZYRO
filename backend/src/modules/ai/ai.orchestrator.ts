@@ -5,7 +5,7 @@ import { getAiQueue, getAiQueueEvents, type AiJobData } from "../../lib/aiQueue"
 import type { AiGenerateResult } from "../../lib/aiProvider";
 import { allowsImage, modelFor } from "../../lib/aiModels";
 import { getRedis } from "../../lib/redis";
-import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, type AiUsageKind } from "./ai.quota.service";
+import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, currentMonth, type AiUsageKind } from "./ai.quota.service";
 import { logger } from "../../lib/logger";
 
 export interface GenerateInput {
@@ -59,6 +59,17 @@ export interface GenerateInput {
  * answered from a per-store cache. Cached answers cost no quota because no AI call happened.
  */
 export async function generate(input: GenerateInput): Promise<AiGenerateResult> {
+  return (await generateRevocable(input)).result;
+}
+
+/**
+ * The same as generate(), for a caller whose use of the answer can still fail afterwards (an email
+ * that will not send): `release()` gives the store back the turn this call took, so the store is only
+ * charged for an answer that was actually used. The tokens stay recorded, because the AI call did
+ * happen and cost what it cost (Part B). A cached answer took no turn, so its release does nothing;
+ * calling release more than once gives back one turn at most.
+ */
+export async function generateRevocable(input: GenerateInput): Promise<{ result: AiGenerateResult; release: () => Promise<void> }> {
   const kind: AiUsageKind = input.kind ?? "generation";
   const model = modelFor(input.promptType);
   const maxTokens = input.maxTokens ?? 1024;
@@ -83,14 +94,15 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
       if (hit) {
         if (!platformPays) await recordCachedAnswer(input.tenantId).catch((err: Error) => logger.error({ err: err.message, tenantId: input.tenantId }, "AI usage count failed"));
         const cached = JSON.parse(hit) as AiGenerateResult;
-        return { ...cached, text: tidyText(cached.text) }; // an answer cached before tidyText existed is tidied too
+        return { result: { ...cached, text: tidyText(cached.text) }, release: async () => {} }; // an answer cached before tidyText existed is tidied too
       }
     } catch (err) {
       logger.warn({ err: (err as Error).message }, "AI cache read failed"); // a cache problem only costs a real call
     }
   }
 
-  const source = platformPays ? null : await reserveQuota(input.tenantId, kind);
+  const month = currentMonth();
+  const source = platformPays ? null : await reserveQuota(input.tenantId, kind, month);
   if (!platformPays && !source) throw await quotaExhaustedError(input.tenantId, kind);
 
   const job = await getAiQueue().add(
@@ -117,7 +129,7 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
     const raw: AiGenerateResult = await job.waitUntilFinished(getAiQueueEvents(), env.ai.jobTimeoutMs);
     result = { ...raw, text: tidyText(raw.text) };
   } catch (err) {
-    if (source) await releaseQuota(input.tenantId, kind, source); // give the reservation back, to where it came from; this attempt never happened
+    if (source) await releaseQuota(input.tenantId, kind, source, month); // give the reservation back, to where it came from; this attempt never happened
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
     // being unable to fulfil the request right now, not something the caller did wrong. The
     // provider's own words go to the log, where they can be acted on; the merchant or shopper gets
@@ -137,7 +149,13 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
       .set(cacheKey, JSON.stringify(result), "EX", env.ai.cacheSeconds)
       .catch((err: Error) => logger.warn({ err: err.message }, "AI cache write failed"));
   }
-  return result;
+  let released = false;
+  const release = async () => {
+    if (released || !source) return;
+    released = true;
+    await releaseQuota(input.tenantId, kind, source, month);
+  };
+  return { result, release };
 }
 
 /**

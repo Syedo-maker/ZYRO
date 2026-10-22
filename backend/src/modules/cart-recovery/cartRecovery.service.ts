@@ -3,8 +3,8 @@ import { prismaUnscoped } from "../../lib/prisma";
 import { tenantContext } from "../../lib/tenantContext";
 import { env } from "../../config/env";
 import { cartService, type CartOwner } from "../cart/cart.service";
-import { generate as aiGenerate } from "../ai/ai.orchestrator";
-import { getEmailGateway } from "../../lib/email";
+import { generateRevocable } from "../ai/ai.orchestrator";
+import { emailStatus, getEmailGateway } from "../../lib/email";
 import { AppError } from "../../errors/AppError";
 import { logger } from "../../lib/logger";
 import { formatPrice } from "../../lib/currencies";
@@ -113,16 +113,15 @@ async function recoverOneInContext(storeId: string, userId: string, key: string)
     ? `Available discount code: ${discount.code} (${discount.type === "PERCENTAGE" ? `${Number(discount.value)}% off` : `${formatPrice(Number(discount.value), tenant.currency)} off`})`
     : "No discount code to mention.";
 
-  let text: string;
+  let generated: Awaited<ReturnType<typeof generateRevocable>>;
   try {
-    const result = await aiGenerate({
+    generated = await generateRevocable({
       tenantId: storeId,
       promptType: "cart_recovery",
       system: RECOVERY_SYSTEM_PROMPT,
       prompt: `Store: ${tenant.name}\nShopper's cart: ${itemLines}\n${discountLine}`,
       maxTokens: 250,
     });
-    text = result.text;
   } catch (err) {
     // Quota exhausted (402) or the provider unavailable (503): skip this cart this scan rather
     // than send a generic, unpersonalized email that was never part of the design.
@@ -131,9 +130,14 @@ async function recoverOneInContext(storeId: string, userId: string, key: string)
   }
 
   try {
-    await email.send({ to: user.email, subject: `You left something in your cart at ${tenant.name}`, text });
-  } catch {
-    return "skipped"; // email is not configured, or SendGrid rejected it; nothing was sent, so nothing is logged
+    await email.send({ to: user.email, subject: `You left something in your cart at ${tenant.name}`, text: generated.result.text });
+  } catch (err) {
+    // The provider refused it, or did not answer: nothing reached the shopper, so the store gets its
+    // AI turn back (it is charged only for a message that was sent) and nothing is recorded, so a
+    // later scan tries again. The provider's message is logged; the email settings never are.
+    await generated.release();
+    logger.warn({ storeId, err: err instanceof Error ? err.message : String(err) }, "a cart recovery email could not be sent");
+    return "skipped";
   }
 
   await prismaUnscoped.cartRecoveryEvent.create({
@@ -182,7 +186,8 @@ export const cartRecoveryService = {
       }
     }
     if (waitingForEmail > 0) {
-      logger.warn({ carts: waitingForEmail }, "abandoned carts are due a reminder, but email is not configured (set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL); no AI message was written");
+      // The setting names come from the email provider (lib/email.ts); never their values.
+      logger.warn({ carts: waitingForEmail, missing: emailStatus().missing }, "abandoned carts are due a reminder, but email sending is not set up; no AI message was written");
     }
     const converted = await markConversions();
     return { scanned, sent, converted };
@@ -196,6 +201,8 @@ export const cartRecoveryService = {
     for (const r of rows) counts[r.status] = r._count._all;
     const totalSent = counts.SENT + counts.OPENED + counts.CLICKED + counts.CONVERTED;
     return {
+      /** False while the platform's email sending is not set up: no reminder can go out until it is. */
+      emailConfigured: emailStatus().configured,
       sent: totalSent,
       opened: counts.OPENED,
       clicked: counts.CLICKED,

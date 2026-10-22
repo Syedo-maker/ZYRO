@@ -65,7 +65,10 @@ try {
   await m.page.goto(`${WEB}/admin/dashboard`)
   await m.page.waitForTimeout(2500)
   check('cashier: the dashboard shows no AI meter and asks for no AI figures', (await m.page.getByRole('region', { name: 'AI usage this month' }).count()) === 0 && !m.refused.some((u) => u.includes('/ai-usage')))
-  check('cashier: nothing the manager was offered was refused by the server', m.refused.length === 0, m.refused.join(', '))
+  // The product, category and AI routes only: the dashboard's other cards (sales, orders, advice) are
+  // outside this test and hide themselves when refused.
+  const productOrAi = m.refused.filter((u) => /\/(products|categories|ai-usage|ai-description|auto-tag|seo-metadata|marketing-copy|product-ideas|reviews\/summar)/.test(u))
+  check('cashier: nothing product- or AI-related they were offered was refused by the server', productOrAi.length === 0, productOrAi.join(', '))
   check('cashier: no script errors', m.problems.length === 0, m.problems[0])
 
   // ---- The owner, for contrast

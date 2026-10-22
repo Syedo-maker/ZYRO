@@ -2796,8 +2796,9 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [sent, opened, clicked, converted, conversionRate]
+                required: [emailConfigured, sent, opened, clicked, converted, conversionRate]
                 properties:
+                  emailConfigured: { type: boolean, description: "False while the platform's email sending is not set up: no reminder can be sent until it is, and none is written or charged for." }
                   sent: { type: integer, description: "Recovery emails sent in total." }
                   opened: { type: integer }
                   clicked: { type: integer }

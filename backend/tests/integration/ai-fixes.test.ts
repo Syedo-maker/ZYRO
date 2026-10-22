@@ -218,7 +218,7 @@ describe("abandoned-cart recovery", () => {
     expect(calls.length).toBe(before.calls);
     expect((await usage(B)).generationsUsed).toBe(before.used);
     expect(await prismaUnscoped.cartRecoveryEvent.count({ where: { tenantId: B.storeId } })).toBe(0);
-    expect(warnings.mock.calls.some(([, msg]) => /email is not configured/.test(String(msg)))).toBe(true);
+    expect(warnings.mock.calls.some(([, msg]) => /email sending is not set up/.test(String(msg)))).toBe(true);
     warnings.mockRestore();
   }, 60_000);
 
