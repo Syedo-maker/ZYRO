@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
-import { formatMoney } from '../../lib/format'
+import { PriceTag } from '../../components/PriceTag'
 import { errorMessage } from '../../lib/ordersApi'
 import { productsApi } from '../../lib/productsApi'
 import { storefrontApi } from '../../lib/storefrontApi'
 import type { Product, ProductInput } from '../../types/api'
 import { ProductForm } from './ProductForm'
+import { QuickStock } from './StockStepper'
 
 type PanelState = { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; product: Product }
 
@@ -91,9 +92,9 @@ export function ProductsPage() {
            * which column it belongs to. The roles change nothing visually; the grid still does the
            * layout. Found by the accessibility audit in e2e/a11y-audit.e2e.mjs.
            */}
-         <div className="min-w-[560px]" role="table" aria-label="Products">
+         <div className="min-w-[680px]" role="table" aria-label="Products">
           <div role="rowgroup">
-           <div role="row" className="grid grid-cols-[2fr_1fr_1fr_1fr_88px] gap-3 px-5 py-3 text-[11px] font-bold text-text-muted border-b border-border">
+           <div role="row" className="grid grid-cols-[2fr_1fr_190px_1fr_88px] gap-3 px-5 py-3 text-[11px] font-bold text-text-muted border-b border-border">
             <div role="columnheader">PRODUCT</div>
             <div role="columnheader">PRICE</div>
             <div role="columnheader">STOCK</div>
@@ -115,7 +116,7 @@ export function ProductsPage() {
             <div
               key={product.id}
               role="row"
-              className="grid grid-cols-[2fr_1fr_1fr_1fr_88px] gap-3 px-5 py-3 items-center border-b border-border last:border-0 text-sm"
+              className="grid grid-cols-[2fr_1fr_190px_1fr_88px] gap-3 px-5 py-3 items-center border-b border-border last:border-0 text-sm"
             >
               <div role="cell" className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-bg shrink-0 overflow-hidden">
@@ -123,8 +124,16 @@ export function ProductsPage() {
                 </div>
                 <span className="font-semibold">{product.title}</span>
               </div>
-              <div role="cell">{formatMoney(product.price, currency)}</div>
-              <div role="cell">{product.stock}</div>
+              <div role="cell"><PriceTag product={product} currency={currency} /></div>
+              <div role="cell">
+                <QuickStock
+                  storeId={activeStore.id}
+                  productId={product.id}
+                  title={product.title}
+                  stock={product.stock}
+                  onSaved={(stock) => setProducts((list) => list.map((p) => (p.id === product.id ? { ...p, stock } : p)))}
+                />
+              </div>
               <div role="cell" className="text-text-secondary">{product.category}</div>
               <div role="cell" className="flex gap-3">
                 <button
@@ -154,6 +163,7 @@ export function ProductsPage() {
           <ProductForm
             key={panel.mode === 'edit' ? panel.product.id : 'new'}
             storeId={activeStore.id}
+            currency={currency}
             initial={panel.mode === 'edit' ? panel.product : undefined}
             onSubmit={panel.mode === 'edit' ? handleUpdate : handleCreate}
             onCancel={() => setPanel({ mode: 'closed' })}

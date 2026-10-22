@@ -756,6 +756,53 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /stores/{storeId}/products/{productId}/stock:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    patch:
+      tags: [catalog]
+      operationId: products_set_stock
+      summary: Set a product's stock, and nothing else
+      description: |
+        The quick stock control on the admin products list (for example 11 to 7). Sets the on-hand
+        count at the store's default location and records a stock adjustment by the caller, as a
+        full edit that changes the stock would. The shop, the cart and the register read stock live,
+        so the new count applies at once. Requires the `products_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stock]
+              additionalProperties: false
+              properties:
+                stock: { type: integer, minimum: 0, maximum: 1000000 }
+      responses:
+        "200":
+          description: The product's stock now
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, stock]
+                properties:
+                  id: { type: string }
+                  stock: { type: integer, minimum: 0, description: "On-hand across the store's locations, as Product.stock." }
+        "400":
+          description: Stock missing, negative or not a whole number
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /stores/{storeId}/products/{productId}/recommendations:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -1901,7 +1948,7 @@ paths:
       operationId: pos_products_search
       summary: Find products by scanned code or by name
       description: |
-        `code` matches a barcode or SKU exactly (what a scanner types). `q` matches part of a
+        `code` matches a SKU exactly (what a scanner or the cashier types). `q` matches part of a
         title or SKU, ignoring case; characters such as `(` and `*` are plain text. Each result
         carries on-hand stock at the store's location.
       parameters:
@@ -2413,6 +2460,93 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── DISCOUNTS ─────────────────────────────────────────────────────────
+  /stores/{storeId}/categories:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [catalog]
+      operationId: categories_list
+      summary: List a store's categories
+      description: |
+        Requires the `products_write` staff permission (or owner). Active categories first, then by
+        name, each with how many of the store's products are in it.
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Category" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [catalog]
+      operationId: categories_create
+      summary: Create a category
+      description: |
+        Requires the `products_write` staff permission (or owner). Names are unique within a store
+        regardless of capitals and spacing: "Toys", "toys" and " TOYS " are the same category, and a
+        second one is refused with 409. The name is kept as typed (edges trimmed, inner spaces made one).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+        "400": { description: "No name, or a name over 60 characters" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "A category with the same name already exists in this store" }
+  /stores/{storeId}/categories/{categoryId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: categoryId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [catalog]
+      operationId: categories_update
+      summary: Rename, enable or disable a category
+      description: |
+        Requires the `products_write` staff permission (or owner). A rename reaches every product in
+        the category at once, because products refer to it by id. A disabled category keeps its
+        products but cannot be chosen for a new or edited product.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                active: { type: boolean }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+        "400": { description: "Neither a name nor active was sent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Another category in this store already has that name" }
+    delete:
+      tags: [catalog]
+      operationId: categories_delete
+      summary: Delete a category
+      description: |
+        Requires the `products_write` staff permission (or owner). Refused with 409 while any product
+        is in the category: move those products to another category first.
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Products are still in this category" }
   /stores/{storeId}/discount-codes:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -3290,7 +3424,7 @@ paths:
                   trendDataAvailable: { type: boolean, description: "False when no source had real data; the keyword list is then empty." }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  # ── VOICE NOTES AND BARGAINING (Part G) ───────────────────────────────
+  # ── VOICE NOTES (Part G) ───────────────────────────────
   /stores/{storeId}/voice-notes:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -3382,102 +3516,6 @@ paths:
       responses:
         "204": { description: Discarded }
         "404": { $ref: "#/components/responses/NotFound" }
-  /stores/{storeId}/products/{productId}/bargain:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-    get:
-      tags: [catalog]
-      operationId: bargain_offer
-      summary: Whether this product can be haggled over
-      description: Public. True only when the merchant has set a lowest acceptable price on the product.
-      security: []
-      responses:
-        "200":
-          description: Whether haggling is open
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  available: { type: boolean }
-    post:
-      tags: [catalog]
-      operationId: bargain_start
-      summary: Start haggling over this product
-      description: |
-        Public; a guest session is enough. The merchant's lowest price is copied into the conversation when
-        it opens, so a price change part-way through cannot move it, and it is never sent to the shopper
-        or to the AI.
-      security: []
-      responses:
-        "201":
-          description: The conversation
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/BargainTurn" }
-        "400": { description: "This product's price is not open to negotiation" }
-  /stores/{storeId}/products/{productId}/bargain/settings:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-    get:
-      tags: [catalog]
-      operationId: bargain_settings_get
-      summary: The merchant's own floor price for this product
-      description: |
-        Requires `products_write`. The public product endpoints deliberately never return this: a shopper
-        who knew the lowest acceptable price would simply ask for it. The merchant's product form reads it
-        from here instead.
-      responses:
-        "200":
-          description: The floor price, or null when this product has a fixed price
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  bargainMinPrice: { type: [number, "null"] }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-  /stores/{storeId}/products/{productId}/bargain/{sessionId}/turn:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-      - name: sessionId
-        in: path
-        required: true
-        schema: { type: string }
-    post:
-      tags: [catalog]
-      operationId: bargain_turn
-      summary: Say something to the shop
-      description: |
-        Public. **The assistant cannot name a price.** It is given the listed price, the shop's current
-        offer and the number the shopper named, and replies with one word from a fixed list plus a
-        sentence; the server works out every price from the merchant's own floor and clamps it there.
-        A number the assistant puts in its own sentence is stripped before the shopper sees it, and an
-        unrecognised reply is read as holding firm. No prompt injection can reach a price, because there
-        is no channel through which the model can express one.
-        A struck deal creates a single-use, short-lived discount code: the only way the agreed price is payable.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [message]
-              properties:
-                message: { type: string, maxLength: 500 }
-      responses:
-        "200":
-          description: The shop's answer and its new price
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/BargainTurn" }
-        "404": { description: "No such conversation for this shopper" }
-        "409": { description: "This conversation has finished or expired" }
 
   # ── PAYMENT AND TRUST (Part E) ────────────────────────────────────────
   /stores/{storeId}/payments/options:
@@ -4317,27 +4355,6 @@ components:
         status: { type: string, enum: [pending, applied, discarded] }
         createdAt: { type: string, format: date-time }
 
-    BargainTurn:
-      type: object
-      required: [sessionId, productId, listPrice, offer, roundsLeft, status, reply, expiresAt]
-      properties:
-        sessionId: { type: string }
-        productId: { type: string }
-        listPrice: { type: number }
-        offer: { type: number, description: "What the shop will accept right now. Worked out by the server, never by the assistant." }
-        roundsLeft: { type: integer, description: "How many more times the shopper may push before the shop stops moving." }
-        status: { type: string, enum: [open, agreed, declined, expired] }
-        reply: { type: string, description: "The assistant's sentence, with any number it wrote stripped out." }
-        settled: { type: boolean }
-        deal:
-          type: object
-          description: Present once a price is agreed. The code is the only way that price is payable.
-          properties:
-            code: { type: string, example: BHAO1A2B3C4D }
-            price: { type: number }
-            expiresAt: { type: string, format: date-time }
-        expiresAt: { type: string, format: date-time }
-
     SearchInterpretation:
       type: object
       description: |
@@ -4704,11 +4721,22 @@ components:
 
     ProductInput:
       type: object
-      required: [title, price, stock, category]
+      description: |
+        A category is required: `categoryId` (what the admin form sends), or a `category` name, which is
+        matched to the store's category with the same normalized name and creates it if the store has none.
+
+        A price is required: `actualPrice` (the MRP), or `price` from callers written before the three
+        prices, read as the actual price. `discountPrice` is optional and may not be more than the actual
+        price. The sale price, what customers pay, is not sent: it is the discounted price when there is
+        one, otherwise the actual price. On an edit, leaving `discountPrice` out (or null) removes the
+        discount.
+      required: [title, stock]
       properties:
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
-        price: { type: number, minimum: 0 }
+        actualPrice: { type: number, exclusiveMinimum: 0, maximum: 10000000, description: "The full price (MRP), shown struck through when there is a discount." }
+        discountPrice: { type: [number, "null"], exclusiveMinimum: 0, maximum: 10000000, description: "Optional; at most the actual price." }
+        price: { type: number, exclusiveMinimum: 0, maximum: 10000000, deprecated: true, description: "Read as actualPrice. Use actualPrice." }
         stock:
           type: integer
           minimum: 0
@@ -4720,10 +4748,6 @@ components:
           type: string
           maxLength: 100
           description: Unique per store when set.
-        barcode:
-          type: string
-          maxLength: 100
-          description: Unique per store when set. Used for barcode lookup at the POS.
         taxable:
           type: boolean
           default: true
@@ -4732,7 +4756,8 @@ components:
           type: number
           minimum: 0
           description: Merchant-only cost, used for margin analytics. Never shown to shoppers.
-        category: { type: string }
+        categoryId: { type: string, description: "One of the store's active categories." }
+        category: { type: string, maxLength: 60, description: "A category by name, for callers without an id; see above." }
         images:
           type: array
           items: { type: string, format: uri }
@@ -4747,24 +4772,30 @@ components:
 
     Product:
       description: |
-        A product as the API returns it. The same fields as ProductInput, except that sku, barcode,
-        seoTitle and seoDescription are null when the merchant has not set them (a request leaves them
-        out; it never sends null). Listed in full rather than built on ProductInput, because a schema
-        composed with allOf would still apply ProductInput's "must be a string" to those four.
+        A product as the API returns it. The same fields as ProductInput, except that sku, seoTitle
+        and seoDescription are null when the merchant has not set them (a request leaves them out; it
+        never sends null). Listed in full rather than built on ProductInput, because a schema composed
+        with allOf would still apply ProductInput's "must be a string" to those three. The barcode and
+        the haggling floor were removed by the product-listing change; a request that still sends
+        them has them ignored.
       type: object
-      required: [id, storeId, title, price, stock, category]
+      required: [id, storeId, title, actualPrice, discountPrice, salePrice, discountPercent, price, stock, category]
       properties:
         id: { type: string }
         storeId: { type: string }
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
-        price: { type: number, minimum: 0 }
+        actualPrice: { type: number, minimum: 0, description: "The full price (MRP)." }
+        discountPrice: { type: [number, "null"], description: "Null when there is no discount." }
+        salePrice: { type: number, minimum: 0, description: "What customers pay: the cart, checkout and orders use this." }
+        discountPercent: { type: [integer, "null"], minimum: 1, maximum: 100, description: "How much below the actual price the sale price is, rounded; null when there is no discount." }
+        price: { type: number, minimum: 0, deprecated: true, description: "The sale price. Kept for callers written before the three prices; use salePrice." }
         stock: { type: integer, minimum: 0, description: "On-hand quantity at the default location (see ProductInput)." }
         sku: { type: [string, "null"], maxLength: 100 }
-        barcode: { type: [string, "null"], maxLength: 100 }
         taxable: { type: boolean }
         costPrice: { type: number, minimum: 0, description: "Merchant-only; absent for shoppers." }
-        category: { type: string }
+        categoryId: { type: [string, "null"], description: "The store's category. Null only for a product listed before categories existed and not yet migrated." }
+        category: { type: string, description: "The category's name, kept in step with it by the server." }
         images: { type: array, items: { type: string, format: uri }, maxItems: 10 }
         tags: { type: array, items: { type: string, maxLength: 30 }, maxItems: 10 }
         seoTitle: { type: [string, "null"], maxLength: 70 }
@@ -4779,6 +4810,10 @@ components:
           storeId: store_01ABCD
           title: Wireless Earbuds Pro
           description: Crisp sound, all-day battery, and a snug fit for workouts or commutes.
+          actualPrice: 59.00
+          discountPrice: 49.00
+          salePrice: 49.00
+          discountPercent: 17
           price: 49.00
           stock: 42
           category: Electronics
@@ -5067,7 +5102,6 @@ components:
         price: { type: number }
         taxable: { type: boolean }
         sku: { type: [string, "null"] }
-        barcode: { type: [string, "null"] }
         category: { type: string }
         image: { type: [string, "null"] }
         stock: { type: integer, description: On hand at the store's location. }
@@ -5338,6 +5372,24 @@ components:
         usageLimit: { type: integer, minimum: 1, description: Omit for unlimited. }
         expiresAt: { type: string, format: date-time, description: Must be in the future when creating. }
         active: { type: boolean, default: true }
+
+    Category:
+      type: object
+      description: "One of a store's own product categories."
+      required: [id, name, active, productCount]
+      properties:
+        id: { type: string }
+        name: { type: string, description: "As the owner typed it." }
+        active: { type: boolean }
+        productCount: { type: integer, description: "How many of the store's products are in it." }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
 
     DiscountCode:
       type: object

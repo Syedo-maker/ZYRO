@@ -34,7 +34,9 @@ Every AI call goes through one orchestrator (provider adapter, job queue, monthl
 | AI Trend Scout (weekly market report per currency and category from anonymised platform sales and imported Google Trends data, every line cited) | built | `PartD_Trend_Scout.md` |
 | AI Payment and Trust module (COD risk, payment screenshot check, courier reconciliation, payment error helper in Urdu) | built | `PartE_Payment_And_Trust.md` |
 | Search that forgives typos and understands Roman Urdu, with semantic search as a last resort | built | `PartF_Search.md` |
-| Voice-note store manager (spoken changes, confirmed by the merchant); bargaining assistant that cannot quote below the merchant's floor | built | `PartG_Voice_And_Bargaining.md` |
+| Voice-note store manager (spoken changes, confirmed by the merchant) | built | `PartG_Voice_And_Bargaining.md` |
+| Bargaining assistant that cannot quote below the merchant's floor | built, then removed on 2026-10-22 by the supervisor's product-listing change | `PartG_Voice_And_Bargaining.md`, `Product_Catalogue.md` |
+| Per-store categories, three prices (MRP, discount, sale) with a "% off" badge, quick stock update; barcode removed | built (supervisor's product-listing change, 2026-10-22) | `Product_Catalogue.md` |
 | Season and festival planner | built as part of the Growth Advisor | `PartC_Growth_Advisor.md` |
 | AI product photo editing | planned, stretch | Phase 6 |
 
@@ -48,7 +50,7 @@ Two deliberate deviations to state honestly: the recommendation service computes
 
 ## 4. Point of sale (was out of scope, now built)
 
-The original scope listed POS as out of scope. It is built as a second sales channel over the same catalog, inventory, customers, discounts and orders: cashier and manager accounts with permissions, product search and barcode lookup, split cash and card payments with change, shifts and cash-drawer counts, a cashier discount limit, held sales, printable receipts, item-level returns (stock goes back, cash comes out of the drawer), transaction history and a daily summary. Documents: `Phase2_5_Module8_POS_Backend.md`, `Phase2_5_POS_Frontend.md`, `Phase2_Commerce_Core_Foundation.md`.
+The original scope listed POS as out of scope. It is built as a second sales channel over the same catalog, inventory, customers, discounts and orders: cashier and manager accounts with permissions, product search and SKU lookup (a barcode field existed until the 2026-10-22 product-listing change removed it), split cash and card payments with change, shifts and cash-drawer counts, a cashier discount limit, held sales, printable receipts, item-level returns (stock goes back, cash comes out of the drawer), transaction history and a daily summary. Documents: `Phase2_5_Module8_POS_Backend.md`, `Phase2_5_POS_Frontend.md`, `Phase2_Commerce_Core_Foundation.md`.
 
 ## 5. Payments: COD and local methods (built: Part E, 2026-10-01)
 
@@ -81,7 +83,7 @@ The local gateway adapter (JazzCash, Easypaisa, Safepay, XPay) is built as a sea
 | Part D | AI Trend Scout | done |
 | Part E | AI Payment and Trust | done |
 | Part F | Search (typo tolerance, Roman Urdu, semantic last resort) | done |
-| Part G | Voice notes and bargaining assistant (festival planner delivered by Part C) | done |
+| Part G | Voice notes and bargaining assistant (festival planner delivered by Part C); bargaining removed 2026-10-22 | done |
 | Issues 1 and 2 | Separate shopper and owner experiences; AI product suggestions from real trending keywords | done (2026-10-05) |
 | Landing page | Marketing homepage at `/` with a live, budget-capped demonstration of trending suggestions | done (2026-10-06) |
 | 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | done (2026-10-07) |

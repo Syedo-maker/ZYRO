@@ -18,6 +18,7 @@ import { RegisterPage } from './pages/Register'
 
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })))
 const ProductsPage = lazy(() => import('./pages/admin/ProductsPage').then((m) => ({ default: m.ProductsPage })))
+const CategoriesPage = lazy(() => import('./pages/admin/CategoriesPage').then((m) => ({ default: m.CategoriesPage })))
 const OrdersPage = lazy(() => import('./pages/admin/OrdersPage').then((m) => ({ default: m.OrdersPage })))
 const TeamPage = lazy(() => import('./pages/admin/TeamPage').then((m) => ({ default: m.TeamPage })))
 const BillingPage = lazy(() => import('./pages/admin/BillingPage').then((m) => ({ default: m.BillingPage })))
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="products" replace />} />
               <Route path="products" element={<ProductsPage />} />
+              <Route path="categories" element={<CategoriesPage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="marketing" element={<MarketingPage />} />

@@ -1,5 +1,5 @@
 import { Types, type HydratedDocument } from "mongoose";
-import { Product, type ProductDocument } from "../../models/Product.model";
+import { Product, priceOf, type ProductDocument } from "../../models/Product.model";
 import { AiGeneratedContent } from "../../models/AiGeneratedContent.model";
 import { ProductReview } from "../../models/ProductReview.model";
 import { Errors } from "../../errors/AppError";
@@ -58,7 +58,7 @@ export function formatPrice(amount: number, currency: string): string {
 
 async function describeProduct(storeId: string, product: HydratedDocument<ProductDocument>): Promise<string> {
   const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { currency: true } });
-  const price = formatPrice(Number(product.price.toString()), tenant?.currency ?? "USD");
+  const price = formatPrice(priceOf(product).sale, tenant?.currency ?? "USD");
   const lines = [`Title: ${product.title}`, `Category: ${product.category}`, `Price: ${price}`];
   if (product.tags?.length) lines.push(`Tags: ${product.tags.join(", ")}`);
   if (product.description) lines.push(`Current description: ${product.description}`);

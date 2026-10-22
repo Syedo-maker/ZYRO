@@ -95,7 +95,7 @@ function Register() {
 
         <div className="flex-1 overflow-y-auto px-5 py-3 min-h-[160px]">
           {cart.length === 0 ? (
-            <p className="text-sm text-text-secondary py-8 text-center">Scan a barcode or tap a product to start a sale.</p>
+            <p className="text-sm text-text-secondary py-8 text-center">Scan a SKU or tap a product to start a sale.</p>
           ) : (
             <ul className="divide-y divide-border">
               {cart.map((line) => {
@@ -295,7 +295,7 @@ function ProductPane({
     }
   }, [storeId, text])
 
-  // A scanner types the code and presses Enter: an exact barcode or SKU match goes
+  // A scanner (or the cashier) types the SKU and presses Enter: an exact SKU match goes
   // straight into the sale.
   async function handleEnter() {
     const code = text.trim()
@@ -324,7 +324,7 @@ function ProductPane({
     <section aria-label="Products" className="flex flex-col p-5 gap-4 lg:min-h-0 lg:overflow-y-auto">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="pos-search" className="text-xs font-semibold text-text-secondary">
-          Scan a barcode or search products
+          Scan a SKU or search products
         </label>
         <input
           id="pos-search"
@@ -339,7 +339,7 @@ function ProductPane({
               void handleEnter()
             }
           }}
-          placeholder="Barcode, SKU or product name"
+          placeholder="SKU or product name"
           className="h-14 rounded-[10px] border border-border-input bg-surface px-4 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
         <div className="min-h-5 text-sm" role="status" aria-live="polite">

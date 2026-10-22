@@ -33,10 +33,10 @@ import { demoRouter } from "./modules/demo/demo.routes";
 import { directoryRouter } from "./modules/stores/directory.routes";
 import { ideasRouter } from "./modules/ideas/ideas.routes";
 import { voiceRouter } from "./modules/voice/voice.routes";
-import { bargainRouter } from "./modules/bargain/bargain.routes";
 import { storeTrendsRouter } from "./modules/trends/trends.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 import { filesRouter } from "./modules/files/files.routes";
+import { categoryRouter } from "./modules/categories/category.routes";
 import { logger } from "./lib/logger";
 import { isDraining, readiness } from "./lib/lifecycle";
 import { requestTimeout } from "./middleware/timeout.middleware";
@@ -108,6 +108,7 @@ v1.use("/auth", authRouter);
 v1.use("/users/me", meRouter);
 v1.use("/stores/:storeId/staff", staffRouter);
 v1.use("/stores/:storeId/products", productRouter);
+v1.use("/stores/:storeId/categories", categoryRouter);
 v1.use("/stores/:storeId/uploads", uploadsRouter);
 v1.use("/stores/:storeId/cart", cartRouter);
 v1.use("/stores/:storeId/checkout", checkoutRouter);
@@ -127,7 +128,6 @@ v1.use("/stores/:storeId/trends", storeTrendsRouter);
 v1.use("/stores/:storeId/payments", paymentsRouter);
 v1.use("/stores/:storeId/voice-notes", voiceRouter);
 v1.use("/stores/:storeId/product-ideas", ideasRouter);
-v1.use("/stores/:storeId/products/:productId/bargain", bargainRouter);
 // Public shop directory (Issue 2). Before the /stores/:storeId router, so "/" and "/categories"
 // are not read as a store id.
 v1.use("/stores", directoryRouter);

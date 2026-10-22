@@ -14,6 +14,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/admin/dashboard', enabled: true },
   { label: 'Products', to: '/admin/products', enabled: true },
+  { label: 'Categories', to: '/admin/categories', enabled: true },
   { label: 'Orders', to: '/admin/orders', enabled: true },
   { label: 'Payments', to: '/admin/payments', enabled: true },
   { label: 'Voice notes', to: '/admin/voice-notes', enabled: true },

@@ -130,9 +130,9 @@ async function main() {
     check("cart: Redis stores only productId to quantity, never prices", JSON.stringify(raw) === JSON.stringify({ [p1]: "5" }));
     check("cart: has a TTL of up to 7 days", ttl > 0 && ttl <= 604800, `ttl=${ttl}`);
 
-    await Product.updateOne({ _id: p1, storeId: A.storeId }, { price: 25 });
+    await Product.updateOne({ _id: p1, storeId: A.storeId }, { actualPrice: 25, salePrice: 25 });
     check("cart: a later price change shows immediately (price is never cached in the cart)", (await api("GET", `/stores/${A.storeId}/cart`, { guest })).json.subtotal === 125);
-    await Product.updateOne({ _id: p1, storeId: A.storeId }, { price: 20 });
+    await Product.updateOne({ _id: p1, storeId: A.storeId }, { actualPrice: 20, salePrice: 20 });
 
     check("cart: store B cannot add store A's product", (await api("POST", `/stores/${B.storeId}/cart/items`, { guest, body: { productId: p1, quantity: 1 } })).status === 404);
     check("cart: same guest id in store B sees an empty cart", (await api("GET", `/stores/${B.storeId}/cart`, { guest })).json.items.length === 0);
@@ -173,7 +173,7 @@ async function main() {
     check("webhook: wrong signature is 400 and creates nothing", (await sendEvent("checkout.session.completed", paidSession(sid1, 6000), { badSignature: true })).status === 400 && (await prismaUnscoped.order.count({ where: { tenantId: A.storeId } })) === 0);
 
     // ---- Webhook: fulfilment uses the snapshot, not today's prices ----
-    await Product.updateOne({ _id: p1, storeId: A.storeId }, { price: 99 });
+    await Product.updateOne({ _id: p1, storeId: A.storeId }, { actualPrice: 99, salePrice: 99 });
     const done = await sendEvent(
       "checkout.session.completed",
       paidSession(sid1, 6000, {
@@ -199,7 +199,7 @@ async function main() {
     check("stock: deducted (widget 5 to 3, gadget 3 to 2)", (await stockOf(A, p1)) === 3 && (await stockOf(A, p2)) === 2);
     check("customer: guest email became a tenant-scoped customer", (await prismaUnscoped.customer.count({ where: { tenantId: A.storeId, email: "shopper@example.com" } })) === 1 && order?.customerId !== null);
     check("cart: cleared after the order is created", (await api("GET", `/stores/${A.storeId}/cart`, { guest })).json.items.length === 0);
-    await Product.updateOne({ _id: p1, storeId: A.storeId }, { price: 20 });
+    await Product.updateOne({ _id: p1, storeId: A.storeId }, { actualPrice: 20, salePrice: 20 });
 
     // ---- Webhook: idempotency ----
     const replay = await sendEvent("checkout.session.completed", paidSession(sid1, 6000));

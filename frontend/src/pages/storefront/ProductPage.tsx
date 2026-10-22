@@ -5,16 +5,15 @@ import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { StarRating } from '../../components/StarRating'
+import { PriceTag } from '../../components/PriceTag'
 import { RecommendationsSection } from '../../components/storefront/RecommendationsSection'
 import { ReviewsSection } from '../../components/storefront/ReviewsSection'
 import { rememberViewed } from '../../lib/recentlyViewed'
-import { formatMoney } from '../../lib/format'
 import { ApiError } from '../../lib/apiClient'
 import { errorMessage } from '../../lib/ordersApi'
 import { catalogApi } from '../../lib/shopApi'
 import { useAddToCart } from '../../lib/useAddToCart'
 import type { Product } from '../../types/api'
-import { BargainWidget } from './BargainWidget'
 
 function stockNote(stock: number): { text: string; tone: string } {
   if (stock < 1) return { text: 'Sold out', tone: 'text-danger' }
@@ -120,7 +119,7 @@ export function ProductPage() {
               {product.reviewCount ?? 0} {product.reviewCount === 1 ? 'review' : 'reviews'}
             </span>
           </a>
-          <p className="font-display text-3xl font-bold">{formatMoney(product.price, store.currency)}</p>
+          <PriceTag product={product} currency={store.currency} size="lg" />
           <p className={`text-sm font-semibold ${note.tone}`}>{note.text}</p>
           {product.description && <p className="whitespace-pre-line text-sm leading-relaxed text-text-secondary">{product.description}</p>}
 
@@ -152,8 +151,6 @@ export function ProductPage() {
               {product.stock < 1 ? 'Sold out' : addingId === product.id ? 'Adding...' : 'Add to cart'}
             </Button>
           </div>
-
-          <BargainWidget storeId={store.id} productId={product.id} currency={store.currency} />
         </div>
       </div>
 
