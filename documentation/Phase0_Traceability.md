@@ -20,7 +20,7 @@ Design-only files (no screen of their own) are marked as such: `NavigationFlow` 
 | AIAssistant.dc.html | Shopping assistant chat | assistant_chat_send |
 | AdminCatalog.dc.html | Admin products (with the quick stock control) and product form with AI tools | products_list, products_create, products_update, products_set_stock, products_delete, uploads_image_create, ai_content_get, ai_content_generate, ai_content_update, ai_content_regenerate, ai_content_publish, ai_content_auto_tag, ai_content_seo_metadata, ai_content_marketing_copy, ai_content_review_summary_get, ai_content_review_summary_generate, ai_usage_get |
 | AdminOrders.dc.html | Admin orders and shipping | orders_list, orders_get, orders_status_update, orders_shipment_upsert, orders_refund, shipping_zones_list, shipping_zones_create, shipping_zones_update, shipping_zones_delete |
-| AdminDashboard.dc.html | Admin dashboard, with this week's growth tip (Part C) and market trends (Part D) | analytics_summary_get, orders_list, ai_usage_get, insights_get, insights_generate, advisor_get, advisor_check, advisor_update, advisor_tip_dismiss, trends_store_get |
+| AdminDashboard.dc.html | Admin dashboard, with this week's growth tip (Part C) and market trends (Part D) | analytics_summary_get, orders_list, ai_usage_get, insights_get, insights_generate, advisor_get, advisor_check, advisor_update, advisor_tip_dismiss, trends_store_get, product_scout_get |
 | AdminMarketing.dc.html | Marketing: discount codes, cart-recovery performance, sales by category | discount_codes_list, discount_codes_create, discount_codes_update, cart_recovery_performance_get, analytics_summary_get |
 | NavigationFlow.dc.html | Design only: how the screens connect | none |
 | ComponentInventory.dc.html | Design only: shared components | none |
@@ -48,7 +48,7 @@ These were added in later phases; the screen itself was designed in code.
 | Reviews moderation | Phase 3 | reviews_moderation_list, reviews_moderate |
 | Store branding | Phase 1 | store_branding_update, stores_get |
 | Plan and billing | Part A | billing_overview, billing_subscribe, billing_top_up, billing_portal, plans_list, store_domain_update |
-| Platform, with the Trend Scout panel (Part D) | Part A | platform_summary, platform_tenants, platform_trends_list, platform_trends_imports_list, platform_trends_import, platform_trends_run |
+| Platform, with the Trend Scout panel (Part D) | Part A | platform_summary, platform_tenants, platform_trends_list, platform_trends_imports_list, platform_trends_import, platform_trends_run, platform_product_scout_refresh |
 | Settings (store currency, and ways to pay) | After Part C | store_currency_get, store_currency_update, payments_settings_get, payments_settings_update |
 | Order placed (cash on delivery or transfer, and sending in the receipt) | Part E | payments_proof_image, payments_submit_proof, payments_proof_status, files_private_get |
 | Voice notes (spoken changes, confirmed by the merchant) | Part G | voice_note_create, voice_notes_list, voice_note_apply, voice_note_discard |

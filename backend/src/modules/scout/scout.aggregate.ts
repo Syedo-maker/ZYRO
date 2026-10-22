@@ -10,6 +10,10 @@
  *   type and every category, separately for the current and the previous period, so one dominant
  *   store can never be read off the numbers. A previous period that fails them is not compared
  *   against: the growth is withheld rather than revealed.
+ * - Subtraction is checked too. A category's figure is withheld when what is left of it after the
+ *   product types shown in it (the part anyone could work out by taking those away) would fail the
+ *   rules; and a 30-day figure is withheld when the part of it before the 7-day figures (days 8 to 30,
+ *   or 15 to 30) would. Either way, no figure can be taken away from another to reveal a few stores.
  * - What comes out carries no store id, store name, product id or customer, and no title any one store
  *   wrote: a product type is named from its normalised words.
  */
@@ -35,6 +39,12 @@ export interface ScoutRow {
   category: string;
   title: string;
   period: "current" | "previous";
+  /**
+   * For the 30-day period only, which part of the current period the line falls in: "recent" (the
+   * last 7 days, which are the 7-day figures), "prior" (the 7 days before, the 7-day comparison) or
+   * "older" (days 15 to 30). Lets the 30-day figures be checked against what subtraction would show.
+   */
+  segment?: "recent" | "prior" | "older";
   units: number;
 }
 
@@ -83,33 +93,74 @@ export function productTypeKey(title: string): string {
 /** "copper kettle" as a name: "Copper kettle". */
 export const typeName = (key: string) => key.charAt(0).toUpperCase() + key.slice(1);
 
+type PerStore = Map<string, number>;
+
 interface Bucket {
-  current: Map<string, number>;
-  previous: Map<string, number>;
+  current: PerStore;
+  previous: PerStore;
+  recent: PerStore;
+  prior: PerStore;
+  older: PerStore;
+  segmented: boolean;
   orders: Set<string>;
 }
-const newBucket = (): Bucket => ({ current: new Map(), previous: new Map(), orders: new Set() });
-const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
-const sum = (m: Map<string, number>) => [...m.values()].reduce((s, n) => s + n, 0);
+const newBucket = (): Bucket => ({ current: new Map(), previous: new Map(), recent: new Map(), prior: new Map(), older: new Map(), segmented: false, orders: new Set() });
+const add = (m: PerStore, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
+const sum = (m: PerStore) => [...m.values()].reduce((s, n) => s + n, 0);
+const merge = (...maps: PerStore[]) => {
+  const out: PerStore = new Map();
+  for (const m of maps) for (const [k, v] of m) add(out, k, v);
+  return out;
+};
+const minus = (a: PerStore, ...bs: PerStore[]) => {
+  const out: PerStore = new Map(a);
+  for (const b of bs) for (const [k, v] of b) out.set(k, (out.get(k) ?? 0) - v);
+  for (const [k, v] of out) if (v <= 0) out.delete(k);
+  return out;
+};
 
-/** The published figures for one group, or null when its current period may not be shown. */
-function figures(b: Bucket, opts: ScoutOptions): Figures | null {
+/** What a published figure exposes, kept so the category check can take it away. */
+interface Shown {
+  current: PerStore;
+  /** The previous period, when its figure is shown. */
+  previous: PerStore | null;
+}
+
+/**
+ * The published figures for one group, or null when its current period may not be shown. `exposed`
+ * are the parts of it already shown elsewhere (the product types in a category); what is left after
+ * taking them away must also pass the rules, or be nothing.
+ */
+function figures(b: Bucket, opts: ScoutOptions, exposed: Shown[] = []): { f: Figures; shown: Shown } | null {
   const rule = { minStores: opts.minStores, maxShare: opts.maxShare, baselineWeeks: 1 };
+  const safeOrEmpty = (m: PerStore) => sum(m) === 0 || safeToPublish(m, rule);
   if (!safeToPublish(b.current, rule)) return null;
+  if (!safeOrEmpty(minus(b.current, ...exposed.map((e) => e.current)))) return null;
+  if (b.segmented) {
+    // The 7-day figures are these same days: when they are shown, the rest of the 30 must be safe too.
+    const recentShown = safeToPublish(b.recent, rule);
+    const priorShown = recentShown && safeToPublish(b.prior, rule);
+    if (recentShown && !safeOrEmpty(merge(b.prior, b.older))) return null;
+    if (priorShown && !safeOrEmpty(b.older)) return null;
+  }
   const units = sum(b.current);
   const previousTotal = sum(b.previous);
-  const previousShown = previousTotal > 0 && safeToPublish(b.previous, rule);
+  const exposedPrevious = exposed.flatMap((e) => (e.previous ? [e.previous] : []));
+  const previousShown = previousTotal > 0 && safeToPublish(b.previous, rule) && safeOrEmpty(minus(b.previous, ...exposedPrevious));
   return {
-    units,
-    orders: b.orders.size,
-    stores: [...b.current.values()].filter((n) => n > 0).length,
-    previousUnits: previousShown ? previousTotal : null,
-    growthPercent: previousShown ? Math.round(((units - previousTotal) / previousTotal) * 100) : null,
-    isNew: previousTotal === 0,
+    f: {
+      units,
+      orders: b.orders.size,
+      stores: [...b.current.values()].filter((n) => n > 0).length,
+      previousUnits: previousShown ? previousTotal : null,
+      growthPercent: previousShown ? Math.round(((units - previousTotal) / previousTotal) * 100) : null,
+      isNew: previousTotal === 0,
+    },
+    shown: { current: b.current, previous: previousShown ? b.previous : null },
   };
 }
 
-/** Every market's published trends. Rows of other periods or with nothing sold are ignored. */
+/** Every market's published trends. Rows with nothing sold, or no meaningful title, are ignored. */
 export function computeTrends(rows: ScoutRow[], opts: ScoutOptions = DEFAULT_SCOUT_OPTIONS): MarketTrends[] {
   const markets = new Map<string, { categories: Map<string, Bucket>; types: Map<string, Bucket> }>();
   for (const r of rows) {
@@ -125,35 +176,46 @@ export function computeTrends(rows: ScoutRow[], opts: ScoutOptions = DEFAULT_SCO
     ] as const) {
       const b = map.get(key) ?? newBucket();
       map.set(key, b);
-      add(r.period === "current" ? b.current : b.previous, r.tenantId, r.units);
-      if (r.period === "current") b.orders.add(`${r.tenantId}:${r.orderId}`);
+      if (r.period === "previous") {
+        add(b.previous, r.tenantId, r.units);
+        continue;
+      }
+      add(b.current, r.tenantId, r.units);
+      b.orders.add(`${r.tenantId}:${r.orderId}`);
+      if (r.segment) {
+        b.segmented = true;
+        add(b[r.segment], r.tenantId, r.units);
+      }
     }
   }
 
   const out: MarketTrends[] = [];
   for (const [market, m] of [...markets].sort(([a], [b]) => a.localeCompare(b))) {
-    const categories: CategoryFigures[] = [];
-    for (const [key, b] of m.categories) {
-      const f = figures(b, opts);
-      if (f) categories.push({ key, name: displayCategory(key), ...f });
-    }
-    categories.sort((a, b) => b.units - a.units || a.key.localeCompare(b.key));
-
     const products: ProductTypeFigures[] = [];
+    const shownByCategory = new Map<string, Shown[]>();
     for (const [id, b] of m.types) {
-      const f = figures(b, opts);
-      if (!f) continue;
+      const r = figures(b, opts);
+      if (!r) continue;
       const [category, type] = id.split("|");
-      products.push({ id, name: typeName(type), category, categoryName: displayCategory(category), ...f });
+      products.push({ id, name: typeName(type), category, categoryName: displayCategory(category), ...r.f });
+      shownByCategory.set(category, [...(shownByCategory.get(category) ?? []), r.shown]);
     }
     products.sort((a, b) => b.units - a.units || a.id.localeCompare(b.id));
+
+    const categories: CategoryFigures[] = [];
+    for (const [key, b] of m.categories) {
+      const r = figures(b, opts, shownByCategory.get(key) ?? []);
+      if (r) categories.push({ key, name: displayCategory(key), ...r.f });
+    }
+    categories.sort((a, b) => b.units - a.units || a.key.localeCompare(b.key));
 
     const growing = products
       .filter((p) => p.growthPercent !== null && p.growthPercent > 0 && p.units >= opts.minGrowthUnits)
       .sort((a, b) => b.growthPercent! - a.growthPercent! || b.units - a.units || a.id.localeCompare(b.id));
-    const rising = categories
-      .map((c) => ({ category: c.key, products: growing.filter((p) => p.category === c.key).slice(0, RISING_PER_CATEGORY).map((p) => p.id) }))
-      .filter((r) => r.products.length > 0);
+    const rising = [...new Set(products.map((p) => p.category))]
+      .map((category) => ({ category, products: growing.filter((p) => p.category === category).slice(0, RISING_PER_CATEGORY).map((p) => p.id) }))
+      .filter((r) => r.products.length > 0)
+      .sort((a, b) => a.category.localeCompare(b.category));
 
     out.push({
       market,

@@ -113,6 +113,49 @@ describe("privacy", () => {
   });
 });
 
+describe("what subtraction would show", () => {
+  it("a category is withheld when taking its shown products away leaves fewer than 3 stores", () => {
+    // Kettles (3 stores) are shown; pots (2 stores) are not. Kitchen minus kettles would be the pots.
+    const [m] = computeTrends([...evenly("Copper Kettle", 3, 4), row("s1", "Steel Pot", 10), row("s2", "Steel Pot", 10)]);
+    expect(m.products.map((p) => p.name)).toEqual(["Copper kettle"]);
+    expect(m.categories).toEqual([]);
+  });
+
+  it("a category is shown when what is left after its shown products is safe, or nothing", () => {
+    const both = computeTrends([...evenly("Copper Kettle", 3, 4), ...evenly("Steel Pot", 3, 2)])[0];
+    expect(both.categories).toEqual([expect.objectContaining({ key: "kitchen", units: 18 })]);
+    // The rest is three different stores' own items, none shown alone, but together safe.
+    const rest = computeTrends([...evenly("Copper Kettle", 3, 4), row("s4", "Clay Cup", 3), row("s5", "Wooden Spoon", 3), row("s6", "Tea Towel", 3)])[0];
+    expect(rest.categories).toEqual([expect.objectContaining({ key: "kitchen", units: 21 })]);
+  });
+
+  it("the previous period's category figure is checked the same way", () => {
+    const rows = [
+      ...evenly("Copper Kettle", 3, 4),
+      ...evenly("Steel Pot", 3, 4),
+      ...evenly("Copper Kettle", 3, 2, "previous"),
+      row("s1", "Steel Pot", 5, "previous"), // last period's pots: one store, so not shown
+    ];
+    const [m] = computeTrends(rows);
+    expect(m.categories[0]).toMatchObject({ units: 24, previousUnits: null, growthPercent: null });
+  });
+
+  const seg = (r: ReturnType<typeof row>, segment: "recent" | "prior" | "older") => ({ ...r, segment });
+
+  it("a 30-day figure is withheld when the days before the 7-day figure would be one store's", () => {
+    const rows = [...evenly("Clay Cup", 3, 5).map((r) => seg(r, "recent")), seg(row("s1", "Clay Cup", 6), "older")];
+    expect(computeTrends(rows)[0].products).toEqual([]);
+  });
+
+  it("and shown when those days are safe too, or when the 7-day figure is not shown at all", () => {
+    const safe = [...evenly("Clay Cup", 3, 5).map((r) => seg(r, "recent")), ...evenly("Clay Cup", 3, 2).map((r) => seg(r, "older"))];
+    expect(computeTrends(safe)[0].products[0]).toMatchObject({ units: 21 });
+    // Last 7 days: only 2 stores, so no 7-day figure exists to take away.
+    const noWeek = [...evenly("Clay Cup", 2, 5).map((r) => seg(r, "recent")), ...evenly("Clay Cup", 3, 5).map((r) => seg(r, "older"))];
+    expect(computeTrends(noWeek)[0].products[0]).toMatchObject({ units: 25 });
+  });
+});
+
 describe("rankings", () => {
   const rows = [
     ...evenly("Clay Cup", 3, 20), // 60 units, no previous

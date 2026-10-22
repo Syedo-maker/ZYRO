@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { sqlNotDemo } from "../../lib/demo";
 import { Types } from "mongoose";
 import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
@@ -57,7 +58,9 @@ async function salesRows(weekStart: string, opts: AggregateOptions, onlyTenantId
            sum(oi."quantity" - oi."returnedQuantity")::int AS units
     FROM "OrderItem" oi
     JOIN "Order" o ON o."id" = oi."orderId"
+    JOIN "Tenant" t ON t."id" = o."tenantId"
     WHERE o."createdAt" >= ${from}::timestamp AND o."createdAt" < ${end}::timestamp
+      AND ${sqlNotDemo("t")}
       AND o."status" NOT IN ('CANCELLED', 'REFUNDED')
       AND EXISTS (SELECT 1 FROM "Payment" p WHERE p."orderId" = o."id" AND p."status" IN ('SUCCEEDED', 'REFUNDED'))
       ${only}
