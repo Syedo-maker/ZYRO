@@ -13,6 +13,7 @@ import { ApiError } from '../../lib/apiClient'
 import { errorMessage } from '../../lib/ordersApi'
 import { catalogApi } from '../../lib/shopApi'
 import { useAddToCart } from '../../lib/useAddToCart'
+import { clampDescription, usePageMeta } from '../../lib/pageMeta'
 import type { Product } from '../../types/api'
 
 function stockNote(stock: number): { text: string; tone: string } {
@@ -30,6 +31,19 @@ export function ProductPage() {
   const [error, setError] = useState<string | null>(null)
   const [image, setImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
+
+  // The merchant's meta title and description (product form, or the AI's SEO suggestion) for the tab
+  // and search results; without them, the product's own name and description.
+  usePageMeta(
+    product
+      ? {
+          title: product.seoTitle?.trim() || `${product.title} | ${store.name}`,
+          description: clampDescription(product.seoDescription?.trim() || product.description?.trim() || `${product.title} at ${store.name}.`),
+          type: 'product',
+          image: product.images[0],
+        }
+      : null
+  )
 
   const load = useCallback(async () => {
     try {
