@@ -38,6 +38,9 @@ export interface Product {
   taxable?: boolean
   /** Part G: the lowest price the merchant will accept when haggling. Merchant-only; shoppers never see it. */
   bargainMinPrice?: number | null
+  /** The store's category; null only for a product listed before categories existed and not yet migrated. */
+  categoryId: string | null
+  /** The category's name, kept in step with it by the server. */
   category: string
   images: string[]
   /** Often filled from an AI auto-tag suggestion; the suggestion itself never writes here. */
@@ -60,11 +63,22 @@ export interface ProductInput {
   barcode?: string
   taxable?: boolean
   bargainMinPrice?: number | null
-  category: string
+  /** One of the store's active categories, chosen from the dropdown; never typed. */
+  categoryId: string
   images?: string[]
   tags?: string[]
   seoTitle?: string
   seoDescription?: string
+}
+
+/** One of a store's own product categories. */
+export interface Category {
+  id: string
+  /** As the owner typed it. */
+  name: string
+  active: boolean
+  /** How many of the store's products are in it. */
+  productCount: number
 }
 
 export interface PaginationInfo {

@@ -4791,7 +4791,8 @@ components:
 
     ProductInput:
       type: object
-      required: [title, price, stock, category]
+      description: "A category is required: `categoryId` (what the admin form sends), or a `category` name, which is matched to the store's category with the same normalized name and creates it if the store has none."
+      required: [title, price, stock]
       properties:
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
@@ -4819,7 +4820,8 @@ components:
           type: number
           minimum: 0
           description: Merchant-only cost, used for margin analytics. Never shown to shoppers.
-        category: { type: string }
+        categoryId: { type: string, description: "One of the store's active categories." }
+        category: { type: string, maxLength: 60, description: "A category by name, for callers without an id; see above." }
         images:
           type: array
           items: { type: string, format: uri }

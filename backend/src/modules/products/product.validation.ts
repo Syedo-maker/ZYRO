@@ -13,13 +13,23 @@ export const productInputSchema = z.object({
   costPrice: z.number().min(0).optional(),
   /** Part G: the lowest price the merchant will accept when haggling. Absent means no haggling. */
   bargainMinPrice: z.number().min(0).max(10_000_000).optional().nullable(),
-  category: z.string().min(1),
+  /** The store's category (the product form always sends this). */
+  categoryId: z.string().trim().min(1).optional(),
+  /**
+   * A category by name, for API callers written before categories existed (voice notes among them).
+   * It is matched to the store's category with the same normalized name, which is created if the
+   * store has none; the product still ends up referencing that category by id.
+   */
+  category: z.string().trim().min(1).max(60).optional(),
   images: z.array(z.string().url()).max(10).optional().default([]),
   /** Often filled from an AI auto-tag suggestion (Phase 4, Module 6), but only once the
    *  merchant saves the form; the suggestion endpoint itself never writes to the product. */
   tags: z.array(z.string().trim().min(1).max(30)).max(10).optional().default([]),
   seoTitle: z.string().trim().max(70).optional(),
   seoDescription: z.string().trim().max(160).optional(),
+}).refine((v) => v.categoryId !== undefined || v.category !== undefined, {
+  message: "Choose a category",
+  path: ["categoryId"],
 }).refine((v) => v.bargainMinPrice === undefined || v.bargainMinPrice === null || v.bargainMinPrice <= v.price, {
   // A floor above the list price would mean haggling could only push the price up.
   message: "The lowest price you will accept cannot be more than the price itself",

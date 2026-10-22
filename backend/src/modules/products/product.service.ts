@@ -11,6 +11,7 @@ import type { ProductInput, ListProductsQuery } from "./product.validation";
 import { forgetVocabulary, runLadder, semanticIds, type SearchOutcome } from "../search/search.service";
 import { normalise } from "../search/search.query";
 import { recordSearchTerm } from "../search/search.terms";
+import { categoryService } from "../categories/category.service";
 
 interface Rating {
   averageRating: number;
@@ -30,6 +31,7 @@ function toPublicProduct(doc: HydratedDocument<ProductDocument>, stock: number, 
     sku: doc.sku ?? null,
     barcode: doc.barcode ?? null,
     taxable: doc.taxable !== false,
+    categoryId: doc.categoryId?.toString() ?? null,
     category: doc.category,
     images: doc.images,
     tags: doc.tags ?? [],
@@ -51,10 +53,23 @@ async function aiDescriptionStatusOf(doc: HydratedDocument<ProductDocument>): Pr
   return content?.status ?? null;
 }
 
-/** Splits the API payload into the catalog fields (MongoDB) and the stock target (Postgres). */
-function splitInput(input: ProductInput) {
-  const { stock, costPrice, bargainMinPrice, ...rest } = input;
-  return { stock, catalog: { ...rest, ...(costPrice !== undefined ? { costPrice } : {}), ...(bargainMinPrice !== undefined ? { bargainMinPrice } : {}) } };
+/**
+ * Splits the API payload into the catalog fields (MongoDB) and the stock target (Postgres), and puts
+ * the product in its category: always by id, with the category's own name copied alongside.
+ */
+async function splitInput(storeId: string, input: ProductInput) {
+  const { stock, costPrice, bargainMinPrice, categoryId, category, ...rest } = input;
+  const resolved = await categoryService.resolveForProduct(storeId, { categoryId, category });
+  return {
+    stock,
+    catalog: {
+      ...rest,
+      categoryId: resolved.id,
+      category: resolved.name,
+      ...(costPrice !== undefined ? { costPrice } : {}),
+      ...(bargainMinPrice !== undefined ? { bargainMinPrice } : {}),
+    },
+  };
 }
 
 function isDuplicateKey(err: unknown): boolean {
@@ -216,8 +231,9 @@ export const productService = {
     return present(docs);
   },
   async create(storeId: string, input: ProductInput, userId?: string) {
-    const { stock, catalog } = splitInput(input);
+    // The plan limit first, so a product the plan refuses never creates a category on its way out.
     await planService.assertCanAddProduct(storeId);
+    const { stock, catalog } = await splitInput(storeId, input);
 
     let doc;
     try {
@@ -270,7 +286,7 @@ export const productService = {
 
   async update(storeId: string, productId: string, input: ProductInput, userId?: string) {
     if (!Types.ObjectId.isValid(productId)) throw Errors.notFound("Product");
-    const { stock, catalog } = splitInput(input);
+    const { stock, catalog } = await splitInput(storeId, input);
 
     // findOneAndUpdate (not findByIdAndUpdate/findUnique-style) so storeId is part of the
     // filter, not assumed; the same discipline as the Prisma tenant-scoping middleware.

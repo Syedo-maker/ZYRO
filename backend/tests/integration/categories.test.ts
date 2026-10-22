@@ -128,14 +128,47 @@ describe("each store's categories are its own", () => {
 describe("a category and its products", () => {
   let productId = "";
 
-  it("counts the products in each category", async () => {
-    const res = await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Rubber Duck", price: 300, stock: 4, category: "Toys" } });
+  it("a product is put in a category by id, and carries its name", async () => {
+    const res = await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Rubber Duck", price: 300, stock: 4, categoryId: toys } });
     expect(res.status).toBe(201);
+    expect(res.json).toMatchObject({ categoryId: toys, category: "Toys" });
     productId = res.json.id;
-    // Linked the way the product form will link it (step 2).
-    await Product.updateOne({ _id: productId, storeId: A.storeId }, { $set: { categoryId: toys } });
     const list = (await api("GET", `/stores/${A.storeId}/categories`, { token: A.token })).json as { id: string; productCount: number }[];
     expect(list.find((c) => c.id === toys)!.productCount).toBe(1);
+  });
+
+  it("a product needs a category, from this store", async () => {
+    const base = { title: "Kite", price: 500, stock: 1 };
+    expect((await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: base })).status).toBe(400);
+    const bToys = (await api("GET", `/stores/${B.storeId}/categories`, { token: B.token })).json[0].id as string;
+    const foreign = await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { ...base, categoryId: bToys } });
+    expect(foreign.status).toBe(400);
+    expect(foreign.json.detail).toMatch(/this store's categories/);
+    expect((await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { ...base, categoryId: "not-an-id" } })).status).toBe(400);
+  });
+
+  it("a disabled category cannot take a new product", async () => {
+    await api("PATCH", `/stores/${A.storeId}/categories/${toys}`, { token: A.token, body: { active: false } });
+    const res = await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Kite", price: 500, stock: 1, categoryId: toys } });
+    expect(res.status).toBe(400);
+    expect(res.json.detail).toMatch(/disabled/);
+    await api("PATCH", `/stores/${A.storeId}/categories/${toys}`, { token: A.token, body: { active: true } });
+  });
+
+  it("an older caller naming a category by text gets the existing one, not a duplicate", async () => {
+    const res = await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Spinning Top", price: 150, stock: 2, category: "  TOYS " } });
+    expect(res.status).toBe(201);
+    expect(res.json).toMatchObject({ categoryId: toys, category: "Toys" });
+    expect((await Category.countDocuments({ storeId: A.storeId, normalizedName: "toys" }))).toBe(1);
+    await api("DELETE", `/stores/${A.storeId}/products/${res.json.id}`, { token: A.token });
+  });
+
+  it("an edit can move a product to another category", async () => {
+    const shoes = (await api("GET", `/stores/${A.storeId}/categories`, { token: A.token })).json.find((c: { name: string }) => c.name === "Kids Shoes").id as string;
+    const moved = await api("PUT", `/stores/${A.storeId}/products/${productId}`, { token: A.token, body: { title: "Rubber Duck", price: 300, stock: 4, categoryId: shoes } });
+    expect(moved.status).toBe(200);
+    expect(moved.json).toMatchObject({ categoryId: shoes, category: "Kids Shoes" });
+    await api("PUT", `/stores/${A.storeId}/products/${productId}`, { token: A.token, body: { title: "Rubber Duck", price: 300, stock: 4, categoryId: toys } });
   });
 
   it("a rename reaches every product in the category", async () => {

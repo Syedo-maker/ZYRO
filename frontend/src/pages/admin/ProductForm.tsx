@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { uploadsApi } from '../../lib/productsApi'
@@ -7,7 +8,11 @@ import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { AiToolsPanel } from './AiToolsPanel'
 import { WriteWithAi } from './WriteWithAi'
 import { bargainApi } from '../../lib/voiceBargainApi'
-import type { Product, ProductInput } from '../../types/api'
+import { categoriesApi } from '../../lib/categoriesApi'
+import type { Category, Product, ProductInput } from '../../types/api'
+
+/** The same comparison the server makes: case and spacing do not make two category names different. */
+const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, ' ').toLowerCase() === b.trim().replace(/\s+/g, ' ').toLowerCase()
 
 interface ProductFormProps {
   storeId: string
@@ -31,7 +36,24 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
       .catch(() => undefined)
   }, [storeId, initial])
   const [stock, setStock] = useState(initial?.stock.toString() ?? '')
-  const [category, setCategory] = useState(initial?.category ?? '')
+  // Chosen from the store's own categories, never typed (the supervisor's product-listing change).
+  const [categories, setCategories] = useState<Category[] | null>(null)
+  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? '')
+  const [categoryHint, setCategoryHint] = useState<string | null>(null)
+  useEffect(() => {
+    categoriesApi
+      .list(storeId)
+      .then((list) => {
+        setCategories(list)
+        // A product listed before categories existed: pick its category by name, if it has one.
+        if (initial && !initial.categoryId) {
+          const match = list.find((c) => c.active && sameName(c.name, initial.category))
+          if (match) setCategoryId(match.id)
+        }
+      })
+      .catch(() => setCategories([]))
+  }, [storeId, initial])
+  const chosenCategory = categories?.find((c) => c.id === categoryId)
   const [sku, setSku] = useState(initial?.sku ?? '')
   const [barcode, setBarcode] = useState(initial?.barcode ?? '')
   const [taxable, setTaxable] = useState(initial?.taxable ?? true)
@@ -76,7 +98,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         sku: sku.trim() || undefined,
         barcode: barcode.trim() || undefined,
         taxable,
-        category,
+        categoryId,
         images,
         tags: tags
           .split(',')
@@ -112,7 +134,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
           storeId={storeId}
           draft={{
             title: title.trim() || undefined,
-            category: category.trim() || undefined,
+            category: chosenCategory?.name,
             description: description.trim() || undefined,
             tags: tags
               .split(',')
@@ -164,7 +186,48 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         />
       </div>
 
-      <Input id="category" label="Category" required value={category} onChange={(e) => setCategory(e.target.value)} />
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="category" className="text-xs font-semibold text-text-secondary">
+          Category
+        </label>
+        {categories !== null && categories.filter((c) => c.active).length === 0 ? (
+          // Nothing to choose from yet: say what to do instead of showing an empty dropdown.
+          <p className="rounded-[10px] border border-border bg-bg px-3.5 py-3 text-sm text-text-secondary">
+            You have no categories yet.{' '}
+            <Link to="/admin/categories" className="font-semibold text-brand underline underline-offset-2">
+              Create a category
+            </Link>{' '}
+            first, then come back to add this product.
+          </p>
+        ) : (
+          <select
+            id="category"
+            required
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value)
+              setCategoryHint(null)
+            }}
+            className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          >
+            <option value="" disabled>
+              {categories === null ? 'Loading categories…' : 'Choose a category'}
+            </option>
+            {(categories ?? [])
+              .filter((c) => c.active || c.id === categoryId)
+              .map((c) => (
+                // A disabled category stays visible for the product already in it, but cannot be saved.
+                <option key={c.id} value={c.id} disabled={!c.active}>
+                  {c.active ? c.name : `${c.name} (disabled)`}
+                </option>
+              ))}
+          </select>
+        )}
+        {chosenCategory && !chosenCategory.active && (
+          <span className="text-xs text-danger">This category is disabled. Choose another, or enable it on the Categories page.</span>
+        )}
+        {categoryHint && <span className="text-xs text-text-secondary">{categoryHint}</span>}
+      </div>
 
       {/* Part G: the lowest price haggling may reach. Left empty, this product has a fixed price. */}
       <div>
@@ -246,7 +309,14 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
           productId={initial.id}
           onApplyDescription={(text) => setDescription(text)}
           onApplyCategoryAndTags={(suggestedCategory, suggestedTags) => {
-            setCategory(suggestedCategory)
+            // The AI suggests a name; only one of the store's own active categories can be chosen.
+            const match = categories?.find((c) => c.active && sameName(c.name, suggestedCategory))
+            if (match) {
+              setCategoryId(match.id)
+              setCategoryHint(null)
+            } else {
+              setCategoryHint(`The AI suggested "${suggestedCategory}", which is not one of your categories. Create it on the Categories page if you want it.`)
+            }
             setTags(suggestedTags.join(', '))
           }}
           onApplySeo={(title, desc) => {

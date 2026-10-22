@@ -28,8 +28,14 @@ function present(c: CategoryRow, productCount: number) {
 }
 
 const isDuplicateKey = (err: unknown) => (err as { code?: number })?.code === 11000;
-const duplicate = (name: string) =>
-  Errors.conflict(`A category called "${name}" already exists in this store. Names are compared without regard to capitals or spaces.`);
+
+/** Names the category that already exists, as its owner wrote it, not the clash just typed. */
+async function duplicate(storeId: string, name: string) {
+  const existing = await Category.findOne({ storeId, normalizedName: normalizeCategoryName(name) }).lean<CategoryRow>();
+  return Errors.conflict(
+    `A category called "${existing?.name ?? name}" already exists in this store. Names are compared without regard to capitals or spaces.`
+  );
+}
 
 async function find(storeId: string, categoryId: string): Promise<CategoryRow> {
   if (!Types.ObjectId.isValid(categoryId)) throw Errors.notFound("Category");
@@ -63,7 +69,7 @@ export const categoryService = {
       const created = await Category.create({ storeId, name, normalizedName: normalizeCategoryName(name), active: true });
       return present(created.toObject() as CategoryRow, 0);
     } catch (err) {
-      if (isDuplicateKey(err)) throw duplicate(name);
+      if (isDuplicateKey(err)) throw await duplicate(storeId, name);
       throw err;
     }
   },
@@ -82,7 +88,7 @@ export const categoryService = {
     try {
       updated = await Category.findOneAndUpdate({ _id: current._id, storeId }, { $set: set }, { new: true }).lean<CategoryRow>();
     } catch (err) {
-      if (isDuplicateKey(err)) throw duplicate(set.name!);
+      if (isDuplicateKey(err)) throw await duplicate(storeId, set.name!);
       throw err;
     }
     if (!updated) throw Errors.notFound("Category");
@@ -104,6 +110,35 @@ export const categoryService = {
       );
     }
     await Category.deleteOne({ _id: current._id, storeId });
+  },
+
+  /**
+   * The category a product goes in, from what the request named: an id (the product form), or a name
+   * from an older API caller. A name is matched to the store's category with the same normalized name
+   * and creates it only when the store has none, so "toys" from a caller and "Toys" from the form are
+   * the same category. Either way the category must be active.
+   */
+  async resolveForProduct(storeId: string, input: { categoryId?: string; category?: string }): Promise<{ id: Types.ObjectId; name: string }> {
+    if (input.categoryId !== undefined) return this.assertAssignable(storeId, input.categoryId);
+    const name = tidyCategoryName(input.category ?? "");
+    if (!name) throw Errors.validation("categoryId: choose a category");
+    const normalizedName = normalizeCategoryName(name);
+    const findOrCreate = () =>
+      Category.findOneAndUpdate(
+        { storeId, normalizedName },
+        { $setOnInsert: { storeId, name, normalizedName, active: true } },
+        { upsert: true, new: true }
+      ).lean<CategoryRow>();
+    let category: CategoryRow | null;
+    try {
+      category = await findOrCreate();
+    } catch (err) {
+      // Two requests creating the same new name at once: one insert wins, the other finds it.
+      if (!isDuplicateKey(err)) throw err;
+      category = await findOrCreate();
+    }
+    if (!category!.active) throw Errors.validation(`categoryId: "${category!.name}" is disabled; enable it or choose another category`);
+    return { id: category!._id, name: category!.name };
   },
 
   /**
