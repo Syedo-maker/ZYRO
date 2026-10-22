@@ -754,6 +754,25 @@ model GrowthTip {
   @@index([tenantId, createdAt])
 }
 
+/// Product Scout (2026-10-22): the platform's anonymised product trends for owners, recomputed daily
+/// per market (store currency) and period (7 or 30 days). Platform data like TrendReport, so no
+/// tenantId: `data` holds only totals that pass the privacy rules (enough stores, none dominating),
+/// never a store id, name, product id or customer. `scope` keeps the demo stores' figures apart from
+/// the real stores': "live" is built from real stores only, "demo" from the demo stores only.
+/// Rolled back with prisma/rollbacks/20261022100000_product_scout_snapshot.down.sql.
+model ProductScoutSnapshot {
+  id         String   @id @default(cuid())
+  scope      String
+  market     String
+  periodDays Int
+  /// The end (exclusive) of the period the figures cover.
+  windowEnd  DateTime
+  data       Json
+  computedAt DateTime @default(now())
+
+  @@unique([scope, market, periodDays])
+}
+
 /// Part D, the Trend Scout: one weekly report per market and category, shared by every store that
 /// sells in that category. Platform data, not any store's own, so there is no tenantId: what goes in
 /// is anonymised first (a category needs enough stores, and no store may dominate it).
