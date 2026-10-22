@@ -15,8 +15,9 @@ process.env.RATE_LIMIT_ENABLED = "false";
 process.env.AI_CACHE_SECONDS = "0";
 process.env.AI_MONTHLY_GENERATIONS_LIMIT = "3";
 // Email starts unconfigured, as on a machine without SendGrid; one test below supplies a gateway.
-delete process.env.SENDGRID_API_KEY;
-delete process.env.SENDGRID_FROM_EMAIL;
+// Email off, whatever backend/.env says: set empty rather than deleted, because config/env.ts loads
+// backend/.env and dotenv never overrides a variable that is already set.
+for (const name of ["EMAIL_PROVIDER", "SENDGRID_API_KEY", "SENDGRID_FROM_EMAIL", "BREVO_API_KEY", "BREVO_FROM_EMAIL"]) process.env[name] = "";
 // Own queues, so this file's fake provider is what answers even if a dev server shares Redis.
 process.env.AI_QUEUE_NAME = `ai-generate-verify-fixes-${Date.now().toString(36)}`;
 process.env.CART_RECOVERY_QUEUE_NAME = `cart-recovery-verify-fixes-${Date.now().toString(36)}`;

@@ -113,12 +113,17 @@ Email is off until the provider's settings are all set. While it is off:
 - each scan logs one warning that names the missing settings (never their values);
 - every store's Marketing page says "Email sending is not set up".
 
-- **Locally:** put `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL` in `backend/.env` (names in
-  `backend/.env.example`; the file is read by path, and is never committed). Restart the backend.
+- **Locally:** put the provider's settings in `backend/.env` (names in `backend/.env.example`; the
+  file is read by path, and is never committed). Restart the backend.
+  - SendGrid (the default): `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL`.
+  - Brevo: `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY` (the API key, not the SMTP key) and
+    `BREVO_FROM_EMAIL`, plus `BREVO_FROM_NAME` if you want a name other than ZYRO.
 - **Azure:** set `ZYRO_SENDGRID_API_KEY` and `ZYRO_SENDGRID_FROM_EMAIL` in the azd environment and run
   `azd provision`. The key goes into Key Vault, and the apps read it as an environment variable.
 
-The from address must be a verified sender in that SendGrid account, or every send is refused. A refused
+The from address must be a verified sender in that provider's account, or every send is refused.
+A free-mail address (Gmail and the like) works for testing but tends to land in spam; for a launch,
+authenticate a domain you own with the provider and send from an address on it. A refused
 or failed send gives the store's AI generation back, and the next scan tries again.
 
 Another provider is one adapter in `backend/src/lib/email.*.ts` and one entry in `lib/email.ts`,

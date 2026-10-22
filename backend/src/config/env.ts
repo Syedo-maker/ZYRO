@@ -181,8 +181,12 @@ export const env = {
   // AI orchestrator: the scan job runs and logs "would have sent" without a real send until set.
   email: {
     /** Which provider lib/email.ts sends through; each names the settings it needs there. */
-    provider: (process.env.EMAIL_PROVIDER ?? "sendgrid").trim().toLowerCase(),
+    provider: (process.env.EMAIL_PROVIDER?.trim() || "sendgrid").toLowerCase(),
     sendgridApiKey: process.env.SENDGRID_API_KEY,
+    brevoApiKey: process.env.BREVO_API_KEY,
+    brevoFromEmail: process.env.BREVO_FROM_EMAIL,
+    /** The name shown with the Brevo sender address. */
+    brevoFromName: process.env.BREVO_FROM_NAME?.trim() || "ZYRO",
     fromEmail: process.env.SENDGRID_FROM_EMAIL,
   },
   // Recommendation microservice (Implementation_Plan.md Phase 6): a separate Python process.

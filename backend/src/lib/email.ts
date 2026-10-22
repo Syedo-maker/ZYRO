@@ -1,6 +1,7 @@
 import { env } from "../config/env";
 import { Errors } from "../errors/AppError";
 import { sendgridGateway } from "./email.sendgrid";
+import { brevoGateway } from "./email.brevo";
 
 export interface EmailMessage {
   to: string;
@@ -16,7 +17,8 @@ export interface EmailGateway {
 }
 
 /**
- * The providers the platform can send through, chosen with EMAIL_PROVIDER (default "sendgrid").
+ * The providers the platform can send through, chosen with EMAIL_PROVIDER ("sendgrid", the default,
+ * or "brevo").
  * Each names the settings it needs (read from backend/.env, see config/env.ts) and builds its gateway
  * from them. Adding a provider is one entry here and one adapter file; no feature changes.
  */
@@ -27,6 +29,13 @@ const PROVIDERS: Record<string, { settings: { name: string; value: () => string 
       { name: "SENDGRID_FROM_EMAIL", value: () => env.email.fromEmail },
     ],
     create: () => sendgridGateway(env.email.sendgridApiKey!, env.email.fromEmail!),
+  },
+  brevo: {
+    settings: [
+      { name: "BREVO_API_KEY", value: () => env.email.brevoApiKey },
+      { name: "BREVO_FROM_EMAIL", value: () => env.email.brevoFromEmail },
+    ],
+    create: () => brevoGateway(env.email.brevoApiKey!, env.email.brevoFromEmail!, env.email.brevoFromName),
   },
 };
 

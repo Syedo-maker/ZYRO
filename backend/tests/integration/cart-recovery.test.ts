@@ -21,6 +21,7 @@ function exitScenario(code: number): never {
 
 process.env.RATE_LIMIT_ENABLED = "false";
 process.env.AI_MONTHLY_GENERATIONS_LIMIT = "10";
+process.env.EMAIL_PROVIDER = "sendgrid"; // whatever backend/.env says
 process.env.SENDGRID_API_KEY = "SG.verify-fake";
 process.env.SENDGRID_FROM_EMAIL = "orders@verify.example";
 // Isolated BullMQ queues, so this script's own fake gateways are what actually answer, even if
