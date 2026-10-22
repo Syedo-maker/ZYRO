@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Types } from "mongoose";
 import { prisma } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
-import { Product } from "../../models/Product.model";
+import { Product, priceOf } from "../../models/Product.model";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import type { CartOwner } from "../cart/cart.service";
 import { applyMove, describeForAssistant, MAX_ROUNDS, parseMove, parseShopperOffer, type BargainState, type Move } from "./bargain.rules";
@@ -62,7 +62,7 @@ const FALLBACK_REPLY: Record<Move, string> = {
 
 async function loadProduct(storeId: string, productId: string) {
   if (!Types.ObjectId.isValid(productId)) throw Errors.notFound("Product");
-  const product = await Product.findOne({ _id: productId, storeId }).select("title price bargainMinPrice");
+  const product = await Product.findOne({ _id: productId, storeId }).select("title actualPrice discountPrice salePrice price bargainMinPrice");
   if (!product) throw Errors.notFound("Product");
   if (!product.bargainMinPrice) throw Errors.validation("The price of this product is not open to negotiation.");
   return product;
@@ -74,7 +74,7 @@ export const bargainService = {
   /** Whether this product can be haggled over, for the storefront to decide whether to show the button. */
   async offer(storeId: string, productId: string) {
     if (!Types.ObjectId.isValid(productId)) return { available: false as const };
-    const product = await Product.findOne({ _id: productId, storeId }).select("bargainMinPrice price");
+    const product = await Product.findOne({ _id: productId, storeId }).select("bargainMinPrice actualPrice discountPrice salePrice price");
     return { available: Boolean(product?.bargainMinPrice) };
   },
 
@@ -97,7 +97,7 @@ export const bargainService = {
     });
     if (existing) return present(existing, "Welcome back. Where were we?");
 
-    const listPrice = money(product.price);
+    const listPrice = priceOf(product).sale;
     // The floor is frozen into the session, so a price change mid-conversation cannot move it.
     const floorPrice = Math.min(money(product.bargainMinPrice!), listPrice);
 

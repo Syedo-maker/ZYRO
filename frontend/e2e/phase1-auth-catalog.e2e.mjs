@@ -100,12 +100,20 @@ await step('session persistence across reloads', async () => {
 })
 
 await step('create a product with an image', async () => {
+  // A product goes in one of the store's own categories, chosen from a dropdown, so make two first.
+  await page.goto(`${WEB}/admin/categories`)
+  for (const name of ['outdoors', 'gear']) {
+    await page.getByLabel('New category').fill(name)
+    await page.getByRole('button', { name: 'Add category' }).click()
+    await page.getByRole('row').filter({ hasText: name }).waitFor()
+  }
+  await page.goto(`${WEB}/admin/products`)
   await page.getByRole('button', { name: '+ Add product' }).click()
   await page.getByLabel('Title', { exact: true }).fill('Trail Mug')
   await page.getByLabel('Description', { exact: true }).fill('Enamel camping mug')
-  await page.getByLabel('Price', { exact: true }).fill('24.5')
+  await page.getByLabel('Price (MRP)').fill('24.5')
   await page.getByLabel('Stock').fill('6')
-  await page.getByLabel('Category').fill('outdoors')
+  await page.getByLabel('Category').selectOption({ label: 'outdoors' })
   await page.getByLabel('Product image file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await page.getByRole('alert').filter({ hasText: 'Image upload failed' }).waitFor()
   check('form: a non-image file is rejected with a visible error', true)
@@ -130,16 +138,16 @@ await step('create a product with an image', async () => {
 
 await step('edit and delete', async () => {
   await page.getByRole('button', { name: 'Edit Trail Mug' }).click()
-  await page.getByLabel('Price', { exact: true }).fill('30')
+  await page.getByLabel('Price (MRP)').fill('30')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   await page.getByText('$30.00').waitFor()
   check('edit: the price change is saved and shown', true)
 
   await page.getByRole('button', { name: '+ Add product' }).click()
   await page.getByLabel('Title', { exact: true }).fill('Camp Stove')
-  await page.getByLabel('Price', { exact: true }).fill('40')
+  await page.getByLabel('Price (MRP)').fill('40')
   await page.getByLabel('Stock').fill('3')
-  await page.getByLabel('Category').fill('gear')
+  await page.getByLabel('Category').selectOption({ label: 'gear' })
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByText('Camp Stove').first().waitFor()
   await page.getByRole('button', { name: 'Delete Camp Stove' }).click()

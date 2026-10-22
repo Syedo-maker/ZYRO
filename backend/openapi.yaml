@@ -4791,12 +4791,22 @@ components:
 
     ProductInput:
       type: object
-      description: "A category is required: `categoryId` (what the admin form sends), or a `category` name, which is matched to the store's category with the same normalized name and creates it if the store has none."
-      required: [title, price, stock]
+      description: |
+        A category is required: `categoryId` (what the admin form sends), or a `category` name, which is
+        matched to the store's category with the same normalized name and creates it if the store has none.
+
+        A price is required: `actualPrice` (the MRP), or `price` from callers written before the three
+        prices, read as the actual price. `discountPrice` is optional and may not be more than the actual
+        price. The sale price, what customers pay, is not sent: it is the discounted price when there is
+        one, otherwise the actual price. On an edit, leaving `discountPrice` out (or null) removes the
+        discount.
+      required: [title, stock]
       properties:
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
-        price: { type: number, minimum: 0 }
+        actualPrice: { type: number, exclusiveMinimum: 0, maximum: 10000000, description: "The full price (MRP), shown struck through when there is a discount." }
+        discountPrice: { type: [number, "null"], exclusiveMinimum: 0, maximum: 10000000, description: "Optional; at most the actual price." }
+        price: { type: number, exclusiveMinimum: 0, maximum: 10000000, deprecated: true, description: "Read as actualPrice. Use actualPrice." }
         stock:
           type: integer
           minimum: 0
@@ -4841,13 +4851,17 @@ components:
         out; it never sends null). Listed in full rather than built on ProductInput, because a schema
         composed with allOf would still apply ProductInput's "must be a string" to those four.
       type: object
-      required: [id, storeId, title, price, stock, category]
+      required: [id, storeId, title, actualPrice, discountPrice, salePrice, discountPercent, price, stock, category]
       properties:
         id: { type: string }
         storeId: { type: string }
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
-        price: { type: number, minimum: 0 }
+        actualPrice: { type: number, minimum: 0, description: "The full price (MRP)." }
+        discountPrice: { type: [number, "null"], description: "Null when there is no discount." }
+        salePrice: { type: number, minimum: 0, description: "What customers pay: the cart, checkout and orders use this." }
+        discountPercent: { type: [integer, "null"], minimum: 1, maximum: 100, description: "How much below the actual price the sale price is, rounded; null when there is no discount." }
+        price: { type: number, minimum: 0, deprecated: true, description: "The sale price. Kept for callers written before the three prices; use salePrice." }
         stock: { type: integer, minimum: 0, description: "On-hand quantity at the default location (see ProductInput)." }
         sku: { type: [string, "null"], maxLength: 100 }
         barcode: { type: [string, "null"], maxLength: 100 }
@@ -4869,6 +4883,10 @@ components:
           storeId: store_01ABCD
           title: Wireless Earbuds Pro
           description: Crisp sound, all-day battery, and a snug fit for workouts or commutes.
+          actualPrice: 59.00
+          discountPrice: 49.00
+          salePrice: 49.00
+          discountPercent: 17
           price: 49.00
           stock: 42
           category: Electronics

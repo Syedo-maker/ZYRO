@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
-import { formatMoney } from '../../lib/format'
+import { PriceTag } from '../../components/PriceTag'
 import { errorMessage } from '../../lib/ordersApi'
 import { productsApi } from '../../lib/productsApi'
 import { storefrontApi } from '../../lib/storefrontApi'
@@ -123,7 +123,7 @@ export function ProductsPage() {
                 </div>
                 <span className="font-semibold">{product.title}</span>
               </div>
-              <div role="cell">{formatMoney(product.price, currency)}</div>
+              <div role="cell"><PriceTag product={product} currency={currency} /></div>
               <div role="cell">{product.stock}</div>
               <div role="cell" className="text-text-secondary">{product.category}</div>
               <div role="cell" className="flex gap-3">
@@ -154,6 +154,7 @@ export function ProductsPage() {
           <ProductForm
             key={panel.mode === 'edit' ? panel.product.id : 'new'}
             storeId={activeStore.id}
+            currency={currency}
             initial={panel.mode === 'edit' ? panel.product : undefined}
             onSubmit={panel.mode === 'edit' ? handleUpdate : handleCreate}
             onCancel={() => setPanel({ mode: 'closed' })}

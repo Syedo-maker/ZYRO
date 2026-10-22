@@ -155,6 +155,18 @@ describe("a category and its products", () => {
     await api("PATCH", `/stores/${A.storeId}/categories/${toys}`, { token: A.token, body: { active: true } });
   });
 
+  it("a product already in a disabled category can still be edited, but no other product can move in", async () => {
+    await api("PATCH", `/stores/${A.storeId}/categories/${toys}`, { token: A.token, body: { active: false } });
+    const edit = await api("PUT", `/stores/${A.storeId}/products/${productId}`, { token: A.token, body: { title: "Rubber Duck", price: 320, stock: 4, categoryId: toys } });
+    expect(edit.status).toBe(200);
+    expect(edit.json).toMatchObject({ categoryId: toys, actualPrice: 320 });
+    const other = await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Ball", price: 90, stock: 1, category: "Kids Shoes" } });
+    const move = await api("PUT", `/stores/${A.storeId}/products/${other.json.id}`, { token: A.token, body: { title: "Ball", price: 90, stock: 1, categoryId: toys } });
+    expect(move.status).toBe(400);
+    await api("DELETE", `/stores/${A.storeId}/products/${other.json.id}`, { token: A.token });
+    await api("PATCH", `/stores/${A.storeId}/categories/${toys}`, { token: A.token, body: { active: true } });
+  });
+
   it("an older caller naming a category by text gets the existing one, not a duplicate", async () => {
     const res = await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Spinning Top", price: 150, stock: 2, category: "  TOYS " } });
     expect(res.status).toBe(201);

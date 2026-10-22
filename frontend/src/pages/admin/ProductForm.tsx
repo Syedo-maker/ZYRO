@@ -9,6 +9,7 @@ import { AiToolsPanel } from './AiToolsPanel'
 import { WriteWithAi } from './WriteWithAi'
 import { bargainApi } from '../../lib/voiceBargainApi'
 import { categoriesApi } from '../../lib/categoriesApi'
+import { formatMoney } from '../../lib/format'
 import type { Category, Product, ProductInput } from '../../types/api'
 
 /** The same comparison the server makes: case and spacing do not make two category names different. */
@@ -16,16 +17,37 @@ const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, ' ').toLower
 
 interface ProductFormProps {
   storeId: string
+  /** The store's currency, for the "customers pay" line under the prices. */
+  currency: string
   /** Present when editing; absent when creating. */
   initial?: Product
   onSubmit: (input: ProductInput) => Promise<void>
   onCancel: () => void
 }
 
-export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFormProps) {
+/**
+ * What customers pay, from the two prices as typed: the discount when there is one. The same rule as
+ * the server's salePriceFor; null while the prices are incomplete or invalid.
+ */
+function salePreview(actual: string, discount: string) {
+  const a = Number(actual)
+  const d = discount.trim() === '' ? null : Number(discount)
+  if (actual.trim() === '' || !(a > 0)) return null
+  if (d !== null && !(d > 0 && d <= a)) return null
+  const sale = d ?? a
+  const off = Math.round(((a - sale) / a) * 100)
+  return { sale, off: off > 0 ? off : null }
+}
+
+export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: ProductFormProps) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
-  const [price, setPrice] = useState(initial?.price.toString() ?? '')
+  // The three prices: the owner sets the actual price (MRP) and, optionally, a discounted one; what
+  // customers pay is computed from them (the supervisor's product-listing change).
+  const [actualPrice, setActualPrice] = useState(initial ? String(initial.actualPrice) : '')
+  const [discountPrice, setDiscountPrice] = useState(initial?.discountPrice != null ? String(initial.discountPrice) : '')
+  const preview = salePreview(actualPrice, discountPrice)
+  const discountTooHigh = discountPrice.trim() !== '' && actualPrice.trim() !== '' && Number(discountPrice) > Number(actualPrice)
   // The floor price is never on the public product endpoints, so it is fetched on its own here.
   const [bargainMinPrice, setBargainMinPrice] = useState('')
   useEffect(() => {
@@ -87,12 +109,18 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
     e.preventDefault()
     setError(null)
     setLimitError(null)
+    if (discountTooHigh) {
+      setError('The discounted price cannot be more than the price (MRP).')
+      return
+    }
     setSubmitting(true)
     try {
       await onSubmit({
         title,
         description,
-        price: Number(price),
+        actualPrice: Number(actualPrice),
+        // Empty means no discount; on an edit that removes one the product had.
+        discountPrice: discountPrice.trim() === '' ? null : Number(discountPrice),
         bargainMinPrice: bargainMinPrice.trim() === '' ? null : Number(bargainMinPrice),
         stock: Number(stock),
         sku: sku.trim() || undefined,
@@ -112,10 +140,13 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         // The plan's product limit: show what to do about it instead of a vague "could not save".
         setLimitError(err)
       } else {
+        const detail = (err as { detail?: string }).detail ?? ''
         setError(
-          err instanceof Error && /SKU or barcode/.test((err as { detail?: string }).detail ?? '')
+          /SKU or barcode/.test(detail)
             ? 'That SKU or barcode is already used by another product.'
-            : 'Could not save this product. Please check the fields and try again.'
+            : /price/i.test(detail)
+              ? detail
+              : 'Could not save this product. Please check the fields and try again.'
         )
       }
     } finally {
@@ -140,7 +171,7 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
               .split(',')
               .map((t) => t.trim())
               .filter(Boolean),
-            price: price.trim() === '' ? undefined : Number(price),
+            price: preview?.sale,
           }}
           onUse={(idea) => {
             setTitle(idea.title)
@@ -164,27 +195,48 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          id="price"
-          type="number"
-          step="0.01"
-          min="0"
-          label="Price"
-          required
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-        <Input
-          id="stock"
-          type="number"
-          min="0"
-          label="Stock"
-          required
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-        />
+      <div className="flex flex-col gap-1.5">
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            id="actualPrice"
+            type="number"
+            step="0.01"
+            min="0.01"
+            label="Price (MRP)"
+            required
+            value={actualPrice}
+            onChange={(e) => setActualPrice(e.target.value)}
+          />
+          <Input
+            id="discountPrice"
+            type="number"
+            step="0.01"
+            min="0.01"
+            label="Discounted price (optional)"
+            aria-describedby="price-preview"
+            value={discountPrice}
+            onChange={(e) => setDiscountPrice(e.target.value)}
+          />
+        </div>
+        <p id="price-preview" aria-live="polite" className={`text-xs ${discountTooHigh ? 'text-danger' : 'text-text-secondary'}`}>
+          {discountTooHigh
+            ? 'The discounted price cannot be more than the price (MRP).'
+            : preview
+              ? `Customers pay ${formatMoney(preview.sale, currency)}${preview.off ? `, ${preview.off}% off the MRP` : ''}.`
+              : 'Leave the discounted price empty to sell at the MRP.'}
+        </p>
       </div>
+
+      <Input
+        id="stock"
+        type="number"
+        min="0"
+        step="1"
+        label="Stock"
+        required
+        value={stock}
+        onChange={(e) => setStock(e.target.value)}
+      />
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="category" className="text-xs font-semibold text-text-secondary">
@@ -224,7 +276,9 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
           </select>
         )}
         {chosenCategory && !chosenCategory.active && (
-          <span className="text-xs text-danger">This category is disabled. Choose another, or enable it on the Categories page.</span>
+          <span className="text-xs text-text-secondary">
+            This category is disabled: this product can stay in it, but no other product can be added to it. Enable it on the Categories page to use it again.
+          </span>
         )}
         {categoryHint && <span className="text-xs text-text-secondary">{categoryHint}</span>}
       </div>

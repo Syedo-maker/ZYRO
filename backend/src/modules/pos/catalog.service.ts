@@ -1,4 +1,4 @@
-import { Product } from "../../models/Product.model";
+import { Product, priceOf } from "../../models/Product.model";
 import { prisma, PrismaTx } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
@@ -37,7 +37,7 @@ export const posCatalogService = {
     return docs.map((d) => ({
       id: d._id.toString(),
       title: d.title,
-      price: Number(d.price.toString()),
+      price: priceOf(d).sale,
       taxable: d.taxable !== false,
       sku: d.sku ?? null,
       barcode: d.barcode ?? null,

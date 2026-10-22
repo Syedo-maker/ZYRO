@@ -278,7 +278,7 @@ describe("a voice note only ever makes a draft", () => {
     expect(res.json.summary).toMatch(/Change the price of "Clay Chai Cup" to PKR 450\.00/);
 
     const product = await Product.findOne({ _id: cup.id, storeId: A.storeId });
-    expect(Number(product!.price.toString())).toBe(1000);
+    expect(Number(product!.actualPrice!.toString())).toBe(1000);
   });
 
   it("confirming it is what applies the change", async () => {
@@ -286,7 +286,8 @@ describe("a voice note only ever makes a draft", () => {
     const res = await api("POST", `/stores/${A.storeId}/voice-notes/${pending.id}/apply`, { token: A.token });
     expect(res.status).toBe(200);
     const product = await Product.findOne({ _id: cup.id, storeId: A.storeId });
-    expect(Number(product!.price.toString())).toBe(450);
+    expect(Number(product!.actualPrice!.toString())).toBe(450);
+    expect(Number(product!.salePrice!.toString())).toBe(450);
     expect((await prismaUnscoped.voiceNote.findUnique({ where: { id: pending.id } }))!.status).toBe("applied");
   });
 

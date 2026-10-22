@@ -180,7 +180,7 @@ await step('review summary', op, async () => {
 await step('a product with no reviews shows no summarize button', op, async () => {
   await op.getByRole('button', { name: '+ Add product' }).click()
   await op.getByLabel('Title', { exact: true }).fill('Lonely Product')
-  await op.getByLabel('Price', { exact: true }).fill('9.99')
+  await op.getByLabel('Price (MRP)').fill('9.99')
   await op.getByLabel('Stock', { exact: true }).fill('5')
   await op.getByLabel('Category', { exact: true }).fill('misc')
   await op.getByRole('button', { name: 'Save', exact: true }).click()

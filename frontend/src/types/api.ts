@@ -31,6 +31,15 @@ export interface Product {
   storeId: string
   title: string
   description: string
+  /** The full price (MRP), shown struck through when there is a discount. */
+  actualPrice: number
+  /** Null when there is no discount. */
+  discountPrice: number | null
+  /** What customers pay: the cart, checkout and orders use this. */
+  salePrice: number
+  /** Whole percent below the MRP, for the "% off" badge; null when there is none. */
+  discountPercent: number | null
+  /** The sale price under its name from before the three prices. Prefer salePrice. */
   price: number
   stock: number
   sku?: string | null
@@ -56,7 +65,10 @@ export interface Product {
 export interface ProductInput {
   title: string
   description?: string
-  price: number
+  /** The full price (MRP). */
+  actualPrice: number
+  /** Empty (null) for no discount; on an edit, that removes one. At most the actual price. */
+  discountPrice: number | null
   stock: number
   /** Scanned at the register; unique per store. */
   sku?: string

@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { prisma } from "../../lib/prisma";
 import { getRedis } from "../../lib/redis";
 import { Errors } from "../../errors/AppError";
-import { Product } from "../../models/Product.model";
+import { Product, priceOf } from "../../models/Product.model";
 import { inventoryService } from "../inventory/inventory.service";
 import { calculateTotals } from "../commerce/pricing.service";
 import { discountService, type ResolvedDiscount } from "../discounts/discount.service";
@@ -48,7 +48,7 @@ async function priceCart(storeId: string, owner: CartOwner, discountCode?: strin
     return {
       productId: id,
       title: product.title,
-      unitPrice: Number(product.price.toString()),
+      unitPrice: priceOf(product).sale,
       unitCost: product.costPrice ? Number(product.costPrice.toString()) : null,
       quantity,
       taxable: product.taxable !== false,

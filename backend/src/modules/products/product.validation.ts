@@ -4,7 +4,16 @@ import { z } from "zod";
 export const productInputSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional().default(""),
-  price: z.number().min(0),
+  /**
+   * Prices (the supervisor's product-listing change). The owner sets the actual price (the MRP) and,
+   * optionally, a discounted price; the sale price the customer pays is computed from them (the
+   * discount when there is one), never sent. All are positive.
+   */
+  actualPrice: z.number().positive("The price must be more than zero").max(10_000_000).optional(),
+  /** Null or absent: no discount. */
+  discountPrice: z.number().positive("A discounted price must be more than zero").max(10_000_000).nullable().optional(),
+  /** The single price of the API before the three; read as the actual price. Kept for older callers. */
+  price: z.number().positive("The price must be more than zero").max(10_000_000).optional(),
   /** Target on-hand quantity at the store's default location; stored in inventory, not on the product. */
   stock: z.number().int().min(0),
   sku: z.string().trim().min(1).max(100).optional(),
@@ -27,10 +36,16 @@ export const productInputSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(30)).max(10).optional().default([]),
   seoTitle: z.string().trim().max(70).optional(),
   seoDescription: z.string().trim().max(160).optional(),
+}).refine((v) => v.actualPrice !== undefined || v.price !== undefined, {
+  message: "The price is required",
+  path: ["actualPrice"],
+}).refine((v) => v.discountPrice === undefined || v.discountPrice === null || v.discountPrice <= (v.actualPrice ?? v.price ?? 0), {
+  message: "The discounted price cannot be more than the actual price",
+  path: ["discountPrice"],
 }).refine((v) => v.categoryId !== undefined || v.category !== undefined, {
   message: "Choose a category",
   path: ["categoryId"],
-}).refine((v) => v.bargainMinPrice === undefined || v.bargainMinPrice === null || v.bargainMinPrice <= v.price, {
+}).refine((v) => v.bargainMinPrice === undefined || v.bargainMinPrice === null || v.bargainMinPrice <= (v.discountPrice ?? v.actualPrice ?? v.price ?? 0), {
   // A floor above the list price would mean haggling could only push the price up.
   message: "The lowest price you will accept cannot be more than the price itself",
   path: ["bargainMinPrice"],

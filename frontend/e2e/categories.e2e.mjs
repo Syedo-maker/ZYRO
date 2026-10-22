@@ -70,7 +70,7 @@ try {
   await select.waitFor()
   check('the category is a dropdown, not a text box', (await select.evaluate((el) => el.tagName)) === 'SELECT')
   await page.locator('#title').fill('Rubber Duck')
-  await page.locator('#price').fill('300')
+  await page.locator('#actualPrice').fill('300')
   await page.locator('#stock').fill('5')
   await select.selectOption({ label: 'Toys' })
   await page.getByRole('button', { name: 'Save' }).click()

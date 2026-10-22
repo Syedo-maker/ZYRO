@@ -17,7 +17,18 @@ export interface ProductDocument {
   title: string;
   description: string;
   aiDescriptionId?: Types.ObjectId; // ref -> AiGeneratedContent, set once a draft/published description exists
-  price: Types.Decimal128;
+  /**
+   * Three prices (the supervisor's product-listing change). The owner sets the actual price (the MRP)
+   * and, optionally, a discounted price; the sale price is what the customer pays, and is always the
+   * discounted price when there is one and the actual price otherwise. The server computes it, so
+   * the three can never disagree, and cart, checkout and orders read only it (see priceOf below).
+   */
+  actualPrice?: Types.Decimal128;
+  discountPrice?: Types.Decimal128;
+  salePrice?: Types.Decimal128;
+  /** The single price products had before the three. Read only as a fallback until
+   *  scripts/migrate-product-fields.ts has converted a product; never written any more. */
+  price?: Types.Decimal128;
   images: string[]; // object-storage URLs only, never binary data (Implementation_Plan.md Phase 1)
   // Stock is NOT stored here. On-hand quantity lives in Postgres (InventoryLevel) so that
   // deducting it is atomic with order creation for both the online store and the POS.
@@ -72,7 +83,10 @@ const productSchema = new Schema<ProductDocument>(
     title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, default: "", maxlength: 5000 },
     aiDescriptionId: { type: Schema.Types.ObjectId, ref: "AiGeneratedContent" },
-    price: { type: Schema.Types.Decimal128, required: true },
+    actualPrice: { type: Schema.Types.Decimal128 },
+    discountPrice: { type: Schema.Types.Decimal128 },
+    salePrice: { type: Schema.Types.Decimal128 },
+    price: { type: Schema.Types.Decimal128 },
     images: {
       type: [String],
       default: [],
@@ -135,6 +149,35 @@ productSchema.index(
   { unique: true, partialFilterExpression: { barcode: { $type: "string" } } }
 );
 
+// Sorting and filtering a store's catalogue by what customers pay.
+productSchema.index({ storeId: 1, salePrice: 1 });
+
 productSchema.plugin(tenantScopePlugin);
+
+/**
+ * A product's prices as numbers, from whichever shape it is stored in. Every reader of a price goes
+ * through this, so a product not yet converted by the migration (only `price`) still sells at that
+ * price instead of failing, and the rest of the code has one place to look.
+ */
+export function priceOf(doc: Pick<ProductDocument, "actualPrice" | "discountPrice" | "salePrice" | "price">) {
+  const num = (d?: Types.Decimal128) => (d === undefined || d === null ? undefined : Number(d.toString()));
+  const legacy = num(doc.price);
+  const actual = num(doc.actualPrice) ?? legacy ?? 0;
+  const discount = num(doc.discountPrice);
+  const sale = num(doc.salePrice) ?? discount ?? actual;
+  const percent = sale < actual && actual > 0 ? Math.round(((actual - sale) / actual) * 100) : 0;
+  return {
+    actual,
+    discount: discount ?? null,
+    sale,
+    /** Whole percent off, for a "% off" badge; null when there is none to show (no discount, or under 0.5%). */
+    percentOff: percent > 0 ? percent : null,
+  };
+}
+
+/** The sale price the owner's two inputs produce. The one place that rule lives. */
+export function salePriceFor(actualPrice: number, discountPrice?: number | null): number {
+  return discountPrice === undefined || discountPrice === null ? actualPrice : discountPrice;
+}
 
 export const Product = model<ProductDocument>("Product", productSchema);

@@ -118,8 +118,13 @@ export const categoryService = {
    * and creates it only when the store has none, so "toys" from a caller and "Toys" from the form are
    * the same category. Either way the category must be active.
    */
-  async resolveForProduct(storeId: string, input: { categoryId?: string; category?: string }): Promise<{ id: Types.ObjectId; name: string }> {
-    if (input.categoryId !== undefined) return this.assertAssignable(storeId, input.categoryId);
+  async resolveForProduct(
+    storeId: string,
+    input: { categoryId?: string; category?: string },
+    /** The product's category before an edit: it may stay there even if that category is disabled. */
+    currentCategoryId?: string
+  ): Promise<{ id: Types.ObjectId; name: string }> {
+    if (input.categoryId !== undefined) return this.assertAssignable(storeId, input.categoryId, input.categoryId === currentCategoryId);
     const name = tidyCategoryName(input.category ?? "");
     if (!name) throw Errors.validation("categoryId: choose a category");
     const normalizedName = normalizeCategoryName(name);
@@ -137,19 +142,19 @@ export const categoryService = {
       if (!isDuplicateKey(err)) throw err;
       category = await findOrCreate();
     }
-    if (!category!.active) throw Errors.validation(`categoryId: "${category!.name}" is disabled; enable it or choose another category`);
+    if (!category!.active && category!._id.toString() !== currentCategoryId) throw Errors.validation(`categoryId: "${category!.name}" is disabled; enable it or choose another category`);
     return { id: category!._id, name: category!.name };
   },
 
   /**
-   * The category a product is being put in: it must be one of this store's, and active. Returns the
-   * id and the name to copy onto the product.
+   * The category a product is being put in: it must be one of this store's, and active (unless the
+   * product is already in it). Returns the id and the name to copy onto the product.
    */
-  async assertAssignable(storeId: string, categoryId: string): Promise<{ id: Types.ObjectId; name: string }> {
+  async assertAssignable(storeId: string, categoryId: string, alreadyIn = false): Promise<{ id: Types.ObjectId; name: string }> {
     if (!Types.ObjectId.isValid(categoryId)) throw Errors.validation("categoryId: choose one of this store's categories");
     const category = await Category.findOne({ _id: categoryId, storeId }).lean<CategoryRow>();
     if (!category) throw Errors.validation("categoryId: choose one of this store's categories");
-    if (!category.active) throw Errors.validation(`categoryId: "${category.name}" is disabled; enable it or choose another category`);
+    if (!category.active && !alreadyIn) throw Errors.validation(`categoryId: "${category.name}" is disabled; enable it or choose another category`);
     return { id: category._id, name: category.name };
   },
 };

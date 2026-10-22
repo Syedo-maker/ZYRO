@@ -111,7 +111,7 @@ await step('add a product with the AI', op, async () => {
 
   // The merchant's own edit on top of the AI's words, which is the point of the feature.
   await op.getByLabel('Title', { exact: true }).fill(`Golden Lawn Suit ${suffix}`)
-  await op.getByLabel('Price', { exact: true }).fill('2500')
+  await op.getByLabel('Price (MRP)').fill('2500')
   await op.getByLabel('Stock', { exact: true }).fill('10')
   await op.getByRole('button', { name: /^(Save|Create)/ }).click()
   await op.getByText(`Golden Lawn Suit ${suffix}`).first().waitFor({ timeout: 20000 })
