@@ -7,7 +7,6 @@ import { upgradeHintOf } from '../../lib/billingApi'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { AiToolsPanel } from './AiToolsPanel'
 import { WriteWithAi } from './WriteWithAi'
-import { bargainApi } from '../../lib/voiceBargainApi'
 import { categoriesApi } from '../../lib/categoriesApi'
 import { formatMoney } from '../../lib/format'
 import { StockStepper } from './StockStepper'
@@ -49,15 +48,6 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
   const [discountPrice, setDiscountPrice] = useState(initial?.discountPrice != null ? String(initial.discountPrice) : '')
   const preview = salePreview(actualPrice, discountPrice)
   const discountTooHigh = discountPrice.trim() !== '' && actualPrice.trim() !== '' && Number(discountPrice) > Number(actualPrice)
-  // The floor price is never on the public product endpoints, so it is fetched on its own here.
-  const [bargainMinPrice, setBargainMinPrice] = useState('')
-  useEffect(() => {
-    if (!initial) return
-    bargainApi
-      .settings(storeId, initial.id)
-      .then((s) => setBargainMinPrice(s.bargainMinPrice === null ? '' : String(s.bargainMinPrice)))
-      .catch(() => undefined)
-  }, [storeId, initial])
   const [stock, setStock] = useState(initial?.stock.toString() ?? '')
   // Chosen from the store's own categories, never typed (the supervisor's product-listing change).
   const [categories, setCategories] = useState<Category[] | null>(null)
@@ -78,7 +68,6 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
   }, [storeId, initial])
   const chosenCategory = categories?.find((c) => c.id === categoryId)
   const [sku, setSku] = useState(initial?.sku ?? '')
-  const [barcode, setBarcode] = useState(initial?.barcode ?? '')
   const [taxable, setTaxable] = useState(initial?.taxable ?? true)
   const [images, setImages] = useState<string[]>(initial?.images ?? [])
   const [tags, setTags] = useState((initial?.tags ?? []).join(', '))
@@ -122,10 +111,8 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
         actualPrice: Number(actualPrice),
         // Empty means no discount; on an edit that removes one the product had.
         discountPrice: discountPrice.trim() === '' ? null : Number(discountPrice),
-        bargainMinPrice: bargainMinPrice.trim() === '' ? null : Number(bargainMinPrice),
         stock: Number(stock),
         sku: sku.trim() || undefined,
-        barcode: barcode.trim() || undefined,
         taxable,
         categoryId,
         images,
@@ -143,8 +130,8 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
       } else {
         const detail = (err as { detail?: string }).detail ?? ''
         setError(
-          /SKU or barcode/.test(detail)
-            ? 'That SKU or barcode is already used by another product.'
+          /SKU/.test(detail)
+            ? 'That SKU is already used by another product.'
             : /price/i.test(detail)
               ? detail
               : 'Could not save this product. Please check the fields and try again.'
@@ -275,25 +262,9 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
         {categoryHint && <span className="text-xs text-text-secondary">{categoryHint}</span>}
       </div>
 
-      {/* Part G: the lowest price haggling may reach. Left empty, this product has a fixed price. */}
       <div>
-        <Input
-          id="bargainMinPrice"
-          type="number"
-          step="0.01"
-          min="0"
-          label="Lowest price you will accept when haggling (optional)"
-          value={bargainMinPrice}
-          onChange={(e) => setBargainMinPrice(e.target.value)}
-        />
-        <p className="mt-1 text-xs text-text-secondary">
-          Leave this empty for a fixed price. Fill it in and shoppers can make an offer; the shop will never go below this number, and it is never shown to them.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
         <Input id="sku" label="SKU (optional)" maxLength={100} value={sku} onChange={(e) => setSku(e.target.value)} />
-        <Input id="barcode" label="Barcode (optional)" maxLength={100} value={barcode} onChange={(e) => setBarcode(e.target.value)} />
+        <p className="mt-1 text-xs text-text-secondary">Unique in your store. The register finds the product by it.</p>
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={taxable} onChange={(e) => setTaxable(e.target.checked)} className="h-4 w-4" />

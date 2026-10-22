@@ -40,7 +40,7 @@ async function api(method, p, { token, body } = {}) {
   return { status: res.status, json: text ? JSON.parse(text) : null }
 }
 
-// ---- Setup through the API: an owner with a store, one product with a barcode, and a person with no register access.
+// ---- Setup through the API: an owner with a store, one product, and a person with no register access.
 const reg = await api('POST', '/auth/register', {
   body: { email: ownerEmail, password, storeName: `POS Shop ${suffix}`, storeSlug: `e2e-pos-${suffix}` },
 })
@@ -146,12 +146,12 @@ await step('owner: team, limit and product setup', owner.page, async () => {
   await page.getByLabel('Stock', { exact: true }).fill('5')
   await page.getByLabel('Category').selectOption({ label: 'kitchen' })
   await page.getByLabel('SKU (optional)').fill(`MUG-${suffix}`)
-  await page.getByLabel('Barcode (optional)').fill(`5901234${suffix}`)
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByText('Scanner Mug').first().waitFor()
-  check('product form: SKU, barcode and the tax switch are on the product form and save', true)
+  check('product form: SKU and the tax switch are on the product form and save', true)
+  check('product form: there is no barcode field (removed; the register finds products by SKU)', (await page.getByLabel(/barcode/i).count()) === 0)
 })
-const barcode = `5901234${suffix}`
+const sku = `MUG-${suffix}`
 
 // ======================================================================================
 // 2. A person with no register access is turned away politely
@@ -201,13 +201,13 @@ await step('cashier: open a shift', cp, async () => {
   check('shift: a negative float is refused by the form', await cp.getByRole('heading', { name: 'Open the register' }).isVisible())
   await cp.getByLabel(/Starting cash/).fill('100')
   await cp.getByRole('button', { name: 'Open shift' }).click()
-  await cp.getByLabel('Scan a barcode or search products').waitFor()
+  await cp.getByLabel('Scan a SKU or search products').waitFor()
   await cp.getByText(/Shift open since/).waitFor()
   check('shift: opened with a 100.00 float; the register appears and the header shows the shift', true)
 })
 
 await step('cashier: scan, search and build a cart', cp, async () => {
-  const search = cp.getByLabel('Scan a barcode or search products')
+  const search = cp.getByLabel('Scan a SKU or search products')
   check('register: the search field has focus, ready for a scanner', await search.evaluate((el) => el === document.activeElement))
   await cp.getByRole('button', { name: /^Widget \$/ }).waitFor()
   check('register: the product grid shows price and stock', (await cp.getByRole('button', { name: /^Widget \$20\.00 10 in stock/ }).count()) === 1)
@@ -218,10 +218,10 @@ await step('cashier: scan, search and build a cart', cp, async () => {
   await cp.getByRole('button', { name: /^Scanner Mug \$/ }).waitFor()
   check('register: typing part of a name filters the grid', (await cp.getByRole('button', { name: /^Widget \$/ }).count()) === 0)
 
-  await search.fill(barcode)
+  await search.fill(sku)
   await search.press('Enter')
   await cp.getByText('Added Scanner Mug').waitFor()
-  check('register: scanning a barcode (typed and Enter) adds the product straight to the sale', (await search.inputValue()) === '' && (await cp.getByText('Scanner Mug').count()) >= 1)
+  check('register: scanning a SKU (typed and Enter) adds the product straight to the sale', (await search.inputValue()) === '' && (await cp.getByText('Scanner Mug').count()) >= 1)
   await search.fill('0000000000000')
   await search.press('Enter')
   await cp.getByText(/No product with the code/).waitFor()
@@ -268,7 +268,7 @@ await step('cashier: customer, hold and resume', cp, async () => {
   check('customer: a new customer is added and attached to the sale', true)
 
   await cp.getByRole('button', { name: 'Hold', exact: true }).click()
-  await cp.getByText('Scan a barcode or tap a product to start a sale.').waitFor()
+  await cp.getByText('Scan a SKU or tap a product to start a sale.').waitFor()
   await cp.getByRole('button', { name: /^Held \(1\)/ }).waitFor()
   check('hold: the sale is parked, the register is empty and Held shows (1)', true)
 
@@ -326,7 +326,7 @@ await step('cashier: receipt', cp, async () => {
   await cp.emulateMedia({ media: 'screen' })
   check('print: when printing, the page is hidden and only the receipt shows', printed.root === 'none' && printed.copy === 'block', JSON.stringify(printed))
   await cp.getByRole('button', { name: 'New sale' }).click()
-  await cp.getByText('Scan a barcode or tap a product to start a sale.').waitFor()
+  await cp.getByText('Scan a SKU or tap a product to start a sale.').waitFor()
   await cp.getByRole('button', { name: /^Widget \$/ }).waitFor()
   check('after the sale: the register is empty and stock on the grid is updated (Widget 10 to 8)', (await cp.getByRole('button', { name: /^Widget \$20\.00 8 in stock/ }).count()) === 1)
 })
@@ -347,7 +347,7 @@ await step('cashier: history and permissions', cp, async () => {
   await cp.getByRole('button', { name: 'Close', exact: true }).click()
 
   await cp.goto(`${WEB}/pos/${storeId}/summary`)
-  await cp.getByRole('heading', { name: 'Open the register' }).or(cp.getByLabel('Scan a barcode or search products')).first().waitFor()
+  await cp.getByRole('heading', { name: 'Open the register' }).or(cp.getByLabel('Scan a SKU or search products')).first().waitFor()
   check('summary: a cashier who opens the summary URL is sent back to the register', cp.url().endsWith(`/pos/${storeId}`))
 })
 
@@ -467,7 +467,7 @@ await step('tablet and phone layouts', tablet.page, async () => {
   await page.waitForURL(`**/pos/${storeId}`)
   await page.getByRole('heading', { name: 'Open the register' }).waitFor()
   await page.getByRole('button', { name: 'Open shift' }).click()
-  await page.getByLabel('Scan a barcode or search products').waitFor()
+  await page.getByLabel('Scan a SKU or search products').waitFor()
   await page.getByRole('button', { name: /^Widget \$/ }).click()
   await page.getByRole('button', { name: /^Charge/ }).waitFor()
   check('tablet (820 wide): register fits with the cart stacked under the products', await noOverflow(page))

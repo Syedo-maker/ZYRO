@@ -43,10 +43,7 @@ export interface Product {
   price: number
   stock: number
   sku?: string | null
-  barcode?: string | null
   taxable?: boolean
-  /** Part G: the lowest price the merchant will accept when haggling. Merchant-only; shoppers never see it. */
-  bargainMinPrice?: number | null
   /** The store's category; null only for a product listed before categories existed and not yet migrated. */
   categoryId: string | null
   /** The category's name, kept in step with it by the server. */
@@ -72,9 +69,7 @@ export interface ProductInput {
   stock: number
   /** Scanned at the register; unique per store. */
   sku?: string
-  barcode?: string
   taxable?: boolean
-  bargainMinPrice?: number | null
   /** One of the store's active categories, chosen from the dropdown; never typed. */
   categoryId: string
   images?: string[]

@@ -223,7 +223,6 @@ model Tenant {
   remittanceRuns   CodRemittanceRun[]
   remittanceItems  CodRemittanceItem[]
   voiceNotes       VoiceNote[]
-  bargainSessions  BargainSession[]
   searchTerms      SearchTermDaily[]
   posShifts        PosShift[]
   orderReturns     OrderReturn[]
@@ -1019,7 +1018,7 @@ model CodRemittanceItem {
   @@index([tenantId, status])
 }
 
-// ── Part G: voice notes and bargaining ──────────────────────────────────────────────────────
+// ── Part G: voice notes ──────────────────────────────────────────────────────
 
 /// A merchant's spoken instruction, turned into a draft the merchant must confirm (Part G).
 /// Nothing here ever changes the catalogue on its own: `draft` is a proposal, and only an explicit
@@ -1048,42 +1047,6 @@ model VoiceNote {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status])
-}
-
-/// One haggling conversation over one product (Part G, "bhao-taao").
-///
-/// The floor price is copied here when the session opens and is never sent to the AI. The assistant
-/// only ever chooses a move from a fixed list; this row holds the prices, and the server works out
-/// every number from them. A session that ends in a deal gets a single-use discount code, which is
-/// the only way the agreed price can actually be paid.
-model BargainSession {
-  id       String @id @default(cuid())
-  tenantId String
-  /// The product being haggled over (a MongoDB id).
-  productId String
-  /// Who is haggling: a signed-in shopper, or a guest session id.
-  userId        String?
-  guestSessionId String?
-  /// Frozen when the session opens, so a price change mid-conversation cannot move the floor.
-  listPrice  Decimal @db.Decimal(10, 2)
-  floorPrice Decimal @db.Decimal(10, 2)
-  /// The best price the shop has offered so far, and what the shopper last asked for.
-  currentOffer  Decimal  @db.Decimal(10, 2)
-  shopperOffer  Decimal? @db.Decimal(10, 2)
-  /// How many times the shopper has pushed. Capped, so a conversation cannot grind the price down.
-  rounds  Int    @default(0)
-  /// "open", "agreed", "declined" or "expired".
-  status  String @default("open")
-  /// The single-use code created when a deal is struck; the only way to pay the agreed price.
-  discountCodeId String?
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, status])
-  @@index([tenantId, productId])
 }
 
 /// What shoppers searched for, counted per store, per day, per term (Issue 1's third keyword source).

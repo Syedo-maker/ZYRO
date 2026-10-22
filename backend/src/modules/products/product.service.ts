@@ -39,7 +39,6 @@ function toPublicProduct(doc: HydratedDocument<ProductDocument>, stock: number, 
     })(),
     stock,
     sku: doc.sku ?? null,
-    barcode: doc.barcode ?? null,
     taxable: doc.taxable !== false,
     categoryId: doc.categoryId?.toString() ?? null,
     category: doc.category,
@@ -68,7 +67,7 @@ async function aiDescriptionStatusOf(doc: HydratedDocument<ProductDocument>): Pr
  * the product in its category: always by id, with the category's own name copied alongside.
  */
 async function splitInput(storeId: string, input: ProductInput, currentCategoryId?: string) {
-  const { stock, costPrice, bargainMinPrice, categoryId, category, actualPrice, discountPrice, price, ...rest } = input;
+  const { stock, costPrice, categoryId, category, actualPrice, discountPrice, price, ...rest } = input;
   const resolved = await categoryService.resolveForProduct(storeId, { categoryId, category }, currentCategoryId);
   const actual = (actualPrice ?? price)!;
   const discount = discountPrice ?? null;
@@ -82,7 +81,6 @@ async function splitInput(storeId: string, input: ProductInput, currentCategoryI
       salePrice: salePriceFor(actual, discount),
       ...(discount !== null ? { discountPrice: discount } : {}),
       ...(costPrice !== undefined ? { costPrice } : {}),
-      ...(bargainMinPrice !== undefined ? { bargainMinPrice } : {}),
     },
     /**
      * Removed on an edit: the discount when none was sent (the form always sends the price fields, an
@@ -260,7 +258,7 @@ export const productService = {
     try {
       doc = await Product.create({ storeId, ...catalog });
     } catch (err) {
-      if (isDuplicateKey(err)) throw Errors.validation("SKU or barcode is already used by another product");
+      if (isDuplicateKey(err)) throw Errors.validation("That SKU is already used by another product");
       throw err;
     }
 
@@ -317,7 +315,7 @@ export const productService = {
     try {
       doc = await Product.findOneAndUpdate({ _id: productId, storeId }, { $set: catalog, $unset: unset }, { new: true });
     } catch (err) {
-      if (isDuplicateKey(err)) throw Errors.validation("SKU or barcode is already used by another product");
+      if (isDuplicateKey(err)) throw Errors.validation("That SKU is already used by another product");
       throw err;
     }
     if (!doc) throw Errors.notFound("Product");

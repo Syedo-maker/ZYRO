@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { formatDateTime } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
-import { voiceApi, type VoiceNote } from '../../lib/voiceBargainApi'
+import { voiceApi, type VoiceNote } from '../../lib/voiceApi'
 
 /**
  * Voice notes (Part G). A shopkeeper with their hands full says what they want changed, and the shop

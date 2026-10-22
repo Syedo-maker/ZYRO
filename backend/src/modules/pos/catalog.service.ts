@@ -17,17 +17,17 @@ const toCustomerView = (c: { id: string; name: string | null; email: string | nu
 /** Product and customer lookup for the register. */
 export const posCatalogService = {
   /**
-   * Finds products by what a cashier has: a scanned barcode or SKU (exact), or part of a
+   * Finds products by what a cashier has: a SKU, scanned or typed (exact), or part of a
    * title. Returns on-hand stock at the store's location so the register can warn before
    * the customer is at the counter with something that is not there.
    */
   async searchProducts(tenantId: string, query: { q?: string; code?: string; limit: number }) {
     const filter: Record<string, unknown> = { storeId: tenantId };
     if (query.code) {
-      filter.$or = [{ barcode: query.code }, { sku: query.code }];
+      filter.sku = query.code;
     } else if (query.q) {
       const pattern = new RegExp(escapeRegex(query.q), "i");
-      filter.$or = [{ title: pattern }, { sku: pattern }, { barcode: query.q }];
+      filter.$or = [{ title: pattern }, { sku: pattern }];
     }
 
     const docs = await Product.find(filter).sort({ title: 1 }).limit(query.limit);
@@ -40,7 +40,6 @@ export const posCatalogService = {
       price: priceOf(d).sale,
       taxable: d.taxable !== false,
       sku: d.sku ?? null,
-      barcode: d.barcode ?? null,
       category: d.category,
       image: d.images[0] ?? null,
       stock: stock.get(d._id.toString()) ?? 0,

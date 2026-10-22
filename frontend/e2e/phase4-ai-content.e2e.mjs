@@ -41,6 +41,10 @@ const reg = await api('POST', '/auth/register', { body: { email: ownerEmail, pas
 const ownerToken = reg.json.accessToken
 const storeId = (await api('GET', '/users/me/stores', { token: ownerToken })).json[0].id
 const mug = (await api('POST', `/stores/${storeId}/products`, { token: ownerToken, body: { title: 'Ceramic Mug', price: 12.5, stock: 10, category: 'kitchen' } })).json.id
+// The AI's suggested category can only be applied if the store has it: categories are the store's own.
+await api('POST', `/stores/${storeId}/categories`, { token: ownerToken, body: { name: 'Kitchenware' } })
+/** The name of the category chosen in the product form's dropdown. */
+const chosenCategory = (page) => page.locator('#category').evaluate((el) => el.selectedOptions[0]?.textContent ?? '')
 
 const custReg = await api('POST', '/auth/register-customer', { body: { email: `e2e-p4-cust-${suffix}@example.com`, password } })
 await api('POST', `/stores/${storeId}/products/${mug}/reviews`, { token: custReg.json.accessToken, body: { rating: 5, comment: 'Keeps my coffee hot for hours.' } })
@@ -122,11 +126,11 @@ await step('description: generate, edit, regenerate, publish', op, async () => {
 
 await step('auto-tag and SEO metadata are suggestions, not silent writes', op, async () => {
   await op.getByRole('button', { name: 'Suggest category & tags' }).click()
-  await op.getByText('Kitchenware').waitFor()
+  await op.getByRole('strong').filter({ hasText: 'Kitchenware' }).waitFor()
   check('auto-tag: shows the suggested category and tags', await op.getByText(/Kitchenware.*mug, ceramic, handmade/).isVisible())
-  check('auto-tag: the form fields are unchanged until Apply is pressed', (await op.locator('#category').inputValue()) === 'kitchen')
+  check('auto-tag: the form fields are unchanged until Apply is pressed', (await chosenCategory(op)) === 'kitchen')
   await op.getByRole('button', { name: 'Apply' }).first().click()
-  check('auto-tag: applying fills the Category and Tags fields (not yet saved to the server)', (await op.locator('#category').inputValue()) === 'Kitchenware' && (await op.locator('#tags').inputValue()) === 'mug, ceramic, handmade')
+  check('auto-tag: applying chooses the store\'s matching category and fills Tags (not yet saved to the server)', (await chosenCategory(op)) === 'Kitchenware' && (await op.locator('#tags').inputValue()) === 'mug, ceramic, handmade')
 
   await op.getByRole('button', { name: 'Generate SEO title & description' }).click()
   await op.getByText('Ceramic Mug | Handmade & Dishwasher Safe').waitFor()
@@ -178,11 +182,17 @@ await step('review summary', op, async () => {
 })
 
 await step('a product with no reviews shows no summarize button', op, async () => {
+  // A product goes in one of the store's own categories, chosen from a dropdown, so make one first.
+  await op.goto(`${WEB}/admin/categories`)
+  await op.getByLabel('New category').fill('misc')
+  await op.getByRole('button', { name: 'Add category' }).click()
+  await op.getByRole('row').filter({ hasText: 'misc' }).waitFor()
+  await op.goto(`${WEB}/admin/products`)
   await op.getByRole('button', { name: '+ Add product' }).click()
   await op.getByLabel('Title', { exact: true }).fill('Lonely Product')
   await op.getByLabel('Price (MRP)').fill('9.99')
   await op.getByLabel('Stock', { exact: true }).fill('5')
-  await op.getByLabel('Category', { exact: true }).fill('misc')
+  await op.getByLabel('Category', { exact: true }).selectOption({ label: 'misc' })
   await op.getByRole('button', { name: 'Save', exact: true }).click()
   await op.getByRole('button', { name: 'Edit Lonely Product' }).waitFor()
   await op.getByRole('button', { name: 'Edit Lonely Product' }).click()

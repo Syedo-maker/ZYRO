@@ -186,6 +186,11 @@ await step('the owner opts out of the directory', op, async () => {
 // ---- Issue 1: Write with AI ----------------------------------------------------------------------
 
 await step('the add product form offers a choice', op, async () => {
+  // A product goes in one of the store's own categories, chosen from a dropdown, so make one first.
+  await op.goto(`${WEB}/admin/categories`)
+  await op.getByLabel('New category').fill('clothing')
+  await op.getByRole('button', { name: 'Add category' }).click()
+  await op.getByRole('row').filter({ hasText: 'clothing' }).waitFor()
   await op.goto(`${WEB}/admin/products`)
   await op.getByRole('button', { name: 'Add product' }).first().click()
   check('the merchant is offered writing it themselves', await op.getByRole('button', { name: 'Write it myself' }).isVisible())
@@ -194,7 +199,7 @@ await step('the add product form offers a choice', op, async () => {
 })
 
 await step('asking the AI for suggestions', op, async () => {
-  await op.getByLabel('Category', { exact: true }).fill('clothing')
+  await op.getByLabel('Category', { exact: true }).selectOption({ label: 'clothing' })
   await op.getByRole('button', { name: 'Write with AI' }).click()
   const suggest = op.getByRole('button', { name: /Suggest 4 options/ })
   check('the button says plainly that it costs one generation', /uses 1 generation/.test(await suggest.innerText()))

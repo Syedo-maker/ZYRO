@@ -33,15 +33,8 @@ export interface ProductDocument {
   // Stock is NOT stored here. On-hand quantity lives in Postgres (InventoryLevel) so that
   // deducting it is atomic with order creation for both the online store and the POS.
   sku?: string;
-  barcode?: string; // scanned at the POS
   taxable: boolean;
   costPrice?: Types.Decimal128; // enables margin analytics; never exposed to shoppers
-  /**
-   * Part G: the lowest price the merchant will accept when haggling. Never sent to a shopper and
-   * never put in an AI prompt: the bargaining assistant chooses a move, and the server works out the
-   * price from this. Absent means this product is not open to bargaining.
-   */
-  bargainMinPrice?: Types.Decimal128;
   /** The store's own category (Category.model.ts). The source of truth for which category this is. */
   categoryId?: Types.ObjectId;
   /**
@@ -96,10 +89,8 @@ const productSchema = new Schema<ProductDocument>(
       },
     },
     sku: { type: String, trim: true, maxlength: 100 },
-    barcode: { type: String, trim: true, maxlength: 100 },
     taxable: { type: Boolean, default: true },
     costPrice: { type: Schema.Types.Decimal128 },
-    bargainMinPrice: { type: Schema.Types.Decimal128 },
     categoryId: { type: Schema.Types.ObjectId, ref: "Category" },
     category: { type: String, required: true, index: true },
     tags: {
@@ -139,14 +130,11 @@ productSchema.index({ storeId: 1, category: 1 });
 productSchema.index({ storeId: 1, categoryId: 1 });
 productSchema.index({ storeId: 1 });
 
-// SKU and barcode are unique per store when present (partial index ignores products without one).
+// A SKU is unique per store when present (partial index ignores products without one). The register
+// finds a product by its SKU.
 productSchema.index(
   { storeId: 1, sku: 1 },
   { unique: true, partialFilterExpression: { sku: { $type: "string" } } }
-);
-productSchema.index(
-  { storeId: 1, barcode: 1 },
-  { unique: true, partialFilterExpression: { barcode: { $type: "string" } } }
 );
 
 // Sorting and filtering a store's catalogue by what customers pay.

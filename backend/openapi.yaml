@@ -1948,7 +1948,7 @@ paths:
       operationId: pos_products_search
       summary: Find products by scanned code or by name
       description: |
-        `code` matches a barcode or SKU exactly (what a scanner types). `q` matches part of a
+        `code` matches a SKU exactly (what a scanner or the cashier types). `q` matches part of a
         title or SKU, ignoring case; characters such as `(` and `*` are plain text. Each result
         carries on-hand stock at the store's location.
       parameters:
@@ -3424,7 +3424,7 @@ paths:
                   trendDataAvailable: { type: boolean, description: "False when no source had real data; the keyword list is then empty." }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  # ── VOICE NOTES AND BARGAINING (Part G) ───────────────────────────────
+  # ── VOICE NOTES (Part G) ───────────────────────────────
   /stores/{storeId}/voice-notes:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -3516,102 +3516,6 @@ paths:
       responses:
         "204": { description: Discarded }
         "404": { $ref: "#/components/responses/NotFound" }
-  /stores/{storeId}/products/{productId}/bargain:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-    get:
-      tags: [catalog]
-      operationId: bargain_offer
-      summary: Whether this product can be haggled over
-      description: Public. True only when the merchant has set a lowest acceptable price on the product.
-      security: []
-      responses:
-        "200":
-          description: Whether haggling is open
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  available: { type: boolean }
-    post:
-      tags: [catalog]
-      operationId: bargain_start
-      summary: Start haggling over this product
-      description: |
-        Public; a guest session is enough. The merchant's lowest price is copied into the conversation when
-        it opens, so a price change part-way through cannot move it, and it is never sent to the shopper
-        or to the AI.
-      security: []
-      responses:
-        "201":
-          description: The conversation
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/BargainTurn" }
-        "400": { description: "This product's price is not open to negotiation" }
-  /stores/{storeId}/products/{productId}/bargain/settings:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-    get:
-      tags: [catalog]
-      operationId: bargain_settings_get
-      summary: The merchant's own floor price for this product
-      description: |
-        Requires `products_write`. The public product endpoints deliberately never return this: a shopper
-        who knew the lowest acceptable price would simply ask for it. The merchant's product form reads it
-        from here instead.
-      responses:
-        "200":
-          description: The floor price, or null when this product has a fixed price
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  bargainMinPrice: { type: [number, "null"] }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-  /stores/{storeId}/products/{productId}/bargain/{sessionId}/turn:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-      - name: sessionId
-        in: path
-        required: true
-        schema: { type: string }
-    post:
-      tags: [catalog]
-      operationId: bargain_turn
-      summary: Say something to the shop
-      description: |
-        Public. **The assistant cannot name a price.** It is given the listed price, the shop's current
-        offer and the number the shopper named, and replies with one word from a fixed list plus a
-        sentence; the server works out every price from the merchant's own floor and clamps it there.
-        A number the assistant puts in its own sentence is stripped before the shopper sees it, and an
-        unrecognised reply is read as holding firm. No prompt injection can reach a price, because there
-        is no channel through which the model can express one.
-        A struck deal creates a single-use, short-lived discount code: the only way the agreed price is payable.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [message]
-              properties:
-                message: { type: string, maxLength: 500 }
-      responses:
-        "200":
-          description: The shop's answer and its new price
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/BargainTurn" }
-        "404": { description: "No such conversation for this shopper" }
-        "409": { description: "This conversation has finished or expired" }
 
   # ── PAYMENT AND TRUST (Part E) ────────────────────────────────────────
   /stores/{storeId}/payments/options:
@@ -4451,27 +4355,6 @@ components:
         status: { type: string, enum: [pending, applied, discarded] }
         createdAt: { type: string, format: date-time }
 
-    BargainTurn:
-      type: object
-      required: [sessionId, productId, listPrice, offer, roundsLeft, status, reply, expiresAt]
-      properties:
-        sessionId: { type: string }
-        productId: { type: string }
-        listPrice: { type: number }
-        offer: { type: number, description: "What the shop will accept right now. Worked out by the server, never by the assistant." }
-        roundsLeft: { type: integer, description: "How many more times the shopper may push before the shop stops moving." }
-        status: { type: string, enum: [open, agreed, declined, expired] }
-        reply: { type: string, description: "The assistant's sentence, with any number it wrote stripped out." }
-        settled: { type: boolean }
-        deal:
-          type: object
-          description: Present once a price is agreed. The code is the only way that price is payable.
-          properties:
-            code: { type: string, example: BHAO1A2B3C4D }
-            price: { type: number }
-            expiresAt: { type: string, format: date-time }
-        expiresAt: { type: string, format: date-time }
-
     SearchInterpretation:
       type: object
       description: |
@@ -4865,10 +4748,6 @@ components:
           type: string
           maxLength: 100
           description: Unique per store when set.
-        barcode:
-          type: string
-          maxLength: 100
-          description: Unique per store when set. Used for barcode lookup at the POS.
         taxable:
           type: boolean
           default: true
@@ -4893,10 +4772,12 @@ components:
 
     Product:
       description: |
-        A product as the API returns it. The same fields as ProductInput, except that sku, barcode,
-        seoTitle and seoDescription are null when the merchant has not set them (a request leaves them
-        out; it never sends null). Listed in full rather than built on ProductInput, because a schema
-        composed with allOf would still apply ProductInput's "must be a string" to those four.
+        A product as the API returns it. The same fields as ProductInput, except that sku, seoTitle
+        and seoDescription are null when the merchant has not set them (a request leaves them out; it
+        never sends null). Listed in full rather than built on ProductInput, because a schema composed
+        with allOf would still apply ProductInput's "must be a string" to those three. The barcode and
+        the haggling floor were removed by the product-listing change; a request that still sends
+        them has them ignored.
       type: object
       required: [id, storeId, title, actualPrice, discountPrice, salePrice, discountPercent, price, stock, category]
       properties:
@@ -4911,7 +4792,6 @@ components:
         price: { type: number, minimum: 0, deprecated: true, description: "The sale price. Kept for callers written before the three prices; use salePrice." }
         stock: { type: integer, minimum: 0, description: "On-hand quantity at the default location (see ProductInput)." }
         sku: { type: [string, "null"], maxLength: 100 }
-        barcode: { type: [string, "null"], maxLength: 100 }
         taxable: { type: boolean }
         costPrice: { type: number, minimum: 0, description: "Merchant-only; absent for shoppers." }
         categoryId: { type: [string, "null"], description: "The store's category. Null only for a product listed before categories existed and not yet migrated." }
@@ -5222,7 +5102,6 @@ components:
         price: { type: number }
         taxable: { type: boolean }
         sku: { type: [string, "null"] }
-        barcode: { type: [string, "null"] }
         category: { type: string }
         image: { type: [string, "null"] }
         stock: { type: integer, description: On hand at the store's location. }

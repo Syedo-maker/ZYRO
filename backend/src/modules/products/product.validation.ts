@@ -17,11 +17,8 @@ export const productInputSchema = z.object({
   /** Target on-hand quantity at the store's default location; stored in inventory, not on the product. */
   stock: z.number().int().min(0),
   sku: z.string().trim().min(1).max(100).optional(),
-  barcode: z.string().trim().min(1).max(100).optional(),
   taxable: z.boolean().optional().default(true),
   costPrice: z.number().min(0).optional(),
-  /** Part G: the lowest price the merchant will accept when haggling. Absent means no haggling. */
-  bargainMinPrice: z.number().min(0).max(10_000_000).optional().nullable(),
   /** The store's category (the product form always sends this). */
   categoryId: z.string().trim().min(1).optional(),
   /**
@@ -45,10 +42,6 @@ export const productInputSchema = z.object({
 }).refine((v) => v.categoryId !== undefined || v.category !== undefined, {
   message: "Choose a category",
   path: ["categoryId"],
-}).refine((v) => v.bargainMinPrice === undefined || v.bargainMinPrice === null || v.bargainMinPrice <= (v.discountPrice ?? v.actualPrice ?? v.price ?? 0), {
-  // A floor above the list price would mean haggling could only push the price up.
-  message: "The lowest price you will accept cannot be more than the price itself",
-  path: ["bargainMinPrice"],
 });
 export type ProductInput = z.infer<typeof productInputSchema>;
 

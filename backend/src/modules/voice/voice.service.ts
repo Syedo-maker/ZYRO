@@ -112,7 +112,6 @@ export const voiceService = {
         ...(current.categoryId ? { categoryId: current.categoryId } : { category: current.category }),
         images: current.images,
         sku: current.sku ?? undefined,
-        barcode: current.barcode ?? undefined,
         taxable: current.taxable,
         tags: current.tags,
       };
