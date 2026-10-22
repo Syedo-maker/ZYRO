@@ -119,8 +119,14 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
   } catch (err) {
     if (source) await releaseQuota(input.tenantId, kind, source); // give the reservation back, to where it came from; this attempt never happened
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
-    // being unable to fulfil the request right now, not something the caller did wrong.
-    throw Errors.serviceUnavailable(`AI generation failed: ${err instanceof Error ? err.message : String(err)}`);
+    // being unable to fulfil the request right now, not something the caller did wrong. The
+    // provider's own words go to the log, where they can be acted on; the merchant or shopper gets
+    // a sentence they can act on instead of an SDK error.
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err), tenantId: input.tenantId, promptType: input.promptType, model },
+      "AI generation failed"
+    );
+    throw Errors.serviceUnavailable("The AI service is unavailable right now. Nothing was used from your AI allowance; please try again in a minute.");
   }
 
   // Only a successful call reaches this point: its tokens are what the store's AI actually cost (Part B).

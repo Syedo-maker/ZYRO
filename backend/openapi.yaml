@@ -341,11 +341,15 @@ paths:
                   allOf:
                     - $ref: "#/components/schemas/Store"
                     - type: object
-                      required: [role]
+                      required: [role, permissions]
                       properties:
                         role:
                           type: string
                           enum: [owner, staff]
+                        permissions:
+                          type: array
+                          items: { type: string, enum: [products_write, orders_write, discounts_write, analytics_read, pos_sell, inventory_write, refunds] }
+                          description: "What this user may do in the store: every permission for the owner, the staff member's own list otherwise. For the UI to offer only what will work; every route still checks for itself."
 
   # ── STORES ────────────────────────────────────────────────────────────
   /stores:

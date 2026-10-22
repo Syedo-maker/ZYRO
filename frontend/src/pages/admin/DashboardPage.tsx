@@ -8,6 +8,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { SalesByDayChart } from '../../components/charts/SalesByDayChart'
 import { ChannelSplit, StatTile, TopProducts } from '../../components/charts/DashboardParts'
 import { AiUsageMeter } from './AiUsageMeter'
+import { can } from '../../lib/permissions'
 import { GrowthTipCard } from './GrowthTipCard'
 import { MarketTrendsCard } from './MarketTrendsCard'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
@@ -176,7 +177,7 @@ export function DashboardPage() {
 
       <MarketTrendsCard storeId={activeStore.id} />
 
-      <AiUsageMeter storeId={activeStore.id} isOwner={activeStore.role === 'owner'} />
+      <AiUsageMeter storeId={activeStore.id} isOwner={activeStore.role === 'owner'} canView={can(activeStore, 'products_write')} />
 
       <section aria-label="Recent orders" className="rounded-2xl border border-border bg-surface p-5">
         <div className="mb-3 flex items-baseline justify-between">

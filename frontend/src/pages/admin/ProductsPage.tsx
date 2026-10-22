@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button'
 import { PriceTag } from '../../components/PriceTag'
 import { errorMessage } from '../../lib/ordersApi'
 import { productsApi } from '../../lib/productsApi'
+import { can } from '../../lib/permissions'
 import { storefrontApi } from '../../lib/storefrontApi'
 import type { Product, ProductInput } from '../../types/api'
 import { ProductForm } from './ProductForm'
@@ -72,6 +73,9 @@ export function ProductsPage() {
   if (!activeStore) {
     return <p className="text-text-secondary">No store found for this account yet.</p>
   }
+  // Staff without the Products permission see the list only: adding, editing (and with it the AI
+  // writing tools) and changing stock would each be refused by the server.
+  const canEdit = can(activeStore, 'products_write')
 
   return (
     // Side by side on a wide screen; on a phone or tablet the form stacks above the list.
@@ -79,8 +83,15 @@ export function ProductsPage() {
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-xl font-bold">Products</h1>
-          <Button onClick={() => setPanel({ mode: 'create' })}>+ Add product</Button>
+          {canEdit && <Button onClick={() => setPanel({ mode: 'create' })}>+ Add product</Button>}
         </div>
+
+        {!canEdit && (
+          <Alert tone="info">
+            You can see this store's products. Adding and editing products, changing stock, and the AI writing tools need the
+            Products permission, which your account does not have in this store. Ask the store owner if you need them.
+          </Alert>
+        )}
 
         {error && <Alert>{error}</Alert>}
 
@@ -126,6 +137,7 @@ export function ProductsPage() {
               </div>
               <div role="cell"><PriceTag product={product} currency={currency} /></div>
               <div role="cell">
+                {canEdit ? (
                 <QuickStock
                   storeId={activeStore.id}
                   productId={product.id}
@@ -133,9 +145,14 @@ export function ProductsPage() {
                   stock={product.stock}
                   onSaved={(stock) => setProducts((list) => list.map((p) => (p.id === product.id ? { ...p, stock } : p)))}
                 />
+                ) : (
+                  <span className="tabular-nums">{product.stock}</span>
+                )}
               </div>
               <div role="cell" className="text-text-secondary">{product.category}</div>
               <div role="cell" className="flex gap-3">
+                {canEdit && (
+                <>
                 <button
                   onClick={() => setPanel({ mode: 'edit', product })}
                   aria-label={`Edit ${product.title}`}
@@ -150,6 +167,8 @@ export function ProductsPage() {
                 >
                   Delete
                 </button>
+                </>
+                )}
               </div>
             </div>
           ))}
@@ -158,7 +177,7 @@ export function ProductsPage() {
         </div>
       </div>
 
-      {panel.mode !== 'closed' && (
+      {canEdit && panel.mode !== 'closed' && (
         <div className="w-full shrink-0 bg-surface border border-border rounded-2xl p-4 sm:p-6 h-fit lg:w-[360px]">
           <ProductForm
             key={panel.mode === 'edit' ? panel.product.id : 'new'}
