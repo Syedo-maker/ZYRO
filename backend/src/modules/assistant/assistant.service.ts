@@ -7,6 +7,7 @@ import { getRecommendationClient, RecommendationUnavailableError, type ScoredPro
 import { ChatTranscript, type ChatRole } from "../../models/ChatTranscript.model";
 import type { CartOwner } from "../cart/cart.service";
 import { logger } from "../../lib/logger";
+import { formatPrice } from "../../lib/currencies";
 
 /**
  * Module 3: AI Shopping Assistant (Implementation_Plan.md Phase 5). Built entirely on
@@ -111,7 +112,7 @@ export const assistantService = {
    * as proof enough that two requests are the same conversation. It is not bound to `owner`.
    */
   async chat(storeId: string, owner: CartOwner, conversationId: string, message: string) {
-    const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { name: true } });
+    const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { name: true, currency: true } });
     if (!tenant) throw Errors.notFound("Store");
 
     const [history, matches] = await Promise.all([
@@ -119,7 +120,12 @@ export const assistantService = {
       findRelevantProducts(storeId, message),
     ]);
 
-    const productLines = matches.data.map((p) => `- ${p.title} ($${p.price.toFixed(2)}, ${p.category}${p.stock > 0 ? "" : ", currently out of stock"})`);
+    // Prices in the store's own currency, and what a discount is, so the assistant can answer "is it on sale?".
+    const money = (amount: number) => formatPrice(amount, tenant.currency);
+    const productLines = matches.data.map((p) => {
+      const price = p.discountPercent ? `${money(p.salePrice)}, reduced from ${money(p.actualPrice)} (${p.discountPercent}% off)` : money(p.salePrice);
+      return `- ${p.title} (${price}, ${p.category}${p.stock > 0 ? "" : ", currently out of stock"})`;
+    });
     const system =
       `You are a friendly, concise shopping assistant for the online store "${tenant.name}". Answer the shopper's ` +
       "question in 2 to 4 short sentences, plain prose, no markdown. Base your answer only on the product list " +

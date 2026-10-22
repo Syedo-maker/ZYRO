@@ -7,6 +7,7 @@ import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { getEmailGateway } from "../../lib/email";
 import { AppError } from "../../errors/AppError";
 import { logger } from "../../lib/logger";
+import { formatPrice } from "../../lib/currencies";
 
 /**
  * Module 7 (remaining): Abandoned-Cart Recovery (Implementation_Plan.md Phase 5). A BullMQ
@@ -61,14 +62,22 @@ async function findActiveDiscount(tenantId: string) {
  * Runs inside tenantContext.run(): a BullMQ job has no ambient tenant context the way an HTTP
  * request does (withTenantContext middleware), but cartService.get() and the AI orchestrator's
  * own quota bookkeeping both touch tenant-scoped Prisma models that require one. */
-async function recoverOne(storeId: string, userId: string, key: string): Promise<"sent" | "skipped"> {
+/** "no-email": the cart was due a reminder, but email is not configured, so nothing was written or spent. */
+type Outcome = "sent" | "skipped" | "no-email";
+
+async function recoverOne(storeId: string, userId: string, key: string): Promise<Outcome> {
   return tenantContext.run(storeId, () => recoverOneInContext(storeId, userId, key));
 }
 
-async function recoverOneInContext(storeId: string, userId: string, key: string): Promise<"sent" | "skipped"> {
+async function recoverOneInContext(storeId: string, userId: string, key: string): Promise<Outcome> {
   const ttl = await getRedis().ttl(key);
   if (ttl < 0) return "skipped"; // no TTL set, or the key vanished between SCAN and here
   if (inactiveSecondsFromTtl(ttl) < env.cartRecovery.abandonedAfterHours * 60 * 60) return "skipped";
+
+  // Before the cart is read: a cart outlives a deleted store in Redis (up to its 7-day TTL), and
+  // reading it would fail with "Store not found" on every scan until then.
+  const tenant = await prismaUnscoped.tenant.findUnique({ where: { id: storeId }, select: { name: true, currency: true } });
+  if (!tenant) return "skipped";
 
   const owner: CartOwner = { kind: "user", id: userId };
   const cart = await cartService.get(storeId, owner);
@@ -89,15 +98,19 @@ async function recoverOneInContext(storeId: string, userId: string, key: string)
   });
   if (alreadyConverted) return "skipped";
 
-  const [tenant, discount] = await Promise.all([
-    prismaUnscoped.tenant.findUnique({ where: { id: storeId }, select: { name: true } }),
-    findActiveDiscount(storeId),
-  ]);
-  if (!tenant) return "skipped"; // store deleted since the cart was created
+  // Before the AI writes anything: a message that cannot be sent would still use the store's AI
+  // allowance, and with no event recorded the next scan would write (and charge for) it again.
+  let email: ReturnType<typeof getEmailGateway>;
+  try {
+    email = getEmailGateway();
+  } catch {
+    return "no-email";
+  }
 
+  const discount = await findActiveDiscount(storeId);
   const itemLines = cart.items.map((i) => `${i.quantity}x ${i.title}`).join(", ");
   const discountLine = discount
-    ? `Available discount code: ${discount.code} (${discount.type === "PERCENTAGE" ? `${Number(discount.value)}% off` : `$${Number(discount.value)} off`})`
+    ? `Available discount code: ${discount.code} (${discount.type === "PERCENTAGE" ? `${Number(discount.value)}% off` : `${formatPrice(Number(discount.value), tenant.currency)} off`})`
     : "No discount code to mention.";
 
   let text: string;
@@ -118,7 +131,7 @@ async function recoverOneInContext(storeId: string, userId: string, key: string)
   }
 
   try {
-    await getEmailGateway().send({ to: user.email, subject: `You left something in your cart at ${tenant.name}`, text });
+    await email.send({ to: user.email, subject: `You left something in your cart at ${tenant.name}`, text });
   } catch {
     return "skipped"; // email is not configured, or SendGrid rejected it; nothing was sent, so nothing is logged
   }
@@ -155,15 +168,21 @@ export const cartRecoveryService = {
   async scan(): Promise<{ scanned: number; sent: number; converted: number }> {
     let scanned = 0;
     let sent = 0;
+    let waitingForEmail = 0;
     for await (const key of scanUserCartKeys()) {
       const parsed = parseUserCartKey(key);
       if (!parsed) continue;
       scanned++;
       try {
-        if ((await recoverOne(parsed.storeId, parsed.userId, key)) === "sent") sent++;
+        const outcome = await recoverOne(parsed.storeId, parsed.userId, key);
+        if (outcome === "sent") sent++;
+        if (outcome === "no-email") waitingForEmail++;
       } catch (err) {
-        logger.error({ err: err instanceof Error ? err.message : String(err) }, "cart recovery failed for one cart");
+        logger.error({ err: err instanceof Error ? err.message : String(err), storeId: parsed.storeId }, "cart recovery failed for one cart");
       }
+    }
+    if (waitingForEmail > 0) {
+      logger.warn({ carts: waitingForEmail }, "abandoned carts are due a reminder, but email is not configured (set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL); no AI message was written");
     }
     const converted = await markConversions();
     return { scanned, sent, converted };
