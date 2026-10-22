@@ -110,7 +110,8 @@ describe("the sale price", () => {
   });
 
   it("a product stored before the three prices still sells at its old price", async () => {
-    const legacy = await Product.create({ storeId, title: "Old Teapot", category: "Kitchen", categoryId, price: 450 } as never);
+    // Only the single `price` field, as every product had before the three prices.
+    const legacy = await new Product({ storeId, title: "Old Teapot", category: "Kitchen", categoryId, price: 450 }).save();
     const res = await api("GET", `/stores/${storeId}/products/${legacy._id}`);
     expect(res.json).toMatchObject({ actualPrice: 450, salePrice: 450, price: 450, discountPrice: null });
     // Sorting and the price filter read the stored sale price, which only the migration gives it.
