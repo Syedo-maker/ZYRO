@@ -31,6 +31,15 @@ export interface ProductDocument {
    * price from this. Absent means this product is not open to bargaining.
    */
   bargainMinPrice?: Types.Decimal128;
+  /** The store's own category (Category.model.ts). The source of truth for which category this is. */
+  categoryId?: Types.ObjectId;
+  /**
+   * A copy of the category's name, written only by the server (on create, on edit, and when the
+   * category is renamed). Search, the storefront menu, the shop directory, Trend Scout and the AI
+   * prompts read a name, and a text index cannot reach into another collection, so the name is kept
+   * here as well. Products listed before categories existed have only this, until
+   * scripts/migrate-categories.ts links them.
+   */
   category: string;
   /** Set by the merchant, often from an AI auto-tag suggestion (Phase 4, Module 6); never
    *  written by the AI tool itself, which only ever returns a suggestion to accept or edit. */
@@ -77,6 +86,7 @@ const productSchema = new Schema<ProductDocument>(
     taxable: { type: Boolean, default: true },
     costPrice: { type: Schema.Types.Decimal128 },
     bargainMinPrice: { type: Schema.Types.Decimal128 },
+    categoryId: { type: Schema.Types.ObjectId, ref: "Category" },
     category: { type: String, required: true, index: true },
     tags: {
       type: [String],
@@ -111,6 +121,8 @@ productSchema.index({ title: "text", category: "text", description: "text" }, { 
 
 // Browsing/filtering by category within a store; storeId alone covers plain catalog listing
 productSchema.index({ storeId: 1, category: 1 });
+// Counting a category's products (the Categories page, and refusing to delete one still in use).
+productSchema.index({ storeId: 1, categoryId: 1 });
 productSchema.index({ storeId: 1 });
 
 // SKU and barcode are unique per store when present (partial index ignores products without one).

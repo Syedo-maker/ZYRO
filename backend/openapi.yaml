@@ -2413,6 +2413,93 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── DISCOUNTS ─────────────────────────────────────────────────────────
+  /stores/{storeId}/categories:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [catalog]
+      operationId: categories_list
+      summary: List a store's categories
+      description: |
+        Requires the `products_write` staff permission (or owner). Active categories first, then by
+        name, each with how many of the store's products are in it.
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Category" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [catalog]
+      operationId: categories_create
+      summary: Create a category
+      description: |
+        Requires the `products_write` staff permission (or owner). Names are unique within a store
+        regardless of capitals and spacing: "Toys", "toys" and " TOYS " are the same category, and a
+        second one is refused with 409. The name is kept as typed (edges trimmed, inner spaces made one).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+        "400": { description: "No name, or a name over 60 characters" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "A category with the same name already exists in this store" }
+  /stores/{storeId}/categories/{categoryId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: categoryId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [catalog]
+      operationId: categories_update
+      summary: Rename, enable or disable a category
+      description: |
+        Requires the `products_write` staff permission (or owner). A rename reaches every product in
+        the category at once, because products refer to it by id. A disabled category keeps its
+        products but cannot be chosen for a new or edited product.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                active: { type: boolean }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+        "400": { description: "Neither a name nor active was sent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Another category in this store already has that name" }
+    delete:
+      tags: [catalog]
+      operationId: categories_delete
+      summary: Delete a category
+      description: |
+        Requires the `products_write` staff permission (or owner). Refused with 409 while any product
+        is in the category: move those products to another category first.
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Products are still in this category" }
   /stores/{storeId}/discount-codes:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -4764,7 +4851,8 @@ components:
         barcode: { type: [string, "null"], maxLength: 100 }
         taxable: { type: boolean }
         costPrice: { type: number, minimum: 0, description: "Merchant-only; absent for shoppers." }
-        category: { type: string }
+        categoryId: { type: [string, "null"], description: "The store's category. Null only for a product listed before categories existed and not yet migrated." }
+        category: { type: string, description: "The category's name, kept in step with it by the server." }
         images: { type: array, items: { type: string, format: uri }, maxItems: 10 }
         tags: { type: array, items: { type: string, maxLength: 30 }, maxItems: 10 }
         seoTitle: { type: [string, "null"], maxLength: 70 }
@@ -5338,6 +5426,24 @@ components:
         usageLimit: { type: integer, minimum: 1, description: Omit for unlimited. }
         expiresAt: { type: string, format: date-time, description: Must be in the future when creating. }
         active: { type: boolean, default: true }
+
+    Category:
+      type: object
+      description: "One of a store's own product categories."
+      required: [id, name, active, productCount]
+      properties:
+        id: { type: string }
+        name: { type: string, description: "As the owner typed it." }
+        active: { type: boolean }
+        productCount: { type: integer, description: "How many of the store's products are in it." }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
 
     DiscountCode:
       type: object
