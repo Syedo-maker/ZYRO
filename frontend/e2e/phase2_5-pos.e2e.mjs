@@ -143,7 +143,7 @@ await step('owner: team, limit and product setup', owner.page, async () => {
   await page.getByRole('button', { name: '+ Add product' }).click()
   await page.getByLabel('Title', { exact: true }).fill('Scanner Mug')
   await page.getByLabel('Price (MRP)').fill('12')
-  await page.getByLabel('Stock').fill('5')
+  await page.getByLabel('Stock', { exact: true }).fill('5')
   await page.getByLabel('Category').selectOption({ label: 'kitchen' })
   await page.getByLabel('SKU (optional)').fill(`MUG-${suffix}`)
   await page.getByLabel('Barcode (optional)').fill(`5901234${suffix}`)

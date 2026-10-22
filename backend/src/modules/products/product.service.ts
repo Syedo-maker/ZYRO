@@ -328,6 +328,20 @@ export const productService = {
     return toPublicProduct(doc, stock);
   },
 
+  /**
+   * Sets the on-hand count at the default location and nothing else, for the quick stock control on
+   * the products list. Recorded as an adjustment by this user, as a full edit would record it; the
+   * shop, the cart and the register read stock live, so the new count shows at once.
+   */
+  async setStock(storeId: string, productId: string, stock: number, userId?: string) {
+    if (!Types.ObjectId.isValid(productId)) throw Errors.notFound("Product");
+    const exists = await Product.exists({ _id: productId, storeId });
+    if (!exists) throw Errors.notFound("Product");
+    await setStock(storeId, productId, stock, "ADJUSTMENT", userId);
+    const current = await inventoryService.getTotals(prisma, storeId, [productId]);
+    return { id: productId, stock: current.get(productId) ?? 0 };
+  },
+
   async remove(storeId: string, productId: string) {
     if (!Types.ObjectId.isValid(productId)) throw Errors.notFound("Product");
     const result = await Product.deleteOne({ _id: productId, storeId });

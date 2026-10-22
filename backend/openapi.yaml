@@ -756,6 +756,53 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /stores/{storeId}/products/{productId}/stock:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    patch:
+      tags: [catalog]
+      operationId: products_set_stock
+      summary: Set a product's stock, and nothing else
+      description: |
+        The quick stock control on the admin products list (for example 11 to 7). Sets the on-hand
+        count at the store's default location and records a stock adjustment by the caller, as a
+        full edit that changes the stock would. The shop, the cart and the register read stock live,
+        so the new count applies at once. Requires the `products_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stock]
+              additionalProperties: false
+              properties:
+                stock: { type: integer, minimum: 0, maximum: 1000000 }
+      responses:
+        "200":
+          description: The product's stock now
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, stock]
+                properties:
+                  id: { type: string }
+                  stock: { type: integer, minimum: 0, description: "On-hand across the store's locations, as Product.stock." }
+        "400":
+          description: Stock missing, negative or not a whole number
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /stores/{storeId}/products/{productId}/recommendations:
     parameters:
       - $ref: "#/components/parameters/StoreId"

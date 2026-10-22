@@ -55,6 +55,12 @@ export type ProductInput = z.infer<typeof productInputSchema>;
 /** An empty box in a search form arrives as "": treat it as not given rather than as an error. */
 const blankToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 
+/** The quick stock control on the products list: only the on-hand count. */
+export const stockUpdateSchema = z.object({
+  stock: z.number().int("Stock is a whole number").min(0, "Stock cannot be below zero").max(1_000_000),
+});
+export type StockUpdateInput = z.infer<typeof stockUpdateSchema>;
+
 export const PRODUCT_SORTS = ["relevance", "newest", "price_asc", "price_desc", "title"] as const;
 
 export const listProductsQuerySchema = z

@@ -10,6 +10,7 @@ import { WriteWithAi } from './WriteWithAi'
 import { bargainApi } from '../../lib/voiceBargainApi'
 import { categoriesApi } from '../../lib/categoriesApi'
 import { formatMoney } from '../../lib/format'
+import { StockStepper } from './StockStepper'
 import type { Category, Product, ProductInput } from '../../types/api'
 
 /** The same comparison the server makes: case and spacing do not make two category names different. */
@@ -227,16 +228,7 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
         </p>
       </div>
 
-      <Input
-        id="stock"
-        type="number"
-        min="0"
-        step="1"
-        label="Stock"
-        required
-        value={stock}
-        onChange={(e) => setStock(e.target.value)}
-      />
+      <StockStepper id="stock" label="Stock" value={stock} onChange={setStock} />
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="category" className="text-xs font-semibold text-text-secondary">
