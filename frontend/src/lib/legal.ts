@@ -8,5 +8,5 @@ export const LEGAL = {
   operator: 'Muhammad Ibrahim and Syed Sikander Gillani',
   contactEmail: 'finalyear860@gmail.com',
   /** When the Terms and the Privacy Policy last changed. */
-  updated: '21 October 2026',
+  updated: '22 October 2026',
 } as const

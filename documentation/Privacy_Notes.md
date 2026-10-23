@@ -48,3 +48,17 @@ Shoppers arriving at ZYRO without a shop in mind see a list of shops.
 - Listing is on by default and you can turn it off at any time from Settings ("List my store in the
   public directory"). An unlisted shop still works normally for anyone who has its link.
 - A shop with fewer than three products is not listed, so half-finished shops are not advertised.
+
+## Sales trends across shops (Product Scout, 2026-10-22)
+
+Product Scout adds up paid orders across shops into totals per product type and category, in each currency separately, for owners and Managers deciding what to stock. Trend Scout does the same per category each week.
+
+- **When a total is shown.** At least 3 different shops must have sold it in that period, and no single shop may have sold more than 60% of it (`SCOUT_MIN_STORES`, `SCOUT_MAX_STORE_SHARE`). This is checked for every product type and category, in each period separately.
+- **No subtraction.** A total is held back when taking other shown totals away from it would reveal fewer shops than that.
+- **What is never shown.** Shop names, ids, customers, orders, prices, and any one shop's own sales. Products are named from common title words.
+- **The AI.** It is given only the totals, and every number it writes is checked against them.
+- **Demo stores.** They are kept out of these totals entirely.
+- **No opt-out yet.** Every shop's paid orders count; there is no per-shop switch. The Privacy Policy and the Terms say so.
+
+Details: `Product_Scout.md`.
+

@@ -86,7 +86,9 @@ export function TermsPage() {
           body: (
             <p>
               AI suggestions can be wrong. Nothing an AI tool writes is published, applied to your catalogue or used to accept a payment until a
-              person has reviewed it and chosen to; that choice is yours. Do not rely on AI output for legal, tax or financial advice.
+              person has reviewed it and chosen to; that choice is yours. Do not rely on AI output for legal, tax or financial advice. Trending
+              products are a guide built from anonymous totals across shops (see the Privacy Policy): they do not promise that anything will
+              sell, and what you stock and how you describe it is up to you. Your shop's paid orders are included in those totals.
             </p>
           ),
         },
