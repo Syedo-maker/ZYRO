@@ -46,7 +46,7 @@ API version 1 only ever gains fields. A caller written before categories existed
 
 ## Prices
 
-The owner sets two prices on the form: **Price (MRP)** and **Discounted price (optional)**. The third is computed and never typed:
+The form shows all three prices. The owner types two: **Price (MRP)** and **Discounted price (optional)**. The third, **Selling price (what customers pay)**, is a read-only field that fills in as they type (2026-10-23; before that it was only a line of text). It is computed and never typed, so it can never disagree with the other two:
 
 | Field | Meaning | Rule |
 |---|---|---|
@@ -119,10 +119,11 @@ All three were applied to the development databases:
 | Suite | What it proves |
 |---|---|
 | `categories.test.ts` (24) | Uniqueness across `toys`, `TOYS`, ` TOYS `, `tOyS` and a trailing tab. Inner spaces. The database itself refuses a duplicate. Another store may use the same name. Another store's owner gets 403, and a category id from another store is not found. Cashiers and signed-out callers are refused. A product needs a category from its own store. Disabled categories. A legacy name finds the existing category. Moving a product. Rename reaches products. A rename collision. A blocked delete, then a delete once the products have moved. |
-| `product-prices.test.ts` (15) | Each price rule is refused with its reason. The sale price, with and without a discount. A legacy `price` request. Adding and removing a discount on edit. A product stored before the change. Sorting and filtering by the sale price. The cart charges the sale price and follows an edit. The register charges it and the sale keeps it after the price changes. |
+| `product-prices.test.ts` (16) | Each price rule is refused with its reason. The sale price, with and without a discount. A legacy `price` request. Adding and removing a discount on edit. A product stored before the change, which can still be put in a cart at its old price. Sorting and filtering by the sale price. The cart charges the sale price and follows an edit. The register charges it and the sale keeps it after the price changes. An online (cash on delivery) order charges the discounted price, and its line keeps it after the owner raises the price. |
+| `tests/unit/product-prices.test.ts` (26) | The request rules on their own (what is accepted and refused, with the message for each), the selling price never above the MRP, an old single-price product, and the "% off" badge: 20%, 50%, rounding both ways (33.33 to 33, 33.67 to 34, 0.5 to 1), and no badge with no discount, a discount equal to the MRP or one under 0.5%. |
 | `product-stock.test.ts` (12) | 11 to 7, shown everywhere. The adjustment record (-4, by the owner). Nothing else changes. The cart limit. Sold out at 0. Negative, fractional, text and missing counts are refused. Signed out, cashier, another store and an unknown product are refused. |
 | `pos.test.ts`, `voice.test.ts` | The register finds products by SKU, and a barcode sent with a product is not stored. Voice notes are unchanged. |
-| Browser: `categories`, `product-prices`, `product-stock`, `partG-voice` | The same journeys in Chromium: the sidebar, the empty-category prompt, the duplicate message, the dropdown, rename and blocked delete; the two price inputs with the live "customers pay" line, the refused discount, the struck MRP and badge on the list, card and product page; the stepper, Save, Enter, Escape, the shop seeing the new count, the form's stepper; no offer box, no haggling or barcode field. |
+| Browser: `categories`, `product-prices`, `product-stock`, `partG-voice` | The same journeys in Chromium: the sidebar, the empty-category prompt, the duplicate message, the dropdown, rename and blocked delete; all three prices on Add Product (the selling price read-only and following the other two) and on Edit, the live "customers pay" line, the refused discount, the struck MRP and badge on the list, card and product page; the stepper, Save, Enter, Escape, the shop seeing the new count, the form's stepper; no offer box, no haggling or barcode field. |
 
 Existing suites updated for the change:
 

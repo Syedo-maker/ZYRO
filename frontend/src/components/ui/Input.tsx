@@ -19,7 +19,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <input
         ref={ref}
         id={id}
-        className={`h-11 rounded-[10px] border px-3.5 text-sm bg-surface outline-none focus:ring-2 focus:ring-brand/30 ${
+        // A read-only field (a value worked out for the user) sits on the page colour, so it does not look typeable.
+        className={`h-11 rounded-[10px] border px-3.5 text-sm ${props.readOnly ? 'bg-bg' : 'bg-surface'} outline-none focus:ring-2 focus:ring-brand/30 ${
           error ? 'border-danger' : 'border-border-input focus:border-brand'
         } ${className}`}
         {...props}
