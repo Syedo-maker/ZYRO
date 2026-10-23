@@ -13,10 +13,27 @@ export type OrderPaymentMethod = "CASH" | "CARD" | "STRIPE" | "OTHER" | "COD" | 
 export interface PricedLine {
   productId: string;
   title: string;
+  /** What the shopper pays per unit: the product's selling price. */
   unitPrice: number;
+  /**
+   * The product's actual price (MRP) per unit when priced, so the order line can keep it beside the
+   * price paid. Absent from a checkout snapshot frozen before 2026-10-23, read then as the price paid.
+   */
+  unitMrp?: number;
   unitCost: number | null;
   quantity: number;
   taxable: boolean;
+}
+
+/**
+ * A line's MRP and discount per unit, written with the order and never changed (a database check
+ * keeps MRP minus discount equal to the price paid). In hundredths, so they add up exactly. A line
+ * with no MRP (a snapshot from before) or an MRP below the price is recorded with no discount.
+ */
+export function priceSnapshot(line: Pick<PricedLine, "unitPrice" | "unitMrp">) {
+  const paid = Math.round(line.unitPrice * 100);
+  const mrp = Math.max(paid, Math.round((line.unitMrp ?? line.unitPrice) * 100));
+  return { unitMrpSnapshot: (mrp / 100).toFixed(2), unitDiscountSnapshot: ((mrp - paid) / 100).toFixed(2) };
 }
 
 /** A priced cart frozen earlier (online checkout); the order is written exactly as priced. */
@@ -131,6 +148,7 @@ export async function priceFromCatalog(
       productId: item.productId,
       title: product.title,
       unitPrice: priceOf(product).sale,
+      unitMrp: priceOf(product).actual,
       unitCost: product.costPrice ? Number(product.costPrice.toString()) : null,
       quantity: item.quantity,
       taxable: product.taxable !== false,
@@ -226,6 +244,7 @@ export async function createOrder(input: CreateOrderInput, outerTx?: PrismaTx) {
         productId: line.productId,
         productTitleSnapshot: line.title,
         unitPrice: line.unitPrice.toFixed(2),
+        ...priceSnapshot(line),
         unitCostSnapshot: line.unitCost === null ? null : line.unitCost.toFixed(2),
         quantity: line.quantity,
         lineTotal: totals.lineTotals[i],
