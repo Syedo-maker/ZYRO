@@ -1,7 +1,8 @@
 /**
  * The three prices (the supervisor's product-listing change): the owner sets the actual price (the
  * MRP) and optionally a discounted price; the sale price is computed from them and is what the cart,
- * the register and every order charge. An order keeps the price it was sold at.
+ * the register and every order charge. An order keeps the price it was sold at, at the register
+ * and online alike.
  */
 process.env.RATE_LIMIT_ENABLED = "false";
 
@@ -112,10 +113,18 @@ describe("the sale price", () => {
   it("a product stored before the three prices still sells at its old price", async () => {
     // Only the single `price` field, as every product had before the three prices.
     const legacy = await new Product({ storeId, title: "Old Teapot", category: "Kitchen", categoryId, price: 450 }).save();
-    const res = await api("GET", `/stores/${storeId}/products/${legacy._id}`);
-    expect(res.json).toMatchObject({ actualPrice: 450, salePrice: 450, price: 450, discountPrice: null });
-    // Sorting and the price filter read the stored sale price, which only the migration gives it.
-    await Product.deleteOne({ _id: legacy._id, storeId });
+    try {
+      const res = await api("GET", `/stores/${storeId}/products/${legacy._id}`);
+      expect(res.json).toMatchObject({ actualPrice: 450, salePrice: 450, price: 450, discountPrice: null, discountPercent: null });
+      // And it can still be bought, at that price (its stock lives in inventory, as it always did).
+      expect((await api("PATCH", `/stores/${storeId}/products/${legacy._id}/stock`, { token, body: { stock: 5 } })).status).toBe(200);
+      const cart = await api("POST", `/stores/${storeId}/cart/items`, { guest: `guest-${suffix}-legacy01`, body: { productId: legacy._id.toString(), quantity: 2 } });
+      expect(cart.status).toBe(200);
+      expect(cart.json.subtotal).toBe(900);
+    } finally {
+      // Sorting and the price filter read the stored sale price, which only the migration gives it.
+      await Product.deleteOne({ _id: legacy._id, storeId });
+    }
   });
 
   it("sorting and the price filter use what customers pay", async () => {
@@ -155,5 +164,29 @@ describe("what is charged", () => {
     const later = await api("GET", `/stores/${storeId}/pos/sales/${sold.json.id}`, { token });
     expect(later.json.items[0].unitPrice).toBe(850);
     expect(later.json.total).toBe(850);
+  });
+
+  it("an online order charges the discounted price, and its lines keep it after the price changes", async () => {
+    const lamp = (await product({ title: "Desk Lamp", actualPrice: 2000, discountPrice: 1600, stock: 5 })).json.id;
+    await api("PATCH", `/stores/${storeId}/payments/settings`, { token, body: { codEnabled: true } });
+    const guest = `guest-${suffix}-prices02`;
+    expect((await api("POST", `/stores/${storeId}/cart/items`, { guest, body: { productId: lamp, quantity: 2 } })).json.subtotal).toBe(3200);
+    const placed = await api("POST", `/stores/${storeId}/payments/orders`, {
+      guest,
+      body: { method: "cod", name: "Ayesha Khan", phone: "03001234567", email: `verify-price-shopper-${suffix}@example.com`, address: { line1: "12 Mall Road", city: "Lahore", country: "PK" } },
+    });
+    expect(placed.status).toBe(201);
+
+    // The owner ends the sale and raises the MRP; the order already placed is untouched.
+    await api("PUT", `/stores/${storeId}/products/${lamp}`, { token, body: { title: "Desk Lamp", stock: 3, categoryId, actualPrice: 2500 } });
+    const order = await prismaUnscoped.order.findUnique({ where: { id: placed.json.orderId }, include: { items: true } });
+    expect(order!.items).toHaveLength(1);
+    expect(order!.items[0]).toMatchObject({ productTitleSnapshot: "Desk Lamp", quantity: 2 });
+    expect(Number(order!.items[0].unitPrice.toString())).toBe(1600);
+    expect(Number(order!.items[0].lineTotal.toString())).toBe(3200);
+    expect(Number(order!.subtotal.toString())).toBe(3200);
+    const seen = await api("GET", `/stores/${storeId}/orders/${placed.json.orderId}`, { token });
+    expect(seen.status).toBe(200);
+    expect(seen.json.items[0].unitPrice).toBe(1600);
   });
 });

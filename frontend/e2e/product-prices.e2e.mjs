@@ -1,7 +1,7 @@
 // The three prices, in a real browser (the supervisor's product-listing change): the owner types the
-// price (MRP) and an optional discounted price and sees what customers will pay; a discount above the
-// MRP is refused; the admin list, the shop's product card and the product page show the sale price,
-// the MRP struck through and a "% off" badge.
+// price (MRP) and an optional discounted price, and the selling price customers will pay fills in as the
+// third, read-only field; a discount above the MRP is refused; the admin list, the shop's product card
+// and the product page show the sale price, the MRP struck through and a "% off" badge.
 //
 // Setup: the backend (npm run dev or the e2e server) and `npm run dev` in the frontend, then:
 //   node e2e/product-prices.e2e.mjs
@@ -49,8 +49,15 @@ try {
   // ---- The form: two prices, and what customers pay
   await page.goto(`${WEB}/admin/products`)
   await page.getByRole('button', { name: '+ Add product' }).click()
+  const selling = page.getByLabel('Selling price (what customers pay)')
+  check(
+    'Add Product shows all three prices: MRP, discounted price and selling price',
+    (await page.getByLabel('Price (MRP)').isVisible()) && (await page.getByLabel('Discounted price (optional)').isVisible()) && (await selling.isVisible()),
+  )
+  check('the selling price is worked out, not typed', (await selling.getAttribute('readonly')) !== null && (await selling.inputValue()) === '')
   await page.locator('#title').fill('Copper Kettle')
   await page.getByLabel('Price (MRP)').fill('1000')
+  check('with only the MRP, the selling price is the MRP', /1,000/.test(await selling.inputValue()), await selling.inputValue())
   const preview = page.locator('#price-preview')
   check('with only the MRP, customers pay the MRP', /empty to sell at the MRP|Customers pay .*1,000/.test(await preview.innerText()), await preview.innerText())
   await page.getByLabel('Discounted price (optional)').fill('1200')
@@ -63,6 +70,7 @@ try {
 
   await page.getByLabel('Discounted price (optional)').fill('800')
   check('a valid discount shows the sale price and the percent off', /Customers pay .*800.*20% off/.test(await preview.innerText()), await preview.innerText())
+  check('and the selling price field follows it', /800/.test(await selling.inputValue()) && !/1,000/.test(await selling.inputValue()), await selling.inputValue())
   await page.getByRole('button', { name: 'Save' }).click()
   const row = page.getByRole('row').filter({ hasText: 'Copper Kettle' })
   await row.waitFor()
@@ -72,7 +80,7 @@ try {
 
   // ---- Editing: the form opens with both prices; removing the discount sells at the MRP
   await page.getByRole('button', { name: 'Edit Copper Kettle' }).click()
-  check('the edit form opens with both prices', (await page.getByLabel('Price (MRP)').inputValue()) === '1000' && (await page.getByLabel('Discounted price (optional)').inputValue()) === '800')
+  check('the edit form opens with all three prices', (await page.getByLabel('Price (MRP)').inputValue()) === '1000' && (await page.getByLabel('Discounted price (optional)').inputValue()) === '800' && /800/.test(await page.getByLabel('Selling price (what customers pay)').inputValue()))
   await page.getByRole('button', { name: 'Cancel' }).click()
 
   // ---- The shop

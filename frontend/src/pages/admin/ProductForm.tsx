@@ -46,8 +46,9 @@ function salePreview(actual: string, discount: string) {
 export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onCancel }: ProductFormProps) {
   const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? prefill?.description ?? '')
-  // The three prices: the owner sets the actual price (MRP) and, optionally, a discounted one; what
-  // customers pay is computed from them (the supervisor's product-listing change).
+  // The three prices: the owner sets the actual price (MRP) and, optionally, a discounted one; the
+  // selling price customers pay is computed from them and shown as the third, read-only field (the
+  // supervisor's product-listing change).
   const [actualPrice, setActualPrice] = useState(initial ? String(initial.actualPrice) : '')
   const [discountPrice, setDiscountPrice] = useState(initial?.discountPrice != null ? String(initial.discountPrice) : '')
   const preview = salePreview(actualPrice, discountPrice)
@@ -238,6 +239,16 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
             onChange={(e) => setDiscountPrice(e.target.value)}
           />
         </div>
+        {/* The third price: what customers pay. Shown, never typed, so it cannot disagree with the other two. */}
+        <Input
+          id="sellingPrice"
+          label="Selling price (what customers pay)"
+          readOnly
+          aria-describedby="price-preview"
+          value={preview ? formatMoney(preview.sale, currency) : ''}
+          placeholder="Fills in from the prices above"
+          className="font-semibold"
+        />
         <p id="price-preview" aria-live="polite" className={`text-xs ${discountTooHigh ? 'text-danger' : 'text-text-secondary'}`}>
           {discountTooHigh
             ? 'The discounted price cannot be more than the price (MRP).'
