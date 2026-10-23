@@ -55,7 +55,7 @@ These were added in later phases; the screen itself was designed in code.
 | Payments (cash-on-delivery queue, screenshots, courier cash) | Part E | payments_cod_pending, payments_cod_outcome, payments_proofs_list, payments_proof_review, payments_remittances_list, payments_remittance_import, payments_remittance_get |
 | Landing screen ("Shop" or "Start a store") | Issue 2 | users_me_preference_update, users_me_get |
 | Public shop directory (/shop) | Issue 2 | stores_directory_list, stores_directory_categories, stores_get |
-| Public directory settings, inside Settings | Issue 2 | store_directory_listing_get, store_branding_update |
+| Public directory settings, inside Settings | Issue 2 | store_directory_listing_get, store_trend_sharing_get, store_trend_sharing_update, store_branding_update |
 | Write with AI, on the Add product form | Issue 1 | product_ideas_suggest, product_ideas_keywords, products_create |
 | Categories page, and the category dropdown on the product form | Product listing change (2026-10-22) | categories_list, categories_create, categories_update, categories_delete |
 | Landing page (marketing homepage at /) | Landing page | demo_product_ideas, demo_product_ideas_examples, plans_list, stores_directory_list |

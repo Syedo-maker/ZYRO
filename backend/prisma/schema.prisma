@@ -207,6 +207,10 @@ model Tenant {
   /// Whether this shop appears in the public directory at /shop. On by default; the owner may opt out.
   /// A shop with too few products is left out regardless, so empty and test shops never show.
   listedInDirectory     Boolean   @default(true)
+  /// Whether this shop's paid orders count toward the platform's shared trends (Product Scout and
+  /// Trend Scout). On by default; only the owner can switch it off, from Settings. Off: the shop's
+  /// orders are left out from the next daily run, and the shop can still see the trends.
+  shareSalesInTrends    Boolean   @default(true)
   /// One line about the shop, shown beside its name in the public directory. Public by definition,
   /// so the owner writes it knowing anyone can read it.
   description           String?

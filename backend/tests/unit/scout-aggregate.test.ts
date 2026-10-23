@@ -2,7 +2,7 @@
  * Product Scout's calculation (scout.aggregate.ts): arithmetic, grouping and the privacy rules, on
  * hand-made rows. No database and no AI.
  */
-import { computeTrends, productTypeKey, DEFAULT_SCOUT_OPTIONS, type ScoutRow } from "../../src/modules/scout/scout.aggregate";
+import { computeTrends, passesRules, productTypeKey, DEFAULT_SCOUT_OPTIONS, type ScoutRow } from "../../src/modules/scout/scout.aggregate";
 
 let n = 0;
 /** One order line: a store sold `units` of `title` in `period`. */
@@ -78,10 +78,9 @@ describe("privacy", () => {
     expect(computeTrends(rows, { ...DEFAULT_SCOUT_OPTIONS, maxShare: 0.75 })[0].products).toHaveLength(1);
   });
 
-  it("the 60% rule applies to each period on its own: a dominated previous period hides the growth, not the product", () => {
+  it("a product whose previous period fails a rule is hidden whole, never shown without its growth", () => {
     const rows = [...evenly("Clay Cup", 3, 10), row("s1", "Clay Cup", 40, "previous"), row("s2", "Clay Cup", 2, "previous"), row("s3", "Clay Cup", 2, "previous")];
-    const p = computeTrends(rows)[0].products[0];
-    expect(p).toMatchObject({ units: 30, previousUnits: null, growthPercent: null, isNew: false });
+    expect(computeTrends(rows)[0].products).toEqual([]);
   });
 
   it("and to the category as well as the product type", () => {
@@ -113,6 +112,56 @@ describe("privacy", () => {
   });
 });
 
+describe("the two biggest shops together (the (2, 85%) rule)", () => {
+  it("is hidden when the top two together sold more than 85%, even with enough shops and none above 60%", () => {
+    // 4 shops; the biggest has 45% (under 60%), but the top two have 90%.
+    const rows = [row("s1", "Clay Cup", 45), row("s2", "Clay Cup", 45), row("s3", "Clay Cup", 5), row("s4", "Clay Cup", 5)];
+    expect(computeTrends(rows)[0].products).toEqual([]);
+  });
+
+  it("is shown at 85% or under", () => {
+    const rows = [row("s1", "Clay Cup", 45), row("s2", "Clay Cup", 40), row("s3", "Clay Cup", 10), row("s4", "Clay Cup", 5)];
+    expect(computeTrends(rows)[0].products[0]).toMatchObject({ units: 100, stores: 4 });
+  });
+
+  it("the limit is a setting", () => {
+    const rows = [row("s1", "Clay Cup", 45), row("s2", "Clay Cup", 40), row("s3", "Clay Cup", 10), row("s4", "Clay Cup", 5)];
+    expect(computeTrends(rows, { ...DEFAULT_SCOUT_OPTIONS, maxTopTwoShare: 0.8 })[0].products).toEqual([]);
+  });
+
+  it("applies to the previous period too, hiding the product whole", () => {
+    const rows = [...evenly("Clay Cup", 4, 10), row("s1", "Clay Cup", 45, "previous"), row("s2", "Clay Cup", 45, "previous"), row("s3", "Clay Cup", 5, "previous"), row("s4", "Clay Cup", 5, "previous")];
+    expect(computeTrends(rows)[0].products).toEqual([]);
+  });
+});
+
+describe("all three rules together", () => {
+  // Each case: units per shop this period, and whether it may be shown (defaults: 3 shops, 60%, 85%).
+  it.each([
+    ["3 even shops", [10, 10, 10], true],
+    ["only 2 shops", [10, 10], false],
+    ["3 shops, one with 70%", [70, 15, 15], false],
+    ["3 shops, exactly 60% and the top two exactly 85%", [60, 25, 15], true],
+    ["4 shops, none over 60%, but the top two at 90%", [45, 45, 5, 5], false],
+    ["5 shops, top one 50%, top two 80%", [50, 30, 10, 5, 5], true],
+    ["5 shops, top one 61%", [61, 20, 9, 5, 5], false],
+    ["1 shop", [100], false],
+  ])("%s", (_label, units, shown) => {
+    const rows = (units as number[]).map((u, i) => row(`s${i + 1}`, "Clay Cup", u));
+    expect(computeTrends(rows)[0].products.length === 1).toBe(shown);
+    // Hidden means hidden whole: no product, and no category total that would carry its numbers.
+    if (!shown) expect(computeTrends(rows)[0].categories).toEqual([]);
+  });
+
+  it("passesRules is the one check behind all of them", () => {
+    const m = (units: number[]) => new Map(units.map((u, i) => [`s${i}`, u]));
+    expect(passesRules(m([10, 10, 10]), DEFAULT_SCOUT_OPTIONS)).toBe(true);
+    expect(passesRules(m([45, 45, 5, 5]), DEFAULT_SCOUT_OPTIONS)).toBe(false);
+    expect(passesRules(m([0, 0, 10, 10, 10]), DEFAULT_SCOUT_OPTIONS)).toBe(true); // shops with nothing do not count
+    expect(passesRules(m([0, 10, 10]), DEFAULT_SCOUT_OPTIONS)).toBe(false);
+  });
+});
+
 describe("what subtraction would show", () => {
   it("a category is withheld when taking its shown products away leaves fewer than 3 stores", () => {
     // Kettles (3 stores) are shown; pots (2 stores) are not. Kitchen minus kettles would be the pots.
@@ -134,10 +183,12 @@ describe("what subtraction would show", () => {
       ...evenly("Copper Kettle", 3, 4),
       ...evenly("Steel Pot", 3, 4),
       ...evenly("Copper Kettle", 3, 2, "previous"),
-      row("s1", "Steel Pot", 5, "previous"), // last period's pots: one store, so not shown
+      row("s1", "Steel Pot", 5, "previous"), // last period's pots: one store, so the pot is hidden
     ];
     const [m] = computeTrends(rows);
-    expect(m.categories[0]).toMatchObject({ units: 24, previousUnits: null, growthPercent: null });
+    expect(m.products.map((p) => p.name)).toEqual(["Copper kettle"]);
+    // Kitchen last period minus the kettles shown would be that one store's pots: the category is hidden too.
+    expect(m.categories).toEqual([]);
   });
 
   const seg = (r: ReturnType<typeof row>, segment: "recent" | "prior" | "older") => ({ ...r, segment });

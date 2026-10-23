@@ -266,8 +266,8 @@ export function ProductScoutPanel({
                   )}
 
                   <p className="text-xs text-text-muted">
-                    Totals from at least {data.rules.minStores} shops, where no shop sold more than {data.rules.maxSharePercent}%. No shop, customer or
-                    order is ever named. Updated daily.
+                    Totals from at least {data.rules.minStores} shops, where no shop sold more than {data.rules.maxSharePercent}% and no two
+                    shops more than {data.rules.maxTopTwoSharePercent}% together. No shop, customer or order is ever named. Updated daily.
                   </p>
                 </div>
               )}

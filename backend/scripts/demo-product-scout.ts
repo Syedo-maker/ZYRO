@@ -110,24 +110,31 @@ const STORES = [
 ];
 
 const LINES: Line[] = [
-  // Rising fast in the last week, across five stores.
+  // Every product meant to be seen is sold by four stores in fairly even amounts, so it passes all three
+  // privacy rules (3 stores, no store over 60%, no two over 85%) in every week, with room to spare.
+  // Rising fast in the last week.
   { category: "Kitchen", titles: ["Clay Chai Cup", "", "", "clay chai cup (set)", "CLAY CHAI CUP", "Clay Chai Cup 250ml", ], price: 450, weekly: [2, 3, 4, 9] },
   { category: "Kitchen", titles: ["Copper Kettle 1.5L", "", "", "copper kettle", "Copper Kettle", "Copper Kettle"], price: 3200, weekly: [3, 3, 4, 5] },
-  { category: "Kitchen", titles: ["Steel Pateela", "", "", "Steel Pateela Large", "steel pateela", ""], price: 1800, weekly: [4, 4, 3, 3] },
+  { category: "Kitchen", titles: ["Steel Pateela", "", "", "Steel Pateela Large", "steel pateela", "Steel Pateela"], price: 1800, weekly: [4, 4, 3, 3] },
   // The best seller, steady.
-  { category: "Clothing", titles: ["", "Lawn Suit 3 Piece", "", "lawn suit", "", "Lawn Suit"], price: 4500, weekly: [8, 9, 10, 11] },
-  { category: "Clothing", titles: ["", "Embroidered Kurta", "", "Embroidered Kurta", "", "embroidered kurta"], price: 3800, weekly: [5, 5, 6, 6] },
+  { category: "Clothing", titles: ["", "Lawn Suit 3 Piece", "", "lawn suit", "Lawn Suit", "Lawn Suit"], price: 4500, weekly: [8, 9, 10, 11] },
+  { category: "Clothing", titles: ["", "Embroidered Kurta", "", "Embroidered Kurta", "embroidered kurta", "embroidered kurta"], price: 3800, weekly: [5, 5, 6, 6] },
   // New this week only: nothing in the weeks before.
-  { category: "Clothing", titles: ["", "Winter Shawl", "", "Winter Shawl", "", "WINTER SHAWL"], price: 2900, weekly: [0, 0, 0, 7] },
-  { category: "Toys", titles: ["", "", "Rubber Duck", "rubber duck", "", "Rubber Duck 2 Pack"], price: 350, weekly: [6, 6, 7, 7] },
-  { category: "Toys", titles: ["", "", "Wooden Puzzle", "Wooden Puzzle", "wooden puzzle", ""], price: 950, weekly: [2, 3, 3, 6] },
+  { category: "Clothing", titles: ["", "Winter Shawl", "", "Winter Shawl", "Winter Shawl", "WINTER SHAWL"], price: 2900, weekly: [0, 0, 0, 7] },
+  { category: "Toys", titles: ["", "", "Rubber Duck", "rubber duck", "Rubber Duck", "Rubber Duck 2 Pack"], price: 350, weekly: [6, 6, 7, 7] },
+  { category: "Toys", titles: ["", "", "Wooden Puzzle", "Wooden Puzzle", "wooden puzzle", "Wooden Puzzle"], price: 950, weekly: [2, 3, 3, 6] },
   // Falling.
-  { category: "Home decor", titles: ["", "", "", "Scented Candle", "Scented Candle", "scented candle"], price: 700, weekly: [9, 8, 6, 4] },
-  // Sold by only two stores: Product Scout must never show it.
-  { category: "Toys", titles: ["", "", "Kite", "", "", "kite"], price: 400, weekly: [5, 6, 8, 12] },
-  // Three stores, but one sells nearly all of it: withheld too.
-  { category: "Home decor", titles: ["", "", "", "Brass Lamp", "brass lamp", "Brass Lamp"], price: 5200, weekly: [1, 1, 1, 1] },
+  { category: "Home decor", titles: ["Scented Candle", "", "", "Scented Candle", "Scented Candle", "scented candle"], price: 700, weekly: [9, 8, 6, 4] },
+  // The two that must stay hidden, each in a category of its own, so the categories above still pass
+  // the rules once what is shown in them is taken away. Sold by only two stores: never shown.
+  { category: "Outdoor", titles: ["", "", "Kite", "", "", "kite"], price: 400, weekly: [5, 6, 8, 12] },
+  // Three stores, but one sells nearly all of it: hidden too.
+  { category: "Lighting", titles: ["", "", "", "Brass Lamp", "brass lamp", "Brass Lamp"], price: 5200, weekly: [1, 1, 1, 1] },
 ];
+/** What the panel must show, for 7 and for 30 days, and what it must not. */
+const SHOWN = ["Clay chai cup", "Copper kettle", "Steel pateela", "Lawn suit", "Embroidered kurta", "Winter shawl", "Rubber duck", "Wooden puzzle", "Scented candle"];
+const SHOWN_CATEGORIES = ["Kitchen", "Clothing", "Toys", "Home decor"];
+const HIDDEN = ["Kite", "Brass lamp", "Outdoor", "Lighting"];
 // The brass lamp's one dominant seller (store index 3, Multan Bazaar) sells far more than the others.
 const DOMINANT = { title: "Brass Lamp", storeIndex: 3, weekly: [12, 14, 15, 18] as [number, number, number, number] };
 
@@ -151,7 +158,10 @@ async function add() {
 
   const passwordHash = await passwordLib.hash(DEMO_PASSWORD);
   const random = seeded(2026);
-  const now = Date.now();
+  // Product Scout's periods end at the start of today (UTC), so the demo's weeks do too: each week's
+  // orders fall inside the same 7 days the panel counts, and the demo comes out the same whenever it runs.
+  const today = new Date();
+  const periodEnd = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
   let orders = 0;
 
   for (const [i, s] of STORES.entries()) {
@@ -185,7 +195,7 @@ async function add() {
         while (left > 0) {
           const qty = Math.min(left, 1 + Math.floor(random() * 3));
           left -= qty;
-          const daysAgo = (3 - week) * 7 + 1 + Math.floor(random() * 7) - 0.5; // within that week, inside the last 28 days
+          const daysAgo = (3 - week) * 7 + Math.floor(random() * 7) + 0.5; // within that week of the last 28 days
           const roll = random();
           const status = roll < 0.06 ? "CANCELLED" : roll < 0.1 ? "REFUNDED" : roll < 0.14 ? "PENDING" : roll < 0.6 ? "COMPLETED" : "PAID";
           await prisma.order.create({
@@ -198,7 +208,7 @@ async function add() {
               subtotal: (qty * p.price).toFixed(2),
               total: (qty * p.price).toFixed(2),
               guestEmail: `customer-${orderNumber}@${DEMO_EMAIL_DOMAIN}`,
-              createdAt: new Date(now - daysAgo * DAY_MS),
+              createdAt: new Date(periodEnd - daysAgo * DAY_MS),
               items: { create: [{ productId: p.id, productTitleSnapshot: p.title, unitPrice: p.price.toFixed(2), quantity: qty, lineTotal: (qty * p.price).toFixed(2) }] },
             },
           });
@@ -223,8 +233,30 @@ async function add() {
   const result = await scoutService.refresh({ scopes: ["demo"] });
   await closeAiQueue();
   console.log(`  ${result.snapshots.join(", ") || "no snapshot (too little data)"}`);
+  await checkSnapshots();
   console.log(`\nSign in at http://localhost:5173/login as any demo owner, for example`);
   console.log(`  ${DEMO_SLUG_PREFIX}${STORES[0].key}@${DEMO_EMAIL_DOMAIN}   password: ${DEMO_PASSWORD}`);
+}
+
+/**
+ * The demo is built to pass all three privacy rules for every product meant to be seen, and to fail
+ * them for the two meant to stay hidden. Say plainly if a snapshot does not show exactly that.
+ */
+async function checkSnapshots() {
+  let ok = true;
+  for (const s of await prisma.productScoutSnapshot.findMany({ where: { scope: "demo", market: "PKR" } })) {
+    const data = s.data as { products?: { name: string }[]; categories?: { name: string }[] };
+    const products = (data.products ?? []).map((p) => p.name);
+    const categories = (data.categories ?? []).map((c) => c.name);
+    const missing = SHOWN.filter((n) => !products.includes(n));
+    const leaked = HIDDEN.filter((n) => products.includes(n) || categories.includes(n));
+    const missingCategories = SHOWN_CATEGORIES.filter((n) => !categories.includes(n));
+    if (missing.length || leaked.length || missingCategories.length) {
+      ok = false;
+      console.error(`  ${s.periodDays} days: missing ${[...missing, ...missingCategories].join(", ") || "nothing"}; shown but should not be: ${leaked.join(", ") || "nothing"}`);
+    } else console.log(`  ${s.periodDays} days: ${products.length} products and ${categories.length} categories shown, as designed; the kite and the brass lamp hidden.`);
+  }
+  if (!ok) console.error("The demo does not show what it was designed to. Check the LINES above against the privacy rules.");
 }
 
 async function remove() {

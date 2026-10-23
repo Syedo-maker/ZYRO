@@ -88,7 +88,8 @@ export function TermsPage() {
               AI suggestions can be wrong. Nothing an AI tool writes is published, applied to your catalogue or used to accept a payment until a
               person has reviewed it and chosen to; that choice is yours. Do not rely on AI output for legal, tax or financial advice. Trending
               products are a guide built from anonymous totals across shops (see the Privacy Policy): they do not promise that anything will
-              sell, and what you stock and how you describe it is up to you. Your shop's paid orders are included in those totals.
+              sell, and what you stock and how you describe it is up to you. Your shop's paid orders are included in those totals unless you
+              turn off "Include my shop's sales in shared platform trends" in your store Settings; you can still see the trends with it off.
             </p>
           ),
         },

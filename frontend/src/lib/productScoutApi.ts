@@ -36,7 +36,7 @@ export interface ProductScout {
   periodDays: 7 | 30
   window: { from: string; to: string } | null
   generatedAt: string | null
-  rules: { minStores: number; maxSharePercent: number }
+  rules: { minStores: number; maxSharePercent: number; maxTopTwoSharePercent: number }
   categories: (ScoutFigures & { key: string; name: string })[]
   topSellers: ScoutProduct[]
   fastestGrowing: ScoutProduct[]

@@ -3,8 +3,11 @@
  *
  * - the figures from seeded orders (growth on the previous period, pending, cancelled and refunded
  *   orders left out, returned units taken off);
- * - the privacy rules: fewer than 3 stores, or one store over 60% of the units, is never shown, and
- *   no store, order, product or customer identifier ever leaves the API;
+ * - the privacy rules: fewer than 3 stores, one store over 60% of the units, or the two biggest over
+ *   85% together, is never shown, and no store, order, product or customer identifier leaves the API;
+ * - a shop whose owner switched off "Include my shop's sales in shared platform trends" is left out of
+ *   Product Scout and Trend Scout from the next run, and still sees the trends; only the owner may
+ *   change it;
  * - the AI only words the figures it is given (a line with an invented number is replaced);
  * - market data where ZYRO has too little, and the store's own empty categories named as such;
  * - a page load reads the saved snapshot: no AI call, no recalculation;
@@ -22,6 +25,7 @@ process.env.AI_CACHE_SECONDS = "0";
 process.env.AI_QUEUE_NAME = `ai-generate-verify-scout-${Date.now().toString(36)}`;
 process.env.SCOUT_MIN_STORES = "3";
 process.env.SCOUT_MAX_STORE_SHARE = "0.6";
+process.env.SCOUT_MAX_TOP_TWO_SHARE = "0.85";
 
 import request from "supertest";
 import type { Express } from "express";
@@ -159,6 +163,7 @@ beforeAll(async () => {
   for (const s of [A, B, C]) await product(s, "lamp", "Lamp", "Home");
   for (const s of [A, B]) await product(s, "pot", "Steel Pot", "Kitchen");
   await product(D, "hose", "Garden Hose", "Garden");
+  for (const s of [A, B, C, other]) await product(s, "mug", "Tea Mug", "Tableware");
   await (await api("POST", `/stores/${D.storeId}/categories`, { token: D.token, body: { name: "Toys" } }));
 
   const line = (s: Shop, key: string, qty: number, returned = 0) => ({ productId: s.products[key], title: key === "kettle" ? "Copper Kettle" : key, qty, returned });
@@ -180,6 +185,14 @@ beforeAll(async () => {
   await order(B, [line(B, "pot", 10)], "PAID", 2);
   // Hose: only D.
   await order(D, [line(D, "hose", 5)], "PAID", 2);
+  // Mug: 4 stores and none over 60% (A has 45%), but A and B together sold 90%.
+  for (const [s, qty] of [
+    [A, 9],
+    [B, 9],
+    [C, 1],
+    [other, 1],
+  ] as const)
+    await order(s, [line(s, "mug", qty)], "PAID", 2);
 
   // Staff on A.
   for (const [role, password] of [
@@ -231,7 +244,7 @@ describe("the figures", () => {
   it("adds up the kettles across differently written titles, takes off returns, and works out the growth", async () => {
     const res = await scout(A.token, A.storeId);
     expect(res.status).toBe(200);
-    expect(res.json).toMatchObject({ status: "ready", demo: false, market: MARKET, periodDays: 7, rules: { minStores: 3, maxSharePercent: 60 } });
+    expect(res.json).toMatchObject({ status: "ready", demo: false, market: MARKET, periodDays: 7, rules: { minStores: 3, maxSharePercent: 60, maxTopTwoSharePercent: 85 } });
     const kettle = res.json.topSellers.find((p: { name: string }) => p.name === "Copper kettle");
     expect(kettle).toMatchObject({ units: 12, orders: 3, stores: 3, previousUnits: 9, growthPercent: 33, isNew: false, categoryName: "Kitchen" });
   });
@@ -270,6 +283,14 @@ describe("privacy", () => {
     const res = await scout(A.token, A.storeId);
     expect(JSON.stringify(res.json)).not.toMatch(/Lamp/);
     expect(res.json.categories.map((c: { key: string }) => c.key)).not.toContain("home");
+  });
+
+  it("a product where the two biggest stores sold over 85% together is not shown, nor its category", async () => {
+    for (const q of ["", "?period=30"]) {
+      const res = await scout(A.token, A.storeId, q);
+      expect(JSON.stringify(res.json)).not.toMatch(/mug/i);
+      expect(res.json.categories.map((c: { key: string }) => c.key)).not.toContain("tableware");
+    }
   });
 
   it("no store, order, product or customer identifier appears anywhere in the response", async () => {
@@ -354,6 +375,62 @@ describe("who may see it", () => {
   it("the refresh is for platform administrators only", async () => {
     expect((await api("POST", "/platform/product-scout/refresh", { token: A.token })).status).toBe(403);
   });
+});
+
+describe("opting out of shared trends", () => {
+  const sharing = (token: string | undefined, storeId: string, body?: unknown) => api(body === undefined ? "GET" : "PUT", `/stores/${storeId}/trend-sharing`, { token, body });
+
+  it("is on by default, and only the owner may see or change it", async () => {
+    expect((await sharing(A.token, A.storeId)).json).toEqual({ shareSalesInTrends: true });
+    expect((await sharing(managerToken, A.storeId)).status).toBe(403);
+    expect((await sharing(managerToken, A.storeId, { shareSalesInTrends: false })).status).toBe(403);
+    expect((await sharing(cashierToken, A.storeId, { shareSalesInTrends: false })).status).toBe(403);
+    expect((await sharing(other.token, A.storeId, { shareSalesInTrends: false })).status).toBe(403);
+    expect((await sharing(undefined, A.storeId)).status).toBe(401);
+    expect((await sharing(A.token, A.storeId, { shareSalesInTrends: "no" })).status).toBe(400);
+    expect((await sharing(A.token, A.storeId, {})).status).toBe(400);
+    expect((await sharing(A.token, A.storeId)).json).toEqual({ shareSalesInTrends: true });
+  });
+
+  it("an opted-out shop's sales leave Product Scout from the next run, and it still sees the trends", async () => {
+    expect((await sharing(C.token, C.storeId, { shareSalesInTrends: false })).json).toEqual({ shareSalesInTrends: false });
+    // Nothing changes until the next run.
+    expect((await scout(A.token, A.storeId)).json.topSellers.map((p: { name: string }) => p.name)).toContain("Copper kettle");
+
+    await scoutService.refresh({ onlyTenantIds: created.tenantIds, scopes: ["live"] });
+    // Without C the kettle comes from 2 shops: hidden, never shown with C's part taken off.
+    const forA = await scout(A.token, A.storeId);
+    expect(JSON.stringify(forA.json)).not.toMatch(/Copper kettle/i);
+    // C still sees the shared trends, the same as everyone else.
+    const forC = await scout(C.token, C.storeId);
+    expect(forC.status).toBe(200);
+    expect(forC.json).toMatchObject({ status: "ready", market: MARKET });
+    expect(forC.json.topSellers).toEqual(forA.json.topSellers);
+
+    expect((await sharing(C.token, C.storeId, { shareSalesInTrends: true })).json).toEqual({ shareSalesInTrends: true });
+    await scoutService.refresh({ onlyTenantIds: created.tenantIds, scopes: ["live"] });
+    expect((await scout(A.token, A.storeId)).json.topSellers.find((p: { name: string }) => p.name === "Copper kettle")).toMatchObject({ units: 12, stores: 3 });
+  }, 120_000);
+
+  it("and Trend Scout's", async () => {
+    const { trendsService } = await import("../../src/modules/trends/trends.service");
+    // The week that holds C's kettle order of yesterday, whatever day this runs on.
+    const now = new Date(Date.now() + 6 * DAY_MS);
+    const run = () => trendsService.runWeek(now, { tenantIds: [C.storeId], markets: [MARKET], categories: ["kitchen"] });
+    // Trend Scout counts paid orders only: give that order its card payment.
+    const kettleOrder = await prismaUnscoped.order.findFirstOrThrow({ where: { tenantId: C.storeId, status: "FULFILLED" } });
+    const payment = await prismaUnscoped.payment.create({ data: { tenantId: C.storeId, orderId: kettleOrder.id, amount: kettleOrder.total, currency: MARKET, status: "SUCCEEDED" } });
+    try {
+      expect((await run()).reports).toBe(1);
+      await prismaUnscoped.trendReport.deleteMany({ where: { market: MARKET, id: { notIn: created.trendReportIds } } });
+      await sharing(C.token, C.storeId, { shareSalesInTrends: false });
+      expect((await run()).reports).toBe(0);
+    } finally {
+      await sharing(C.token, C.storeId, { shareSalesInTrends: true });
+      await prismaUnscoped.payment.delete({ where: { id: payment.id } });
+      await prismaUnscoped.trendReport.deleteMany({ where: { market: MARKET, id: { notIn: created.trendReportIds } } });
+    }
+  }, 60_000);
 });
 
 describe("demo stores stay apart", () => {

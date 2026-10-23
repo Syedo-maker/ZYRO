@@ -34,7 +34,8 @@ const STARTERS = 12;
 /** Market-data reports older than this are not offered as a fallback. */
 const MARKET_DATA_MAX_AGE_DAYS = 42;
 
-export const scoutOptions = (): ScoutOptions => ({ minStores: env.scout.minStores, maxShare: env.scout.maxShare, minGrowthUnits: 5 });
+export const scoutOptions = (): ScoutOptions => ({ minStores: env.scout.minStores, maxShare: env.scout.maxShare, maxTopTwoShare: env.scout.maxTopTwoShare, minGrowthUnits: 5 });
+const rulesOf = () => ({ minStores: env.scout.minStores, maxSharePercent: Math.round(env.scout.maxShare * 100), maxTopTwoSharePercent: Math.round(env.scout.maxTopTwoShare * 100) });
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 const shortDate = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -51,7 +52,8 @@ export function windows(windowEnd: Date, days: number) {
 /**
  * Every store's order lines in both periods, one per store, order and product, with the product's
  * category from the catalog. Orders that are paid, being fulfilled or completed count; pending,
- * cancelled and refunded ones never do, and returned units are taken off. `scope` keeps the demo
+ * cancelled and refunded ones never do, and returned units are taken off. A shop whose owner has
+ * switched off "Include my shop's sales in shared platform trends" is left out. `scope` keeps the demo
  * stores apart; `onlyTenantIds` limits it to some stores (tests use it, so other stores' sales never
  * mix in).
  */
@@ -77,6 +79,7 @@ async function salesRows(scope: Scope, windowEnd: Date, days: number, onlyTenant
     WHERE o."createdAt" >= ${w.previous.from} AND o."createdAt" < ${w.current.to}
       AND o."status" IN ('PAID', 'FULFILLED', 'COMPLETED')
       AND ${scope === "demo" ? sqlIsDemo("t") : sqlNotDemo("t")}
+      AND t."shareSalesInTrends" = true
       ${only}
     GROUP BY 1, 2, 3, 4, 6, 7`;
 
@@ -207,7 +210,7 @@ export interface SnapshotData {
   market: string;
   periodDays: PeriodDays;
   window: { from: string; to: string };
-  rules: { minStores: number; maxSharePercent: number };
+  rules: { minStores: number; maxSharePercent: number; maxTopTwoSharePercent: number };
   categories: MarketTrends["categories"];
   products: (ProductTypeFigures & { why: string; whySource: "ai" | "template"; starter: string; starterSource: "ai" | "template" })[];
   topSellers: string[];
@@ -243,7 +246,7 @@ export const scoutService = {
             market: m.market,
             periodDays: days,
             window: { from: isoDay(w.current.from), to: isoDay(new Date(w.current.to.getTime() - DAY_MS)) },
-            rules: { minStores: env.scout.minStores, maxSharePercent: Math.round(env.scout.maxShare * 100) },
+            rules: rulesOf(),
             categories: m.categories,
             products: shown.map((p) => {
               const why = whys.get(p.id)!;
@@ -304,7 +307,7 @@ export const scoutService = {
       periodDays: query.period,
       window: data?.window ?? null,
       generatedAt: row?.computedAt ?? null,
-      rules: data?.rules ?? { minStores: env.scout.minStores, maxSharePercent: Math.round(env.scout.maxShare * 100) },
+      rules: rulesOf(), // the rules in force now, which every snapshot from now on is held to
       categories: (data?.categories ?? []).filter((c) => inCategory(c.key)),
       topSellers: pick(data?.topSellers ?? []),
       fastestGrowing: pick(data?.fastestGrowing ?? []),

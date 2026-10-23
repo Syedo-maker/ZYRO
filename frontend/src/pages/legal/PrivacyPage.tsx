@@ -100,9 +100,15 @@ export function PrivacyPage() {
             <>
               <p>
                 To show merchants what is selling (Trending products and the weekly market report), ZYRO adds up paid orders across shops into
-                totals per product type and category, in each currency separately. A total is shown only when at least three different shops
-                sold it in that period and no single shop sold more than 60% of it, and a total is held back when taking other totals away from it
-                would reveal fewer shops than that.
+                totals per product type and category, in each currency separately. A total is shown only when, in that period and the one
+                before, at least three different shops sold it, no single shop sold more than 60% of it and no two shops more than 85% of it
+                together. A total that fails any of these is not shown at all, and a total is also held back when taking other totals away from
+                it would reveal a figure that fails them.
+              </p>
+              <p>
+                Taking part is the shop owner's choice. Every shop has the setting "Include my shop's sales in shared platform trends" on its
+                Settings page, on by default. When the owner turns it off, that shop's orders are left out of every shared total from the next
+                daily update. The shop can still see the trends either way.
               </p>
               <p>
                 What is shown is numbers of units, orders and shops, and how they changed. Never a shop's name, a customer, an order, a price

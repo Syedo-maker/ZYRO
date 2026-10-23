@@ -484,6 +484,47 @@ paths:
                   reason: { type: [string, "null"], description: "Why it is not listed, in words for the merchant; null when it is." }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /stores/{storeId}/trend-sharing:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [stores]
+      operationId: store_trend_sharing_get
+      summary: Whether this shop's sales count toward the platform's shared trends
+      description: Owner-only (a Manager is refused). See `put`.
+      responses:
+        "200":
+          description: The setting
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrendSharing" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [stores]
+      operationId: store_trend_sharing_update
+      summary: Include or leave out this shop's sales in the shared trends
+      description: |
+        Owner-only. "Include my shop's sales in shared platform trends", on by default. Off: this shop's
+        paid orders are left out of every shared total (Product Scout and Trend Scout) from the next
+        daily run. The shop can still see the trends either way.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TrendSharing" }
+      responses:
+        "200":
+          description: The saved setting
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrendSharing" }
+        "400":
+          description: The setting is missing or not true or false
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /stores/{storeId}/staff:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -4102,9 +4143,11 @@ paths:
       summary: What is selling across ZYRO, for this store's market (Product Scout)
       description: |
         The anonymised product trends for the store's market (its currency), from the saved daily
-        snapshot: no heavy query and no AI call happen here. A figure is shown only if at least
-        `rules.minStores` stores sold it in that period and no store sold more than
-        `rules.maxSharePercent`% of its units; nothing identifies a store, an order or a customer.
+        snapshot: no heavy query and no AI call happen here. A figure is shown only if, in both its
+        period and the one before, at least `rules.minStores` stores sold it, no store sold more than
+        `rules.maxSharePercent`% of its units and the two biggest no more than
+        `rules.maxTopTwoSharePercent`% together; otherwise it is hidden whole. Shops whose owners
+        switched off trend sharing are left out. Nothing identifies a store, an order or a customer.
         Where the platform has too little data, `marketData` carries the external Trend Scout report,
         labelled as market data. Demo stores see the demo stores' figures only (`demo: true`).
         Products permission (the owner and Managers).
@@ -4368,6 +4411,12 @@ components:
         date: { type: string, format: date, description: "The last date the fact covers." }
         url: { type: string, format: uri, description: "Where to look the figure up, when there is such a page." }
 
+    TrendSharing:
+      type: object
+      required: [shareSalesInTrends]
+      properties:
+        shareSalesInTrends: { type: boolean }
+
     ScoutFigures:
       type: object
       required: [units, orders, stores, previousUnits, growthPercent, isNew]
@@ -4375,7 +4424,7 @@ components:
         units: { type: integer }
         orders: { type: integer }
         stores: { type: integer, description: "Different stores that sold it in the period; always at least rules.minStores." }
-        previousUnits: { type: [integer, "null"], description: "Null when the previous period may not be shown (too few stores, or one dominated it)." }
+        previousUnits: { type: [integer, "null"], description: "Null only when nothing was sold in the previous period (isNew). A product whose previous period fails a rule is not shown at all." }
         growthPercent: { type: [integer, "null"] }
         isNew: { type: boolean, description: "Nothing sold in the previous period." }
 
@@ -4410,10 +4459,11 @@ components:
         generatedAt: { type: [string, "null"], format: date-time }
         rules:
           type: object
-          required: [minStores, maxSharePercent]
+          required: [minStores, maxSharePercent, maxTopTwoSharePercent]
           properties:
             minStores: { type: integer }
-            maxSharePercent: { type: integer }
+            maxSharePercent: { type: integer, description: "The most one shop may have sold of a shown figure." }
+            maxTopTwoSharePercent: { type: integer, description: "The most the two biggest shops may have sold of it together." }
         categories:
           type: array
           items:

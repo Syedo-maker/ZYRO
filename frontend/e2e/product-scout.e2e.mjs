@@ -1,6 +1,7 @@
 // Product Scout in a real browser (2026-10-22): the Trending products panel on the dashboard and the
 // Products page, its filters, "Add to my store" (a prefilled Add Product form; nothing saved until Save),
-// new-store onboarding, and who sees it (owner and Manager yes, Cashier no).
+// new-store onboarding, who sees it (owner and Manager yes, Cashier no), and the owner's
+// "Include my shop's sales in shared platform trends" switch on the Settings page (2026-10-23).
 //
 // Setup: the demo stores (cd backend; npm run demo:scout:add), the backend (npm run dev) and
 // `npm run dev` in the frontend, then:  node e2e/product-scout.e2e.mjs
@@ -68,7 +69,8 @@ try {
   check('each product shows its real figures and why it is trending', /\d+ sold · \d+ orders · \d+ shops/.test(text) && /sold \d+ units|\d+ units/.test(text))
   check('no shop is named anywhere in it', !/Demo: |Karachi|Lahore Threads|Multan|Pindi|Quetta|Peshawar/.test(text))
   check('the 2-store kite and the one-shop-dominated brass lamp are never shown', !/Kite|Brass lamp/i.test(text))
-  check('it says how the figures are protected', /at least 3 shops/.test(text))
+  check('it says how the figures are protected, with all three rules', /at least 3 shops/.test(text) && /no shop sold more than 60%/.test(text) && /no two\s+shops more than 85% together/.test(text))
+  check('every demo product built to pass the rules is shown', ['Clay chai cup', 'Copper kettle', 'Steel pateela', 'Lawn suit', 'Embroidered kurta', 'Winter shawl', 'Rubber duck', 'Wooden puzzle', 'Scented candle'].every((n) => text.includes(n)))
 
   // Filters
   await panel.getByRole('button', { name: '30 days' }).click()
@@ -127,6 +129,28 @@ try {
   await op.getByRole('button', { name: 'Done, show me the trends' }).click()
   await op.getByText(/Top sellers|Not enough sales across ZYRO shops/).first().waitFor()
   check('after setup, the panel shows the trends (or says there are not enough yet)', true)
+
+  // ---- The owner's trend sharing switch on the Settings page
+  await o.page.goto(`${WEB}/admin/settings`)
+  const share = o.page.getByLabel("Include my shop's sales in shared platform trends")
+  await share.waitFor({ timeout: 15000 })
+  check('the trend sharing switch is on the Settings page, on by default', await share.isChecked())
+  await share.uncheck()
+  await o.page.getByRole('region', { name: 'Shared trends' }).getByRole('button', { name: 'Save' }).click()
+  await o.page.getByText('left out of the shared trends from the next daily update').waitFor({ timeout: 10000 })
+  const off = await api('GET', `/stores/${newStoreId}/trend-sharing`, { token: reg.json.accessToken })
+  check('switching it off is saved', off.json?.shareSalesInTrends === false)
+  await o.page.reload()
+  await share.waitFor()
+  check('and stays off after a reload', !(await share.isChecked()))
+  await o.page.goto(`${WEB}/admin/dashboard`)
+  await panelOf(o.page).getByText(/Top sellers|Not enough sales across ZYRO shops/).first().waitFor({ timeout: 15000 })
+  check('an opted-out shop still sees the trends panel', true)
+  await o.page.goto(`${WEB}/admin/settings`)
+  await share.check()
+  await o.page.getByRole('region', { name: 'Shared trends' }).getByRole('button', { name: 'Save' }).click()
+  await o.page.getByText('count toward the shared trends from the next daily update').waitFor({ timeout: 10000 })
+  check('switching it back on is saved', (await api('GET', `/stores/${newStoreId}/trend-sharing`, { token: reg.json.accessToken })).json?.shareSalesInTrends === true)
   check('no script errors (new owner)', o.problems.length === 0, o.problems[0])
 
   // ---- Who sees it
@@ -134,6 +158,9 @@ try {
   await m.page.goto(`${WEB}/admin/products`)
   await panelOf(m.page).waitFor({ timeout: 15000 })
   check('a Manager sees the panel', true)
+  await m.page.goto(`${WEB}/admin/settings`)
+  await m.page.getByText("Only the store owner can change the store's settings.").waitFor({ timeout: 15000 })
+  check('a Manager cannot reach the trend sharing switch', (await m.page.getByLabel("Include my shop's sales in shared platform trends").count()) === 0)
   const c = await signIn(`e2e-scout-${suffix}-cashier@example.com`, 'staff-pass-123')
   await c.page.goto(`${WEB}/admin/products`)
   await c.page.getByRole('heading', { name: 'Products' }).waitFor()
