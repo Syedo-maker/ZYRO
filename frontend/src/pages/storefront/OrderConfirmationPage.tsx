@@ -124,6 +124,9 @@ export function OrderConfirmationPage() {
         <dl className="mt-2 flex w-full flex-col gap-2.5 rounded-xl bg-bg p-[18px] text-left text-[13px]">
           <div className="flex justify-between"><dt className="text-text-muted">Order number</dt><dd className="font-bold">#{order.orderNumber}</dd></div>
           <div className="flex justify-between"><dt className="text-text-muted">Total paid</dt><dd className="font-bold">{formatMoney(order.total, order.currency)}</dd></div>
+          {order.savings > 0 && (
+            <div className="flex justify-between"><dt className="text-text-muted">You saved</dt><dd className="font-bold text-success">{formatMoney(order.savings, order.currency)}</dd></div>
+          )}
           <div className="flex items-center justify-between"><dt className="text-text-muted">Status</dt><dd><OrderStatusBadge status={order.status} /></dd></div>
         </dl>
 

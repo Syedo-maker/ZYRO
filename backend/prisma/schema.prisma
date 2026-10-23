@@ -461,6 +461,11 @@ model OrderItem {
   productId            String // Mongo ObjectId string: catalog lives in MongoDB
   productTitleSnapshot String
   unitPrice            Decimal  @db.Decimal(10, 2)
+  /// The product's actual price (MRP) per unit at the time of sale, and the discount taken off it:
+  /// MRP minus discount is always unitPrice (a database check says so). Written once with the order,
+  /// never changed by later price edits; receipts use them to show what the shopper saved.
+  unitMrpSnapshot      Decimal  @db.Decimal(10, 2)
+  unitDiscountSnapshot Decimal  @default(0) @db.Decimal(10, 2)
   /// Cost price at order time, when the merchant recorded one; enables margin analytics.
   unitCostSnapshot     Decimal? @db.Decimal(10, 2)
   quantity             Int

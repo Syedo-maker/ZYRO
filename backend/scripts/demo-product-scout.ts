@@ -209,7 +209,7 @@ async function add() {
               total: (qty * p.price).toFixed(2),
               guestEmail: `customer-${orderNumber}@${DEMO_EMAIL_DOMAIN}`,
               createdAt: new Date(periodEnd - daysAgo * DAY_MS),
-              items: { create: [{ productId: p.id, productTitleSnapshot: p.title, unitPrice: p.price.toFixed(2), quantity: qty, lineTotal: (qty * p.price).toFixed(2) }] },
+              items: { create: [{ productId: p.id, productTitleSnapshot: p.title, unitPrice: p.price.toFixed(2), unitMrpSnapshot: p.price.toFixed(2), quantity: qty, lineTotal: (qty * p.price).toFixed(2) }] },
             },
           });
           orders++;

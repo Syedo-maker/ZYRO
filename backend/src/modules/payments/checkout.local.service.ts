@@ -6,7 +6,8 @@ import { Product, priceOf } from "../../models/Product.model";
 import { inventoryService } from "../inventory/inventory.service";
 import { calculateTotals } from "../commerce/pricing.service";
 import { discountService, type ResolvedDiscount } from "../discounts/discount.service";
-import { createOrder, type OrderSnapshot, type PricedLine } from "../commerce/order.service";
+import { createOrder, priceSnapshot, type OrderSnapshot, type PricedLine } from "../commerce/order.service";
+import { savingsOf } from "../orders/order.presenter";
 import { cartKey, type CartOwner } from "../cart/cart.service";
 import { paymentsService, type CodRiskSubject } from "./payments.service";
 import { customerService } from "../customers/customer.service";
@@ -49,6 +50,7 @@ async function priceCart(storeId: string, owner: CartOwner, discountCode?: strin
       productId: id,
       title: product.title,
       unitPrice: priceOf(product).sale,
+      unitMrp: priceOf(product).actual,
       unitCost: product.costPrice ? Number(product.costPrice.toString()) : null,
       quantity,
       taxable: product.taxable !== false,
@@ -197,6 +199,8 @@ export const localCheckoutService = {
       total,
       currency: tenant.currency,
       method: input.method,
+      /** "You saved": the products' own discounts on what was bought (MRP minus price, per unit). */
+      savings: savingsOf(snapshot.lines.map((l) => ({ unitDiscountSnapshot: priceSnapshot(l).unitDiscountSnapshot, quantity: l.quantity }))),
       ...(input.method === "bank_transfer"
         ? {
             payTo: {
