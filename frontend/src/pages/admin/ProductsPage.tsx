@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
@@ -10,8 +11,10 @@ import { storefrontApi } from '../../lib/storefrontApi'
 import type { Product, ProductInput } from '../../types/api'
 import { ProductForm } from './ProductForm'
 import { QuickStock } from './StockStepper'
+import { ProductScoutPanel } from './ProductScoutPanel'
+import type { ScoutPrefill } from '../../lib/productScoutApi'
 
-type PanelState = { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; product: Product }
+type PanelState = { mode: 'closed' } | { mode: 'create'; prefill?: ScoutPrefill } | { mode: 'edit'; product: Product }
 
 export function ProductsPage() {
   const { activeStore } = useAuth()
@@ -20,8 +23,19 @@ export function ProductsPage() {
   const [error, setError] = useState<string | null>(null)
   const [currency, setCurrency] = useState('USD')
   const [panel, setPanel] = useState<PanelState>({ mode: 'closed' })
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const storeId = activeStore?.id
+
+  // "Add to my store" on the dashboard's panel brings its suggestion here, in the navigation state;
+  // it opens the form once, and the state is cleared so a reload does not open it again.
+  useEffect(() => {
+    const prefill = (location.state as { scoutPrefill?: ScoutPrefill } | null)?.scoutPrefill
+    if (!prefill) return
+    setPanel({ mode: 'create', prefill })
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location, navigate])
 
   const reload = useCallback(async () => {
     if (!storeId) return
@@ -78,7 +92,8 @@ export function ProductsPage() {
   const canEdit = can(activeStore, 'products_write')
 
   return (
-    // Side by side on a wide screen; on a phone or tablet the form stacks above the list.
+    // Side by side on a wide screen; on a phone or tablet the form stacks above the list, and the
+    // Trending products panel sits at the top.
     <div className="flex flex-col-reverse gap-8 lg:flex-row">
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -180,15 +195,18 @@ export function ProductsPage() {
       {canEdit && panel.mode !== 'closed' && (
         <div className="w-full shrink-0 bg-surface border border-border rounded-2xl p-4 sm:p-6 h-fit lg:w-[360px]">
           <ProductForm
-            key={panel.mode === 'edit' ? panel.product.id : 'new'}
+            key={panel.mode === 'edit' ? panel.product.id : `new-${panel.prefill?.id ?? ''}`}
             storeId={activeStore.id}
             currency={currency}
             initial={panel.mode === 'edit' ? panel.product : undefined}
+            prefill={panel.mode === 'create' ? panel.prefill : undefined}
             onSubmit={panel.mode === 'edit' ? handleUpdate : handleCreate}
             onCancel={() => setPanel({ mode: 'closed' })}
           />
         </div>
       )}
+
+      {canEdit && <ProductScoutPanel page="products" forceCollapsed={panel.mode !== 'closed'} onAdd={(prefill) => setPanel({ mode: 'create', prefill })} />}
     </div>
   )
 }

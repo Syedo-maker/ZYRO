@@ -52,6 +52,24 @@ export function getAiQueueEvents(): QueueEvents {
   return events;
 }
 
+let eventsReady: Promise<QueueEvents> | undefined;
+/**
+ * The events listener, once it is actually reading. A job added before that can finish before the
+ * listener starts, and its "completed" event is then missed: the caller waits out the whole job
+ * timeout and reports a failure that never happened. BullMQ's own advice is to wait for
+ * waitUntilReady() before adding the jobs one waits on; this does it once per process.
+ */
+export function readyAiQueueEvents(): Promise<QueueEvents> {
+  eventsReady ??= getAiQueueEvents()
+    .waitUntilReady()
+    .then(() => getAiQueueEvents())
+    .catch((err) => {
+      eventsReady = undefined; // try again on the next call rather than remembering a failure
+      throw err;
+    });
+  return eventsReady;
+}
+
 /**
  * Starts the worker that actually calls the provider adapter. Called once from src/index.ts;
  * this is a single-process app (Implementation_Plan.md's stack has no separate worker
@@ -91,5 +109,6 @@ export async function closeAiQueue(): Promise<void> {
   await queue?.close();
   worker = undefined;
   events = undefined;
+  eventsReady = undefined;
   queue = undefined;
 }

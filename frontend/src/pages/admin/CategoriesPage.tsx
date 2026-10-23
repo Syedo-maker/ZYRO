@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Alert } from '../../components/ui/Alert'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { categoriesApi } from '../../lib/categoriesApi'
+import { can } from '../../lib/permissions'
 import type { Category } from '../../types/api'
 
 /** The server's own explanation (a duplicate name, a category still in use), or a fallback. */
@@ -24,11 +25,16 @@ export function CategoriesPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
+  /** Why the last "Add category" did not add anything, shown under the field. */
+  const [addError, setAddError] = useState<string | null>(null)
+  const newNameRef = useRef<HTMLInputElement>(null)
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null)
+  const [renameError, setRenameError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const canManage = can(activeStore, 'products_write')
 
   const reload = useCallback(async () => {
-    if (!storeId) return
+    if (!storeId || !canManage) return
     try {
       setCategories(await categoriesApi.list(storeId))
     } catch (e) {
@@ -36,7 +42,7 @@ export function CategoriesPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [storeId])
+  }, [storeId, canManage])
 
   useEffect(() => {
     void reload()
@@ -59,24 +65,60 @@ export function CategoriesPage() {
     }
   }
 
+  /**
+   * The button is never greyed out for an empty name: a click that cannot add anything says why,
+   * next to the field, and puts the cursor there, rather than doing nothing at all.
+   */
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
-    if (!storeId || !newName.trim()) return
+    if (!storeId || adding) return
+    const name = newName.trim()
+    setError(null)
+    setNotice(null)
+    if (!name) {
+      setAddError('Type a name for the new category first, for example "Toys".')
+      newNameRef.current?.focus()
+      return
+    }
+    setAddError(null)
     setAdding(true)
-    const ok = await act(null, () => categoriesApi.create(storeId, newName), `Added "${newName.trim()}".`, 'Could not add the category.')
-    if (ok) setNewName('')
-    setAdding(false)
+    try {
+      await categoriesApi.create(storeId, name)
+      setNewName('')
+      setNotice(`Added "${name}". Choose it when you add or edit a product.`)
+      await reload()
+    } catch (err) {
+      setAddError(reason(err, 'Could not add the category. Please try again.'))
+      newNameRef.current?.focus()
+    } finally {
+      setAdding(false)
+    }
   }
 
   async function handleRename(e: FormEvent) {
     e.preventDefault()
-    if (!storeId || !renaming || !renaming.name.trim()) return
+    if (!storeId || !renaming || busyId) return
+    if (!renaming.name.trim()) {
+      setRenameError('Type the new name first.')
+      return
+    }
+    setRenameError(null)
     const ok = await act(renaming.id, () => categoriesApi.update(storeId, renaming.id, { name: renaming.name }), `Renamed to "${renaming.name.trim()}". Its products show the new name.`, 'Could not rename the category.')
     if (ok) setRenaming(null)
   }
 
   if (!activeStore || !storeId) {
     return <p className="text-text-secondary">No store found for this account yet.</p>
+  }
+  if (!canManage) {
+    return (
+      <div className="flex max-w-3xl flex-col gap-5">
+        <h1 className="font-display text-xl font-bold">Categories</h1>
+        <Alert tone="info">
+          Categories need the Products permission, which your account does not have in this store. Ask the store owner if you need it.
+        </Alert>
+      </div>
+    )
   }
 
   return (
@@ -89,13 +131,35 @@ export function CategoriesPage() {
         </p>
       </div>
 
-      <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-surface p-4">
-        <div className="min-w-[220px] flex-1">
-          <Input id="new-category" label="New category" maxLength={60} placeholder="For example: Toys" value={newName} onChange={(e) => setNewName(e.target.value)} />
+      <form onSubmit={handleAdd} noValidate className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[220px] flex-1">
+            <Input
+              ref={newNameRef}
+              id="new-category"
+              label="New category"
+              maxLength={60}
+              placeholder="For example: Toys"
+              autoComplete="off"
+              value={newName}
+              aria-invalid={addError ? true : undefined}
+              aria-describedby={addError ? 'new-category-error' : undefined}
+              className={addError ? 'border-danger focus:border-danger' : ''}
+              onChange={(e) => {
+                setNewName(e.target.value)
+                if (addError) setAddError(null)
+              }}
+            />
+          </div>
+          <Button type="submit" disabled={adding} aria-busy={adding || undefined}>
+            {adding ? 'Adding…' : 'Add category'}
+          </Button>
         </div>
-        <Button type="submit" disabled={adding || !newName.trim()}>
-          {adding ? 'Adding…' : 'Add category'}
-        </Button>
+        {addError && (
+          <p id="new-category-error" role="alert" className="text-sm font-medium text-danger">
+            {addError}
+          </p>
+        )}
       </form>
 
       {error && <Alert>{error}</Alert>}
@@ -122,18 +186,40 @@ export function CategoriesPage() {
               <div key={c.id} role="row" className="grid grid-cols-[2fr_1fr_1fr_190px] items-center gap-3 border-b border-border px-5 py-3 text-sm last:border-0">
                 <div role="cell">
                   {renaming?.id === c.id ? (
-                    <form onSubmit={handleRename} className="flex items-center gap-2">
+                    <form onSubmit={handleRename} noValidate className="flex flex-wrap items-center gap-2">
                       <label htmlFor={`rename-${c.id}`} className="sr-only">New name for {c.name}</label>
                       <input
                         id={`rename-${c.id}`}
                         autoFocus
                         maxLength={60}
                         value={renaming.name}
-                        onChange={(e) => setRenaming({ id: c.id, name: e.target.value })}
+                        aria-invalid={renameError ? true : undefined}
+                        aria-describedby={renameError ? `rename-${c.id}-error` : undefined}
+                        onChange={(e) => {
+                          setRenaming({ id: c.id, name: e.target.value })
+                          if (renameError) setRenameError(null)
+                        }}
                         className="h-9 min-w-0 flex-1 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
                       />
-                      <Button type="submit" size="sm" disabled={busyId === c.id || !renaming.name.trim()}>Save</Button>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => setRenaming(null)}>Cancel</Button>
+                      <Button type="submit" size="sm" disabled={busyId === c.id}>
+                        {busyId === c.id ? 'Saving…' : 'Save'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setRenaming(null)
+                          setRenameError(null)
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      {renameError && (
+                        <p id={`rename-${c.id}-error`} role="alert" className="basis-full text-xs font-medium text-danger">
+                          {renameError}
+                        </p>
+                      )}
                     </form>
                   ) : (
                     <span className="font-semibold">{c.name}</span>

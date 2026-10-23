@@ -110,8 +110,9 @@ await step('owner: team, limit and product setup', owner.page, async () => {
   await page.getByRole('button', { name: 'Add to team' }).click()
   await page.getByText(`${cashierEmail} was added as a cashier.`).waitFor()
   check('team: a new cashier is created with a starting password', true)
-  await page.getByRole('listitem').filter({ hasText: cashierEmail }).getByText('Cashier', { exact: true }).waitFor()
-  check('team: the cashier appears in the staff list with the Cashier role', true)
+  const cashierRole = page.getByLabel(`Role for ${cashierEmail}`)
+  await cashierRole.waitFor()
+  check('team: the cashier appears in the staff list with the Cashier role', (await cashierRole.inputValue()) === 'cashier')
 
   await page.getByLabel('Name', { exact: true }).fill('Sam Okafor')
   await page.getByLabel('Email', { exact: true }).fill(managerEmail)
@@ -119,8 +120,9 @@ await step('owner: team, limit and product setup', owner.page, async () => {
   await page.getByRole('radio', { name: /^Manager/ }).check()
   await page.getByRole('button', { name: 'Add to team' }).click()
   await page.getByText(`${managerEmail} was added as a manager.`).waitFor()
-  await page.getByRole('listitem').filter({ hasText: managerEmail }).getByText('Manager', { exact: true }).waitFor()
-  check('team: a manager is created the same way', true)
+  const managerRole = page.getByLabel(`Role for ${managerEmail}`)
+  await managerRole.waitFor()
+  check('team: a manager is created the same way', (await managerRole.inputValue()) === 'manager')
 
   await page.getByLabel('Email', { exact: true }).fill(ownerEmail)
   await page.getByLabel(/Starting password/).fill(password)

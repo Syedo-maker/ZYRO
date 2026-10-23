@@ -207,6 +207,10 @@ model Tenant {
   /// Whether this shop appears in the public directory at /shop. On by default; the owner may opt out.
   /// A shop with too few products is left out regardless, so empty and test shops never show.
   listedInDirectory     Boolean   @default(true)
+  /// Whether this shop's paid orders count toward the platform's shared trends (Product Scout and
+  /// Trend Scout). On by default; only the owner can switch it off, from Settings. Off: the shop's
+  /// orders are left out from the next daily run, and the shop can still see the trends.
+  shareSalesInTrends    Boolean   @default(true)
   /// One line about the shop, shown beside its name in the public directory. Public by definition,
   /// so the owner writes it knowing anyone can read it.
   description           String?
@@ -752,6 +756,25 @@ model GrowthTip {
 
   @@unique([tenantId, weekStart])
   @@index([tenantId, createdAt])
+}
+
+/// Product Scout (2026-10-22): the platform's anonymised product trends for owners, recomputed daily
+/// per market (store currency) and period (7 or 30 days). Platform data like TrendReport, so no
+/// tenantId: `data` holds only totals that pass the privacy rules (enough stores, none dominating),
+/// never a store id, name, product id or customer. `scope` keeps the demo stores' figures apart from
+/// the real stores': "live" is built from real stores only, "demo" from the demo stores only.
+/// Rolled back with prisma/rollbacks/20261022100000_product_scout_snapshot.down.sql.
+model ProductScoutSnapshot {
+  id         String   @id @default(cuid())
+  scope      String
+  market     String
+  periodDays Int
+  /// The end (exclusive) of the period the figures cover.
+  windowEnd  DateTime
+  data       Json
+  computedAt DateTime @default(now())
+
+  @@unique([scope, market, periodDays])
 }
 
 /// Part D, the Trend Scout: one weekly report per market and category, shared by every store that

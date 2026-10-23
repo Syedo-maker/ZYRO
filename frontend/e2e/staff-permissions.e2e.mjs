@@ -1,6 +1,7 @@
-// What a staff member without the Products permission sees, in a real browser. Before this, a manager
-// (the Team page's Manager role has no Products permission) was offered "+ Add product", Edit, the
-// stock buttons and every AI writing tool, and each one failed with a 403 they could do nothing about.
+// What a staff member without the Products permission (a Cashier) sees, in a real browser. Before this,
+// staff without it were offered "+ Add product", Edit, the stock buttons and every AI writing tool, and
+// each one failed with a 403 they could do nothing about. (Managers have had Products since 2026-10-22;
+// staff-roles.test.ts covers what each role may do on the server.)
 // Now the products list is read-only for them, it says why, Categories is not in their sidebar, and the
 // dashboard does not ask for AI figures they may not read. The owner still sees everything.
 //
@@ -32,8 +33,8 @@ const reg = await api('POST', '/auth/register', { body: { email: ownerEmail, pas
 const token = reg.json.accessToken
 const storeId = (await api('GET', '/users/me/stores', { token })).json[0].id
 await api('POST', `/stores/${storeId}/products`, { token, body: { title: 'Brass Lamp', actualPrice: 3200, stock: 4, category: 'Home' } })
-// The Team page's Manager role.
-await api('POST', `/stores/${storeId}/staff`, { token, body: { email: managerEmail, password: 'manager-pass-1', permissions: ['pos_sell', 'refunds', 'discounts_write', 'analytics_read', 'orders_write'] } })
+// A cashier, added by role the way the Team page does it.
+await api('POST', `/stores/${storeId}/staff`, { token, body: { email: managerEmail, password: 'manager-pass-1', role: 'cashier' } })
 
 const browser = await chromium.launch()
 async function signIn(email, password) {
@@ -55,17 +56,23 @@ try {
   const m = await signIn(managerEmail, 'manager-pass-1')
   await m.page.goto(`${WEB}/admin/products`)
   await m.page.getByRole('row').filter({ hasText: 'Brass Lamp' }).waitFor({ timeout: 15000 })
-  check('manager: the products list is shown', true)
+  check('cashier: the products list is shown', true)
   const notice = m.page.getByRole('status').filter({ hasText: 'Products permission' })
-  check('manager: it says why products cannot be changed here, and who to ask', (await notice.count()) === 1 && /Ask the store owner/.test(await notice.innerText()))
-  check('manager: no "+ Add product", no Edit or Delete', (await m.page.getByRole('button', { name: '+ Add product' }).count()) === 0 && (await m.page.getByRole('button', { name: /^(Edit|Delete) Brass Lamp$/ }).count()) === 0)
-  check('manager: stock is shown as a number, without the stock buttons', (await m.page.getByLabel('Stock for Brass Lamp', { exact: true }).count()) === 0 && /\b4\b/.test(await m.page.getByRole('row').filter({ hasText: 'Brass Lamp' }).innerText()))
-  check('manager: Categories is not in the sidebar', (await m.page.locator('aside a', { hasText: 'Categories' }).count()) === 0)
+  check('cashier: it says why products cannot be changed here, and who to ask', (await notice.count()) === 1 && /Ask the store owner/.test(await notice.innerText()))
+  check('cashier: no "+ Add product", no Edit or Delete', (await m.page.getByRole('button', { name: '+ Add product' }).count()) === 0 && (await m.page.getByRole('button', { name: /^(Edit|Delete) Brass Lamp$/ }).count()) === 0)
+  check('cashier: stock is shown as a number, without the stock buttons', (await m.page.getByLabel('Stock for Brass Lamp', { exact: true }).count()) === 0 && /\b4\b/.test(await m.page.getByRole('row').filter({ hasText: 'Brass Lamp' }).innerText()))
+  check('cashier: Categories is not in the sidebar', (await m.page.locator('aside a', { hasText: 'Categories' }).count()) === 0)
+  await m.page.goto(`${WEB}/admin/categories`)
+  await m.page.getByRole('status').filter({ hasText: 'Categories need the Products permission' }).waitFor({ timeout: 15000 })
+  check('cashier: opening Categories directly explains why, with no form that would only be refused', (await m.page.getByRole('button', { name: 'Add category' }).count()) === 0)
   await m.page.goto(`${WEB}/admin/dashboard`)
   await m.page.waitForTimeout(2500)
-  check('manager: the dashboard shows no AI meter and asks for no AI figures', (await m.page.getByRole('region', { name: 'AI usage this month' }).count()) === 0 && !m.refused.some((u) => u.includes('/ai-usage')))
-  check('manager: nothing the manager was offered was refused by the server', m.refused.length === 0, m.refused.join(', '))
-  check('manager: no script errors', m.problems.length === 0, m.problems[0])
+  check('cashier: the dashboard shows no AI meter and asks for no AI figures', (await m.page.getByRole('region', { name: 'AI usage this month' }).count()) === 0 && !m.refused.some((u) => u.includes('/ai-usage')))
+  // The product, category and AI routes only: the dashboard's other cards (sales, orders, advice) are
+  // outside this test and hide themselves when refused.
+  const productOrAi = m.refused.filter((u) => /\/(products|categories|ai-usage|ai-description|auto-tag|seo-metadata|marketing-copy|product-ideas|reviews\/summar)/.test(u))
+  check('cashier: nothing product- or AI-related they were offered was refused by the server', productOrAi.length === 0, productOrAi.join(', '))
+  check('cashier: no script errors', m.problems.length === 0, m.problems[0])
 
   // ---- The owner, for contrast
   const o = await signIn(ownerEmail, 'password123')
