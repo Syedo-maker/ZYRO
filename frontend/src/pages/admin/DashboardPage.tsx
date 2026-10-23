@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { OrderStatusBadge } from '../../components/OrderStatusBadge'
 import { Alert } from '../../components/ui/Alert'
@@ -11,6 +11,7 @@ import { AiUsageMeter } from './AiUsageMeter'
 import { can } from '../../lib/permissions'
 import { GrowthTipCard } from './GrowthTipCard'
 import { MarketTrendsCard } from './MarketTrendsCard'
+import { ProductScoutPanel } from './ProductScoutPanel'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { upgradeHintOf } from '../../lib/billingApi'
 import { formatDate, formatMoney } from '../../lib/format'
@@ -41,6 +42,7 @@ function Card({ title, children, wide }: { title: string; children: React.ReactN
 
 /** Sales at a glance: how much came in through each channel, how it moved, and what sold. */
 export function DashboardPage() {
+  const navigate = useNavigate()
   const { activeStore } = useAuth()
   const storeId = activeStore?.id
   const [days, setDays] = useState<(typeof PERIODS)[number]>(30)
@@ -93,13 +95,16 @@ export function DashboardPage() {
   }
 
   if (!activeStore) return <p className="text-sm text-text-secondary">Create a store first.</p>
+  const openProductForm = (scoutPrefill: unknown) => navigate('/admin/products', { state: { scoutPrefill } })
   const currency = data?.now.currency ?? 'USD'
   const money = (n: number) => formatMoney(n, currency)
   const t = data?.now.totals
   const p = data?.before.totals
 
   return (
-    <div className="flex flex-col gap-6">
+    // The dashboard on the left, the Trending products panel on the right (on top on a small screen).
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+    <div className="order-2 flex min-w-0 flex-1 flex-col gap-6 lg:order-1">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold">Dashboard</h1>
@@ -217,6 +222,10 @@ export function DashboardPage() {
           </div>
         )}
       </section>
+    </div>
+    <div className="order-1 lg:order-2">
+      <ProductScoutPanel page="dashboard" onAdd={openProductForm} />
+    </div>
     </div>
   )
 }

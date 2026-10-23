@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { storeService } from "./store.service";
-import { updateBrandingSchema, updateCurrencySchema, updateDomainSchema } from "./store.validation";
+import { updateBrandingSchema, updateCurrencySchema, updateDomainSchema, updateTrendSharingSchema } from "./store.validation";
 import { Errors } from "../../errors/AppError";
 import { STORE_CURRENCIES } from "../../lib/currencies";
 
@@ -28,6 +28,24 @@ export const storeController = {
   getDirectoryListing: (async (req, res, next) => {
     try {
       res.status(200).json(await storeService.directoryListing(req.params.storeId));
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  getTrendSharing: (async (req, res, next) => {
+    try {
+      res.status(200).json(await storeService.trendSharing(req.params.storeId));
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  setTrendSharing: (async (req, res, next) => {
+    const parsed = updateTrendSharingSchema.safeParse(req.body);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      res.status(200).json(await storeService.setTrendSharing(req.params.storeId, parsed.data));
     } catch (err) {
       next(err);
     }

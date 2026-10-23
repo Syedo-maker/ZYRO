@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { notDemoTenant } from "../../lib/demo";
 import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { tenantContext } from "../../lib/tenantContext";
 import { Errors } from "../../errors/AppError";
@@ -200,7 +201,7 @@ export const advisorService = {
    */
   async runAll(now = new Date(), onlyTenantIds?: string[]) {
     const tenants = await prismaUnscoped.tenant.findMany({
-      where: { growthTipsEnabled: true, ...(onlyTenantIds ? { id: { in: onlyTenantIds } } : {}) },
+      where: { growthTipsEnabled: true, ...notDemoTenant, ...(onlyTenantIds ? { id: { in: onlyTenantIds } } : {}) },
       select: { id: true },
     });
     const outcome = { stores: tenants.length, tips: 0, quiet: 0, failed: 0 };

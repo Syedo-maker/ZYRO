@@ -8,6 +8,7 @@ import { errorMessage } from '../../lib/ordersApi'
 import { storeSettingsApi, type CurrencySetting } from '../../lib/storeSettingsApi'
 import { PaymentMethodsPanel } from './PaymentMethodsPanel'
 import { DirectoryPanel } from './DirectoryPanel'
+import { TrendSharingPanel } from './TrendSharingPanel'
 
 /**
  * The owner's store settings. For now: the currency the store sells in. It can be changed until the
@@ -120,6 +121,8 @@ export function SettingsPage() {
       </section>
 
       <DirectoryPanel storeId={activeStore.id} />
+
+      <TrendSharingPanel storeId={activeStore.id} />
 
       <PaymentMethodsPanel storeId={activeStore.id} currency={setting.currency} />
     </div>

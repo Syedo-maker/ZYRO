@@ -168,6 +168,15 @@ export const env = {
     graceHours: num("PLAN_GRACE_HOURS", 24),
   },
   // Abandoned-cart recovery (Implementation_Plan.md Phase 5, Module 7 remainder).
+  /** Product Scout (2026-10-22): the privacy rules for the platform-wide product trends. */
+  scout: {
+    /** Fewest different stores a published figure may come from; never below 2. */
+    minStores: Math.max(2, Math.floor(Number(process.env.SCOUT_MIN_STORES ?? 3) || 3)),
+    /** Largest share of a figure's units one store may hold, between 0.3 and 0.95. */
+    maxShare: Math.min(0.95, Math.max(0.3, Number(process.env.SCOUT_MAX_STORE_SHARE ?? 0.6) || 0.6)),
+    /** Largest share the two biggest stores may hold together, between 0.5 and 0.99. */
+    maxTopTwoShare: Math.min(0.99, Math.max(0.5, Number(process.env.SCOUT_MAX_TOP_TWO_SHARE ?? 0.85) || 0.85)),
+  },
   cartRecovery: {
     /** A cart with no activity for this long is "abandoned" (the plan's own example: 2 hours). */
     abandonedAfterHours: num("CART_RECOVERY_ABANDONED_AFTER_HOURS", 2),

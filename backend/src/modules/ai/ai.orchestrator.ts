@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
-import { getAiQueue, getAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
+import { getAiQueue, readyAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
 import type { AiGenerateResult } from "../../lib/aiProvider";
 import { allowsImage, modelFor } from "../../lib/aiModels";
 import { getRedis } from "../../lib/redis";
@@ -105,6 +105,8 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
   const source = platformPays ? null : await reserveQuota(input.tenantId, kind, month);
   if (!platformPays && !source) throw await quotaExhaustedError(input.tenantId, kind);
 
+  // Listening first: a job that finished before the listener was reading would look like a timeout.
+  const events = await readyAiQueueEvents();
   const job = await getAiQueue().add(
     input.promptType,
     {
@@ -126,7 +128,7 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
 
   let result: AiGenerateResult;
   try {
-    const raw: AiGenerateResult = await job.waitUntilFinished(getAiQueueEvents(), env.ai.jobTimeoutMs);
+    const raw: AiGenerateResult = await job.waitUntilFinished(events, env.ai.jobTimeoutMs);
     result = { ...raw, text: tidyText(raw.text) };
   } catch (err) {
     if (source) await releaseQuota(input.tenantId, kind, source, month); // give the reservation back, to where it came from; this attempt never happened

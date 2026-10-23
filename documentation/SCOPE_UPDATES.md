@@ -36,6 +36,7 @@ Every AI call goes through one orchestrator (provider adapter, job queue, monthl
 | Search that forgives typos and understands Roman Urdu, with semantic search as a last resort | built | `PartF_Search.md` |
 | Voice-note store manager (spoken changes, confirmed by the merchant) | built | `PartG_Voice_And_Bargaining.md` |
 | Bargaining assistant that cannot quote below the merchant's floor | built, then removed on 2026-10-22 by the supervisor's product-listing change | `PartG_Voice_And_Bargaining.md`, `Product_Catalogue.md` |
+| Product Scout: trending products for owners from anonymised sales across shops, AI-explained, with onboarding for new stores | built (2026-10-22) | `Product_Scout.md` |
 | Per-store categories, three prices (MRP, discount, sale) with a "% off" badge, quick stock update; barcode removed | built (supervisor's product-listing change, 2026-10-22) | `Product_Catalogue.md` |
 | Season and festival planner | built as part of the Growth Advisor | `PartC_Growth_Advisor.md` |
 | AI product photo editing | planned, stretch | Phase 6 |
