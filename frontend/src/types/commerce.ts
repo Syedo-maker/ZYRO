@@ -73,7 +73,8 @@ export interface ShippingAddress {
 
 export interface OrderPayment {
   id: string
-  method: 'cash' | 'card' | 'stripe' | 'other'
+  /** cod, bank_transfer and gateway are the local ways to pay (Part E). */
+  method: 'cash' | 'card' | 'stripe' | 'other' | 'cod' | 'bank_transfer' | 'gateway'
   amount: number
   status: 'pending' | 'succeeded' | 'failed' | 'refunded'
 }

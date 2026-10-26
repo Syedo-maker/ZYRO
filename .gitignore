@@ -56,3 +56,6 @@ backend/uploads-private/
 # deployment plan is part of the project.
 .azure/*
 !.azure/deployment-plan.md
+
+# Walkthrough videos: clips, finished videos and check frames (scripts/demo-videos/README.md)
+scripts/demo-videos/output/

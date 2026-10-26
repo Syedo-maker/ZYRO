@@ -21,6 +21,9 @@ const METHOD_LABEL: Record<Order['payments'][number]['method'], string> = {
   card: 'Card',
   cash: 'Cash',
   other: 'Other',
+  cod: 'Cash on delivery',
+  bank_transfer: 'Bank transfer',
+  gateway: 'Payment gateway',
 }
 
 function Row({ label, value }: { label: string; value: string }) {
