@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
 
 export const HERE = dirname(fileURLToPath(import.meta.url))
 export const REPO = resolve(HERE, '../..')
@@ -111,7 +112,11 @@ export async function filmChapter(browser, { id, title, storageState, permission
     style.textContent = 'body::after{content:"";display:block;height:180px}'
     document.addEventListener('DOMContentLoaded', () => document.head.appendChild(style))
   }, new URL(WEB).origin)
+  // The drawn cursor, click ripples and labels (overlay.js), on every page the chapter opens.
+  await context.addInitScript({ path: join(HERE, 'overlay.js') })
   const page = await context.newPage()
+  // Slow set-up (API calls) belongs in the chapter's `before` hook, before this page exists: done in `run`
+  // before the first page load, it costs the video frames and puts the marks out of step.
   const t0 = Date.now()
   const problems = []
   page.on('pageerror', (e) => problems.push(`script error: ${e.message}`))
@@ -119,8 +124,47 @@ export async function filmChapter(browser, { id, title, storageState, permission
     if (r.url().includes('/api/v1/') && r.status() >= 500) problems.push(`${r.status()} ${r.request().method()} ${r.url().replace(/^.*\/api\/v1/, '')}`)
   })
   const cues = []
+  const marks = []
   let started = null
   const now = () => (Date.now() - t0) / 1000
+  const overlay = (fn, ...args) => page.evaluate(([name, a]) => window.__demoOverlay?.[name]?.(...a), [fn, args]).catch(() => {})
+
+  /**
+   * Brings an element into view, saying so when the page has to scroll to reach it, so no scroll
+   * goes unannounced.
+   */
+  async function ensureVisible(locator, label) {
+    await locator.waitFor({ state: 'visible', timeout: 20000 })
+    const box = await locator.boundingBox()
+    const view = page.viewportSize()
+    // In view when its top is on screen and it fits below (an element taller than the screen counts
+    // as in view once its top is showing): then no scroll, and nothing to announce.
+    if (box && box.y >= 0 && box.y + Math.min(box.height, view.height * 0.8) <= view.height - 8) return
+    const down = !box || box.y + Math.min(box.height, view.height) / 2 > view.height / 2
+    await overlay('hint', (down ? 'Scroll down ↓' : 'Scroll up ↑') + '\n' + label)
+    marks.push({ t: now(), label: 'Scroll: ' + label })
+    await locator.evaluate((el) => el.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+    await sleep(1200)
+    await overlay('hide')
+  }
+
+  /** Moves the drawn cursor to the element, outlines it and labels it ("Click: Add product"). */
+  async function point(locator, label) {
+    await ensureVisible(locator, label.replace(/^\w+: /, ''))
+    const box = await locator.boundingBox()
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    const from = await page.evaluate(() => window.__demoOverlay?.position ?? { x: 0, y: 0 }).catch(() => ({ x: 0, y: 0 }))
+    const ms = Math.round(Math.max(450, Math.min(1100, 350 + Math.hypot(x - from.x, y - from.y) * 0.55)))
+    await overlay('move', x, y, ms)
+    await page.mouse.move(x, y, { steps: 8 })
+    await sleep(ms + 100)
+    await overlay('show', { x: box.x, y: box.y, width: box.width, height: box.height }, label)
+    marks.push({ t: now(), label })
+    await sleep(1000)
+    return { x, y }
+  }
+
   const film = {
     page,
     context,
@@ -128,39 +172,118 @@ export async function filmChapter(browser, { id, title, storageState, permission
     start() {
       started = now()
     },
-    /** A caption: what the user is doing and why. It stays until the next one, and is held long enough to read. */
+    /** A caption: what to do and why, in plain words. It stays until the next one, held long enough to read. */
     async say(text, holdMs) {
       if (started === null) started = now()
       cues.push({ t: now(), text })
-      await sleep(holdMs ?? Math.max(2200, Math.min(5000, 900 + text.length * 38)))
+      await sleep(holdMs ?? Math.max(2400, Math.min(5500, 1000 + text.length * 40)))
     },
     pause: (ms = 900) => sleep(ms),
-    /** Types like a person: visible keystrokes at a readable pace. */
-    async type(locator, text, delay = 55) {
+    /** clickWithIndicator: cursor, outline and "Click: ..." for a second, a ripple, the click, then its result. */
+    async click(locator, label, opts = {}) {
+      const at = await point(locator, 'Click: ' + label)
+      await overlay('ripple', at.x, at.y)
+      await locator.click(opts)
+      await sleep(350)
+      await overlay('hide')
+      await sleep(900)
+    },
+    /** chooseWithIndicator, for radio buttons, check boxes and switches. */
+    async choose(locator, label) {
+      const at = await point(locator, 'Choose: ' + label)
+      await overlay('ripple', at.x, at.y)
+      await locator.click()
+      await sleep(350)
+      await overlay('hide')
+      await sleep(700)
+    },
+    /** typeWithIndicator: outlines the field, labels it "Type: ...", and types at a readable speed. */
+    async type(locator, text, label, delay = 70) {
+      const at = await point(locator, 'Type: ' + label)
+      await overlay('ripple', at.x, at.y)
       await locator.click()
       await locator.fill('')
       await locator.pressSequentially(String(text), { delay })
-      await sleep(350)
+      await sleep(450)
+      await overlay('hide')
+      await sleep(400)
     },
-    /** Moves the pointer to the element first, so the viewer sees where the click lands. */
-    async click(locator, opts = {}) {
-      await locator.scrollIntoViewIfNeeded().catch(() => {})
-      const box = await locator.boundingBox().catch(() => null)
-      if (box) {
-        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 12 })
-        await sleep(250)
-      }
-      await locator.click(opts)
+    /** selectWithIndicator: a dropdown, with the option chosen in the label. */
+    async select(locator, option, label, shown) {
+      const at = await point(locator, 'Select: ' + label + ' → ' + (shown ?? (typeof option === 'string' ? option : option.label)))
+      await overlay('ripple', at.x, at.y)
+      await locator.selectOption(option)
+      await sleep(600)
+      await overlay('hide')
+      await sleep(600)
+    },
+    /** uploadWithIndicator: points at the visible upload control, then gives the file to its input. */
+    async upload(target, input, files, label) {
+      const at = await point(target, 'Upload: ' + label)
+      await overlay('ripple', at.x, at.y)
+      await input.setInputFiles(files)
+      await sleep(1500)
+      await overlay('hide')
       await sleep(500)
     },
-    /** Scrolls smoothly so a long page can be read on the way down. */
-    async scrollTo(locator) {
-      await locator.evaluate((el) => el.scrollIntoView({ behavior: 'smooth', block: 'center' })).catch(() => {})
-      await sleep(1100)
+    /** pressWithIndicator: a key, shown on the element it goes to (or mid-screen when none). */
+    async press(key, locator, label) {
+      if (locator) await point(locator, 'Press: ' + key + (label ? ' (' + label + ')' : ''))
+      else {
+        await overlay('hint', 'Press: ' + key)
+        marks.push({ t: now(), label: 'Press: ' + key })
+        await sleep(1000)
+      }
+      await page.keyboard.press(key)
+      await sleep(400)
+      await overlay('hide')
+      await sleep(700)
     },
-    async scrollBy(y) {
-      await page.evaluate((dy) => window.scrollBy({ top: dy, behavior: 'smooth' }), y)
-      await sleep(1100)
+    /** hoverWithIndicator. */
+    async hover(locator, label, holdMs = 1800) {
+      await point(locator, 'Hover: ' + label)
+      await sleep(holdMs)
+      await overlay('hide')
+    },
+    /** Scrolls to an element, announced ("Scroll down ↓ ..."). */
+    async scrollTo(locator, label) {
+      const box = await locator.boundingBox().catch(() => null)
+      const down = !box || box.y + Math.min(box.height, page.viewportSize().height) / 2 > page.viewportSize().height / 2
+      await overlay('hint', (down ? 'Scroll down ↓' : 'Scroll up ↑') + '\n' + label)
+      marks.push({ t: now(), label: 'Scroll: ' + label })
+      await locator.evaluate((el) => el.scrollIntoView({ behavior: 'smooth', block: 'center' })).catch(() => {})
+      await sleep(1300)
+      await overlay('hide')
+    },
+    /** Scrolls the page by dy pixels, announced. */
+    async scrollBy(dy, label) {
+      await overlay('hint', (dy > 0 ? 'Scroll down ↓' : 'Scroll up ↑') + '\n' + label)
+      marks.push({ t: now(), label: 'Scroll: ' + label })
+      await page.evaluate((d) => window.scrollBy({ top: d, behavior: 'smooth' }), dy)
+      await sleep(1300)
+      await overlay('hide')
+    },
+    /** Shows each field of a form for a moment before anything is filled in. */
+    async fields(list) {
+      for (const [locator, label] of list) {
+        if (!(await locator.isVisible().catch(() => false))) continue
+        await ensureVisible(locator, label)
+        const box = await locator.boundingBox()
+        await overlay('show', { x: box.x, y: box.y, width: box.width, height: box.height }, 'Field: ' + label)
+        marks.push({ t: now(), label: 'Field: ' + label })
+        await sleep(900)
+      }
+      await overlay('hide')
+      await sleep(300)
+    },
+    /** Holds on an important result, outlined, so the viewer can take it in. */
+    async result(locator, label, holdMs = 3500) {
+      await ensureVisible(locator, label)
+      const box = await locator.boundingBox()
+      await overlay('show', { x: box.x, y: box.y, width: box.width, height: box.height }, 'Result: ' + label)
+      marks.push({ t: now(), label: 'Result: ' + label })
+      await sleep(holdMs)
+      await overlay('hide')
     },
     problems,
   }
@@ -182,7 +305,10 @@ export async function filmChapter(browser, { id, title, storageState, permission
   const { renameSync, rmSync } = await import('node:fs')
   rmSync(file, { force: true })
   renameSync(raw, file)
-  const meta = { id, title, file, start: started ?? 0, end, cues: cues.map((c) => ({ ...c, t: c.t - (started ?? 0) })), problems, error: error ? String(error.message).split('\n')[0] : null }
+  // A video shorter than the take lost frames before the first page load: the marks would be late.
+  const lost = end - Number(execFileSync(FFPROBE, ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', file]).toString().trim())
+  if (lost > 0.4) problems.push(`the video lost ${lost.toFixed(1)}s of frames: move set-up into the chapter's before hook`)
+  const meta = { id, title, file, start: started ?? 0, end, cues: cues.map((c) => ({ ...c, t: c.t - (started ?? 0) })), marks: marks.map((m) => ({ ...m, t: m.t - (started ?? 0) })), problems, error: error ? String(error.message).split('\n')[0] : null }
   writeJson(join(dir, `${id}.json`), meta)
   return meta
 }
@@ -247,6 +373,8 @@ export async function runChapters(role, chapters, { only, redo } = {}) {
         continue
       }
       process.stdout.write(`  filming ${id} ... `)
+      // Set-up for this take only (API calls), done before the page and its video exist.
+      if (chapter.before) await chapter.before(ctx)
       const meta = await filmChapter(browser, { id, title: chapter.title, ...(chapter.options ? chapter.options(ctx) : {}) }, (film) => chapter.run(film, ctx))
       console.log(meta.error ? `FAILED: ${meta.error}` : meta.problems.length ? `done, with ${meta.problems.length} problem(s): ${meta.problems[0]}` : 'done')
       results.push(meta)
@@ -257,3 +385,6 @@ export async function runChapters(role, chapters, { only, redo } = {}) {
   writeJson(join(OUT, `${role}-chapters.json`), chapters.map((c, i) => ({ index: i + 1, slug: c.slug, title: c.title, id: `${role}-${String(i + 1).padStart(2, '0')}-${c.slug}` })))
   return results
 }
+
+/** A link in the admin's left-hand menu (the sidebar). */
+export const sidebar = (page, name) => page.locator('aside').getByRole('link', { name, exact: true })

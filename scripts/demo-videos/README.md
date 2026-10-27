@@ -62,12 +62,48 @@ node scripts/demo-videos/assemble.mjs owner
   `output/clips/<chapter>.json` and burned in by `assemble.mjs`: edit them there and in the role's
   script, then assemble again.
 
+## Showing what is clicked
+
+The videos are made for someone who has never seen the app, so every action is shown on screen.
+
+- **A drawn cursor.**
+  - Playwright's videos don't show the system pointer, so `overlay.js` draws one.
+  - It glides to each target and keeps its place across page loads and in-app route changes.
+- **Every action is announced:**
+  - an orange outline around the element;
+  - an arrow;
+  - a label held for about a second before the action, such as "Click: Add product",
+    "Type: product name", "Select: category → Home decor", "Upload: product photo" or
+    "Scroll down ↓ Save";
+  - a ripple where each click lands.
+- **The overlay never changes the app.**
+  - It is one fixed layer with `pointer-events: none` and the highest z-index.
+  - It is also a manual popover, so it stays above modal dialogs.
+  - The label moves to whichever side of the element has room, so it is never cut off at a screen
+    edge.
+- **The helpers.**
+  - Chapters call the film helpers in `lib.mjs`, never Playwright's plain `click` or `fill`:
+    `click`, `type`, `select`, `choose`, `upload`, `press`, `hover`, `scrollTo`, `scrollBy`,
+    `fields` (shows each field of a form before it is filled) and `result` (outlines what an
+    action produced and holds it on screen).
+  - An element below the fold is scrolled to with an announced scroll first.
+- **Captions.**
+  - Each chapter opens with its path ("Path: Sidebar > Products > + Add product"), reached by
+    clicking, never by typing an address.
+  - Then come plain "Step N:" captions. The band under the page names the role and chapter.
+- **Checking.**
+  - `check.mjs` saves a frame just after every announced action, as well as two frames per
+    chapter, in `output/frames/<role>/`.
+  - Look through the `sheet-actions-*.png` contact sheets: every frame should show the cursor,
+    the outline, the arrow and a readable label.
+
 ## Where things are
 
 | Path | What |
 |---|---|
 | `roles/*.mjs` | The chapters of each video: what is clicked and typed, and the captions. |
-| `lib.mjs` | The recorder, the demo accounts and the title card text. |
+| `lib.mjs` | The recorder, the film helpers, the demo accounts and the title card text. |
+| `overlay.js` | The drawn cursor, ripple, outline, arrow and label (loaded into every filmed page). |
 | `assets/` | Product pictures, a demo bank receipt and the spoken voice note, all made by `make-assets.mjs`. |
 | `output/` (not committed) | Clips, the finished MP4s, the chapter lists and the check frames. |
 | `../../backend/scripts/demo-videos.ts` | The demo store: `add`, `remove`, `remove-signups`. |

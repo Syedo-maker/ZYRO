@@ -90,7 +90,7 @@ for (const c of chapters) {
   }
   const length = meta.end - meta.start
   const ass = `${c.id}.ass`
-  captions(join(work, ass), `${c.index} · ${c.title}`, meta.cues, length)
+  captions(join(work, ass), `${ROLE_NAMES[role]} · Chapter ${c.index}: ${c.title}`, meta.cues, length)
   const out = join(work, `${c.id}.mp4`)
   // Run from the work folder, so the subtitles filter gets a plain relative path (no drive colon to escape).
   ff(['-ss', meta.start.toFixed(2), '-i', meta.file, '-t', length.toFixed(2), '-vf', `fps=${FPS},${frame(meta.file)},subtitles=${ass}:fontsdir=fonts,format=yuv420p`, '-an', '-c:v', 'libx264', '-preset', 'medium', '-crf', '24', out], work)

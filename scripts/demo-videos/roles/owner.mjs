@@ -1,7 +1,9 @@
-// The Owner's walkthrough: signing up, then running the prepared demo store. One entry per chapter;
-// each starts from a signed-in session and its own page, so it can be filmed again on its own.
+// The Owner's walkthrough: signing up, then running the prepared demo store. One entry per chapter.
+// Every chapter starts where the owner lands after signing in and reaches its page through the
+// sidebar, so the viewer sees where each page lives; every click, field and key is announced.
 import { join } from 'node:path'
-import { WEB, DEMO, ASSETS, api, login, showcaseStoreId, signedInState } from '../lib.mjs'
+import { readFileSync } from 'node:fs'
+import { WEB, API, DEMO, ASSETS, api, showcaseStoreId, signedInState, sidebar } from '../lib.mjs'
 
 /** The owner's session and store, made once per run and shared by the chapters after sign-up. */
 async function owner(ctx, browser) {
@@ -14,6 +16,36 @@ async function owner(ctx, browser) {
 const asOwner = (ctx) => ({ storageState: ctx.owner.state, onState: (state) => (ctx.owner.state = state) })
 const product = async (o, title) => (await api('GET', `/stores/${o.storeId}/products?limit=50`, { token: o.token })).json.data.find((p) => p.title === title)
 
+/** Opens the admin where the owner lands (the dashboard), off camera; the chapter then clicks from there. */
+async function startAt(f, path = '/admin/dashboard', heading = 'Dashboard') {
+  await f.page.goto(WEB + path)
+  await f.page.getByRole('heading', { name: heading, level: 1 }).waitFor({ timeout: 20000 })
+  await f.page.waitForTimeout(800)
+  f.start()
+}
+
+/** A shopper's cash on delivery order and a bank transfer with its receipt, waiting on the Payments page. */
+async function ensurePendingPayments(o) {
+  const guestCall = (method, path, guest, body, form) =>
+    fetch(`${API}/stores/${o.storeId}${path}`, { method, headers: { 'X-Guest-Session-Id': guest, ...(form ? {} : { 'Content-Type': 'application/json' }) }, body: form ?? JSON.stringify(body) }).then((r) => r.json())
+  const place = async (key, method, name) => {
+    const guest = `video-guest-${method}-${Date.now()}`
+    const p = await product(o, key)
+    await guestCall('POST', '/cart/items', guest, { productId: p.id, quantity: 1 })
+    return guestCall('POST', '/payments/orders', guest, { method, name, phone: '03001234567', email: `${guest}@demo.zyro.local`, address: { line1: '7 Gulberg III', city: 'Lahore', country: 'PK' } })
+  }
+  const cod = (await api('GET', `/stores/${o.storeId}/payments/cod/pending`, { token: o.token })).json ?? []
+  if (!cod.length) await place('Winter Shawl', 'cod', 'Kiran Shah')
+  const proofs = (await api('GET', `/stores/${o.storeId}/payments/proofs?status=pending`, { token: o.token })).json ?? []
+  if (!(proofs.data ?? proofs).length) {
+    const order = await place('Copper Kettle 1.5L', 'bank_transfer', 'Omar Farooq')
+    const form = new FormData()
+    form.append('file', new Blob([readFileSync(join(ASSETS, 'receipt.png'))], { type: 'image/png' }), 'receipt.png')
+    const { key } = await fetch(`${API}/stores/${o.storeId}/payments/orders/${order.orderId}/proof-image`, { method: 'POST', body: form }).then((r) => r.json())
+    await guestCall('POST', `/payments/orders/${order.orderId}/proof`, 'x', { imageKey: key, declaredAmount: order.total, declaredReference: `DEMO-${Date.now() % 1000000}` })
+  }
+}
+
 export const chapters = [
   {
     slug: 'sign-up',
@@ -24,20 +56,26 @@ export const chapters = [
       await page.goto(WEB + '/')
       await page.getByRole('heading', { level: 1 }).waitFor()
       f.start()
-      await f.say('A shop owner arrives at ZYRO and starts with one free sign-up.')
-      await page.goto(WEB + '/register')
-      await page.getByLabel('Email').waitFor()
-      await f.say('One form creates the account and the online store together.')
-      await f.type(page.getByLabel('Email'), `video-signup-${stamp}@demo.zyro.local`)
-      await f.type(page.getByLabel('Password'), 'Demo-Video-2026')
-      await f.type(page.getByLabel('Store name'), 'Noor Handicrafts')
-      await f.say('The store gets its own web address, shown here before it is created.')
-      await f.type(page.getByLabel('Store URL'), `noor-handicrafts-${stamp}`)
-      await f.click(page.getByRole('button', { name: 'Create store' }))
+      await f.say('Path: ZYRO home page > Start your store free. A new shop owner starts here.')
+      await f.click(page.getByRole('link', { name: 'Start your store free' }).first(), 'Start your store free')
+      await page.getByLabel('Store name').waitFor()
+      await f.say('Step 1: One short form creates the owner\'s account and the online store together.')
+      await f.fields([
+        [page.getByLabel('Email'), 'Email'],
+        [page.getByLabel('Password'), 'Password'],
+        [page.getByLabel('Store name'), 'Store name'],
+        [page.getByLabel('Store URL'), 'Store URL'],
+      ])
+      await f.type(page.getByLabel('Email'), `video-signup-${stamp}@demo.zyro.local`, 'your email')
+      await f.type(page.getByLabel('Password'), 'Demo-Video-2026', 'a password (8 or more characters)')
+      await f.type(page.getByLabel('Store name'), 'Noor Handicrafts', 'the shop\'s name')
+      await f.say('Step 2: The store URL is the shop\'s own web address. Letters, numbers and dashes only.')
+      await f.type(page.getByLabel('Store URL'), `noor-handicrafts-${stamp}`, 'the web address')
+      await f.click(page.getByRole('button', { name: 'Create store' }), 'Create store')
       await page.waitForURL('**/admin/**', { timeout: 30000 })
-      await page.waitForTimeout(1500)
-      await f.say('The store is live straight away, and an empty store is walked through its first steps.')
-      await f.say('For the rest of this video we use a prepared demo store with a month of demo sales.', 3500)
+      await page.getByRole('heading', { name: 'Products', level: 1 }).waitFor()
+      await f.result(page.getByRole('complementary', { name: 'Trending products' }), 'a guide for a new, empty store', 4000)
+      await f.say('The store is live at once. For the rest of this video we use a prepared demo store with a month of demo sales.', 5000)
     },
   },
   {
@@ -45,16 +83,19 @@ export const chapters = [
     title: 'Sign in to the demo store',
     async run(f) {
       const { page } = f
-      await page.goto(WEB + '/login')
-      await page.getByLabel('Email').waitFor()
+      await page.goto(WEB + '/')
+      await page.getByRole('heading', { level: 1 }).waitFor()
       f.start()
-      await f.say('The owner of "Chai & Clay Co.", a demo store, signs in.')
-      await f.type(page.getByLabel('Email'), DEMO.owner)
-      await f.type(page.getByLabel('Password'), DEMO.password)
-      await f.click(page.getByRole('button', { name: /log in|sign in/i }))
+      await f.say('Path: ZYRO home page > Log in. The owner of "Chai & Clay Co.", a demo store, signs in.')
+      await f.click(page.getByRole('link', { name: 'Log in' }).first(), 'Log in')
+      await page.getByLabel('Email').waitFor()
+      await f.type(page.getByLabel('Email'), DEMO.owner, 'the owner\'s email')
+      await f.type(page.getByLabel('Password'), DEMO.password, 'the password')
+      await f.click(page.getByRole('button', { name: /log in|sign in/i }), 'Log in')
       await page.waitForURL('**/admin/**', { timeout: 30000 })
       await page.getByRole('heading', { name: 'Products', level: 1 }).waitFor()
-      await f.say('The admin opens on the products. The menu on the left holds everything an owner runs.')
+      await f.result(page.locator('aside').first(), 'the sidebar: every page the owner runs', 3500)
+      await f.say('Signed in as the Owner. The sidebar on the left is how we reach every page in this video.')
     },
   },
   {
@@ -68,14 +109,16 @@ export const chapters = [
       // Filmed again? Take away the category this chapter adds, so it can add it once more.
       const old = (await api('GET', `/stores/${o.storeId}/categories`, { token: o.token })).json.find((c) => c.name === 'Gift sets')
       if (old) await api('DELETE', `/stores/${o.storeId}/categories/${old.id}`, { token: o.token })
-      await page.goto(WEB + '/admin/categories')
+      await startAt(f)
+      await f.say('Path: Sidebar > Categories. Every product belongs to one of the store\'s own categories.')
+      await f.click(sidebar(page, 'Categories'), 'Categories in the sidebar')
       await page.getByRole('heading', { name: 'Categories' }).waitFor()
-      f.start()
-      await f.say('Products are grouped into the store\'s own categories, with a count of products in each.')
-      await f.type(page.getByLabel('New category'), 'Gift sets')
-      await f.click(page.getByRole('button', { name: 'Add category' }))
-      await page.getByRole('cell', { name: 'Gift sets' }).first().waitFor()
-      await f.say('"Gift sets" is added. Categories can also be renamed, switched off or deleted when empty.')
+      await f.say('Step 1: Type a name for the new category.')
+      await f.type(page.getByLabel('New category'), 'Gift sets', 'category name')
+      await f.say('Step 2: Add it. Products can then be put in it.')
+      await f.click(page.getByRole('button', { name: 'Add category' }), 'Add category')
+      await f.result(page.getByRole('row').filter({ hasText: 'Gift sets' }).first(), '"Gift sets" added, with 0 products')
+      await f.say('Categories can also be renamed, switched off, or deleted once empty.')
     },
   },
   {
@@ -88,33 +131,47 @@ export const chapters = [
       const o = ctx.owner
       const old = await product(o, 'Hand-painted Tea Tray')
       if (old) await api('DELETE', `/stores/${o.storeId}/products/${old.id}`, { token: o.token })
-      await page.goto(WEB + '/admin/products')
+      await startAt(f)
+      await f.say('Path: Sidebar > Products > + Add product.')
+      await f.click(sidebar(page, 'Products'), 'Products in the sidebar')
       await page.getByRole('heading', { name: 'Products', level: 1 }).waitFor()
-      f.start()
-      await f.say('Adding a product. Every product has three prices: the MRP, a discount, and the selling price.')
-      await f.click(page.getByRole('button', { name: '+ Add product' }))
-      await f.type(page.locator('#title'), 'Hand-painted Tea Tray')
-      await f.type(page.locator('#description'), 'A wooden tray painted by hand in Multan, with a rim to keep cups steady.', 25)
-      await f.type(page.getByLabel('Price (MRP)'), '2400')
-      await f.say('The discount can be given as a percentage...')
-      await f.click(page.getByRole('button', { name: 'Discount in percent' }))
-      await f.type(page.getByLabel('Discount (optional)'), '15')
-      await f.say('...and the selling price is worked out at once: MRP minus the discount. It cannot be typed, so it can never be wrong.')
-      await f.click(page.getByRole('button', { name: 'Discount in PKR' }))
-      await f.say('Switching to rupees converts the same discount: 15% of Rs 2,400 is Rs 360 off.')
-      await f.click(page.getByRole('button', { name: 'Discount in percent' }))
-      await f.type(page.locator('#stock'), '12')
-      await page.getByLabel('Category').selectOption({ label: 'Home decor' })
-      await page.waitForTimeout(600)
-      const upload = page.locator('input[type="file"]').first()
-      await upload.setInputFiles(join(ASSETS, 'products', 'tea-tray.png'))
-      await page.waitForTimeout(2500)
-      await f.say('A photo, the stock and the category, and the product is ready to save.')
-      await f.click(page.getByRole('button', { name: 'Save', exact: true }))
+      await f.click(page.getByRole('button', { name: '+ Add product' }), '+ Add product')
+      await page.locator('#title').waitFor()
+      await f.say('The form. Every product has three prices: the MRP, an optional discount, and the selling price.')
+      await f.fields([
+        [page.locator('#title'), 'Title'],
+        [page.locator('#description'), 'Description'],
+        [page.getByLabel('Price (MRP)'), 'Price (MRP)'],
+        [page.getByLabel('Discount (optional)'), 'Discount, in Rs or %'],
+        [page.getByLabel('Selling price (what customers pay)'), 'Selling price (worked out for you)'],
+        [page.locator('#stock'), 'Stock'],
+        [page.getByLabel('Category'), 'Category'],
+        [page.getByRole('button', { name: 'Add image' }), 'Photo'],
+      ])
+      await f.say('Step 1: The name and a short description shoppers will read.')
+      await f.type(page.locator('#title'), 'Hand-painted Tea Tray', 'product name')
+      await f.type(page.locator('#description'), 'A wooden tray painted by hand in Multan, with a rim to keep cups steady.', 'description', 30)
+      await f.say('Step 2: The MRP, the full price before any discount.')
+      await f.type(page.getByLabel('Price (MRP)'), '2400', 'MRP in rupees')
+      await f.say('Step 3: A discount, here as a percentage. Pick % first.')
+      await f.click(page.getByRole('button', { name: 'Discount in percent' }), '% (percent)')
+      await f.type(page.getByLabel('Discount (optional)'), '15', 'discount, 15%')
+      await f.result(page.getByLabel('Selling price (what customers pay)'), 'selling price: MRP minus 15% = Rs 2,040')
+      await f.say('Switching to Rs converts the same discount instead of clearing it: 15% of Rs 2,400 is Rs 360.')
+      await f.click(page.getByRole('button', { name: 'Discount in PKR' }), 'Rs (rupees)')
+      await f.result(page.getByLabel('Discount (optional)'), 'the same discount, now Rs 360', 2500)
+      await f.click(page.getByRole('button', { name: 'Discount in percent' }), '% (percent) again')
+      await f.say('Step 4: How many are in stock, and the category. Categories are made first, under Categories.')
+      await f.type(page.locator('#stock'), '12', 'stock')
+      await f.select(page.getByLabel('Category'), { label: 'Home decor' }, 'category', 'Home decor')
+      await f.say('Step 5: A photo of the product.')
+      await f.upload(page.getByRole('button', { name: 'Add image' }), page.getByLabel('Product image file'), join(ASSETS, 'products', 'tea-tray.png'), 'product photo')
+      await page.waitForTimeout(1500)
+      await f.say('Step 6: Save.')
+      await f.click(page.getByRole('button', { name: 'Save', exact: true }), 'Save')
       const row = page.getByRole('row').filter({ hasText: 'Hand-painted Tea Tray' })
       await row.waitFor({ timeout: 20000 })
-      await f.scrollTo(row)
-      await f.say('In the list: the selling price, the MRP crossed out, and the "15% off" badge shoppers will see.')
+      await f.result(row, 'saved: selling price, MRP crossed out, "15% off"', 4500)
     },
   },
   {
@@ -125,31 +182,29 @@ export const chapters = [
     async run(f, ctx) {
       const { page } = f
       const o = ctx.owner
-      const pateela = await product(o, 'Steel Pateela Large')
       const brass = await product(o, 'Brass Lamp')
       await api('PATCH', `/stores/${o.storeId}/products/${brass.id}/stock`, { token: o.token, body: { stock: 8 } })
+      const pateela = await product(o, 'Steel Pateela Large')
       await api('PUT', `/stores/${o.storeId}/products/${pateela.id}`, { token: o.token, body: { title: pateela.title, description: pateela.description, actualPrice: 3200, discountType: null, discountValue: null, stock: 30, categoryId: pateela.categoryId, images: pateela.images, tags: pateela.tags } })
-      await page.goto(WEB + '/admin/products')
+      await startAt(f)
+      await f.say('Path: Sidebar > Products > Edit. The steel pateela gets a Rs 300 discount for the week.')
+      await f.click(sidebar(page, 'Products'), 'Products in the sidebar')
       await page.getByRole('heading', { name: 'Products', level: 1 }).waitFor()
-      f.start()
-      await f.say('Editing a product: the steel pateela gets a Rs 300 discount for the week.')
-      await f.click(page.getByRole('button', { name: 'Edit Steel Pateela Large' }))
-      await f.click(page.getByRole('button', { name: 'Discount in PKR' }))
-      await f.type(page.getByLabel('Discount (optional)'), '300')
-      await page.waitForTimeout(800)
-      await f.click(page.getByRole('button', { name: 'Save', exact: true }))
+      await f.click(page.getByRole('button', { name: 'Edit Steel Pateela Large' }), 'Edit (Steel Pateela Large)')
+      await page.locator('#title').waitFor()
+      await f.say('Step 1: Choose Rs, then type the discount.')
+      await f.click(page.getByRole('button', { name: 'Discount in PKR' }), 'Rs (rupees)')
+      await f.type(page.getByLabel('Discount (optional)'), '300', 'discount, Rs 300')
+      await f.result(page.getByLabel('Selling price (what customers pay)'), 'new selling price: Rs 2,900', 2500)
+      await f.click(page.getByRole('button', { name: 'Save', exact: true }), 'Save')
       const row = page.getByRole('row').filter({ hasText: 'Steel Pateela Large' })
       await row.filter({ hasText: /Rs\s300 off/ }).waitFor({ timeout: 20000 })
-      await f.scrollTo(row)
-      await f.say('Saved: now Rs 2,900, shown as "Rs 300 off".')
-      const lamp = page.getByRole('row').filter({ hasText: 'Brass Lamp' })
-      await f.scrollTo(lamp)
-      await f.say('Stock is changed right in the list. Two more brass lamps arrived:')
-      await f.click(page.getByRole('button', { name: 'One more (Stock for Brass Lamp)' }))
-      await f.click(page.getByRole('button', { name: 'One more (Stock for Brass Lamp)' }))
-      await f.click(page.getByRole('button', { name: 'Save stock for Brass Lamp' }))
-      await page.waitForTimeout(1500)
-      await f.say('Saved: 10 in stock. The shop and the register see the new count straight away.')
+      await f.result(row, 'saved: Rs 2,900, "Rs 300 off"')
+      await f.say('Step 2: Stock is changed right in the list. Two more brass lamps arrived.')
+      await f.click(page.getByRole('button', { name: 'One more (Stock for Brass Lamp)' }), '+ (one more)')
+      await f.click(page.getByRole('button', { name: 'One more (Stock for Brass Lamp)' }), '+ (one more)')
+      await f.click(page.getByRole('button', { name: 'Save stock for Brass Lamp' }), 'Save stock')
+      await f.result(page.getByRole('row').filter({ hasText: 'Brass Lamp' }), 'saved: 10 in stock, everywhere at once')
     },
   },
   ...['description', 'categorize', 'seo', 'marketing', 'review-summary'].map((tool) => ({
@@ -165,67 +220,63 @@ export const chapters = [
     options: asOwner,
     async run(f) {
       const { page } = f
-      await page.goto(WEB + '/admin/products')
+      await startAt(f)
+      await f.say('Path: Sidebar > Products > Edit (Clay Chai Cup) > AI tools, at the bottom of the form.')
+      await f.click(sidebar(page, 'Products'), 'Products in the sidebar')
       await page.getByRole('heading', { name: 'Products', level: 1 }).waitFor()
-      await page.getByRole('button', { name: 'Edit Clay Chai Cup (Set of 4)' }).click()
-      await page.getByText('AI tools').first().waitFor()
-      const panel = page.locator('section, div').filter({ has: page.getByText('AI tools', { exact: true }) }).last()
-      await page.getByText('AI tools', { exact: true }).first().scrollIntoViewIfNeeded()
-      await page.waitForTimeout(800)
-      f.start()
+      await f.click(page.getByRole('button', { name: 'Edit Clay Chai Cup (Set of 4)' }), 'Edit (Clay Chai Cup)')
+      await page.getByText('AI tools', { exact: true }).first().waitFor({ timeout: 20000 })
+      await f.scrollTo(page.getByText('AI tools', { exact: true }).first(), 'AI tools')
       if (tool === 'description') {
-        await f.say('The AI tools sit right in the product form. First, a description written from the product\'s own details.')
-        await f.click(page.getByRole('button', { name: 'Generate description with AI' }))
-        await page.getByLabel('AI description draft').waitFor({ timeout: 60000 })
-        await f.scrollTo(page.getByLabel('AI description draft'))
-        await f.say('It arrives as a draft. Nothing is published until the owner reads it and chooses to.', 4500)
-        await f.click(page.getByRole('button', { name: 'Publish to product' }))
-        await page.waitForTimeout(2500)
-        await f.say('Published to the product page. Every AI call is counted against the store\'s monthly allowance.')
+        await f.say('Step 1: The AI writes a description from the product\'s own name, category and price.')
+        // A product that already has a description offers "Regenerate" instead.
+        const generate = page.getByRole('button', { name: /^(Generate description with AI|Regenerate)$/ })
+        const again = (await generate.innerText()).trim() === 'Regenerate'
+        await f.click(generate, again ? 'Regenerate (a new description)' : 'Generate description with AI')
+        const draft = page.getByLabel('AI description draft')
+        await draft.waitFor({ timeout: 60000 })
+        await page.getByRole('button', { name: /^(Regenerating|Generating)/ }).waitFor({ state: 'detached', timeout: 60000 }).catch(() => {})
+        await page.waitForTimeout(800)
+        await f.result(draft, 'the AI\'s draft (nothing published yet)', 6000)
+        await f.say('Step 2: The owner reads it and publishes it, or edits it first. Nothing goes live without the owner.', 4500)
+        await f.click(page.getByRole('button', { name: 'Publish to product' }), 'Publish to product')
+        await f.say('Published to the product page. Each AI use counts against the store\'s monthly AI allowance.')
       } else if (tool === 'categorize') {
-        await f.say('The AI can also suggest a category and tags, chosen from the store\'s own categories.')
-        const b = page.getByRole('button', { name: 'Suggest category & tags' })
-        await f.scrollTo(b)
-        await f.click(b)
+        await f.say('Step 1: Ask the AI for a category and tags. It picks from the store\'s own categories.')
+        await f.click(page.getByRole('button', { name: 'Suggest category & tags' }), 'Suggest category & tags')
         const apply = page.getByRole('button', { name: 'Apply', exact: true })
         await apply.waitFor({ timeout: 60000 })
-        await f.scrollTo(apply)
-        await f.say('A suggested category and tags. Only a suggestion: the owner applies it, or ignores it.', 4500)
-        await f.click(apply)
-        await f.say('Applied to the form. It is saved with the product only when the owner presses Save.')
+        await f.result(apply.locator('xpath=..'), 'the suggested category and tags', 5000)
+        await f.say('Step 2: Only a suggestion. Apply puts it in the form; Save keeps it.')
+        await f.click(apply, 'Apply')
+        await f.result(page.getByLabel('Category'), 'category filled in from the suggestion', 3000)
       } else if (tool === 'seo') {
-        await f.say('Search engines read a page title and description. The AI writes both, within the length limits.')
-        const b = page.getByRole('button', { name: 'Generate SEO title & description' })
-        await f.scrollTo(b)
-        await f.click(b)
+        await f.say('Step 1: Google shows a page title and a short description. The AI writes both, within the length limits.', 4500)
+        await f.click(page.getByRole('button', { name: 'Generate SEO title & description' }), 'Generate SEO title & description')
         const apply = page.getByRole('button', { name: 'Apply', exact: true })
         await apply.waitFor({ timeout: 60000 })
-        await f.scrollTo(apply)
-        await f.say('A search title and description, sized for Google. Again only a suggestion.', 4500)
-        await f.click(apply)
-        await f.scrollTo(page.getByLabel(/Meta title/))
-        await f.say('Applied: they fill the meta title and description, saved with the product.')
+        await f.result(apply.locator('xpath=..'), 'the suggested search title and description', 5500)
+        await f.say('Step 2: Apply copies them into the Meta title and Meta description fields.')
+        await f.click(apply, 'Apply')
+        await f.result(page.getByLabel(/Meta title/), 'Meta title filled in', 3000)
       } else if (tool === 'marketing') {
-        await f.say('Marketing copy for a social post, an email or ad headlines, in the tone the owner picks.')
-        const channel = page.getByLabel('Marketing channel')
-        await f.scrollTo(channel)
-        await channel.selectOption({ label: 'Social media post' }).catch(() => channel.selectOption('social_post'))
-        await page.getByLabel('Marketing tone').selectOption({ label: 'Friendly' }).catch(() => page.getByLabel('Marketing tone').selectOption('friendly'))
-        await f.type(page.getByLabel('Offer details (optional)'), '10% off this week with code WELCOME10', 35)
-        await f.click(page.getByRole('button', { name: 'Write marketing copy' }))
-        await page.getByLabel('Marketing copy result').waitFor({ timeout: 60000 })
-        await f.scrollTo(page.getByLabel('Marketing copy result'))
-        await f.say('Ready to copy into Instagram or WhatsApp, with the offer the owner typed.', 5000)
+        await f.say('Step 1: Choose where the post goes and its tone, and type the offer.')
+        await f.select(page.getByLabel('Marketing channel'), { label: 'Social media post' }, 'channel', 'Social media post')
+        await f.select(page.getByLabel('Marketing tone'), { label: 'Friendly' }, 'tone', 'Friendly')
+        await f.type(page.getByLabel('Offer details (optional)'), '10% off this week with code WELCOME10', 'the offer', 40)
+        await f.say('Step 2: Write it.')
+        await f.click(page.getByRole('button', { name: 'Write marketing copy' }), 'Write marketing copy')
+        const out = page.getByLabel('Marketing copy result')
+        await out.waitFor({ timeout: 60000 })
+        await f.result(out, 'a ready-to-post caption with the offer', 6500)
+        await f.say('Copy it into Instagram, Facebook or WhatsApp.')
       } else {
-        await f.say('This product has four reviews. The AI sums up what shoppers are saying, for the owner.')
-        const b = page.getByRole('button', { name: /Summarize reviews|Regenerate summary/ })
-        await f.scrollTo(b)
-        await f.click(b)
+        await f.say('Step 1: This product has four reviews. Ask the AI to sum them up for the owner.')
+        await f.click(page.getByRole('button', { name: /Summarize reviews|Regenerate summary/ }), 'Summarize reviews')
         await page.getByRole('button', { name: /Regenerate summary/ }).waitFor({ timeout: 60000 })
-        await f.scrollTo(page.getByText('Review summary', { exact: true }))
-        await f.say('Praise, complaints and themes in a few lines, from the published reviews only.', 5000)
+        await f.result(page.getByText('Review summary', { exact: true }).locator('xpath=..'), 'what shoppers like, and what they don\'t', 6500)
+        await f.say('Written only from the published reviews, so the owner sees the themes at a glance.')
       }
-      void panel
     },
   })),
   {
@@ -235,17 +286,17 @@ export const chapters = [
     options: asOwner,
     async run(f) {
       const { page } = f
-      await page.goto(WEB + '/admin/products')
+      await startAt(f)
+      await f.say('Path: Sidebar > Products > Trending products (the panel on the right).')
+      await f.click(sidebar(page, 'Products'), 'Products in the sidebar')
       const panel = page.getByRole('complementary', { name: 'Trending products' })
       await panel.getByText('Top sellers').waitFor({ timeout: 20000 })
-      f.start()
-      await f.say('Product Scout shows what is selling across ZYRO shops in the same market, to help decide what to stock.')
-      await f.say('This is a demo store, so it sees the demo stores\' figures, marked "Demo data".', 4000)
-      await f.click(panel.getByRole('button', { name: '30 days' }))
-      await page.waitForTimeout(1200)
-      await f.say('Each product shows units, orders and how many shops sold it. No shop or customer is ever named.', 4500)
-      await f.scrollTo(panel.getByText(/Totals from at least/))
-      await f.say('Totals are only shown when enough shops sold a product and no one or two shops dominate it.', 4500)
+      await f.result(panel, 'Product Scout: what sells across ZYRO shops', 4000)
+      await f.say('It helps decide what to stock. This is a demo store, so it shows the demo stores\' figures.')
+      await f.click(panel.getByRole('button', { name: '30 days' }), '30 days')
+      await f.say('Each product shows units sold, orders, how many shops sold it, and the change. No shop or customer is named.', 5000)
+      await f.scrollTo(panel.getByText(/Totals from at least/), 'how the figures are protected')
+      await f.result(panel.getByText(/Totals from at least/), 'only totals from several shops are shown', 4000)
     },
   },
   {
@@ -255,28 +306,22 @@ export const chapters = [
     options: asOwner,
     async run(f) {
       const { page } = f
-      await page.goto(WEB + '/admin/orders')
-      await page.getByRole('heading', { name: 'Orders' }).waitFor()
-      f.start()
-      await f.say('All orders, online and from the register, in one list that can be filtered by status.')
-      await f.click(page.getByRole('tab', { name: /^Processing/ }))
-      await page.waitForTimeout(1200)
-      await f.say('Paid online orders waiting to be packed. Opening one:')
-      await f.click(page.getByRole('row').filter({ hasText: 'Processing' }).first().getByRole('button').first())
-      await page.getByRole('button', { name: 'Mark fulfilled' }).waitFor({ timeout: 15000 })
-      await f.say('The order shows what was bought, the shipping address, and what the shopper saved.', 4000)
-      const carrier = page.getByLabel('Carrier')
-      if (await carrier.isVisible().catch(() => false)) {
-        await f.type(carrier, 'TCS')
-        await f.type(page.getByLabel('Tracking number'), 'TCS-DEMO-10423')
-        await f.click(page.getByRole('button', { name: 'Mark shipped' }))
-        await page.waitForTimeout(1500)
-        await f.say('Shipped with the courier\'s tracking number, which the shopper sees in their account. The order is now fulfilled.', 4500)
-      } else {
-        await f.click(page.getByRole('button', { name: 'Mark fulfilled' }))
-        await page.waitForTimeout(1500)
-      }
-      await f.say('Refunds and cancellations are on the same panel when they are needed.')
+      await startAt(f)
+      await f.say('Path: Sidebar > Orders. All orders, online and from the register, in one list.')
+      await f.click(sidebar(page, 'Orders'), 'Orders in the sidebar')
+      await page.getByRole('heading', { name: 'Orders', level: 1 }).waitFor()
+      await f.say('Step 1: Show only the paid orders waiting to be packed.')
+      await f.click(page.getByRole('tab', { name: /^Processing/ }), 'Processing')
+      await f.say('Step 2: Open one by its order number.')
+      await f.click(page.getByRole('row').filter({ hasText: 'Processing' }).first().getByRole('button').first(), 'the order number')
+      await page.getByLabel('Carrier').waitFor({ timeout: 15000 })
+      await f.result(page.getByRole('button', { name: 'Refund' }).locator('xpath=ancestor::*[.//h2 or .//h3][1]'), 'what was bought, the address, and what the shopper saved', 4000)
+      await f.say('Step 3: Type the courier and the tracking number, then mark it shipped.')
+      await f.type(page.getByLabel('Carrier'), 'TCS', 'courier')
+      await f.type(page.getByLabel('Tracking number'), 'TCS-DEMO-10423', 'tracking number')
+      await f.click(page.getByRole('button', { name: 'Mark shipped' }), 'Mark shipped')
+      await f.result(page.getByText('Shipment', { exact: true }).locator('xpath=..'), 'shipped; the order is now fulfilled', 4000)
+      await f.say('The shopper sees the tracking number in their account. Refunds are on the same panel.')
     },
   },
   {
@@ -289,22 +334,24 @@ export const chapters = [
       const o = ctx.owner
       const zones = (await api('GET', `/stores/${o.storeId}/shipping-zones`, { token: o.token })).json ?? []
       for (const z of (Array.isArray(zones) ? zones : zones.data ?? []).filter((z) => z.name === 'Karachi')) await api('DELETE', `/stores/${o.storeId}/shipping-zones/${z.id}`, { token: o.token })
-      await page.goto(WEB + '/admin/orders')
+      await startAt(f)
+      await f.say('Path: Sidebar > Orders > Shipping zones (below the orders). Zones set what delivery costs.')
+      await f.click(sidebar(page, 'Orders'), 'Orders in the sidebar')
       const heading = page.getByRole('heading', { name: 'Shipping zones' })
       await heading.waitFor()
-      // The zones sit below the orders: bring them to the top, clear of the caption band.
-      await heading.evaluate((el) => el.scrollIntoView({ block: 'start' }))
-      await page.evaluate(() => window.scrollBy(0, -24))
-      await page.waitForTimeout(600)
-      f.start()
-      await f.say('Shipping zones set what delivery costs. The store already charges Rs 150 in Lahore and Rs 250 elsewhere.')
-      await f.click(page.getByRole('button', { name: '+ Add zone' }))
-      await f.type(page.getByLabel('Zone name'), 'Karachi')
-      await f.type(page.getByLabel('Region'), 'Karachi')
-      await f.type(page.getByLabel('Rate'), '200')
-      await f.click(page.getByRole('button', { name: 'Add', exact: true }))
-      await page.getByRole('cell', { name: 'Karachi' }).first().waitFor({ timeout: 15000 })
-      await f.say('Shoppers in Karachi now pay Rs 200 for delivery, worked out at checkout.')
+      await f.scrollTo(page.getByRole('button', { name: '+ Add zone' }), 'Shipping zones')
+      await f.say('Step 1: Add a zone for Karachi.')
+      await f.click(page.getByRole('button', { name: '+ Add zone' }), '+ Add zone')
+      await f.fields([
+        [page.getByLabel('Zone name'), 'Zone name'],
+        [page.getByLabel('Region'), 'Region'],
+        [page.getByLabel('Rate'), 'Rate (delivery charge)'],
+      ])
+      await f.type(page.getByLabel('Zone name'), 'Karachi', 'zone name')
+      await f.type(page.getByLabel('Region'), 'Karachi', 'region')
+      await f.type(page.getByLabel('Rate'), '200', 'delivery charge in rupees')
+      await f.click(page.getByRole('button', { name: 'Add', exact: true }), 'Add')
+      await f.result(page.getByRole('row').filter({ hasText: 'Karachi' }).first(), 'Karachi: Rs 200, charged at checkout')
     },
   },
   {
@@ -312,31 +359,23 @@ export const chapters = [
     title: 'Payments: cash on delivery and bank transfers',
     setup: owner,
     options: asOwner,
+    before: (ctx) => ensurePendingPayments(ctx.owner),
     async run(f) {
       const { page } = f
-      await page.goto(WEB + '/admin/payments')
-      await page.getByRole('heading', { name: 'Payments' }).waitFor()
-      await page.waitForTimeout(1200)
-      f.start()
-      await f.say('Pakistani shoppers often pay cash on delivery or by bank transfer. This page tracks both.')
+      await startAt(f)
+      await f.say('Path: Sidebar > Payments. Cash on delivery and bank transfers, checked by the shop.')
+      await f.click(sidebar(page, 'Payments'), 'Payments in the sidebar')
+      await page.getByRole('heading', { name: 'Payments', level: 1 }).waitFor()
       const cod = page.getByRole('region', { name: 'Cash on delivery' })
-      await f.scrollTo(cod)
-      await f.say('A cash on delivery order, with a risk score that explains itself.')
-      const collected = cod.getByRole('button', { name: 'Cash collected' }).first()
-      if (await collected.isVisible().catch(() => false)) {
-        await f.click(collected)
-        await page.waitForTimeout(1500)
-        await f.say('The courier brought the cash: marked as collected.')
-      }
+      await f.result(cod, 'a cash on delivery order, with a risk score', 3500)
+      await f.say('Step 1: The courier brought the cash back. Mark it collected.')
+      await f.click(cod.getByRole('button', { name: 'Cash collected' }).first(), 'Cash collected')
       const shots = page.getByRole('region', { name: 'Payment screenshots' })
-      await f.scrollTo(shots)
-      await f.say('A shopper paid by bank transfer and uploaded the receipt (a demo receipt, fake bank).', 4000)
-      const accept = shots.getByRole('button', { name: 'Accept payment' }).first()
-      if (await accept.isVisible().catch(() => false)) {
-        await f.click(accept)
-        await page.waitForTimeout(1500)
-        await f.say('Checked against the order and accepted: the order is now paid.')
-      }
+      await f.scrollTo(shots, 'Payment screenshots to check')
+      await f.result(shots, 'a bank transfer receipt (a demo receipt) and the checks on it', 4500)
+      await f.say('Step 2: The shop compares the receipt with the order, then accepts the payment.')
+      await f.click(shots.getByRole('button', { name: 'Accept payment' }).first(), 'Accept payment')
+      await f.result(page.getByRole('status').first(), 'the order is now marked paid', 3000)
     },
   },
   {
@@ -348,22 +387,29 @@ export const chapters = [
       const { page } = f
       const o = ctx.owner
       const codes = ((await api('GET', `/stores/${o.storeId}/discount-codes`, { token: o.token })).json ?? []).map((c) => c.code)
-      const code = ['EID15', 'EID16', 'EID17', 'EID18', 'EID19'].find((c) => !(Array.isArray(codes) ? codes : []).includes(c)) ?? `EID${Date.now() % 1000}`
-      await page.goto(WEB + '/admin/marketing')
-      await page.getByRole('heading', { name: 'Marketing' }).waitFor()
-      f.start()
-      await f.say('Discount codes for shoppers to type at checkout, or for the cashier at the register.')
-      await f.click(page.getByRole('button', { name: '+ New discount code' }))
-      await f.type(page.getByLabel('Code (letters, digits, - and _)'), code)
-      await page.getByLabel('Percent off').check().catch(() => page.getByText('Percent off').click())
-      const value = page.getByLabel(/Percent|Value|Discount/).last()
-      await f.type(value, '15')
-      await f.type(page.getByLabel('Minimum spend (optional)'), '3000')
-      await f.click(page.getByRole('button', { name: 'Create code' }))
+      const code = ['EID15', 'EID16', 'EID17', 'EID18', 'EID19', 'EID20', 'EID21'].find((c) => !(Array.isArray(codes) ? codes : []).includes(c)) ?? `EID${Date.now() % 1000}`
+      await startAt(f)
+      await f.say('Path: Sidebar > Marketing > + New discount code.')
+      await f.click(sidebar(page, 'Marketing'), 'Marketing in the sidebar')
+      await page.getByRole('heading', { name: 'Marketing', level: 1 }).waitFor()
+      await f.click(page.getByRole('button', { name: '+ New discount code' }), '+ New discount code')
+      await f.fields([
+        [page.getByLabel('Code (letters, digits, - and _)'), 'Code'],
+        [page.getByText('Percent off').first(), 'Type: percent or amount'],
+        [page.locator('#dc-value'), 'Value'],
+        [page.getByLabel('Minimum spend (optional)'), 'Minimum spend'],
+        [page.getByLabel('Usage limit (optional)'), 'Usage limit'],
+        [page.getByLabel('Last day (optional)'), 'Last day'],
+      ])
+      await f.say(`Step 1: A code shoppers type at checkout: ${code}, 15% off orders over Rs 3,000.`)
+      await f.type(page.getByLabel('Code (letters, digits, - and _)'), code, 'the code')
+      await f.choose(page.getByText('Percent off').first(), 'Percent off')
+      await f.type(page.locator('#dc-value'), '15', 'percent off')
+      await f.type(page.getByLabel('Minimum spend (optional)'), '3000', 'minimum spend in rupees')
+      await f.click(page.getByRole('button', { name: 'Create code' }), 'Create code')
       await page.getByText('Discount code created.').waitFor({ timeout: 15000 })
-      await f.say(`${code}: 15% off orders over Rs 3,000. Codes can be limited, given an end date, or switched off.`, 4500)
-      await f.scrollBy(500)
-      await f.say('Further down: sales by category, and the abandoned-cart reminders, which wait until email is set up.', 4500)
+      await f.result(page.getByRole('row').filter({ hasText: code }).first(), `${code} is active`)
+      await f.say('Codes can be switched off at any time. Further down: sales by category.')
     },
   },
   {
@@ -374,22 +420,24 @@ export const chapters = [
     async run(f, ctx) {
       const { page } = f
       const o = ctx.owner
-      // Filmed again? Put the lamp back to its price, so the note changes it once more.
+      // Filmed again? Put the lamp back to its price, and clear notes left waiting.
       const lamp = await product(o, 'Brass Lamp')
       await api('PUT', `/stores/${o.storeId}/products/${lamp.id}`, { token: o.token, body: { title: lamp.title, description: lamp.description, actualPrice: 7200, discountType: null, discountValue: null, stock: lamp.stock, categoryId: lamp.categoryId, images: lamp.images, tags: lamp.tags } })
       for (const n of (await api('GET', `/stores/${o.storeId}/voice-notes?status=pending`, { token: o.token })).json ?? []) await api('POST', `/stores/${o.storeId}/voice-notes/${n.id}/discard`, { token: o.token })
-      await page.goto(WEB + '/admin/voice-notes')
-      await page.getByRole('heading', { name: 'Voice notes' }).waitFor()
-      f.start()
-      await f.say('Busy at the counter? The owner can say a change out loud instead of typing it.')
-      await f.click(page.getByRole('button', { name: /Record a note/ }))
-      await f.say('Recording: "Set the price of brass lamp to seven thousand five hundred rupees."', 5900)
-      await f.click(page.getByRole('button', { name: /Stop|Done|Record/ }).first())
-      await page.getByRole('button', { name: 'Yes, make this change' }).first().waitFor({ timeout: 90000 })
-      await f.say('The note is transcribed and turned into a change. Nothing happens until the owner confirms it.', 5000)
-      await f.click(page.getByRole('button', { name: 'Yes, make this change' }).first())
-      await page.waitForTimeout(2000)
-      await f.say('Done: the brass lamp now sells for Rs 7,500. Urdu and Roman Urdu notes work the same way.')
+      await startAt(f)
+      await f.say('Path: Sidebar > Voice notes. Busy at the counter? Say a change out loud instead of typing it.')
+      await f.click(sidebar(page, 'Voice notes'), 'Voice notes in the sidebar')
+      await page.getByRole('heading', { name: 'Voice notes', level: 1 }).waitFor()
+      await f.say('Step 1: Record a note. English, Urdu or Roman Urdu all work.')
+      await f.click(page.getByRole('button', { name: 'Record a note' }), 'Record a note')
+      await f.say('Speaking: "Set the price of brass lamp to seven thousand five hundred rupees."', 3500)
+      await f.click(page.getByRole('button', { name: 'Stop and send' }), 'Stop and send')
+      const confirm = page.getByRole('button', { name: 'Yes, make this change' }).first()
+      await confirm.waitFor({ timeout: 90000 })
+      await f.result(confirm.locator('xpath=ancestor::*[.//audio][1]'), 'what was heard, and the change it will make', 5000)
+      await f.say('Step 2: Nothing changes until the owner confirms.')
+      await f.click(confirm, 'Yes, make this change')
+      await f.result(page.getByRole('status').first(), 'done: the brass lamp now sells for Rs 7,500', 3500)
     },
   },
   {
@@ -400,32 +448,34 @@ export const chapters = [
     async run(f, ctx) {
       const { page } = f
       const o = ctx.owner
-      const staff = (await api('GET', `/stores/${o.storeId}/staff`, { token: o.token })).json ?? []
       // The Free plan allows two staff accounts, and the demo store has two. So the chapter starts
       // with the Cashier taken off the team (off camera) and shows the owner adding them back.
+      const staff = (await api('GET', `/stores/${o.storeId}/staff`, { token: o.token })).json ?? []
       for (const m of (Array.isArray(staff) ? staff : []).filter((m) => m.email === DEMO.cashier)) await api('DELETE', `/stores/${o.storeId}/staff/${m.id}`, { token: o.token })
-      await page.goto(WEB + '/admin/team')
+      await startAt(f)
+      await f.say('Path: Sidebar > Team & register. Only the owner can add staff or change their roles.')
+      await f.click(sidebar(page, 'Team & register'), 'Team & register in the sidebar')
       await page.getByRole('heading', { name: 'Team and register' }).waitFor()
-      f.start()
-      await f.say('The team page. Staff sign in at the register with the email and password the owner sets here.')
-      await f.scrollTo(page.getByRole('heading', { name: /Add a cashier or manager/ }))
-      await f.say('Adding a cashier who already has a ZYRO account, so no new password is needed.')
-      await f.type(page.getByLabel('Name'), 'Cashier (demo)')
-      await f.type(page.getByLabel('Email'), DEMO.cashier)
-      await page.getByRole('radio', { name: /Cashier/ }).check()
-      await f.click(page.getByRole('button', { name: 'Add to team' }))
+      await f.scrollTo(page.getByRole('heading', { name: /Add a cashier or manager/ }), 'Add a cashier or manager')
+      await f.fields([
+        [page.getByLabel('Name'), 'Name'],
+        [page.getByLabel('Email'), 'Email'],
+        [page.getByLabel(/Starting password/), 'Starting password (new accounts only)'],
+        [page.getByRole('radio', { name: /Cashier/ }), 'Role: Cashier or Manager'],
+      ])
+      await f.say('Step 1: Add a cashier who already has a ZYRO account, so no password is needed.')
+      await f.type(page.getByLabel('Name'), 'Cashier (demo)', 'their name')
+      await f.type(page.getByLabel('Email'), DEMO.cashier, 'their email')
+      await f.choose(page.getByRole('radio', { name: /Cashier/ }), 'Cashier')
+      await f.click(page.getByRole('button', { name: 'Add to team' }), 'Add to team')
       const role = page.getByLabel(`Role for ${DEMO.cashier}`)
       await role.waitFor({ timeout: 15000 })
-      await f.scrollTo(role)
-      await f.say('Added as a Cashier: the register only, with discounts up to the owner\'s limit.')
-      await role.selectOption('manager')
-      await page.waitForTimeout(1800)
-      await f.say('Changing the role is one click: as a Manager they could also run products, orders and discounts.', 4500)
-      await role.selectOption('cashier')
-      await page.waitForTimeout(1800)
-      await f.say('Back to Cashier. Only the owner can add staff or change roles.')
-      await f.scrollTo(page.getByRole('heading', { name: 'Cashier discount limit' }))
-      await f.say('The owner also sets the biggest discount a cashier may give at the register.')
+      await f.result(role.locator('xpath=ancestor::li[1]'), 'added as a Cashier: the register only', 3000)
+      await f.say('Step 2: Changing a role is one dropdown. As a Manager they could also run products, orders and discounts.', 5000)
+      await f.select(role, 'manager', 'role', 'Manager')
+      await f.select(role, 'cashier', 'role', 'back to Cashier')
+      await f.scrollTo(page.getByRole('heading', { name: 'Cashier discount limit' }), 'Cashier discount limit')
+      await f.result(page.getByRole('heading', { name: 'Cashier discount limit' }).locator('xpath=..'), 'the biggest discount a cashier may give', 3500)
     },
   },
   {
@@ -435,18 +485,20 @@ export const chapters = [
     options: asOwner,
     async run(f) {
       const { page } = f
-      await page.goto(WEB + '/admin/dashboard')
-      await page.getByRole('heading', { name: 'Dashboard' }).waitFor()
-      await page.waitForTimeout(2000)
-      f.start()
-      await f.say('The dashboard: net sales, orders, average order and refunds, online and at the counter together.')
-      await f.click(page.getByRole('group', { name: 'Period', exact: true }).getByRole('button', { name: '30 days' }))
+      await startAt(f, '/admin/products', 'Products')
+      await f.say('Path: Sidebar > Dashboard. The shop\'s figures, online and at the counter together.')
+      await f.click(sidebar(page, 'Dashboard'), 'Dashboard in the sidebar')
+      await page.getByRole('heading', { name: 'Dashboard', level: 1 }).waitFor()
       await page.waitForTimeout(1500)
-      await f.say('Four weeks of demo sales. Hovering a day shows that day\'s figures.')
-      await f.scrollBy(650)
-      await f.say('Below: this week\'s tip, the market trends for the store\'s categories, and the AI allowance used.', 4500)
-      await f.scrollBy(650)
-      await f.say('And the most recent orders, with a link to each.')
+      await f.result(page.getByRole('region', { name: 'Key figures' }), 'net sales, orders, average order, refunds', 4000)
+      await f.say('Step 1: Choose the period. Here, the last 30 days.')
+      await f.click(page.getByRole('group', { name: 'Period', exact: true }).getByRole('button', { name: '30 days' }), '30 days')
+      const bars = page.getByRole('region', { name: /Sales per day/ }).getByRole('button')
+      await f.hover(bars.nth(20), 'a day in the chart: that day\'s sales', 2500)
+      await f.scrollBy(650, 'this week\'s tip, market trends and the AI allowance')
+      await f.say('Below: a weekly tip, market trends for the store\'s categories, and how much of the AI allowance is used.', 5000)
+      await f.scrollBy(650, 'recent orders')
+      await f.result(page.getByRole('region', { name: 'Recent orders' }), 'the latest orders, each one a link', 3500)
     },
   },
   {
@@ -456,16 +508,17 @@ export const chapters = [
     options: asOwner,
     async run(f) {
       const { page } = f
-      await page.goto(WEB + '/admin/settings')
-      await page.getByRole('heading', { name: 'Settings' }).waitFor()
-      f.start()
-      await f.say('Settings are for the owner only. The currency is fixed after the first sale, and says why.', 4500)
-      await f.scrollTo(page.getByRole('region', { name: 'Public directory' }))
-      await f.say('Whether the shop is listed in ZYRO\'s public directory, with a line about it.')
-      await f.scrollTo(page.getByRole('region', { name: 'Shared trends' }))
-      await f.say('Whether the shop\'s sales count toward the shared trends. On by default, and the owner\'s choice.', 4500)
-      await f.scrollBy(700)
-      await f.say('And the ways to pay this shop accepts: card, cash on delivery and bank transfer.')
+      await startAt(f)
+      await f.say('Path: Sidebar > Settings. Settings are for the owner only.')
+      await f.click(sidebar(page, 'Settings'), 'Settings in the sidebar')
+      await page.getByRole('heading', { name: 'Settings', level: 1 }).waitFor()
+      await f.result(page.getByRole('region', { name: 'Currency' }), 'the currency, fixed after the first sale (it says why)', 4500)
+      await f.scrollTo(page.getByRole('region', { name: 'Public directory' }), 'Public directory')
+      await f.result(page.getByRole('region', { name: 'Public directory' }), 'whether the shop is listed in ZYRO\'s shop directory', 4000)
+      await f.scrollTo(page.getByRole('region', { name: 'Shared trends' }), 'Shared trends')
+      await f.result(page.getByRole('region', { name: 'Shared trends' }), 'whether the shop\'s sales count in shared trends', 4000)
+      await f.scrollBy(700, 'Ways to pay')
+      await f.say('And the ways to pay the shop accepts: card, cash on delivery and bank transfer.')
     },
   },
 ]
