@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { getRedis } from "../../lib/redis";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
-import { Product } from "../../models/Product.model";
+import { Product, priceOf } from "../../models/Product.model";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
 
@@ -81,7 +81,7 @@ export const cartService = {
     const items: CartItemView[] = [];
     for (const [id, product] of byId) {
       const quantity = Number(raw[id]);
-      const unitPrice = Number(product.price.toString());
+      const unitPrice = priceOf(product).sale;
       const lineCents = Math.round(unitPrice * 100) * quantity;
       subtotalCents += lineCents;
       items.push({

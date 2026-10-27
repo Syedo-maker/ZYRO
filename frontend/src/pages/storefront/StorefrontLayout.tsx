@@ -7,6 +7,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { SearchBox } from '../../components/storefront/SearchBox'
 import { AssistantWidget } from '../../components/storefront/AssistantWidget'
 import { catalogApi } from '../../lib/shopApi'
+import { brandStyle } from '../../lib/brandTheme'
 import { storefrontApi } from '../../lib/storefrontApi'
 import type { StoreProfile } from '../../types/commerce'
 import type { CategoryCount } from '../../types/shop'
@@ -25,7 +26,7 @@ function CartLink({ storeId }: { storeId: string }) {
       </svg>
       Cart
       {itemCount > 0 && (
-        <span className="min-w-5 rounded-full bg-brand px-1.5 py-0.5 text-center text-[11px] font-bold text-white">{itemCount}</span>
+        <span className="min-w-5 rounded-full bg-brand px-1.5 py-0.5 text-center text-[11px] font-bold text-on-brand">{itemCount}</span>
       )}
     </Link>
   )
@@ -121,8 +122,9 @@ export function StorefrontLayout() {
   return (
     <StoreContext.Provider value={store}>
       <CartProvider storeId={store.id}>
-        <div className="flex min-h-screen flex-col bg-bg">
-          <header className="border-b border-border bg-white">
+        {/* The shop wears its merchant's colour from here down (lib/brandTheme.ts); the platform keeps ZYRO's. */}
+        <div className="flex min-h-screen flex-col bg-bg" style={brandStyle(store.themeColor)}>
+          <header className="border-b border-border bg-surface">
             <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-10">
               <Link to={`/store/${store.id}`} className="font-display text-xl font-bold text-text">
                 {store.name}
@@ -145,10 +147,14 @@ export function StorefrontLayout() {
           <main className="mx-auto w-full max-w-[1120px] flex-1 px-4 py-8 sm:px-10">
             <Outlet context={{ categories }} />
           </main>
-          <footer className="border-t border-border bg-white">
+          <footer className="border-t border-border bg-surface">
             <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-text-secondary sm:px-10">
               <span>{store.name}, powered by ZYRO</span>
-              <span>Secure checkout by Stripe</span>
+              <span className="flex flex-wrap gap-x-4">
+                <span>Secure checkout by Stripe</span>
+                <Link to="/privacy" className="underline underline-offset-2 hover:text-text">Privacy</Link>
+                <Link to="/terms" className="underline underline-offset-2 hover:text-text">Terms</Link>
+              </span>
             </div>
           </footer>
           <AssistantWidget storeId={store.id} currency={store.currency} />

@@ -8,6 +8,7 @@ import { createOrder, OrderSnapshot } from "../commerce/order.service";
 import { customerService } from "../customers/customer.service";
 import { cartService } from "../cart/cart.service";
 import { billingPurpose, handleSubscriptionCheckout, handleTopUpCheckout, syncSubscription, type BillingOutcome } from "../billing/billing.webhook";
+import { logger } from "../../lib/logger";
 
 export type WebhookOutcome =
   | "fulfilled"
@@ -47,7 +48,7 @@ async function fulfil(session: Stripe.Checkout.Session): Promise<WebhookOutcome>
   return tenantContext.run(tenantId, async () => {
     // What Stripe actually charged must match what we priced; never write an order that doesn't.
     if (session.amount_total !== record.totalCents || session.currency?.toLowerCase() !== record.currency.toLowerCase()) {
-      console.error(`Stripe session ${session.id}: charged ${session.amount_total} ${session.currency}, expected ${record.totalCents} ${record.currency}`);
+      logger.error(`Stripe session ${session.id}: charged ${session.amount_total} ${session.currency}, expected ${record.totalCents} ${record.currency}`);
       await prisma.checkoutSession.updateMany({
         where: { id: record.id, tenantId, status: "PENDING" },
         data: { status: "FAILED", failureReason: "Charged amount did not match the priced cart" },
@@ -107,7 +108,7 @@ async function fulfil(session: Stripe.Checkout.Session): Promise<WebhookOutcome>
       });
 
       if (!claimed) return "already-processed";
-      await cartService.clear(record.cartKey).catch((err) => console.error("Could not clear cart:", err));
+      await cartService.clear(record.cartKey).catch((err) => logger.error({ err: err instanceof Error ? err.message : String(err) }, "could not clear the cart after payment"));
       return "fulfilled";
     } catch (err) {
       if (isUniqueViolation(err)) return "already-processed";

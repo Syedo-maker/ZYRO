@@ -3,7 +3,8 @@ import { tenantContext } from "../../lib/tenantContext";
 import { password as passwordLib } from "../../lib/password";
 import { Errors, AppError } from "../../errors/AppError";
 import { planService } from "../billing/plan.service";
-import type { CreateStaffInput } from "./staff.validation";
+import { ROLE_PERMISSIONS, roleOf } from "../../lib/staffRoles";
+import type { CreateStaffInput, UpdateStaffRoleInput } from "./staff.validation";
 
 interface StaffRow {
   id: string;
@@ -11,11 +12,12 @@ interface StaffRow {
   permissions: string[];
 }
 
-/** The StaffMember shape in openapi.yaml: the person's email, permissions in lowercase. */
+/** The StaffMember shape in openapi.yaml: the person's email, their role, permissions in lowercase. */
 const toView = (row: StaffRow, email: string) => ({
   id: row.id,
   userId: row.userId,
   email,
+  role: roleOf(row.permissions),
   permissions: row.permissions.map((p) => p.toLowerCase()),
 });
 
@@ -76,6 +78,22 @@ export const staffService = {
       data: { tenantId, userId: user.id, permissions: input.permissions },
     });
     return toView(created, user.email);
+  },
+
+  /**
+   * The owner gives a staff member another role. Only the owner reaches this (requireOwner), so a
+   * staff member can change neither their own role nor anyone else's; the owner has no staff row,
+   * so the owner's own access can never be changed here. Takes effect on that person's next request:
+   * every route reads their permissions afresh.
+   */
+  async updateRole(staffId: string, input: UpdateStaffRoleInput) {
+    const tenantId = tenantContext.getTenantId()!;
+    // updateMany, not update: the store is part of the filter, the same discipline as the tenant guard.
+    const { count } = await prisma.staffMember.updateMany({ where: { id: staffId, tenantId }, data: { permissions: ROLE_PERMISSIONS[input.role] } });
+    if (count === 0) throw Errors.notFound("Staff member");
+    const row = (await prisma.staffMember.findFirst({ where: { id: staffId, tenantId } }))!;
+    const user = await prismaUnscoped.user.findUnique({ where: { id: row.userId }, select: { email: true } });
+    return toView(row, user?.email ?? "");
   },
 
   async remove(staffId: string) {

@@ -97,7 +97,7 @@ export const closeShiftSchema = z.object({
 
 export const productSearchSchema = z.object({
   q: z.string().trim().min(1).max(100).optional(),
-  /** Exact barcode or SKU, as a scanner types it. */
+  /** An exact SKU, as a scanner or the cashier types it. */
   code: z.string().trim().min(1).max(100).optional(),
   limit: z.coerce.number().int().min(1).max(60).optional().default(30),
 });

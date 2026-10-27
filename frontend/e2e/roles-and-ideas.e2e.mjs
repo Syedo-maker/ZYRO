@@ -87,13 +87,16 @@ await step('landing screen', visitor, async () => {
   await visitor.goto(WEB)
   await visitor.waitForLoadState('networkidle')
   check('a new visitor is asked what they want to do, not sent to the dashboard', !visitor.url().includes('/admin'), visitor.url())
-  check('both choices are offered', await visitor.getByRole('heading', { name: 'Shop', exact: true }).isVisible())
-  check('and so is opening a store', await visitor.getByRole('heading', { name: 'Start a store' }).isVisible())
+  // The chooser screen this first checked was replaced by the landing page; its hero offers the same
+  // two choices as links.
+  const hero = visitor.getByRole('main')
+  check('both choices are offered', await hero.getByRole('link', { name: 'Shop now' }).first().isVisible())
+  check('and so is opening a store', await hero.getByRole('link', { name: 'Start your store free' }).first().isVisible())
   await visitor.screenshot({ path: path.join(SHOTS, 'roles-landing.png') })
 })
 
 await step('choosing to shop', visitor, async () => {
-  await visitor.getByRole('button', { name: 'Start shopping' }).click()
+  await visitor.getByRole('main').getByRole('link', { name: 'Shop now' }).first().click()
   await visitor.waitForURL('**/shop')
   check('choosing to shop opens the shop directory', visitor.url().endsWith('/shop'))
   const card = visitor.getByRole('listitem').filter({ hasText: `E2E Roles ${suffix}` })
@@ -183,6 +186,11 @@ await step('the owner opts out of the directory', op, async () => {
 // ---- Issue 1: Write with AI ----------------------------------------------------------------------
 
 await step('the add product form offers a choice', op, async () => {
+  // A product goes in one of the store's own categories, chosen from a dropdown, so make one first.
+  await op.goto(`${WEB}/admin/categories`)
+  await op.getByLabel('New category').fill('clothing')
+  await op.getByRole('button', { name: 'Add category' }).click()
+  await op.getByRole('row').filter({ hasText: 'clothing' }).waitFor()
   await op.goto(`${WEB}/admin/products`)
   await op.getByRole('button', { name: 'Add product' }).first().click()
   check('the merchant is offered writing it themselves', await op.getByRole('button', { name: 'Write it myself' }).isVisible())
@@ -191,7 +199,7 @@ await step('the add product form offers a choice', op, async () => {
 })
 
 await step('asking the AI for suggestions', op, async () => {
-  await op.getByLabel('Category', { exact: true }).fill('clothing')
+  await op.getByLabel('Category', { exact: true }).selectOption({ label: 'clothing' })
   await op.getByRole('button', { name: 'Write with AI' }).click()
   const suggest = op.getByRole('button', { name: /Suggest 4 options/ })
   check('the button says plainly that it costs one generation', /uses 1 generation/.test(await suggest.innerText()))

@@ -70,7 +70,7 @@ function Register() {
         onNotice={setNotice}
       />
 
-      <aside aria-label="Current sale" className="bg-white border-l border-border flex flex-col lg:min-h-0">
+      <aside aria-label="Current sale" className="bg-surface border-l border-border flex flex-col lg:min-h-0">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="font-display text-base font-bold">
             Current sale {itemCount > 0 && <span className="text-text-secondary font-medium">({itemCount} items)</span>}
@@ -95,7 +95,7 @@ function Register() {
 
         <div className="flex-1 overflow-y-auto px-5 py-3 min-h-[160px]">
           {cart.length === 0 ? (
-            <p className="text-sm text-text-secondary py-8 text-center">Scan a barcode or tap a product to start a sale.</p>
+            <p className="text-sm text-text-secondary py-8 text-center">Scan a SKU or tap a product to start a sale.</p>
           ) : (
             <ul className="divide-y divide-border">
               {cart.map((line) => {
@@ -295,7 +295,7 @@ function ProductPane({
     }
   }, [storeId, text])
 
-  // A scanner types the code and presses Enter: an exact barcode or SKU match goes
+  // A scanner (or the cashier) types the SKU and presses Enter: an exact SKU match goes
   // straight into the sale.
   async function handleEnter() {
     const code = text.trim()
@@ -324,7 +324,7 @@ function ProductPane({
     <section aria-label="Products" className="flex flex-col p-5 gap-4 lg:min-h-0 lg:overflow-y-auto">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="pos-search" className="text-xs font-semibold text-text-secondary">
-          Scan a barcode or search products
+          Scan a SKU or search products
         </label>
         <input
           id="pos-search"
@@ -339,8 +339,8 @@ function ProductPane({
               void handleEnter()
             }
           }}
-          placeholder="Barcode, SKU or product name"
-          className="h-14 rounded-[10px] border border-border bg-white px-4 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          placeholder="SKU or product name"
+          className="h-14 rounded-[10px] border border-border-input bg-surface px-4 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
         <div className="min-h-5 text-sm" role="status" aria-live="polite">
           {notice && <span className="font-medium text-text-secondary">{notice}</span>}
@@ -364,7 +364,7 @@ function ProductPane({
                     searchRef.current?.focus()
                   }}
                   disabled={out}
-                  className="w-full h-full text-left rounded-xl border border-border bg-white p-3 flex flex-col gap-1 hover:border-brand disabled:opacity-60 disabled:hover:border-border"
+                  className="w-full h-full text-left rounded-xl border border-border bg-surface p-3 flex flex-col gap-1 hover:border-brand disabled:opacity-60 disabled:hover:border-border"
                 >
                   {p.image ? (
                     <img src={p.image} alt="" className="h-20 w-full object-cover rounded-lg mb-1" />

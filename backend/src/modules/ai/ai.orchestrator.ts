@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
-import { getAiQueue, getAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
+import { getAiQueue, readyAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
 import type { AiGenerateResult } from "../../lib/aiProvider";
 import { allowsImage, modelFor } from "../../lib/aiModels";
 import { getRedis } from "../../lib/redis";
-import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, type AiUsageKind } from "./ai.quota.service";
+import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, currentMonth, type AiUsageKind } from "./ai.quota.service";
+import { logger } from "../../lib/logger";
 
 export interface GenerateInput {
   tenantId: string;
@@ -58,6 +59,17 @@ export interface GenerateInput {
  * answered from a per-store cache. Cached answers cost no quota because no AI call happened.
  */
 export async function generate(input: GenerateInput): Promise<AiGenerateResult> {
+  return (await generateRevocable(input)).result;
+}
+
+/**
+ * The same as generate(), for a caller whose use of the answer can still fail afterwards (an email
+ * that will not send): `release()` gives the store back the turn this call took, so the store is only
+ * charged for an answer that was actually used. The tokens stay recorded, because the AI call did
+ * happen and cost what it cost (Part B). A cached answer took no turn, so its release does nothing;
+ * calling release more than once gives back one turn at most.
+ */
+export async function generateRevocable(input: GenerateInput): Promise<{ result: AiGenerateResult; release: () => Promise<void> }> {
   const kind: AiUsageKind = input.kind ?? "generation";
   const model = modelFor(input.promptType);
   const maxTokens = input.maxTokens ?? 1024;
@@ -80,18 +92,21 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
     try {
       const hit = await getRedis().get(cacheKey);
       if (hit) {
-        if (!platformPays) await recordCachedAnswer(input.tenantId).catch((err: Error) => console.error("AI usage count failed:", err.message));
+        if (!platformPays) await recordCachedAnswer(input.tenantId).catch((err: Error) => logger.error({ err: err.message, tenantId: input.tenantId }, "AI usage count failed"));
         const cached = JSON.parse(hit) as AiGenerateResult;
-        return { ...cached, text: tidyText(cached.text) }; // an answer cached before tidyText existed is tidied too
+        return { result: { ...cached, text: tidyText(cached.text) }, release: async () => {} }; // an answer cached before tidyText existed is tidied too
       }
     } catch (err) {
-      console.error("AI cache read failed:", (err as Error).message); // a cache problem only costs a real call
+      logger.warn({ err: (err as Error).message }, "AI cache read failed"); // a cache problem only costs a real call
     }
   }
 
-  const source = platformPays ? null : await reserveQuota(input.tenantId, kind);
+  const month = currentMonth();
+  const source = platformPays ? null : await reserveQuota(input.tenantId, kind, month);
   if (!platformPays && !source) throw await quotaExhaustedError(input.tenantId, kind);
 
+  // Listening first: a job that finished before the listener was reading would look like a timeout.
+  const events = await readyAiQueueEvents();
   const job = await getAiQueue().add(
     input.promptType,
     {
@@ -113,31 +128,45 @@ export async function generate(input: GenerateInput): Promise<AiGenerateResult> 
 
   let result: AiGenerateResult;
   try {
-    const raw: AiGenerateResult = await job.waitUntilFinished(getAiQueueEvents(), env.ai.jobTimeoutMs);
+    const raw: AiGenerateResult = await job.waitUntilFinished(events, env.ai.jobTimeoutMs);
     result = { ...raw, text: tidyText(raw.text) };
   } catch (err) {
-    if (source) await releaseQuota(input.tenantId, kind, source); // give the reservation back, to where it came from; this attempt never happened
+    if (source) await releaseQuota(input.tenantId, kind, source, month); // give the reservation back, to where it came from; this attempt never happened
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
-    // being unable to fulfil the request right now, not something the caller did wrong.
-    throw Errors.serviceUnavailable(`AI generation failed: ${err instanceof Error ? err.message : String(err)}`);
+    // being unable to fulfil the request right now, not something the caller did wrong. The
+    // provider's own words go to the log, where they can be acted on; the merchant or shopper gets
+    // a sentence they can act on instead of an SDK error.
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err), tenantId: input.tenantId, promptType: input.promptType, model },
+      "AI generation failed"
+    );
+    throw Errors.serviceUnavailable("The AI service is unavailable right now. Nothing was used from your AI allowance; please try again in a minute.");
   }
 
   // Only a successful call reaches this point: its tokens are what the store's AI actually cost (Part B).
-  if (!platformPays) await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => console.error("AI usage count failed:", err.message));
+  if (!platformPays) await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => logger.error({ err: err.message, tenantId: input.tenantId }, "AI usage count failed"));
 
   if (cacheKey) {
     await getRedis()
       .set(cacheKey, JSON.stringify(result), "EX", env.ai.cacheSeconds)
-      .catch((err: Error) => console.error("AI cache write failed:", err.message));
+      .catch((err: Error) => logger.warn({ err: err.message }, "AI cache write failed"));
   }
-  return result;
+  let released = false;
+  const release = async () => {
+    if (released || !source) return;
+    released = true;
+    await releaseQuota(input.tenantId, kind, source, month);
+  };
+  return { result, release };
 }
 
 /**
  * House style for everything the AI writes: no em dashes (the project's writing rule). The model
  * uses them freely, so every answer is tidied here, in the one place all AI features pass through,
- * rather than in each prompt. "word—word" and "word — word" both become "word - word".
+ * rather than in each prompt. An em dash (U+2014), with or without spaces around it, becomes " - ".
  */
+const EM_DASH = new RegExp(`[ \\t]*${String.fromCharCode(0x2014)}[ \\t]*`, "g");
+
 export function tidyText(text: string): string {
-  return text.replace(/[ \t]*—[ \t]*/g, " - ");
+  return text.replace(EM_DASH, " - ");
 }

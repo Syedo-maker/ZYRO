@@ -179,8 +179,14 @@ async function main() {
   check("startup: production refuses to start with the placeholder JWT secret", !weak.stdout.includes("STARTED") && /JWT_ACCESS_SECRET/.test(weak.stderr));
   const short = run({ NODE_ENV: "production", JWT_ACCESS_SECRET: "tooshort" });
   check("startup: production refuses a short JWT secret", !short.stdout.includes("STARTED"));
-  const strong = run({ NODE_ENV: "production", JWT_ACCESS_SECRET: "k9Tq2vL8xR4mZ7nB1cW6yH3sD5fG0jPa8uE2iO4tY6r" });
+  // Production also needs real file storage (lib/storage.ts), as it would have in Azure.
+  const strong = run({ NODE_ENV: "production", JWT_ACCESS_SECRET: "k9Tq2vL8xR4mZ7nB1cW6yH3sD5fG0jPa8uE2iO4tY6r", STORAGE_DRIVER: "azure" });
   check("startup: production starts with a strong secret", strong.stdout.includes("STARTED"), (strong.stderr || "").split("\n")[0]);
+  // A container's disk is lost on restart: production must not quietly keep uploads there.
+  const localDisk = run({ NODE_ENV: "production", JWT_ACCESS_SECRET: "k9Tq2vL8xR4mZ7nB1cW6yH3sD5fG0jPa8uE2iO4tY6r", STORAGE_DRIVER: "local" });
+  check("startup: production refuses to keep uploads on the container's own disk", !localDisk.stdout.includes("STARTED") && /STORAGE_DRIVER/.test(localDisk.stderr));
+  const persistentHost = run({ NODE_ENV: "production", JWT_ACCESS_SECRET: "k9Tq2vL8xR4mZ7nB1cW6yH3sD5fG0jPa8uE2iO4tY6r", STORAGE_DRIVER: "local", ALLOW_LOCAL_STORAGE_IN_PRODUCTION: "true" });
+  check("startup: a host with a persistent disk may opt in explicitly", persistentHost.stdout.includes("STARTED"));
   const dev = run({ NODE_ENV: "development", JWT_ACCESS_SECRET: "dev-only-secret" });
   check("startup: development still allows the simple dev secret", dev.stdout.includes("STARTED"));
   await closeRedis();

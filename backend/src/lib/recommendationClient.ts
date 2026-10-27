@@ -1,4 +1,5 @@
 import { env } from "../config/env";
+import { logger } from "./logger";
 
 /**
  * Node's side of the Phase 6 recommendation microservice (recommendation-service/, Python).
@@ -158,6 +159,6 @@ export function indexProductInBackground(storeId: string, productId: string): vo
     .embedProduct(storeId, productId)
     .catch((err: unknown) => {
       if (err instanceof RecommendationUnavailableError && /not configured/.test(err.message)) return; // expected when the feature is off
-      console.warn(`[recommendations] could not index product ${productId}: ${(err as Error).message}`);
+      logger.warn(`[recommendations] could not index product ${productId}: ${(err as Error).message}`);
     });
 }

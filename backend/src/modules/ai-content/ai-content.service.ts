@@ -1,9 +1,13 @@
 import { Types, type HydratedDocument } from "mongoose";
-import { Product, type ProductDocument } from "../../models/Product.model";
+import { Product, priceOf, type ProductDocument } from "../../models/Product.model";
 import { AiGeneratedContent } from "../../models/AiGeneratedContent.model";
 import { ProductReview } from "../../models/ProductReview.model";
 import { Errors } from "../../errors/AppError";
+import { formatPrice } from "../../lib/currencies";
+
+export { formatPrice };
 import { prisma } from "../../lib/prisma";
+import { Category } from "../../models/Category.model";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { productService } from "../products/product.service";
 import { MARKETING_CHANNELS, type MarketingCopyInput } from "./ai-content.validation";
@@ -47,18 +51,9 @@ async function requireProduct(storeId: string, productId: string): Promise<Hydra
   return doc;
 }
 
-/** The price as a shopper in this store sees it ("Rs 450.00", "$19.99"), so any price the AI repeats carries the right currency. */
-export function formatPrice(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-PK", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount).replace(/ /g, " "); // Intl's non-breaking space, as a plain one
-  } catch {
-    return `${currency} ${amount.toFixed(2)}`; // a code Intl does not know still names the currency
-  }
-}
-
 async function describeProduct(storeId: string, product: HydratedDocument<ProductDocument>): Promise<string> {
   const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { currency: true } });
-  const price = formatPrice(Number(product.price.toString()), tenant?.currency ?? "USD");
+  const price = formatPrice(priceOf(product).sale, tenant?.currency ?? "USD");
   const lines = [`Title: ${product.title}`, `Category: ${product.category}`, `Price: ${price}`];
   if (product.tags?.length) lines.push(`Tags: ${product.tags.join(", ")}`);
   if (product.description) lines.push(`Current description: ${product.description}`);
@@ -200,14 +195,21 @@ export const aiContentService = {
   /** A category + tag suggestion. Returned only; saving it is the merchant's own product-form save. */
   async autoTag(storeId: string, productId: string) {
     const product = await requireProduct(storeId, productId);
+    // A product goes in one of the store's own categories, so the AI is shown them and asked to pick
+    // one; the product form can only apply a name that is on this list.
+    const categories = await Category.find({ storeId, active: true }).sort({ normalizedName: 1 }).limit(100).lean();
     const result = await aiGenerate({
       tenantId: storeId,
       promptType: "auto_tag",
       system:
         "Suggest a single short category and 3 to 6 short tags for this product, based only on the title and " +
-        "description given. Reply with EXACTLY two lines and nothing else, in this exact format:\n" +
+        "description given. If one of the store's categories listed fits the product, use that category's name " +
+        "exactly as written; suggest a new short name only if none of them fits. Reply with EXACTLY two lines and " +
+        "nothing else, in this exact format:\n" +
         "Category: <category>\nTags: <tag1>, <tag2>, <tag3>",
-      prompt: `Title: ${product.title}\nDescription: ${product.description || "(none given)"}\nCurrent category: ${product.category}`,
+      prompt:
+        `Title: ${product.title}\nDescription: ${product.description || "(none given)"}\nCurrent category: ${product.category}\n` +
+        `The store's categories: ${categories.length > 0 ? categories.map((c) => c.name).join(", ") : "(none yet)"}`,
       maxTokens: 100,
       cache: true, // same product text in, same tags out: no reason to pay twice
     });

@@ -1,7 +1,8 @@
 import { RequestHandler, Router } from "express";
 import multer from "multer";
 import { env } from "../../config/env";
-import { imageUpload } from "../../middleware/upload.middleware";
+import { imageUpload, storeImage } from "../../middleware/upload.middleware";
+import { getStorage } from "../../lib/storage";
 import { requireAuth } from "../../middleware/requireAuth.middleware";
 import { requireOwner } from "../../middleware/requireOwner.middleware";
 import { withTenantContext } from "../../middleware/tenantContext.middleware";
@@ -93,7 +94,10 @@ paymentsRouter.post(
   run(async (req) => {
     if (!req.file) throw Errors.validation("No image was uploaded, or it failed the type or size check");
     await proofService.assertCanUpload(req.params.storeId, req.params.orderId);
-    return { url: `${env.publicUrl}/uploads/${req.file.filename}` };
+    // Private: a receipt carries names and account numbers. The shopper gets the key to submit, and
+    // a short-lived link so the page can show what they picked.
+    const key = await storeImage(req.file.buffer, "receipts", req.params.storeId);
+    return { key, url: await getStorage().signedUrl(key, env.storage.privateLinkSeconds) };
   }, 201)
 );
 

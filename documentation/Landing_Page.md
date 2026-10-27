@@ -107,6 +107,13 @@ Every feature shown is built and working. Nothing is labelled "coming soon" exce
 
 ## Design
 
+> **Since 2026-10-21 this palette is the whole platform's.** The page was first built with a private
+> palette (`--color-lp-*`) while the app was indigo. The production-readiness programme made this
+> palette ZYRO's design system for every screen and deleted the private tokens; see "Phase 2" in
+> `Production_Readiness.md`. The landing page now uses the shared semantic tokens, and the terracotta
+> below was deepened from `#A8481B` to `#9E4318` so that it also passes on the sage sections (4.92).
+> The record below is kept as it was written.
+
 The palette is **scoped to this page**: `--color-lp-*` tokens in `index.css`, used nowhere else. The
 app's own indigo system dresses forty-odd screens whose contrast was audited in Phase 0, and
 re-skinning those was not asked for and would have put every one of them at risk.

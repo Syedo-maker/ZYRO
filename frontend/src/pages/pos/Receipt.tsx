@@ -26,7 +26,7 @@ export function Receipt({ sale }: { sale: Sale }) {
   const returned = sale.returns.reduce((s, r) => s + r.amount, 0)
 
   return (
-    <article aria-label={`Receipt for sale ${sale.orderNumber}`} className="mx-auto w-full max-w-[340px] bg-white text-text font-mono text-[13px] leading-relaxed">
+    <article aria-label={`Receipt for sale ${sale.orderNumber}`} className="mx-auto w-full max-w-[340px] bg-surface text-text font-mono text-[13px] leading-relaxed">
       <header className="text-center pb-3 border-b border-dashed border-text/40">
         <div className="font-display text-lg font-bold">{sale.store.name}</div>
         <div>Sale #{sale.orderNumber}</div>

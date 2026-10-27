@@ -14,7 +14,7 @@
  * The family names are the same as Google's ("IBM Plex Sans" and so on), so the `--font-*` tokens in
  * index.css did not have to change.
  *
- * All three are licensed under the SIL Open Font License 1.1, which permits commercial use.
+ * Both are licensed under the SIL Open Font License 1.1, which permits commercial use.
  */
 
 // Body text.
@@ -22,12 +22,7 @@ import '@fontsource/ibm-plex-sans/400.css'
 import '@fontsource/ibm-plex-sans/500.css'
 import '@fontsource/ibm-plex-sans/600.css'
 
-// Headings on the landing page.
+// Headings, everywhere: the landing page, the dashboard, the register and every storefront.
 import '@fontsource/plus-jakarta-sans/600.css'
 import '@fontsource/plus-jakarta-sans/700.css'
 import '@fontsource/plus-jakarta-sans/800.css'
-
-// Headings in the app. To be replaced by Plus Jakarta Sans when the platform shares one design system.
-import '@fontsource/space-grotesk/500.css'
-import '@fontsource/space-grotesk/600.css'
-import '@fontsource/space-grotesk/700.css'

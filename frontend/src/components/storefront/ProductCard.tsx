@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
 import { StarRating } from '../StarRating'
-import { formatMoney } from '../../lib/format'
+import { PriceTag } from '../PriceTag'
 import type { Product } from '../../types/api'
 
 /**
@@ -23,7 +23,7 @@ export function ProductCard({
 }) {
   const soldOut = product.stock < 1
   return (
-    <li className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white">
+    <li className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface">
       <Link to={`/store/${storeId}/products/${product.id}`} className="group flex flex-1 flex-col gap-2 p-3 outline-offset-[-2px]">
         <div className="relative aspect-[4/3] overflow-hidden rounded-[10px] bg-bg">
           {product.images[0] ? (
@@ -39,7 +39,7 @@ export function ProductCard({
         </div>
         <h3 className="text-sm font-semibold leading-snug group-hover:text-brand">{product.title}</h3>
         <StarRating value={product.averageRating} count={product.reviewCount} size="sm" />
-        <p className="text-sm font-bold">{formatMoney(product.price, currency)}</p>
+        <PriceTag product={product} currency={currency} />
       </Link>
       <div className="px-3 pb-3">
         <Button variant="secondary" className="h-10 w-full" disabled={soldOut || adding} onClick={() => onAdd(product)}>

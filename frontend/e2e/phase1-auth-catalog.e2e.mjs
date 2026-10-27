@@ -55,14 +55,14 @@ await step('logged-out visitors are sent to login', async () => {
   check('guard: /admin/products redirects a logged-out visitor to /login', true)
   await page.evaluate(() => document.fonts.ready)
   const fonts = await page.evaluate(async () => {
-    await Promise.all([document.fonts.load('700 20px "Space Grotesk"'), document.fonts.load('400 14px "IBM Plex Sans"')])
+    await Promise.all([document.fonts.load('700 20px "Plus Jakarta Sans"'), document.fonts.load('400 14px "IBM Plex Sans"')])
     return {
-      display: document.fonts.check('700 20px "Space Grotesk"'),
+      display: document.fonts.check('700 20px "Plus Jakarta Sans"'),
       body: document.fonts.check('400 14px "IBM Plex Sans"'),
       loaded: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')),
     }
   })
-  check('design: the Space Grotesk and IBM Plex Sans web fonts actually load', fonts.display && fonts.body && fonts.loaded.some((f) => /Space Grotesk/.test(f)) && fonts.loaded.some((f) => /IBM Plex Sans/.test(f)), JSON.stringify(fonts.loaded))
+  check('design: the Plus Jakarta Sans and IBM Plex Sans web fonts actually load', fonts.display && fonts.body && fonts.loaded.some((f) => /Plus Jakarta Sans/.test(f)) && fonts.loaded.some((f) => /IBM Plex Sans/.test(f)), JSON.stringify(fonts.loaded))
   await page.getByRole('link', { name: 'Create one' }).click()
   // The URL changes before React swaps the pages; typing now would fill the old login form.
   await page.getByRole('heading', { name: 'Create your store' }).waitFor()
@@ -100,12 +100,20 @@ await step('session persistence across reloads', async () => {
 })
 
 await step('create a product with an image', async () => {
+  // A product goes in one of the store's own categories, chosen from a dropdown, so make two first.
+  await page.goto(`${WEB}/admin/categories`)
+  for (const name of ['outdoors', 'gear']) {
+    await page.getByLabel('New category').fill(name)
+    await page.getByRole('button', { name: 'Add category' }).click()
+    await page.getByRole('row').filter({ hasText: name }).waitFor()
+  }
+  await page.goto(`${WEB}/admin/products`)
   await page.getByRole('button', { name: '+ Add product' }).click()
   await page.getByLabel('Title', { exact: true }).fill('Trail Mug')
   await page.getByLabel('Description', { exact: true }).fill('Enamel camping mug')
-  await page.getByLabel('Price', { exact: true }).fill('24.5')
-  await page.getByLabel('Stock').fill('6')
-  await page.getByLabel('Category').fill('outdoors')
+  await page.getByLabel('Price (MRP)').fill('24.5')
+  await page.getByLabel('Stock', { exact: true }).fill('6')
+  await page.getByLabel('Category').selectOption({ label: 'outdoors' })
   await page.getByLabel('Product image file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await page.getByRole('alert').filter({ hasText: 'Image upload failed' }).waitFor()
   check('form: a non-image file is rejected with a visible error', true)
@@ -130,20 +138,20 @@ await step('create a product with an image', async () => {
 
 await step('edit and delete', async () => {
   await page.getByRole('button', { name: 'Edit Trail Mug' }).click()
-  await page.getByLabel('Price', { exact: true }).fill('30')
+  await page.getByLabel('Price (MRP)').fill('30')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   await page.getByText('$30.00').waitFor()
   check('edit: the price change is saved and shown', true)
 
   await page.getByRole('button', { name: '+ Add product' }).click()
   await page.getByLabel('Title', { exact: true }).fill('Camp Stove')
-  await page.getByLabel('Price', { exact: true }).fill('40')
-  await page.getByLabel('Stock').fill('3')
-  await page.getByLabel('Category').fill('gear')
+  await page.getByLabel('Price (MRP)').fill('40')
+  await page.getByLabel('Stock', { exact: true }).fill('3')
+  await page.getByLabel('Category').selectOption({ label: 'gear' })
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByText('Camp Stove').first().waitFor()
   await page.getByRole('button', { name: 'Delete Camp Stove' }).click()
-  await page.getByText('Camp Stove').waitFor({ state: 'detached' })
+  await page.getByText('Camp Stove', { exact: true }).waitFor({ state: 'detached' })
   check('delete: the product is removed after confirming', true)
   check('delete: the other product is untouched', await page.getByText('Trail Mug').first().isVisible())
 })

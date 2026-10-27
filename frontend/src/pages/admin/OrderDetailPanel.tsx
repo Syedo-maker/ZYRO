@@ -61,7 +61,7 @@ export function OrderDetailPanel({ order, storeId, onChanged, onClose }: OrderDe
   }
 
   return (
-    <aside aria-label={`Order ${order.orderNumber} details`} className="flex w-full shrink-0 flex-col gap-4 border-border bg-white p-6 lg:w-[400px] lg:border-l">
+    <aside aria-label={`Order ${order.orderNumber} details`} className="flex w-full shrink-0 flex-col gap-4 border-border bg-surface p-6 lg:w-[400px] lg:border-l">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-display text-[15px] font-bold">Order #{order.orderNumber}</h2>
         <div className="flex items-center gap-3">

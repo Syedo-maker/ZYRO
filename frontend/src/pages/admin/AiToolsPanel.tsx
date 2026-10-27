@@ -20,7 +20,7 @@ const TONES: { value: MarketingTone; label: string }[] = [
   { value: 'playful', label: 'Playful' },
   { value: 'luxury', label: 'Luxury' },
 ]
-const fieldClass = 'h-9 rounded-[10px] border border-border bg-white px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+const fieldClass = 'h-9 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
 
 interface AiToolsPanelProps {
   storeId: string
@@ -188,7 +188,7 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
               rows={3}
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
-              className="rounded-[10px] border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="rounded-[10px] border border-border-input bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="secondary" className="h-9 px-3 text-xs" disabled={busy !== null || draftText === draft.content} onClick={() => void handleSaveEdit()}>
@@ -226,7 +226,7 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
           {busy === 'auto-tag' ? 'Thinking…' : 'Suggest category & tags'}
         </Button>
         {tagSuggestion && (
-          <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-border bg-white p-2.5 text-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-border bg-surface p-2.5 text-sm">
             <span>
               <strong>{tagSuggestion.category}</strong> · {tagSuggestion.tags.join(', ')}
             </span>
@@ -277,7 +277,7 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
                 setCopyText(e.target.value)
                 setCopied(null)
               }}
-              className="rounded-[10px] border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="rounded-[10px] border border-border-input bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
             <div className="flex items-center gap-3">
               <Button type="button" className="h-8 px-3 text-xs" onClick={() => void handleCopy()}>
@@ -300,7 +300,7 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
           {busy === 'seo' ? 'Thinking…' : 'Generate SEO title & description'}
         </Button>
         {seoSuggestion && (
-          <div className="flex flex-col gap-2 rounded-[10px] border border-border bg-white p-2.5 text-sm">
+          <div className="flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-2.5 text-sm">
             <p>
               <strong>{seoSuggestion.seoTitle}</strong>
             </p>

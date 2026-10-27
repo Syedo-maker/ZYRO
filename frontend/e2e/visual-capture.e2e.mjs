@@ -175,7 +175,7 @@ for (const [label, width, height] of WIDTHS) {
   if (await openShift.isVisible().catch(() => false)) {
     await page.getByLabel(/Starting cash/).fill('100')
     await page.getByRole('button', { name: 'Open shift' }).click()
-    await page.getByLabel('Scan a barcode or search products').waitFor({ timeout: 15000 }).catch(() => undefined)
+    await page.getByLabel('Scan a SKU or search products').waitFor({ timeout: 15000 }).catch(() => undefined)
   }
   await shoot(page, 'register-selling', label)
 

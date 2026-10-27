@@ -68,7 +68,7 @@ export function DailySummaryPage() {
               value={date}
               max={localToday()}
               onChange={(e) => setDate(e.target.value)}
-              className="h-11 rounded-[10px] border border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
           </div>
           <Button variant="secondary" onClick={() => window.print()} disabled={!report}>
@@ -154,7 +154,7 @@ export function DailySummaryPage() {
 
 function Stat({ label, value, note, strong }: { label: string; value: string; note?: string; strong?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-4 ${strong ? 'border-brand bg-brand-soft' : 'border-border bg-white'}`}>
+    <div className={`rounded-2xl border p-4 ${strong ? 'border-brand bg-brand-soft' : 'border-border bg-surface'}`}>
       <div className="text-xs font-semibold text-text-secondary">{label}</div>
       <div className="font-display text-2xl font-bold tabular-nums mt-1">{value}</div>
       {note && <div className="text-xs text-text-secondary mt-0.5">{note}</div>}
@@ -165,7 +165,7 @@ function Stat({ label, value, note, strong }: { label: string; value: string; no
 function Table({ title, head, children }: { title: string; head: string[]; children: React.ReactNode }) {
   const rows = Array.isArray(children) ? children.length : children ? 1 : 0
   return (
-    <section className="bg-white border border-border rounded-2xl overflow-x-auto [&_td]:px-4 [&_td]:py-2.5 [&_td.num]:text-right [&_td.num]:tabular-nums [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-xs [&_th]:font-semibold [&_th]:text-text-secondary [&_th]:text-left [&_tr:not(:last-child)]:border-b [&_tr]:border-border">
+    <section className="bg-surface border border-border rounded-2xl overflow-x-auto [&_td]:px-4 [&_td]:py-2.5 [&_td.num]:text-right [&_td.num]:tabular-nums [&_th]:px-4 [&_th]:py-2.5 [&_th]:text-xs [&_th]:font-semibold [&_th]:text-text-secondary [&_th]:text-left [&_tr:not(:last-child)]:border-b [&_tr]:border-border">
       <h2 className="font-display text-base font-bold px-4 pt-4">{title}</h2>
       <table className="w-full text-sm mt-2">
         <thead>

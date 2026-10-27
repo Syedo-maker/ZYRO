@@ -77,7 +77,7 @@ export function HistoryPage() {
               setQ(e.target.value)
               setOffset(0)
             }}
-            className="h-11 rounded-[10px] border border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           />
         </div>
       </div>
@@ -89,7 +89,7 @@ export function HistoryPage() {
         <p className="text-sm text-text-secondary">No sales found.</p>
       ) : (
         data && (
-          <div className="relative bg-white border border-border rounded-2xl overflow-x-auto">
+          <div className="relative bg-surface border border-border rounded-2xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-text-secondary border-b border-border">

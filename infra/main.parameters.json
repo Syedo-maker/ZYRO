@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "value": "${AZURE_ENV_NAME}" },
+    "location": { "value": "${AZURE_LOCATION}" },
+    "isProduction": { "value": "${ZYRO_PRODUCTION=false}" },
+    "customDomain": { "value": "${ZYRO_CUSTOM_DOMAIN=}" },
+    "postgresAdminPassword": { "value": "${ZYRO_POSTGRES_ADMIN_PASSWORD}" },
+    "jwtAccessSecret": { "value": "${ZYRO_JWT_ACCESS_SECRET}" },
+    "mongodbUri": { "value": "${ZYRO_MONGODB_URI}" },
+    "recommendationServiceToken": { "value": "${ZYRO_RECOMMENDATION_SERVICE_TOKEN}" },
+    "stripeSecretKey": { "value": "${ZYRO_STRIPE_SECRET_KEY=}" },
+    "stripeWebhookSecret": { "value": "${ZYRO_STRIPE_WEBHOOK_SECRET=}" },
+    "anthropicApiKey": { "value": "${ZYRO_ANTHROPIC_API_KEY=}" },
+    "sendgridApiKey": { "value": "${ZYRO_SENDGRID_API_KEY=}" },
+    "sendgridFromEmail": { "value": "${ZYRO_SENDGRID_FROM_EMAIL=}" },
+    "webImage": { "value": "${SERVICE_WEB_IMAGE_NAME=}" },
+    "apiImage": { "value": "${SERVICE_API_IMAGE_NAME=}" },
+    "recoImage": { "value": "${SERVICE_RECO_IMAGE_NAME=}" },
+    "migrateImage": { "value": "${ZYRO_MIGRATE_IMAGE=}" }
+  }
+}

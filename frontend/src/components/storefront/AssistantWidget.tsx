@@ -67,7 +67,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
-        <div role="dialog" aria-label="Shopping assistant" className="flex h-[480px] w-[340px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
+        <div role="dialog" aria-label="Shopping assistant" className="flex h-[480px] w-[340px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <h2 className="text-sm font-bold">Ask us anything</h2>
             <button type="button" aria-label="Close chat" onClick={() => setOpen(false)} className="text-text-muted hover:text-text">
@@ -78,7 +78,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
           <div ref={listRef} className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3">
             {messages.map((m, i) => (
               <div key={i} className={`flex flex-col gap-2 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <p className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${m.role === 'user' ? 'bg-brand text-white' : 'bg-bg text-text'}`}>{m.content}</p>
+                <p className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${m.role === 'user' ? 'bg-brand text-on-brand' : 'bg-bg text-text'}`}>{m.content}</p>
                 {m.suggestedProducts && m.suggestedProducts.length > 0 && (
                   <div className="flex w-full gap-2 overflow-x-auto pb-1">
                     {m.suggestedProducts.map((p) => (
@@ -91,7 +91,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
                           {p.images[0] && <img src={p.images[0]} alt="" className="h-full w-full object-cover" />}
                         </div>
                         <span className="line-clamp-2 text-xs font-semibold">{p.title}</span>
-                        <span className="text-xs font-bold">{p.stock > 0 ? formatMoney(p.price, currency) : 'Sold out'}</span>
+                        <span className="text-xs font-bold">{p.stock > 0 ? formatMoney(p.salePrice ?? p.price, currency) : 'Sold out'}</span>
                       </Link>
                     ))}
                   </div>
@@ -117,7 +117,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
               placeholder="Ask about a product..."
               maxLength={1000}
               disabled={sending}
-              className="h-10 flex-1 rounded-[10px] border border-border px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30 disabled:opacity-60"
+              className="h-10 flex-1 rounded-[10px] border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30 disabled:opacity-60"
             />
             <Button type="submit" className="h-10 px-4" disabled={sending || !input.trim()}>
               Send
@@ -131,7 +131,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? 'Close shopping assistant' : 'Open shopping assistant'}
         aria-expanded={open}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg hover:bg-brand-hover"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-on-brand shadow-lg hover:bg-brand-hover"
       >
         {open ? (
           <span aria-hidden="true" className="text-xl">✕</span>

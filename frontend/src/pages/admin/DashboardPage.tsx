@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { OrderStatusBadge } from '../../components/OrderStatusBadge'
 import { Alert } from '../../components/ui/Alert'
@@ -8,8 +8,10 @@ import { Spinner } from '../../components/ui/Spinner'
 import { SalesByDayChart } from '../../components/charts/SalesByDayChart'
 import { ChannelSplit, StatTile, TopProducts } from '../../components/charts/DashboardParts'
 import { AiUsageMeter } from './AiUsageMeter'
+import { can } from '../../lib/permissions'
 import { GrowthTipCard } from './GrowthTipCard'
 import { MarketTrendsCard } from './MarketTrendsCard'
+import { ProductScoutPanel } from './ProductScoutPanel'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { upgradeHintOf } from '../../lib/billingApi'
 import { formatDate, formatMoney } from '../../lib/format'
@@ -31,7 +33,7 @@ function windows(days: number) {
 
 function Card({ title, children, wide }: { title: string; children: React.ReactNode; wide?: boolean }) {
   return (
-    <section className={`rounded-2xl border border-border bg-white p-5 ${wide ? 'lg:col-span-2' : ''}`} aria-label={title}>
+    <section className={`rounded-2xl border border-border bg-surface p-5 ${wide ? 'lg:col-span-2' : ''}`} aria-label={title}>
       <h2 className="mb-4 font-display text-base font-bold">{title}</h2>
       {children}
     </section>
@@ -40,6 +42,7 @@ function Card({ title, children, wide }: { title: string; children: React.ReactN
 
 /** Sales at a glance: how much came in through each channel, how it moved, and what sold. */
 export function DashboardPage() {
+  const navigate = useNavigate()
   const { activeStore } = useAuth()
   const storeId = activeStore?.id
   const [days, setDays] = useState<(typeof PERIODS)[number]>(30)
@@ -92,13 +95,16 @@ export function DashboardPage() {
   }
 
   if (!activeStore) return <p className="text-sm text-text-secondary">Create a store first.</p>
+  const openProductForm = (scoutPrefill: unknown) => navigate('/admin/products', { state: { scoutPrefill } })
   const currency = data?.now.currency ?? 'USD'
   const money = (n: number) => formatMoney(n, currency)
   const t = data?.now.totals
   const p = data?.before.totals
 
   return (
-    <div className="flex flex-col gap-6">
+    // The dashboard on the left, the Trending products panel on the right (on top on a small screen).
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+    <div className="order-2 flex min-w-0 flex-1 flex-col gap-6 lg:order-1">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold">Dashboard</h1>
@@ -108,7 +114,7 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div role="group" aria-label="Period" className="flex overflow-hidden rounded-[10px] border border-border bg-white">
+          <div role="group" aria-label="Period" className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
             {PERIODS.map((d) => (
               <button
                 key={d}
@@ -117,7 +123,7 @@ export function DashboardPage() {
                   setDays(d)
                 }}
                 aria-pressed={days === d}
-                className={`h-10 px-4 text-sm font-semibold ${days === d ? 'bg-brand text-white' : 'hover:bg-bg'}`}
+                className={`h-10 px-4 text-sm font-semibold ${days === d ? 'bg-brand text-on-brand' : 'hover:bg-bg'}`}
               >
                 {d} days
               </button>
@@ -144,7 +150,7 @@ export function DashboardPage() {
           </section>
 
           {t.orders === 0 && t.refunds.count === 0 ? (
-            <p className="rounded-2xl border border-border bg-white px-6 py-12 text-center text-sm text-text-secondary">
+            <p className="rounded-2xl border border-border bg-surface px-6 py-12 text-center text-sm text-text-secondary">
               No sales in the last {days} days yet. Sales from your online store and your register will appear here.
             </p>
           ) : (
@@ -176,9 +182,9 @@ export function DashboardPage() {
 
       <MarketTrendsCard storeId={activeStore.id} />
 
-      <AiUsageMeter storeId={activeStore.id} isOwner={activeStore.role === 'owner'} />
+      <AiUsageMeter storeId={activeStore.id} isOwner={activeStore.role === 'owner'} canView={can(activeStore, 'products_write')} />
 
-      <section aria-label="Recent orders" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Recent orders" className="rounded-2xl border border-border bg-surface p-5">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="font-display text-base font-bold">Recent orders</h2>
           <Link to="/admin/orders" className="text-sm font-semibold text-brand hover:text-brand-hover">
@@ -216,6 +222,10 @@ export function DashboardPage() {
           </div>
         )}
       </section>
+    </div>
+    <div className="order-1 lg:order-2">
+      <ProductScoutPanel page="dashboard" onAdd={openProductForm} />
+    </div>
     </div>
   )
 }

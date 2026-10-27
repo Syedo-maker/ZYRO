@@ -124,7 +124,7 @@ export function CheckoutPage() {
               1. SHIPPING METHOD
             </h2>
             {zones.length === 0 ? (
-              <p className="rounded-[10px] border border-border bg-white px-4 py-3.5 text-sm text-text-secondary">
+              <p className="rounded-[10px] border border-border bg-surface px-4 py-3.5 text-sm text-text-secondary">
                 This store has no shipping charge configured, so shipping is free.
               </p>
             ) : (
@@ -133,7 +133,7 @@ export function CheckoutPage() {
                 {zones.map((z) => (
                   <label
                     key={z.id}
-                    className={`flex cursor-pointer items-center justify-between rounded-[10px] bg-white px-4 py-3.5 ${
+                    className={`flex cursor-pointer items-center justify-between rounded-[10px] bg-surface px-4 py-3.5 ${
                       zoneId === z.id ? 'border-2 border-brand' : 'border border-border'
                     }`}
                   >
@@ -163,7 +163,7 @@ export function CheckoutPage() {
               2. PAYMENT
             </h2>
             {method === 'card' && (
-              <p className="rounded-[10px] border border-border bg-white px-4 py-3.5 text-[13px] leading-relaxed text-text-secondary">
+              <p className="rounded-[10px] border border-border bg-surface px-4 py-3.5 text-[13px] leading-relaxed text-text-secondary">
                 You will enter your email, shipping address and card details on Stripe&apos;s secure payment page. ZYRO never sees or
                 stores your card number.
               </p>
@@ -183,7 +183,7 @@ export function CheckoutPage() {
           </section>
         </div>
 
-        <aside className="flex w-full flex-col gap-4 rounded-[14px] border border-border bg-white p-6 lg:w-[340px]" aria-label="Order summary">
+        <aside className="flex w-full flex-col gap-4 rounded-[14px] border border-border bg-surface p-6 lg:w-[340px]" aria-label="Order summary">
           <h2 className="text-[15px] font-bold">Order summary</h2>
           <ul className="flex flex-col gap-3">
             {cart.items.map((item) => (

@@ -31,7 +31,7 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white border border-border rounded-2xl p-8 flex flex-col gap-5">
+      <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-8 flex flex-col gap-5">
         <div>
           <div className="font-display text-2xl font-bold">ZYRO</div>
           <h1 className="font-display text-lg font-semibold mt-4">Log in</h1>

@@ -51,7 +51,7 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white border border-border rounded-2xl p-8 flex flex-col gap-5">
+      <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-8 flex flex-col gap-5">
         <div>
           <div className="font-display text-2xl font-bold">ZYRO</div>
           <h1 className="font-display text-lg font-semibold mt-4">Create your store</h1>
@@ -109,7 +109,7 @@ export function RegisterPage() {
               id="currency"
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="h-11 rounded-[10px] border border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             >
               {STORE_CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -125,6 +125,11 @@ export function RegisterPage() {
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Creating your store…' : 'Create store'}
           </Button>
+          <p className="text-xs text-text-secondary">
+            By creating a store you agree to the{' '}
+            <Link to="/terms" className="font-semibold text-text underline underline-offset-2">Terms of Service</Link> and the{' '}
+            <Link to="/privacy" className="font-semibold text-text underline underline-offset-2">Privacy Policy</Link>.
+          </p>
         </form>
 
         <p className="text-sm text-text-secondary text-center">

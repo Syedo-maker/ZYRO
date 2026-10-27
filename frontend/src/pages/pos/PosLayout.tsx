@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Wordmark } from '../../components/ui/Wordmark'
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { PosProvider, usePos } from '../../context/PosContext'
@@ -37,7 +38,7 @@ export function PosEntry() {
 function Centered({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-bg">
-      <div className="w-full max-w-md bg-white border border-border rounded-2xl p-8 text-sm">{children}</div>
+      <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-8 text-sm">{children}</div>
     </div>
   )
 }
@@ -110,7 +111,7 @@ function PosFrame() {
   const [closing, setClosing] = useState(false)
 
   const link = ({ isActive }: { isActive: boolean }) =>
-    `rounded-[10px] px-4 py-2 text-sm font-semibold transition-colors ${isActive ? 'bg-white/15 text-white' : 'text-white/75 hover:text-white'}`
+    `rounded-[10px] px-4 py-2 text-sm font-semibold transition-colors ${isActive ? 'bg-on-inverse/15 text-on-inverse' : 'text-on-inverse/75 hover:text-on-inverse'}`
 
   async function signOut() {
     await logout()
@@ -118,10 +119,10 @@ function PosFrame() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-bg print:bg-white">
-      <header className="bg-text text-white flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 print:hidden">
-        <div className="font-display text-lg font-bold">ZYRO</div>
-        <div className="text-sm text-white/75">{session.store.name}</div>
+    <div className="min-h-screen flex flex-col bg-bg print:bg-surface">
+      <header className="bg-inverse text-on-inverse flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 print:hidden">
+        <Wordmark className="text-lg" />
+        <div className="text-sm text-on-inverse/75">{session.store.name}</div>
         <nav aria-label="Register sections" className="flex gap-1">
           <NavLink to={`/pos/${storeId}`} end className={link}>
             Register
@@ -138,19 +139,19 @@ function PosFrame() {
         <div className="ml-auto flex flex-wrap items-center gap-4 text-sm">
           {shift ? (
             <>
-              <span className="text-white/75">Shift open since {formatDateTime(shift.openedAt)}</span>
+              <span className="text-on-inverse/75">Shift open since {formatDateTime(shift.openedAt)}</span>
               <button
                 onClick={() => setClosing(true)}
-                className="rounded-[10px] border border-white/40 px-3 py-1.5 font-semibold hover:bg-white/10"
+                className="rounded-[10px] border border-on-inverse/40 px-3 py-1.5 font-semibold hover:bg-on-inverse/10"
               >
                 Close shift
               </button>
             </>
           ) : (
-            <span className="text-white/75">No shift open</span>
+            <span className="text-on-inverse/75">No shift open</span>
           )}
-          <span className="text-white/75">{session.user.name ?? session.user.email}</span>
-          <button onClick={() => void signOut()} className="font-semibold text-white hover:underline">
+          <span className="text-on-inverse/75">{session.user.name ?? session.user.email}</span>
+          <button onClick={() => void signOut()} className="font-semibold text-on-inverse hover:underline">
             Sign out
           </button>
         </div>
