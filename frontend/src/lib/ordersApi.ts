@@ -33,7 +33,8 @@ export const ordersApi = {
 }
 
 export const shippingZonesApi = {
-  list: (storeId: string) => apiFetch<ShippingZone[]>(`/stores/${storeId}/shipping-zones`),
+  /** The admin's list (needs orders_write); checkout reads the public one through storefrontApi. */
+  list: (storeId: string) => apiFetch<ShippingZone[]>(`/stores/${storeId}/shipping-zones/manage`),
   create: (storeId: string, input: ShippingZoneInput) =>
     apiFetch<ShippingZone>(`/stores/${storeId}/shipping-zones`, { method: 'POST', body: input }),
   update: (storeId: string, zoneId: string, input: ShippingZoneInput) =>

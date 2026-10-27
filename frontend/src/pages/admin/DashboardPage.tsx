@@ -19,6 +19,7 @@ import { errorMessage, ordersApi } from '../../lib/ordersApi'
 import { analyticsApi } from '../../lib/shopApi'
 import type { Order } from '../../types/commerce'
 import type { AnalyticsSummary } from '../../types/shop'
+import { NeedsPermission } from './NeedsPermission'
 
 const PERIODS = [7, 30, 90] as const
 
@@ -41,7 +42,7 @@ function Card({ title, children, wide }: { title: string; children: React.ReactN
 }
 
 /** Sales at a glance: how much came in through each channel, how it moved, and what sold. */
-export function DashboardPage() {
+function DashboardContent() {
   const navigate = useNavigate()
   const { activeStore } = useAuth()
   const storeId = activeStore?.id
@@ -227,5 +228,14 @@ export function DashboardPage() {
       <ProductScoutPanel page="dashboard" onAdd={openProductForm} />
     </div>
     </div>
+  )
+}
+
+/** Only for someone with analytics_read; anyone else sees just the page's title and what is missing. */
+export function DashboardPage() {
+  return (
+    <NeedsPermission permission="analytics_read" title="Dashboard" what="The dashboard needs the Analytics permission">
+      <DashboardContent />
+    </NeedsPermission>
   )
 }

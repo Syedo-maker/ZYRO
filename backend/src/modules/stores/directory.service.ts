@@ -1,5 +1,6 @@
 import { prismaUnscoped } from "../../lib/prisma";
-import { notDemoTenant } from "../../lib/demo";
+import { isDemoSlug, notDemoTenant } from "../../lib/demo";
+import { env } from "../../config/env";
 import { Product } from "../../models/Product.model";
 
 /**
@@ -101,8 +102,11 @@ export const directoryService = {
     const candidates = await prismaUnscoped.tenant.findMany({
       where: {
         listedInDirectory: true,
-        ...notDemoTenant,
-        ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }] } : {}),
+        AND: [
+          // Never a demo store, except the one a development machine names for the walkthrough videos.
+          isDemoSlug(env.directoryShowcaseSlug) ? { OR: [notDemoTenant, { slug: env.directoryShowcaseSlug! }] } : notDemoTenant,
+          ...(q ? [{ OR: [{ name: { contains: q, mode: "insensitive" as const } }, { description: { contains: q, mode: "insensitive" as const } }] }] : []),
+        ],
       },
       select: { id: true, name: true, slug: true, logoUrl: true, themeColor: true, currency: true, description: true },
       orderBy: { createdAt: "asc" },
