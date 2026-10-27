@@ -1,9 +1,6 @@
 import { RequestHandler, Router } from "express";
 import multer from "multer";
-import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
-import path from "node:path";
-import { env } from "../../config/env";
+import { getStorage, newKey } from "../../lib/storage";
 import { requireAuth } from "../../middleware/requireAuth.middleware";
 import { withTenantContext } from "../../middleware/tenantContext.middleware";
 import { requirePermission } from "../../middleware/requirePermission.middleware";
@@ -15,8 +12,8 @@ const ALLOWED_AUDIO = new Set(["audio/webm", "audio/ogg", "audio/mpeg", "audio/m
 const EXTENSION: Record<string, string> = { "audio/webm": ".webm", "video/webm": ".webm", "audio/ogg": ".ogg", "audio/mpeg": ".mp3", "audio/mp4": ".m4a", "audio/x-m4a": ".m4a", "audio/wav": ".wav", "audio/wave": ".wav", "audio/x-wav": ".wav" };
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 
-// In memory, not on disk: the file goes straight to the transcriber, and only then is it written
-// somewhere the merchant can play it back.
+// In memory, not on disk: the file goes straight to the transcriber, and is kept in private storage
+// (lib/storage.ts) so the merchant can play it back through a signed link.
 const audioUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_AUDIO_BYTES },
@@ -66,10 +63,10 @@ voiceRouter.post(
   handleAudioUpload,
   run(async (req) => {
     if (!req.file) throw Errors.validation("No recording was sent, or it failed the type or size check");
-    const name = `voice-${randomUUID()}${EXTENSION[req.file.mimetype] ?? ".webm"}`;
-    await writeFile(path.join(env.uploadsDir, name), req.file.buffer);
-    const audioUrl = `${env.publicUrl}/uploads/${name}`;
-    return voiceService.record(req.params.storeId, req.userId!, req.file.buffer, name, req.file.mimetype, audioUrl);
+    const ext = EXTENSION[req.file.mimetype] ?? ".webm";
+    const key = newKey("voice", req.params.storeId, ext);
+    await getStorage().put(key, req.file.buffer, req.file.mimetype === "video/webm" ? "audio/webm" : req.file.mimetype);
+    return voiceService.record(req.params.storeId, req.userId!, req.file.buffer, key.split("/").pop()!, req.file.mimetype, key);
   }, 201)
 );
 

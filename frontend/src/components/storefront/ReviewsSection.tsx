@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useStore } from '../../context/StoreContext'
 import { Alert } from '../ui/Alert'
 import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
+import { Button, buttonStyles } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import { Spinner } from '../ui/Spinner'
 import { StarRating } from '../StarRating'
@@ -140,11 +140,11 @@ export function ReviewsSection({ productId, onChanged }: { productId: string; on
         <>
           {page.reviewCount > 0 || filter ? <Summary page={page} filter={filter} onFilter={setFilter} /> : <p className="text-sm text-text-secondary">No reviews yet. Be the first to review this product.</p>}
 
-          <div className="rounded-2xl border border-border bg-white p-5">
+          <div className="rounded-2xl border border-border bg-surface p-5">
             {!isAuthenticated ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm">Bought this? Share what you think.</p>
-                <Link to={`/store/${store.id}/account/login?next=${encodeURIComponent(next)}`} className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover">
+                <Link to={`/store/${store.id}/account/login?next=${encodeURIComponent(next)}`} className={buttonStyles({ className: 'h-10 px-4' })}>
                   Sign in to write a review
                 </Link>
               </div>
@@ -193,7 +193,7 @@ export function ReviewsSection({ productId, onChanged }: { productId: string; on
                   <label htmlFor="review-sort" className="text-xs font-semibold text-text-secondary">
                     Sort by
                   </label>
-                  <select id="review-sort" value={sort} onChange={(e) => setSort(e.target.value as ReviewSort)} className="h-10 rounded-[10px] border border-border bg-white px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30">
+                  <select id="review-sort" value={sort} onChange={(e) => setSort(e.target.value as ReviewSort)} className="h-10 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30">
                     {Object.entries(SORTS).map(([v, l]) => (
                       <option key={v} value={v}>
                         {l}

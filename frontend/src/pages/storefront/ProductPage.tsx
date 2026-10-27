@@ -5,16 +5,16 @@ import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { StarRating } from '../../components/StarRating'
+import { PriceTag } from '../../components/PriceTag'
 import { RecommendationsSection } from '../../components/storefront/RecommendationsSection'
 import { ReviewsSection } from '../../components/storefront/ReviewsSection'
 import { rememberViewed } from '../../lib/recentlyViewed'
-import { formatMoney } from '../../lib/format'
 import { ApiError } from '../../lib/apiClient'
 import { errorMessage } from '../../lib/ordersApi'
 import { catalogApi } from '../../lib/shopApi'
 import { useAddToCart } from '../../lib/useAddToCart'
+import { clampDescription, usePageMeta } from '../../lib/pageMeta'
 import type { Product } from '../../types/api'
-import { BargainWidget } from './BargainWidget'
 
 function stockNote(stock: number): { text: string; tone: string } {
   if (stock < 1) return { text: 'Sold out', tone: 'text-danger' }
@@ -31,6 +31,19 @@ export function ProductPage() {
   const [error, setError] = useState<string | null>(null)
   const [image, setImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
+
+  // The merchant's meta title and description (product form, or the AI's SEO suggestion) for the tab
+  // and search results; without them, the product's own name and description.
+  usePageMeta(
+    product
+      ? {
+          title: product.seoTitle?.trim() || `${product.title} | ${store.name}`,
+          description: clampDescription(product.seoDescription?.trim() || product.description?.trim() || `${product.title} at ${store.name}.`),
+          type: 'product',
+          image: product.images[0],
+        }
+      : null
+  )
 
   const load = useCallback(async () => {
     try {
@@ -53,7 +66,7 @@ export function ProductPage() {
 
   if (notFound) {
     return (
-      <div className="rounded-2xl border border-border bg-white px-6 py-16 text-center">
+      <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
         <h1 className="font-display text-xl font-bold">Product not found</h1>
         <p className="mt-2 text-sm text-text-secondary">It may have been removed.</p>
         <Link to={`/store/${store.id}/products`} className="mt-4 inline-block text-sm font-semibold text-brand">
@@ -84,7 +97,7 @@ export function ProductPage() {
 
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
         <div className="flex flex-col gap-3">
-          <div className="aspect-square overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
             {product.images[image] ? (
               <img src={product.images[image]} alt={product.title} className="h-full w-full object-cover" />
             ) : (
@@ -120,7 +133,7 @@ export function ProductPage() {
               {product.reviewCount ?? 0} {product.reviewCount === 1 ? 'review' : 'reviews'}
             </span>
           </a>
-          <p className="font-display text-3xl font-bold">{formatMoney(product.price, store.currency)}</p>
+          <PriceTag product={product} currency={store.currency} size="lg" />
           <p className={`text-sm font-semibold ${note.tone}`}>{note.text}</p>
           {product.description && <p className="whitespace-pre-line text-sm leading-relaxed text-text-secondary">{product.description}</p>}
 
@@ -152,8 +165,6 @@ export function ProductPage() {
               {product.stock < 1 ? 'Sold out' : addingId === product.id ? 'Adding...' : 'Add to cart'}
             </Button>
           </div>
-
-          <BargainWidget storeId={store.id} productId={product.id} currency={store.currency} />
         </div>
       </div>
 

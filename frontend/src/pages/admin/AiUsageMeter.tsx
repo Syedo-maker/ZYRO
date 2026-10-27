@@ -18,12 +18,15 @@ function resetDate(month: string): string {
  * use the AI tools can read the figures; for anyone else, or if the request fails, the meter is
  * simply not shown, because a missing bonus panel is better than an error on the dashboard.
  */
-export function AiUsageMeter({ storeId, isOwner = false }: { storeId: string; isOwner?: boolean }) {
+export function AiUsageMeter({ storeId, isOwner = false, canView = true }: { storeId: string; isOwner?: boolean; canView?: boolean }) {
   const [usage, setUsage] = useState<AiUsageQuota | null>(null)
 
   useEffect(() => {
     let cancelled = false
     setUsage(null)
+    // The figures need the Products permission (they belong with the AI tools): not asked for at all
+    // without it, rather than a request the server can only refuse.
+    if (!canView) return
     aiUsageApi
       .get(storeId)
       .then((u) => !cancelled && setUsage(u))
@@ -31,12 +34,12 @@ export function AiUsageMeter({ storeId, isOwner = false }: { storeId: string; is
     return () => {
       cancelled = true
     }
-  }, [storeId])
+  }, [storeId, canView])
 
   if (!usage) return null
   const credits = usage.topUpGenerations + usage.topUpChatMessages
   return (
-    <section aria-label="AI usage this month" className="rounded-2xl border border-border bg-white p-5">
+    <section aria-label="AI usage this month" className="rounded-2xl border border-border bg-surface p-5">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-base font-bold">
           AI usage this month <span className="ml-1 text-xs font-semibold text-text-secondary">{usage.plan} plan</span>

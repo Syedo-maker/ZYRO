@@ -1,6 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import { getBullRedis } from "./redis";
 import { trendsService } from "../modules/trends/trends.service";
+import { logger } from "./logger";
 
 /**
  * The Trend Scout's weekly run (Part D). Mondays at 05:00 UTC (10:00 in Pakistan), an hour before the
@@ -28,12 +29,12 @@ export function startTrendsWorker(): Worker {
     TRENDS_QUEUE_NAME,
     async () => {
       const o = await trendsService.runWeek();
-      console.log(`[trends] week of ${o.weekStart}: ${o.published} published, ${o.suppressed} withheld, ${o.noData} no data, ${o.existing} already done, ${o.failed} failed`);
+      logger.info(`[trends] week of ${o.weekStart}: ${o.published} published, ${o.suppressed} withheld, ${o.noData} no data, ${o.existing} already done, ${o.failed} failed`);
       return o;
     },
     { connection: getBullRedis(), concurrency: 1 }
   );
-  worker.on("error", (err) => console.error("Trends worker error:", err.message));
+  worker.on("error", (err) => logger.error({ err: err.message }, "trends worker error"));
   return worker;
 }
 

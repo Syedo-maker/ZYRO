@@ -35,7 +35,7 @@ function ReplyDialog({ review, onClose, onSave }: { review: ModerationReview; on
         <p className="rounded-[10px] bg-bg px-4 py-3 text-sm text-text-secondary">{review.comment ?? review.title ?? `${review.rating} stars, no comment`}</p>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="reply" className="text-xs font-semibold text-text-secondary">Your public reply (leave empty to remove it)</label>
-          <textarea id="reply" rows={4} maxLength={1000} autoFocus value={text} onChange={(e) => setText(e.target.value)} className="rounded-[10px] border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+          <textarea id="reply" rows={4} maxLength={1000} autoFocus value={text} onChange={(e) => setText(e.target.value)} className="rounded-[10px] border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
         </div>
         {error && <Alert>{error}</Alert>}
         <div className="flex gap-3">
@@ -75,7 +75,7 @@ export function ReviewsAdminPage() {
   }
 
   if (!activeStore) return <p className="text-sm text-text-secondary">Create a store first.</p>
-  const select = 'h-10 rounded-[10px] border border-border bg-white px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+  const select = 'h-10 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
@@ -105,12 +105,12 @@ export function ReviewsAdminPage() {
       {error && <Alert>{error}</Alert>}
       {!data && !error && <Spinner label="Loading reviews" />}
       {data?.reviews.length === 0 && (
-        <p className="rounded-2xl border border-border bg-white px-6 py-12 text-center text-sm text-text-secondary">No reviews match. Reviews appear here as soon as customers post them.</p>
+        <p className="rounded-2xl border border-border bg-surface px-6 py-12 text-center text-sm text-text-secondary">No reviews match. Reviews appear here as soon as customers post them.</p>
       )}
 
       <ul className="flex flex-col gap-3">
         {data?.reviews.map((r) => (
-          <li key={r.id} className="flex flex-col gap-2 rounded-2xl border border-border bg-white p-5">
+          <li key={r.id} className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-5">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <StarRating value={r.rating} size="sm" />
               <span className="text-sm font-semibold">{r.authorName}</span>

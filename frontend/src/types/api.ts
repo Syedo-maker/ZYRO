@@ -31,13 +31,22 @@ export interface Product {
   storeId: string
   title: string
   description: string
+  /** The full price (MRP), shown struck through when there is a discount. */
+  actualPrice: number
+  /** Null when there is no discount. */
+  discountPrice: number | null
+  /** What customers pay: the cart, checkout and orders use this. */
+  salePrice: number
+  /** Whole percent below the MRP, for the "% off" badge; null when there is none. */
+  discountPercent: number | null
+  /** The sale price under its name from before the three prices. Prefer salePrice. */
   price: number
   stock: number
   sku?: string | null
-  barcode?: string | null
   taxable?: boolean
-  /** Part G: the lowest price the merchant will accept when haggling. Merchant-only; shoppers never see it. */
-  bargainMinPrice?: number | null
+  /** The store's category; null only for a product listed before categories existed and not yet migrated. */
+  categoryId: string | null
+  /** The category's name, kept in step with it by the server. */
   category: string
   images: string[]
   /** Often filled from an AI auto-tag suggestion; the suggestion itself never writes here. */
@@ -53,18 +62,30 @@ export interface Product {
 export interface ProductInput {
   title: string
   description?: string
-  price: number
+  /** The full price (MRP). */
+  actualPrice: number
+  /** Empty (null) for no discount; on an edit, that removes one. At most the actual price. */
+  discountPrice: number | null
   stock: number
   /** Scanned at the register; unique per store. */
   sku?: string
-  barcode?: string
   taxable?: boolean
-  bargainMinPrice?: number | null
-  category: string
+  /** One of the store's active categories, chosen from the dropdown; never typed. */
+  categoryId: string
   images?: string[]
   tags?: string[]
   seoTitle?: string
   seoDescription?: string
+}
+
+/** One of a store's own product categories. */
+export interface Category {
+  id: string
+  /** As the owner typed it. */
+  name: string
+  active: boolean
+  /** How many of the store's products are in it. */
+  productCount: number
 }
 
 export interface PaginationInfo {

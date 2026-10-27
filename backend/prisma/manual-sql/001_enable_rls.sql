@@ -1,4 +1,4 @@
--- ShopMind AI: Row-Level Security (defense-in-depth for multi-tenancy)
+-- ZYRO: Row-Level Security (defense-in-depth for multi-tenancy)
 -- Phase 0, Module 1: Database schema design
 --
 -- Prisma does not manage RLS policies natively, so this file is applied manually

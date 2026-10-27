@@ -45,11 +45,16 @@ export const updatePaymentSettingsSchema = z
   });
 export type UpdatePaymentSettingsInput = z.infer<typeof updatePaymentSettingsSchema>;
 
-export const submitProofSchema = z.object({
-  imageUrl: z.string().url().max(500),
-  declaredAmount: z.number().positive().max(10_000_000),
-  declaredReference: z.string().trim().min(1).max(64).optional().nullable(),
-});
+export const submitProofSchema = z
+  .object({
+    /** The key the upload returned. */
+    imageKey: z.string().max(200).optional(),
+    /** Accepted for clients written before keys: the link the upload returned. */
+    imageUrl: z.string().url().max(2000).optional(),
+    declaredAmount: z.number().positive().max(10_000_000),
+    declaredReference: z.string().trim().min(1).max(64).optional().nullable(),
+  })
+  .refine((v) => v.imageKey || v.imageUrl, { message: "imageKey: the screenshot's key from the upload is required" });
 export type SubmitProofInput = z.infer<typeof submitProofSchema>;
 
 export const reviewProofSchema = z.object({

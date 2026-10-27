@@ -45,7 +45,7 @@ export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-white p-8">
+    <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-surface p-8">
       <h1 className="font-display text-2xl font-bold">{register ? 'Create your account' : 'Sign in'}</h1>
       <p className="mt-1 text-sm text-text-secondary">
         {register

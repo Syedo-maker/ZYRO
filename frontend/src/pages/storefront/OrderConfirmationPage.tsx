@@ -19,7 +19,7 @@ type View =
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col items-center gap-4 rounded-2xl border border-border bg-white p-8 text-center sm:p-10">
+    <div className="mx-auto flex max-w-[560px] flex-col items-center gap-4 rounded-2xl border border-border bg-surface p-8 text-center sm:p-10">
       {children}
     </div>
   )

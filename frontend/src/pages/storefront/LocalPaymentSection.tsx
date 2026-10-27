@@ -103,7 +103,7 @@ export function LocalPaymentSection({
   const choice = (value: PayMethod, title: string, note: string, disabled = false) => (
     <label
       key={value}
-      className={`flex cursor-pointer items-start gap-3 rounded-[10px] bg-white px-4 py-3.5 ${method === value ? 'border-2 border-brand' : 'border border-border'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+      className={`flex cursor-pointer items-start gap-3 rounded-[10px] bg-surface px-4 py-3.5 ${method === value ? 'border-2 border-brand' : 'border border-border'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
     >
       <input type="radio" name="pay-method" value={value} checked={method === value} disabled={disabled} onChange={() => onMethodChange(value)} className="mt-0.5 h-4 w-4 accent-brand" />
       <span>
@@ -128,7 +128,7 @@ export function LocalPaymentSection({
       </fieldset>
 
       {method !== 'card' && (
-        <div className="flex flex-col gap-3 rounded-[10px] border border-border bg-white p-4">
+        <div className="flex flex-col gap-3 rounded-[10px] border border-border bg-surface p-4">
           <h3 className="text-[13px] font-semibold">Where should we deliver?</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input id="d-name" label="Full name" required maxLength={120} autoComplete="name" value={delivery.name} onChange={(e) => set('name', e.target.value)} />

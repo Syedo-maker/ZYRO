@@ -32,10 +32,10 @@ const POINTS = [
 
 export function TrustSection() {
   return (
-    <section className="bg-lp-green py-16 lg:py-24">
+    <section className="bg-inverse py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-landing text-3xl font-extrabold leading-tight text-lp-cream sm:text-4xl">
+          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-on-inverse sm:text-4xl">
             Built so your shop, and your customers, stay safe.
           </h2>
         </Reveal>
@@ -44,24 +44,24 @@ export function TrustSection() {
           {POINTS.map((point, i) => (
             <li key={point.title}>
               <Reveal delayMs={(i % 2) * 90}>
-                <div className="flex h-full gap-4 rounded-2xl border border-lp-cream/15 bg-lp-cream/[0.06] p-6">
+                <div className="flex h-full gap-4 rounded-2xl border border-on-inverse/15 bg-on-inverse/[0.06] p-6">
                   <svg
                     width="26"
                     height="26"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#E8703D"
+                    stroke="currentColor"
                     strokeWidth="1.6"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     aria-hidden="true"
-                    className="mt-0.5 shrink-0"
+                    className="mt-0.5 shrink-0 text-accent-display"
                   >
                     <path d={point.path} />
                   </svg>
                   <div>
-                    <h3 className="font-landing text-base font-bold text-lp-cream">{point.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-lp-cream/70">{point.body}</p>
+                    <h3 className="font-display text-base font-bold text-on-inverse">{point.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-on-inverse-muted">{point.body}</p>
                   </div>
                 </div>
               </Reveal>

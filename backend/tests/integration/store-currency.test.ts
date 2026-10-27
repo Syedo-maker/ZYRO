@@ -5,6 +5,10 @@
  * payment set per currency so Stripe never refuses a checkout at the last step.
  */
 process.env.RATE_LIMIT_ENABLED = "false";
+// Test-only values, set here so the suite never depends on a developer's own .env (CI has none;
+// the first CI run on GitHub failed this suite for exactly that reason).
+process.env.STRIPE_SECRET_KEY = "sk_test_verifycurrency";
+process.env.STRIPE_WEBHOOK_SECRET = "whsec_verifycurrency";
 
 import request from "supertest";
 import type { Express } from "express";

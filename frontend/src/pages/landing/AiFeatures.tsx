@@ -23,24 +23,24 @@ interface FeatureProps {
  */
 function AiFeatureSection({ id, kicker, title, body, points, mockup, lead = false, tone, flip = false }: FeatureProps) {
   return (
-    <section id={id} className={tone === 'cream' ? 'bg-lp-cream py-12 lg:py-16' : 'bg-lp-sage py-14 lg:py-20'}>
+    <section id={id} className={tone === 'cream' ? 'bg-bg py-12 lg:py-16' : 'bg-subtle py-14 lg:py-20'}>
       <div
         className={`mx-auto grid w-full max-w-6xl items-center gap-8 px-4 sm:px-6 lg:gap-14 lg:px-8 ${
           lead ? 'lg:grid-cols-[1fr_1fr]' : 'lg:grid-cols-[1.15fr_0.85fr]'
         }`}
       >
         <Reveal className={flip ? 'lg:order-2' : ''}>
-          <p className="font-landing text-xs font-bold uppercase tracking-[0.14em] text-lp-accent-strong">{kicker}</p>
-          <h3 className={`mt-3 font-landing font-extrabold leading-tight text-lp-green ${lead ? 'text-3xl sm:text-4xl' : 'text-2xl sm:text-3xl'}`}>
+          <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-accent">{kicker}</p>
+          <h3 className={`mt-3 font-display font-extrabold leading-tight text-text ${lead ? 'text-3xl sm:text-4xl' : 'text-2xl sm:text-3xl'}`}>
             {title}
           </h3>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-lp-green/80">{body}</p>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-text-secondary">{body}</p>
           <ul role="list" className="mt-5 flex flex-col gap-2.5">
             {points.map((p) => (
-              <li key={p} className="flex items-start gap-2.5 text-sm text-lp-green/85">
+              <li key={p} className="flex items-start gap-2.5 text-sm text-text-secondary">
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="mt-0.5 shrink-0">
-                  <circle cx="10" cy="10" r="9" fill="#0B3B33" />
-                  <path d="M6 10.4l2.6 2.6L14 7.6" stroke="#F4F3EE" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="10" cy="10" r="9" className="fill-brand" />
+                  <path d="M6 10.4l2.6 2.6L14 7.6" className="stroke-on-brand" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span>{p}</span>
               </li>
@@ -62,13 +62,13 @@ export function AiFeatures() {
       {/* The block needs its own heading, both so the five features below can be h3 under something
           rather than skipping a level, and because jumping straight from the problem into feature
           one left the reader with no idea what they were about to read. */}
-      <section className="bg-lp-cream pt-16 lg:pt-24">
+      <section className="bg-bg pt-16 lg:pt-24">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <h2 className="max-w-3xl font-landing text-3xl font-extrabold leading-tight text-lp-green sm:text-4xl">
+            <h2 className="max-w-3xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
               The AI is the product, not an add-on.
             </h2>
-            <p className="mt-4 max-w-2xl text-base text-lp-green/80">
+            <p className="mt-4 max-w-2xl text-base text-text-secondary">
               Five things it does for you and your shoppers, included on every plan. All of it is built and running today.
             </p>
           </Reveal>
@@ -82,7 +82,7 @@ export function AiFeatures() {
         title="Trending suggestions, while you add the product"
         body="Name a product and the AI offers titles and descriptions built around the words shoppers are really using. Each suggestion shows which of those words it contains, so you can see where the wording came from instead of taking it on trust."
         points={[
-          'Keywords come from real data: what sells across ShopMind shops, imported Google Trends, and what shoppers search for here.',
+          'Keywords come from real data: what sells across ZYRO shops, imported Google Trends, and what shoppers search for here.',
           'A word is only used once several different shops have seen it, so no shop can read another shop’s data.',
           'If a category has no trend data yet, it says so plainly rather than making something up.',
           'Nothing is saved until you pick a suggestion and save the product. Edit any of it first.',

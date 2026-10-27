@@ -74,7 +74,7 @@ export function AccountOrderPage() {
       </div>
 
       {order.shipment && (
-        <section aria-labelledby="ship-heading" className="rounded-2xl border border-border bg-white p-5">
+        <section aria-labelledby="ship-heading" className="rounded-2xl border border-border bg-surface p-5">
           <h2 id="ship-heading" className="text-sm font-bold">
             Delivery
           </h2>
@@ -90,7 +90,7 @@ export function AccountOrderPage() {
         </section>
       )}
 
-      <section aria-labelledby="items-heading" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-labelledby="items-heading" className="rounded-2xl border border-border bg-surface p-5">
         <h2 id="items-heading" className="text-sm font-bold">
           Items
         </h2>
@@ -115,7 +115,7 @@ export function AccountOrderPage() {
       </section>
 
       {order.shippingAddress && (
-        <section aria-labelledby="addr-heading" className="rounded-2xl border border-border bg-white p-5">
+        <section aria-labelledby="addr-heading" className="rounded-2xl border border-border bg-surface p-5">
           <h2 id="addr-heading" className="text-sm font-bold">
             Shipping address
           </h2>

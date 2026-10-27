@@ -35,7 +35,7 @@ export function StatTile({
     }
   }
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-white p-5">
+    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-surface p-5">
       <p className="text-xs font-semibold text-text-secondary">{label}</p>
       <p className="font-display text-3xl font-bold tabular-nums">{value}</p>
       {change && <p className={`text-xs font-medium ${change.good === null ? 'text-text-secondary' : change.good ? 'text-success' : 'text-danger'}`}>{change.text}</p>}

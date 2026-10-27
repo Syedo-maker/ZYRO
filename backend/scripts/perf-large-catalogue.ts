@@ -99,7 +99,8 @@ async function main() {
         // well as against a haystack.
         title: `${adjective} ${noun} ${i}${i === 4242 ? " zephyrine" : ""}`,
         description: `A ${adjective} ${noun} for everyday use. Item number ${i} in the catalogue.`,
-        price: 500 + (i % 90) * 50,
+        actualPrice: 500 + (i % 90) * 50,
+        salePrice: 500 + (i % 90) * 50,
         category: CATEGORIES[i % CATEGORIES.length],
         tags: [adjective, noun.split(" ")[0]],
         images: [],

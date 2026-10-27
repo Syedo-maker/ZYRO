@@ -9,7 +9,7 @@ import { Reveal } from './Reveal'
  * emoji standing in for a drawing.
  */
 const ITEMS: { title: string; body: string; path: string }[] = [
-  { title: 'Product catalogue', body: 'Photos, prices, stock, SKUs, barcodes, tags and categories.', path: 'M4 7h16v13H4zM4 7l2-3h12l2 3M9 12h6' },
+  { title: 'Product catalogue', body: 'Photos, sale and MRP prices, stock, SKUs, tags and your own categories.', path: 'M4 7h16v13H4zM4 7l2-3h12l2 3M9 12h6' },
   { title: 'Cart and checkout', body: 'Guest checkout, so a shopper can buy without making an account.', path: 'M3 5h2l2.5 11h11L21 8H6M9 20a1 1 0 100-2 1 1 0 000 2M18 20a1 1 0 100-2 1 1 0 000 2' },
   { title: 'Orders and shipping', body: 'Shipping zones and rates, order status, refunds and returns.', path: 'M3 8h12v8H3zM15 11h4l2 3v2h-6M6 19a1 1 0 100-2 1 1 0 000 2M18 19a1 1 0 100-2 1 1 0 000 2' },
   { title: 'Discount codes', body: 'Percentage or fixed, with limits on how often a code can be used.', path: 'M4 9l5-5 11 11-5 5zM8.5 8.5h.01M13 14l3 3' },
@@ -21,13 +21,13 @@ const ITEMS: { title: string; body: string; path: string }[] = [
 
 export function FeatureGrid() {
   return (
-    <section className="bg-lp-green py-16 lg:py-24">
+    <section className="bg-inverse py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-landing text-3xl font-extrabold leading-tight text-lp-cream sm:text-4xl">
+          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-on-inverse sm:text-4xl">
             And everything else a shop actually needs.
           </h2>
-          <p className="mt-4 max-w-2xl text-base text-lp-cream/80">
+          <p className="mt-4 max-w-2xl text-base text-on-inverse-secondary">
             All of it included on every plan, the free one too. One catalogue and one set of stock, whether you sell online or across a
             counter.
           </p>
@@ -37,12 +37,12 @@ export function FeatureGrid() {
           {ITEMS.map((item, i) => (
             <li key={item.title}>
               <Reveal delayMs={(i % 4) * 70}>
-                <div className="flex h-full flex-col gap-2.5 rounded-2xl border border-lp-cream/15 bg-lp-cream/[0.06] p-5 transition-colors hover:border-lp-cream/35">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E8703D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <div className="flex h-full flex-col gap-2.5 rounded-2xl border border-on-inverse/15 bg-on-inverse/[0.06] p-5 transition-colors hover:border-on-inverse/35">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-accent-display">
                     <path d={item.path} />
                   </svg>
-                  <h3 className="font-landing text-base font-bold text-lp-cream">{item.title}</h3>
-                  <p className="text-sm leading-relaxed text-lp-cream/70">{item.body}</p>
+                  <h3 className="font-display text-base font-bold text-on-inverse">{item.title}</h3>
+                  <p className="text-sm leading-relaxed text-on-inverse-muted">{item.body}</p>
                 </div>
               </Reveal>
             </li>

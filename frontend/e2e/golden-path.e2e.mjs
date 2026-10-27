@@ -97,10 +97,16 @@ await step('sign up', op, async () => {
 // ---- 2. Add a product, with the AI writing it ----------------------------------------------------
 
 await step('add a product with the AI', op, async () => {
+  // A product goes in one of the store's own categories, chosen from a dropdown, so make one first.
+  await op.goto(`${WEB}/admin/categories`)
+  await op.getByLabel('New category').fill('clothing')
+  await op.getByRole('button', { name: 'Add category' }).click()
+  await op.getByRole('row').filter({ hasText: 'clothing' }).waitFor()
+
   await op.goto(`${WEB}/admin/products`)
   await op.getByRole('button', { name: 'Add product' }).first().click()
 
-  await op.getByLabel('Category', { exact: true }).fill('clothing')
+  await op.getByLabel('Category', { exact: true }).selectOption({ label: 'clothing' })
   await op.getByRole('button', { name: 'Write with AI' }).click()
   await op.getByRole('button', { name: /Suggest 4 options/ }).click()
   await op.getByRole('listitem').filter({ hasText: 'Use this' }).first().waitFor({ timeout: 60000 })
@@ -111,7 +117,7 @@ await step('add a product with the AI', op, async () => {
 
   // The merchant's own edit on top of the AI's words, which is the point of the feature.
   await op.getByLabel('Title', { exact: true }).fill(`Golden Lawn Suit ${suffix}`)
-  await op.getByLabel('Price', { exact: true }).fill('2500')
+  await op.getByLabel('Price (MRP)').fill('2500')
   await op.getByLabel('Stock', { exact: true }).fill('10')
   await op.getByRole('button', { name: /^(Save|Create)/ }).click()
   await op.getByText(`Golden Lawn Suit ${suffix}`).first().waitFor({ timeout: 20000 })
@@ -190,7 +196,7 @@ await step('the register sells from the same stock', op, async () => {
   await op.getByLabel(/Starting cash/).fill('100')
   await op.getByRole('button', { name: 'Open shift' }).click()
 
-  const search = op.getByLabel('Scan a barcode or search products')
+  const search = op.getByLabel('Scan a SKU or search products')
   await search.waitFor({ timeout: 20000 })
   await search.fill('Golden Lawn')
   await op.getByText(`Golden Lawn Suit ${suffix}`).first().waitFor({ timeout: 20000 })
@@ -229,7 +235,9 @@ await step('one catalogue, one stock figure', op, async () => {
   const row = op.getByRole('row').filter({ hasText: `Golden Lawn Suit ${suffix}` }).first()
   await row.waitFor({ timeout: 20000 })
   // Ten to begin with, one sold online and one at the counter.
-  check('the merchant sees one stock figure reduced by both sales', /\b8\b/.test(await row.innerText()), (await row.innerText()).replace(/\n/g, ' | '))
+  // The count sits in the row's quick stock control.
+  const shown = await row.getByLabel(/^Stock for /).inputValue()
+  check('the merchant sees one stock figure reduced by both sales', shown === '8', shown)
 })
 
 // ---- 6. Refund the online order ----------------------------------------------------------------------
@@ -253,7 +261,8 @@ await step('refund the online order', op, async () => {
   await op.goto(`${WEB}/admin/products`)
   const stockRow = op.getByRole('row').filter({ hasText: `Golden Lawn Suit ${suffix}` }).first()
   await stockRow.waitFor({ timeout: 20000 })
-  check('putting the items back in stock really put them back', /\b9\b/.test(await stockRow.innerText()), (await stockRow.innerText()).replace(/\n/g, ' | '))
+  const restocked = await stockRow.getByLabel(/^Stock for /).inputValue()
+  check('putting the items back in stock really put them back', restocked === '9', restocked)
 })
 
 // ---- 7. Buy a plan ----------------------------------------------------------------------------------

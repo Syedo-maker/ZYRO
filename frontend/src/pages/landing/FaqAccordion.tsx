@@ -15,7 +15,7 @@ const QUESTIONS: { q: string; a: string }[] = [
   },
   {
     q: 'How do the trending suggestions actually work?',
-    a: 'When you name a product, we look up the popular search words for that category from three real sources: words from products selling well across ShopMind shops, Google Trends data a platform administrator has imported, and what shoppers type into ShopMind search boxes. The AI is given that list and asked to write titles and descriptions around the fitting ones. Each suggestion then shows which of those words it genuinely contains, checked on our server rather than taken from the AI.',
+    a: 'When you name a product, we look up the popular search words for that category from three real sources: words from products selling well across ZYRO shops, Google Trends data a platform administrator has imported, and what shoppers type into ZYRO search boxes. The AI is given that list and asked to write titles and descriptions around the fitting ones. Each suggestion then shows which of those words it genuinely contains, checked on our server rather than taken from the AI.',
   },
   {
     q: 'Can one shop see another shop’s data through this?',
@@ -31,7 +31,7 @@ const QUESTIONS: { q: string; a: string }[] = [
   },
   {
     q: 'Can I use my own domain name?',
-    a: 'Not yet, honestly. The Business plan reserves a custom domain and you can save one, but serving your shop on it is still being built. Until then every shop runs on its own ShopMind link, which works perfectly well for sharing.',
+    a: 'Not yet, honestly. The Business plan reserves a custom domain and you can save one, but serving your shop on it is still being built. Until then every shop runs on its own ZYRO link, which works perfectly well for sharing.',
   },
   {
     q: 'Does it work on a phone?',
@@ -45,17 +45,17 @@ const QUESTIONS: { q: string; a: string }[] = [
 
 export function FaqAccordion() {
   return (
-    <section id="faq" className="bg-lp-cream py-16 lg:py-24">
+    <section id="faq" className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="font-landing text-3xl font-extrabold leading-tight text-lp-green sm:text-4xl">Questions, answered straight</h2>
+          <h2 className="font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">Questions, answered straight</h2>
         </Reveal>
 
         <div className="mt-9 flex flex-col gap-3">
           {QUESTIONS.map((item, i) => (
             <Reveal key={item.q} delayMs={Math.min(i, 4) * 60}>
-              <details className="group rounded-2xl border border-lp-green/12 bg-white px-5 py-4 open:border-lp-green/30">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-landing text-base font-bold text-lp-green focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lp-green">
+              <details className="group rounded-2xl border border-border bg-surface px-5 py-4 open:border-border-input">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-bold text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
                   {item.q}
                   <svg
                     width="20"
@@ -71,7 +71,7 @@ export function FaqAccordion() {
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-lp-green/80">{item.a}</p>
+                <p className="mt-3 text-sm leading-relaxed text-text-secondary">{item.a}</p>
               </details>
             </Reveal>
           ))}

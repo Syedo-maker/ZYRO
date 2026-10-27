@@ -1,10 +1,14 @@
 import { Link, NavLink, Navigate, Outlet } from 'react-router-dom'
+import { Wordmark } from '../../components/ui/Wordmark'
 import { useAuth } from '../../context/AuthContext'
+import { can, type StorePermission } from '../../lib/permissions'
 
 interface NavItem {
   label: string
   to: string
   enabled: boolean
+  /** Shown only to someone with this permission in the store (the page would only refuse them). */
+  needs?: StorePermission
 }
 
 // Matches the sidebar in design/wireframes/AdminDashboard.dc.html / AdminCatalog.dc.html.
@@ -13,6 +17,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/admin/dashboard', enabled: true },
   { label: 'Products', to: '/admin/products', enabled: true },
+  { label: 'Categories', to: '/admin/categories', enabled: true, needs: 'products_write' },
   { label: 'Orders', to: '/admin/orders', enabled: true },
   { label: 'Payments', to: '/admin/payments', enabled: true },
   { label: 'Voice notes', to: '/admin/voice-notes', enabled: true },
@@ -40,7 +45,7 @@ export function AdminLayout() {
   if (stores.length === 0) return <Navigate to="/shop" replace />
 
   const items = [
-    ...NAV_ITEMS.filter((i) => i.enabled),
+    ...NAV_ITEMS.filter((i) => i.enabled && (!i.needs || can(activeStore, i.needs))),
     ...(activeStore?.role === 'owner' ? OWNER_ITEMS : []),
     ...(user?.platformAdmin ? [PLATFORM_ITEM] : []),
     ...NAV_ITEMS.filter((i) => !i.enabled),
@@ -49,8 +54,8 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-bg">
       {/* A column on a wide screen; a row of links that scrolls sideways on a phone or tablet. */}
-      <aside className="w-full lg:w-[220px] shrink-0 bg-text flex flex-row lg:flex-col items-center lg:items-stretch p-3 lg:p-4 gap-1 overflow-x-auto">
-        <div className="font-display text-lg font-bold text-white px-2 lg:pb-6">ZYRO</div>
+      <aside className="w-full lg:w-[220px] shrink-0 bg-inverse flex flex-row lg:flex-col items-center lg:items-stretch p-3 lg:p-4 gap-1 overflow-x-auto">
+        <div className="px-2 lg:pb-6"><Wordmark className="text-lg text-on-inverse" /></div>
         {items.map((item) =>
           item.enabled ? (
             <NavLink
@@ -58,7 +63,7 @@ export function AdminLayout() {
               to={item.to}
               className={({ isActive }) =>
                 `whitespace-nowrap rounded-[10px] px-4 py-2.5 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-white/15 text-white font-semibold' : 'text-white/70 hover:text-white'
+                  isActive ? 'bg-on-inverse/15 text-on-inverse font-semibold' : 'text-on-inverse/75 hover:text-on-inverse'
                 }`
               }
             >
@@ -67,8 +72,8 @@ export function AdminLayout() {
           ) : (
             <span
               key={item.to}
-              title="Coming in a later phase"
-              className="whitespace-nowrap rounded-[10px] px-4 py-2.5 text-sm font-medium text-white/30 cursor-not-allowed"
+              title="Not available on your plan yet"
+              className="whitespace-nowrap rounded-[10px] px-4 py-2.5 text-sm font-medium text-on-inverse/40 cursor-not-allowed"
             >
               {item.label}
             </span>
@@ -77,7 +82,7 @@ export function AdminLayout() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="min-h-[72px] bg-white border-b border-border flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 lg:px-8">
+        <header className="min-h-[72px] bg-surface border-b border-border flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 lg:px-8">
           <div className="text-[17px] font-semibold">{activeStore?.name ?? 'No store yet'}</div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             {activeStore && (

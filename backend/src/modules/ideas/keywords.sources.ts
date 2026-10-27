@@ -2,6 +2,7 @@ import { prismaUnscoped } from "../../lib/prisma";
 import { getRedis } from "../../lib/redis";
 import { normaliseCategory } from "../trends/trends.aggregate";
 import type { TrendSeries } from "../trends/trends.csv";
+import { logger } from "../../lib/logger";
 
 /**
  * Where the trending keywords behind AI product suggestions come from (Issue 1).
@@ -164,7 +165,7 @@ export async function trendingKeywords(market: string, category: string): Promis
   const gathered = await Promise.all(
     getKeywordSources().map((s) =>
       s.keywordsFor(market, normalisedCategory).catch((err: Error) => {
-        console.error(`[ideas] keyword source ${s.id} failed: ${err.message}`);
+        logger.error(`[ideas] keyword source ${s.id} failed: ${err.message}`);
         return [] as TrendingKeyword[];
       })
     )

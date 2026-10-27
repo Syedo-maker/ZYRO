@@ -7,7 +7,7 @@ export const updateBrandingSchema = z.object({
   logoUrl: z.string().url().optional(),
   themeColor: z
     .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, "themeColor must be a 6-digit hex color, e.g. #4F46E5")
+    .regex(/^#[0-9a-fA-F]{6}$/, "themeColor must be a 6-digit hex color, e.g. #0B3B33")
     .optional(),
   // Issue 2: both of these are about how the shop appears in the public directory at /shop.
   // One line, because the directory shows a card and not a page.
@@ -17,6 +17,10 @@ export const updateBrandingSchema = z.object({
 export type UpdateBrandingInput = z.infer<typeof updateBrandingSchema>;
 
 export const updateCurrencySchema = z.object({ currency: z.enum(STORE_CURRENCY_CODES) });
+
+/** "Include my shop's sales in shared platform trends" (Product Scout, Trend Scout). */
+export const updateTrendSharingSchema = z.object({ shareSalesInTrends: z.boolean() });
+export type UpdateTrendSharingInput = z.infer<typeof updateTrendSharingSchema>;
 export type UpdateCurrencyInput = z.infer<typeof updateCurrencySchema>;
 
 // A host name such as shop.example.com: lowercase letters, digits and hyphens in dot-separated

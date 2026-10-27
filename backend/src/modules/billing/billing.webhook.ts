@@ -4,6 +4,7 @@ import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { tenantContext } from "../../lib/tenantContext";
 import { getStripeGateway, type BillingSubscription } from "../../lib/stripe";
 import { BILLING_CURRENCY, PLANS, findTopUpPack } from "../../lib/plans";
+import { logger } from "../../lib/logger";
 
 /**
  * The only code that changes a store's plan or credits (Part A). It runs from the Stripe webhook
@@ -55,7 +56,7 @@ export async function handleSubscriptionCheckout(session: Stripe.Checkout.Sessio
   // What was charged must be what this plan costs; otherwise refuse to upgrade and say so loudly.
   const expected = PLANS[tier as "PRO" | "BUSINESS"];
   if (session.amount_total !== expected.priceCents || session.currency?.toLowerCase() !== BILLING_CURRENCY) {
-    console.error(`Stripe session ${session.id}: plan ${tier} charged ${session.amount_total} ${session.currency}, expected ${expected.priceCents} ${BILLING_CURRENCY}`);
+    logger.error(`Stripe session ${session.id}: plan ${tier} charged ${session.amount_total} ${session.currency}, expected ${expected.priceCents} ${BILLING_CURRENCY}`);
     return "rejected";
   }
 
@@ -120,7 +121,7 @@ export async function handleTopUpCheckout(session: Stripe.Checkout.Session): Pro
 
   // Credit what the catalog says this pack contains, and only if the charged amount matches its price.
   if (session.amount_total !== pack.priceCents || session.currency?.toLowerCase() !== BILLING_CURRENCY) {
-    console.error(`Stripe session ${session.id}: top-up ${pack.id} charged ${session.amount_total} ${session.currency}, expected ${pack.priceCents} ${BILLING_CURRENCY}`);
+    logger.error(`Stripe session ${session.id}: top-up ${pack.id} charged ${session.amount_total} ${session.currency}, expected ${pack.priceCents} ${BILLING_CURRENCY}`);
     return "rejected";
   }
   const tenant = await prismaUnscoped.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });

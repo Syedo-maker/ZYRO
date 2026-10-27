@@ -129,7 +129,7 @@ export function BillingPage() {
       {notice && <Alert tone={notice.tone === 'error' ? 'error' : notice.tone}>{notice.text}</Alert>}
       {!billingConfigured && <Alert tone="info">Payments are not set up on this server yet, so plans and packs cannot be bought. You can still see what each includes.</Alert>}
 
-      <section aria-label="Your plan" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Your plan" className="rounded-2xl border border-border bg-surface p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <h2 className="font-display text-lg font-bold">{plan.name} plan</h2>
@@ -172,7 +172,7 @@ export function BillingPage() {
             const price = p.priceCents === 0 ? 'Free' : `${formatPlanPrice(p.priceCents, currency)}/month`
             return (
               <li key={p.tier}>
-                <section aria-label={`${p.name} plan`} className={`flex h-full flex-col gap-4 rounded-2xl border bg-white p-5 ${current ? 'border-brand' : 'border-border'}`}>
+                <section aria-label={`${p.name} plan`} className={`flex h-full flex-col gap-4 rounded-2xl border bg-surface p-5 ${current ? 'border-brand' : 'border-border'}`}>
                   <div>
                     <h3 className="font-display text-base font-bold">{p.name}</h3>
                     <p className="mt-1 font-display text-2xl font-bold">{price}</p>
@@ -210,7 +210,7 @@ export function BillingPage() {
         </div>
         <ul className="grid gap-4 sm:grid-cols-2">
           {topUpPacks.map((pack) => (
-            <li key={pack.id} className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-white p-5">
+            <li key={pack.id} className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-5">
               <div>
                 <h3 className="font-display text-base font-bold">{pack.name}</h3>
                 <p className="mt-1 text-sm text-text-secondary">
