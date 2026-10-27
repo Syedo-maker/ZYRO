@@ -11,11 +11,11 @@ afterwards. Each phase ends with a test gate.
 | 0 | Groundwork: skills, baseline | done |
 | 1 | Rebrand ShopMind AI to ZYRO | done |
 | 2 | One design system for the whole platform | done |
-| 3 | Production hardening | done, awaiting review; recommendation image still to build (network) |
-| 4 | Whole-system workflow tests | |
-| 5 | Azure deployment structure | |
-| 6 | Smoke tests on a local production stack | |
-| 7 | Documentation and handover | |
+| 3 | Production hardening | done, awaiting review |
+| 4 | Whole-system workflow tests | done, awaiting review |
+| 5 | Azure deployment structure | done, awaiting review (nothing deployed) |
+| 6 | Smoke tests on a local production stack | done, awaiting review |
+| 7 | Documentation and handover | done, awaiting review |
 
 ## Decisions taken before starting
 
@@ -490,3 +490,416 @@ build pipeline in Phase 5, and in any case before Phase 6's smoke tests, which n
 
 Test data was removed afterwards (10 stores and 17 users remain, all real), together with the files
 the deleted test stores had uploaded. `cleanup-test-data.ts` now deletes a store's files with it.
+
+---
+
+## Phase 4: Whole-system tests
+
+The suites before this phase tested each module well, mostly one at a time. This phase tests the
+seams: what the frontend asks for against what the server offers, what the server sends against
+what the contract promises, the workflows against each other, and every request against the
+services it depends on failing.
+
+### Every response checked against the contract
+
+`tests/helpers/conformance.ts` runs inside every integration test file (a Jest setup file). Every
+JSON response the API sends in any test is checked against `openapi.yaml`: a success must be a
+documented status for that operation and match its schema (required fields, types, formats, allowed
+values), and every error must be an RFC 9457 problem document. A path the contract does not describe
+is a violation too. The file fails, naming each violation.
+
+It runs on the requests the suite already makes, which cover every module, so the contract is
+checked against real scenarios rather than samples written for the purpose.
+
+**Its first full run found 24 distinct violations, from two causes. The server was right both
+times; the contract was wrong:**
+
+- **Fields documented as always-strings that are `null` when unset**: a user's name (optional at
+  sign-up), a store's logo and colour, a product's SKU, barcode and SEO text. A client generated from
+  the contract would have crashed on the first product without a SKU. `Product` is now listed in full
+  rather than built on `ProductInput`, because a request never sends `null` but a response does.
+- **Payment methods.** The contract listed only the register's (`cash`, `card`, `stripe`,
+  `other`), but orders also carry cash on delivery, bank transfer and gateway payments. Every order
+  paid any of those ways broke the documented shape.
+
+The run also writes `coverage/conformance.jsonl`, a record of which operations the suite exercised.
+
+### Every frontend call checked against the contract
+
+`tests/unit/ui-contract.test.ts` reads the frontend's source with the TypeScript compiler, finds
+every call to `apiFetch` (133 of them), works out the method and path each one requests, including
+paths built by helper functions, and checks that `openapi.yaml` documents exactly that operation.
+All 133 do.
+
+With the existing route test (every documented operation exists in the server), the three now hold
+each other in place: the pages, the contract and the server cannot drift apart unnoticed.
+
+### Journeys across every kind of user
+
+`tests/integration/journeys.test.ts` runs one day in one shop, with every kind of person who uses
+ZYRO, one after another, and checks the invariants between them after every step:
+
+| Who | What they do |
+|---|---|
+| Owner | Sets up payments, two products, a clerk and a cashier |
+| Guest shopper | Buys two cups by cash on delivery, without an account |
+| Signed-in shopper | Buys the shawl by bank transfer and sends in the receipt |
+| Clerk (`orders_write`) | Checks and accepts the receipt, records the delivery cash; is refused a refund and the register |
+| Cashier (`pos_sell`) | Opens the drawer, sells a cup in the shop, closes with no difference; is refused the dashboard |
+| Owner | Reads the dashboard, refunds the shawl with restock |
+| Another owner | Sees none of it |
+| Platform admin | Sees the store in the platform totals, and no customer data |
+
+The invariants: stock always equals what was stocked, less what was sold and not returned, across
+the online shop and the register together; every order adds up (items, less discount, plus tax and
+shipping, equals the total); the dashboard's gross and net sales equal the orders and refunds; a
+refund is never given twice; nothing reaches another store.
+
+**It found a defect.** A signed-in shopper's first cash-on-delivery or bank-transfer order was
+attached to no customer at all. A card payment creates the store's customer record and links it to
+the shopper's account; the cash and transfer path only looked for an existing one. So the shopper's
+order was missing from their own "My orders", and the merchant had no customer record for them.
+Orders now create or link the customer exactly as card payments do. (The cash-on-delivery risk
+check still uses only a customer that already existed, so a brand-new record cannot vouch for
+itself.)
+
+### When a dependency hangs
+
+`tests/integration/dependency-failures.test.ts` makes each outside service hang, the worst kind of
+outage because nothing fails, it just never answers, and checks the request still ends with
+something a person can act on:
+
+| Hangs | What the person gets |
+|---|---|
+| The AI provider | A 503 problem within the job timeout, and the store's AI allowance is not charged |
+| The recommendation service (a server that accepts and never replies) | The product page loads, without recommendations, in under 1.5 s |
+| Stripe | Checkout answers with the request-timeout 503 instead of hanging |
+
+Auditing every outbound call for this found three with no limit of their own:
+
+- **Anthropic.** The SDK waits up to 10 minutes. The API stops waiting after 60 seconds, but the
+  worker kept the slot busy long after nobody was waiting. Now 25 seconds, one retry.
+- **Stripe.** The SDK's 80 seconds a try, plus retries, could outlast the API's own 90-second limit,
+  so a slow Stripe would have surfaced as a generic timeout. Now 20 seconds, one retry; Stripe calls
+  carry idempotency keys, so a retry never charges twice.
+- **SendGrid** had no limit at all. Now 10 seconds; the next scan tries again.
+
+### Test mistakes, so they are not mistaken for findings
+
+Building the journey also turned up three things that looked like defects and were not: order
+statuses are lowercase in the API (`paid`, not `PAID`); collecting the cash for a delivery takes the
+order straight to `completed`; and the dashboard is served from a five-minute cache that labels its
+answer `cached`. The journey now checks that label instead of expecting a figure that is deliberately
+up to five minutes old.
+
+### The coverage floor, and a test that ended the run
+
+The first gate run failed the coverage floor for functions (91.41% against 92%). The gap was Phase
+3's: the shutdown sequence and the Azure Blob driver were proven against real containers, but no Jest
+test ran them. Rather than lower the floor, two suites were added: the shutdown sequence, driven by
+calling the handler a signal would call (Windows cannot deliver SIGTERM), and the Azure driver
+against the Azurite emulator, including that a read-only link cannot overwrite a receipt.
+
+The next run stopped early: a shutdown test let its shutdown finish after the test, and the real
+`process.exit` ended Jest itself. The run reported success, because it was cut off rather than
+failed. The test now waits for its shutdown, and the gate checks for that message as well as the
+totals.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Backend suite | 51 suites, 1,769 tests, all passing, nothing cut short |
+| Response conformance | every JSON response in every suite matches `openapi.yaml` (after the 24 contract fixes above) |
+| Frontend calls | all 133 are documented operations |
+| Journeys | 9 of 9 steps, every invariant holding |
+| Dependency failures | 4 of 4 |
+| Azure Blob driver, against Azurite | 5 of 5 |
+| Coverage | 91.29% statements, 75.72% branches, 92.00% functions, 94.11% lines: every floor met (90, 75, 92, 92) |
+
+---
+
+## Phase 5: The Azure deployment structure
+
+**Nothing has been created in Azure, and nothing has been deployed.** This phase is the structure:
+the templates, the images and the pipeline, ready for the owners to run when they decide.
+
+### The folder structure
+
+| Path | What it is |
+|---|---|
+| `azure.yaml` | The Azure Developer CLI project: four services (web, api, worker, reco) and a pre-deploy hook that runs migrations |
+| `infra/main.bicep`, `infra/main.parameters.json` | One environment (staging or production), switched by `isProduction` |
+| `infra/modules/*.bicep` | Monitoring, identities, registry, Key Vault, storage, PostgreSQL, Redis, and the apps |
+| `infra/scripts/release.sh` | A no-downtime release with automatic rollback, used by the pipeline |
+| `infra/scripts/migrate.sh`, `.ps1` | Migrations for a manual `azd deploy` |
+| `frontend/Dockerfile`, `frontend/nginx/` | The web image: the built site, and the one door to the API |
+| `.github/workflows/ci.yml` | Every push and pull request: all tests against real databases, the frontend, the Python service, every image |
+| `.github/workflows/deploy.yml` | Staging on every green `main`; production on a person's approval |
+| `.azure/deployment-plan.md` | The decisions, as the Azure skills require |
+| `documentation/Deployment_Runbook.md` | The order of operations, for the owners |
+| `documentation/Azure_Cost_Estimate.md` | What it costs, per environment |
+
+### What runs where
+
+| Part | Azure service | Notes |
+|---|---|---|
+| web | Container Apps, public | Serves the site; forwards `/api` to the API |
+| api | Container Apps, **internal only** | Reached through web; blue-green revisions |
+| worker | Container Apps, no ingress | Scales on the AI queue's length |
+| reco | Container Apps, internal only | Kept warm (model loading) |
+| migrate | Container Apps job | One run per release, before the new API takes traffic |
+| PostgreSQL | Flexible Server 17 | TLS required; admits only Azure services |
+| MongoDB | MongoDB Atlas, same region | The decision of 2026-10-20 |
+| Redis | Azure Managed Redis | No eviction; one endpoint (BullMQ needs both) |
+| Files | Storage account | `public` and `private` containers; no account keys |
+| Secrets | Key Vault | Apps read them by managed identity; nothing in configuration |
+| Telemetry | Log Analytics, Application Insights | |
+
+### One change to the approved plan, and why
+
+The plan of 2026-10-20 named **Static Web Apps** for the frontend. Writing the templates showed it
+would break sign-in: the refresh token is an `httpOnly`, `SameSite=lax` cookie on the API's origin,
+so with the site and the API on two different Azure domains the browser would not send it, and
+merchants would be signed out on every reload. The site and the API must share one origin, as they
+already do in development through the Vite proxy.
+
+The frontend is therefore a small nginx container that serves the site and forwards `/api` to the
+API over the environment's private network. Two further gains: the API has no public address of its
+own, and the proxy's timeout is set to outlast the API's longest legitimate wait. The decision and
+its reasoning are recorded in `.azure/deployment-plan.md`.
+
+### Security, by construction
+
+- **No keys anywhere in configuration.** Two user-assigned managed identities (one for the API side,
+  one for the recommendation service) pull images, read secrets and use storage. The storage account
+  refuses account keys outright; private file links are signed with a user delegation key.
+- **Every secret in Key Vault**, read through Key Vault references; an optional integration (Stripe,
+  Anthropic, SendGrid) is wired in only when its secret is supplied.
+- **The API is not on the internet.** Only the web app is.
+- **The site sends a strict Content-Security-Policy** (scripts only from ZYRO itself, no framing),
+  HSTS, and a permissions policy that allows the microphone (voice notes) and nothing else.
+- **The pipeline has no Azure password.** It signs in with OpenID Connect, one identity per
+  environment, each with access to its own resource group only.
+
+### Releases
+
+`infra/scripts/release.sh`, run by the pipeline for each environment:
+
+1. Pin traffic to what is live.
+2. Run migrations with the new build. If they fail, stop; nothing new is running.
+3. Update the worker and the recommendation service.
+4. Start new revisions of the API and the site with no traffic, and wait until they are healthy.
+   Their readiness checks the databases, Redis and storage.
+5. Move traffic, then smoke-test the live site.
+6. On any failure from step 3: move traffic back to the previous revisions (seconds, no rebuild),
+   restore the previous worker and recommendation images, and fail the release.
+
+Production receives the **exact images staging tested**, copied between registries, never rebuilt.
+Migrations must be backward compatible with the release before, because the old revisions keep
+serving during a release and after a rollback.
+
+### The vibe-ship audit
+
+The `vibe-ship` audit of the images found no critical or high issue. It asked for a `HEALTHCHECK`
+in the backend and recommendation service images, which both now have (the backend's serves the API
+and the worker from one image, so the URL is configurable). Its one low finding, an apt cache not
+cleaned in the same layer, was a false positive: the cleanup is in the same `RUN`, on the next line.
+
+### Validation
+
+| Check | Result |
+|---|---|
+| `bicep build` (Bicep CLI 0.48.1) | compiles, **0 warnings**; every resource type and API version recognised, including Azure Managed Redis |
+| `bicep lint` | clean |
+| Workflows and `azure.yaml` | parse |
+| Release and migration scripts | `bash -n` syntax check passes |
+| `actionlint` | **not run**: its image could not be downloaded (the same network failures as Phase 3) |
+| Images | web, api (and worker), migrate and the recommendation service all build; the recommendation image loads both its models with networking switched off |
+| A real `azd provision` | **not run, deliberately**: nothing is created in Azure until the owners say so |
+
+---
+
+## Phase 6: Smoke tests on a local production stack
+
+### The stack
+
+`compose.yaml` runs ZYRO on one machine the way Azure runs it: the same four images, `NODE_ENV=production`,
+the web container as the only door to the API, the worker in its own container, migrations as a
+one-off container before the API starts, PostgreSQL 17, MongoDB 8, Redis 7 with eviction off (as on
+Azure Managed Redis), and Blob Storage through the Azurite emulator. Every secret in it is a
+throwaway for that machine.
+
+```sh
+docker compose up -d --build      # then http://localhost:8080
+node frontend/e2e/smoke.e2e.mjs   # the smoke test
+docker compose down -v            # remove it all, data included
+```
+
+### The smoke test
+
+`frontend/e2e/smoke.e2e.mjs` goes through the front door only, as a visitor would, and checks what
+only the assembled system can show: every container healthy and migrations completed first; the
+security headers; the API answering through the proxy with a request id; a merchant staying signed
+in across a reload (the reason the site and the API share one origin); a product image served by
+Blob Storage; a receipt stored privately, opened by a signed link and refused without one; the
+recommendation service answering; a real browser with no script errors and nothing blocked by the
+security policy; and the API restarting with its data intact after a clean shutdown. The same script
+runs against any deployment with `BASE=https://<site>`.
+
+### What it found
+
+The first run failed three checks, and **two were real defects in Phase 5's security policy**, the
+kind that only show in a real browser against the real images:
+
+- **The site's fonts were blocked.** The build inlines the smallest font files into the stylesheet
+  as `data:` URLs, and the policy allowed fonts from the site itself only. Fixed: `font-src 'self' data:`.
+- **Receipts and product images could not load locally.** The policy allowed images from any HTTPS
+  address (right for Azure, where Blob Storage is HTTPS), but the emulator serves plain HTTP. The
+  policy is now a template with a `FILES_ORIGIN` setting for where files come from when it is not
+  HTTPS; it is empty on Azure.
+
+One more fix came from making the stack work at all: **file links need two addresses** when the API
+and the browser reach storage differently (inside Docker the API sees `azurite:10000`, the browser
+`localhost:10000`). `AZURE_STORAGE_PUBLIC_URL` now rewrites the address in the links the API hands
+out; a SAS signature does not cover the host, so they stay valid. The same setting is how a CDN or a
+custom files domain will be put in front of Blob Storage later.
+
+The third failure was the test's own: it asked whether the web container was healthy seconds after
+restarting it. It now waits for health checks to settle. It also no longer counts the 401 the
+sign-in page correctly receives when it asks whether a session already exists; script errors and
+blocked content still fail it.
+
+### CI's first run
+
+Opening the Phase 5 pull request ran the new CI on GitHub for the first time. The frontend, Python
+and image jobs passed. The backend job failed before running a test: **MongoDB 8.0 refuses to start
+on Linux 6.19 or newer** (MongoDB's issue SERVER-121912), the kernel GitHub's Ubuntu 24.04 runners
+had just moved to. The backend job now runs on Ubuntu 22.04, with a note to move back once MongoDB
+ships the fix. Production uses MongoDB Atlas and is not affected.
+
+### The recommendation image, at last
+
+The connection that failed in Phase 3 recovered, and the image built: 2.97 GB with 525 MB of models.
+Run with networking switched off entirely, it loads both the embedding model and the speech model,
+which is the proof that nothing is downloaded at start any more.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Smoke test against the production images | **31 of 31** |
+| Containers | all nine up; every health check passing; migrations exited 0 before the API started |
+| Whole stack stopped (`docker compose stop`) | every service exited 0, in 1.8 seconds |
+| Recommendation image, no network | both models load |
+| Backend suites touching the file links | 4 suites, 201 tests, all passing |
+
+---
+
+## Phase 7: Documentation and handover
+
+### What was written
+
+| Document | For | What it holds |
+|---|---|---|
+| `README.md` | Anyone opening the repository | The product first; running it three ways (developer, local production stack, Azure); tests; a map of the documentation |
+| `documentation/Architecture.md` | Engineers | A diagram of the system, each part, where data lives and why, one request end to end, environments, testing layers |
+| `documentation/adr/` | Engineers, later | Eight decisions that would be expensive to reverse, each with context, alternatives and consequences |
+| `documentation/Deployment_Runbook.md` | The owners, on deployment day | Phase 5; the order of operations onto Azure |
+| `documentation/Operations_Runbook.md` | Whoever is on call | Where to look, queries, alerts to set up, what to do for each kind of failure, rotating secrets, restoring the database, the reviewer's checklist |
+| `/terms`, `/privacy` (pages in the app) | Merchants and shoppers | The Terms of Service and the Privacy Policy |
+
+### The Terms of Service and the Privacy Policy
+
+Both are pages in the app, linked from the landing page footer, the sign-up form ("By creating a
+store you agree to...") and every storefront's footer. Who runs ZYRO and how to reach them come from
+one constant (`frontend/src/lib/legal.ts`), which the footer now uses too, so the three can never
+disagree. They carry the details the site already published: the two of you, and the contact email
+already in the footer. Nothing was invented.
+
+The Privacy Policy was written from the code, not from a template, and checked against it. That
+check removed three overstatements from the first draft: it had said no IP address is ever held (the
+rate limiter holds one for its window, at most an hour), that backups expire within 14 days (true for
+PostgreSQL, not necessarily for Atlas), and that email is sent only when a shop switches it on (no
+such switch was confirmed). It states plainly what a reader would want to know and might not expect:
+bank-transfer receipts are read by an AI provider; voice notes are transcribed on ZYRO's own servers
+and only the text goes to AI; shoppers' order details are held for the shop, which is the seller.
+
+**They need a qualified review before launch.** They are written to be accurate and readable, not by
+a lawyer. Three things in them are commitments the owners make by publishing: answering data requests
+within 30 days, telling merchants before a change that affects them, and the choice of Pakistani law.
+
+### Found on the way
+
+**The first CI run on GitHub with MongoDB working** (after Phase 6's fix) passed 49 of 51 backend
+suites. The two that failed relied on the developer's own `backend/.env` for Stripe settings, which a
+clean CI machine does not have: one written in Phase 4, one older. Both now set test-only values
+themselves, and were re-run locally with `.env` hidden and every Stripe, AI and email key removed.
+
+**Two flaky checks.** Two final full runs each failed one bargaining test: both checked that a
+product's floor price (700) never reaches a shopper by searching raw JSON for the text "700", and each
+run happened to produce a random id containing those digits (a store id with "...o70012...", a session
+id with "...c7000..."). They would have failed at random, whatever the code did. Both now check the
+values themselves, ids aside.
+
+**One hang that did not come back.** In one full run the dependency-failure suite's AI test timed out
+after 120 seconds, which its own 3-second request limit should make impossible. It passed in four runs
+of the suite alone, in a run of the exact sequence of suites that preceded it, and in every full run
+before and since. Its cause was not found, and this record does not pretend otherwise. Each request in
+that suite now has its own 15-second limit, so if it ever happens again the failure names the call that
+stalled.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Accessibility audit, with the two new pages | **0 findings** across 44 screen visits, 1,832 text elements measured |
+| Browser suites touching the footer and sign-up | `landing` 54, `phase1-auth-catalog` 25, `golden-path` 27, `responsive` 65, `partE-payments` 19: all passing |
+| Frontend type check, build, lint | pass; lint 37 warnings, 0 errors |
+| Final full backend run, every fix in | **51 suites, 1,769 tests, all passing**; coverage 92.32% statements, 77.31% branches, 93.60% functions, 94.80% lines |
+| The three suites CI failed, run with `.env` hidden and no keys | all passing |
+| **CI on GitHub** (pull request #26, a clean machine with no secrets) | **all four jobs pass**: backend (every test, the contract checks, the coverage floors), frontend, Python, and every production image |
+
+---
+
+## Where the programme ends
+
+| Phase | Pull request | State |
+|---|---|---|
+| 1. Rebrand to ZYRO | #20 | open, awaiting the owners' review |
+| 2. One design system | #21 | open; the owners' screenshot review is part of its gate |
+| 3. Production hardening | #22 | open |
+| 4. Whole-system tests | #23 | open |
+| 5. Azure deployment structure | #24 | open; nothing deployed |
+| 6. Local production stack and smoke test | #25 | open |
+| 7. Documentation and handover | this branch | open |
+
+Each pull request is stacked on the one before and is merged in order, by the owners.
+
+### Defects found and fixed across the programme
+
+Not counting test mistakes, which are recorded where they happened:
+
+1. Stored cross-site scripting through uploads (Phase 3).
+2. The MongoDB connection string, with its password on Atlas, logged at every start (Phase 3).
+3. Receipts (names, bank details) in a public folder; uploads on a disk that containers discard (Phase 3).
+4. Migration drift that made `prisma migrate dev` demand a database reset (Phase 3).
+5. 51 buttons rendering larger than their screens asked for (Phase 2).
+6. Every form field's border too faint to see (1.31:1) and 29 kinds of landing text below 4.5:1 (Phase 2).
+7. The merchant's colour stored but never shown (Phase 2).
+8. 24 places where the API contract did not match the server (Phase 4).
+9. A signed-in shopper's first cash or transfer order missing from their own orders (Phase 4).
+10. Outbound calls to Anthropic, Stripe and SendGrid without time limits (Phase 4).
+11. A sign-in that would not have survived a reload on two domains, caught before deployment (Phase 5).
+12. A security policy that blocked the site's own fonts and file images (Phase 6).
+13. Tests relying on a developer's own `.env`, and a test that failed at random (Phase 7).
+
+### Still open, for the owners
+
+- **Merge** pull requests #19 to #26, in order.
+- **Review** the Phase 2 before/after screenshots.
+- **Decide** what the footer says about who runs ZYRO, and have the Terms and Privacy Policy
+  reviewed by someone qualified, with the operator's legal name filled in (`frontend/src/lib/legal.ts`).
+- **Choose** the Azure subscription and region, and say go; then `Deployment_Runbook.md` from step 0.
+- **Upgrade Prisma to 7** in its own change, to clear the one accepted audit advisory.
+- **Delete the old Anthropic key** in the Anthropic console (rolled on 2026-10-20).

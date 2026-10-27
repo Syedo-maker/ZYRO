@@ -17,6 +17,10 @@ export const updateBrandingSchema = z.object({
 export type UpdateBrandingInput = z.infer<typeof updateBrandingSchema>;
 
 export const updateCurrencySchema = z.object({ currency: z.enum(STORE_CURRENCY_CODES) });
+
+/** "Include my shop's sales in shared platform trends" (Product Scout, Trend Scout). */
+export const updateTrendSharingSchema = z.object({ shareSalesInTrends: z.boolean() });
+export type UpdateTrendSharingInput = z.infer<typeof updateTrendSharingSchema>;
 export type UpdateCurrencyInput = z.infer<typeof updateCurrencySchema>;
 
 // A host name such as shop.example.com: lowercase letters, digits and hyphens in dot-separated

@@ -45,6 +45,9 @@ COPY --from=build /app/dist ./dist
 COPY package.json ./
 USER node
 EXPOSE 5000
+# For docker compose; Azure Container Apps uses its own probes (infra/modules/apps.bicep). The worker
+# runs from this same image and points HEALTHCHECK_URL at its own health port (5001).
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3   CMD node -e "fetch(process.env.HEALTHCHECK_URL || 'http://127.0.0.1:' + (process.env.PORT || 5000) + '/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
 # Node runs as PID 1 and handles SIGTERM itself (lib/lifecycle.ts): it stops taking traffic, finishes
 # the requests and jobs in flight, closes its connections, and exits.
 CMD ["node", "--enable-source-maps", "dist/index.js"]

@@ -44,7 +44,10 @@ function createRealProvider(): AiProvider {
     throw Errors.serviceUnavailable("AI features are not configured (set ANTHROPIC_API_KEY)");
   }
   // One client instance per process, like the Stripe client in lib/stripe.ts.
-  const client = new Anthropic({ apiKey: anthropicApiKey });
+  // The SDK waits up to 10 minutes by default. The API stops waiting for a generation after
+  // AI_JOB_TIMEOUT_MS (60 s); without a limit here the worker would keep that slot busy long after
+  // anyone was waiting for the answer. 25 s and one retry finish inside the 60 s.
+  const client = new Anthropic({ apiKey: anthropicApiKey, timeout: 25_000, maxRetries: 1 });
 
   return {
     async generate({ model, system, prompt, maxTokens, image }) {

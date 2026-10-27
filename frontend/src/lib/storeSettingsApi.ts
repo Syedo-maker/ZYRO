@@ -20,4 +20,9 @@ export const storeSettingsApi = {
   directoryListing: (storeId: string) => apiFetch<DirectoryListing>(`/stores/${storeId}/directory-listing`),
   setDirectoryListing: (storeId: string, body: { listedInDirectory?: boolean; description?: string | null }) =>
     apiFetch<{ listedInDirectory: boolean; description: string | null }>(`/stores/${storeId}/branding`, { method: 'PATCH', body }),
+
+  /** "Include my shop's sales in shared platform trends" (Product Scout, Trend Scout); on by default. */
+  trendSharing: (storeId: string) => apiFetch<{ shareSalesInTrends: boolean }>(`/stores/${storeId}/trend-sharing`),
+  setTrendSharing: (storeId: string, shareSalesInTrends: boolean) =>
+    apiFetch<{ shareSalesInTrends: boolean }>(`/stores/${storeId}/trend-sharing`, { method: 'PUT', body: { shareSalesInTrends } }),
 }

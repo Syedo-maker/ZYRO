@@ -4,6 +4,90 @@
 > small businesses: an online store, a shop-floor register and the AI that runs alongside them, on
 > one catalogue, one inventory and one set of orders.
 
+## What it is
+
+A merchant runs an online store and a shop-floor register from one catalogue, one inventory and one
+set of orders, with AI built in: product descriptions, tags and SEO text, marketing copy, review
+summaries, a shopping assistant, "products like this one", abandoned-cart emails, business insights,
+a weekly growth tip, and title suggestions built on what shoppers really search for. Shoppers pay by
+card, cash on delivery or bank transfer, and a receipt for a transfer is read by AI and accepted by a
+person. Each store is isolated from every other store. Stores start free and can move to Pro or
+Business (billed through Stripe); AI is capped per plan so its cost is known in advance.
+
+Everything the AI writes is shown to the merchant first, AI never handles money, and every price and
+plan comes from the server.
+
+## Running it
+
+**On a developer's machine** (fast reloads). Needs PostgreSQL, MongoDB and Redis running:
+
+- `backend/`: copy `.env.example` to `.env`, `npx prisma migrate deploy`, `npm run dev` (port 5000).
+- `frontend/`: `npm run dev` (port 5173).
+- `recommendation-service/` (optional): see its README. Without it the store works and
+  recommendations are simply empty.
+- No Stripe or AI keys? `npx tsx scripts/e2e-server.ts` in `backend/` runs the API with fake
+  payments and fake AI, so every screen can be tried.
+
+**As it runs in production**, on one machine, with Docker:
+
+```sh
+docker compose up -d --build      # then open http://localhost:8080
+node frontend/e2e/smoke.e2e.mjs   # the smoke test
+docker compose down -v            # remove it, data included
+```
+
+The same four images, settings and topology as Azure (`compose.yaml`).
+
+**On Azure**: nothing is deployed yet. `documentation/Deployment_Runbook.md` is the order of
+operations, `.azure/deployment-plan.md` the decisions, `documentation/Azure_Cost_Estimate.md` the
+cost.
+
+## Repository layout
+
+```
+frontend/               React storefront, merchant dashboard and register; nginx config for production
+backend/                Node/Express API and background worker: Prisma (PostgreSQL), Mongoose
+                        (MongoDB), BullMQ; openapi.yaml is the API contract
+recommendation-service/ Python/FastAPI: product embeddings, semantic search, speech to text
+infra/                  Azure (Bicep): one environment per deployment; release scripts
+.github/workflows/      CI on every push and pull request; releases to staging and production
+documentation/          Architecture, decisions (adr/), runbooks, and a design document per module
+design/                 Wireframes
+```
+
+## Tests
+
+| What | How |
+|---|---|
+| Backend: 1,700+ tests on real PostgreSQL, MongoDB and Redis, with every response checked against `openapi.yaml` | `npm test` in `backend/` (add `AZURITE=1` with Azurite running for the Blob Storage suite) |
+| Browser: each feature, accessibility | `node e2e/<suite>.e2e.mjs` in `frontend/`, with the e2e server and the frontend running |
+| Smoke: the production images, assembled | `node frontend/e2e/smoke.e2e.mjs` with `docker compose up` |
+| Python | `python -m pytest` in `recommendation-service/` |
+
+CI (`.github/workflows/ci.yml`) runs the backend, frontend and Python suites and builds every image on
+every push and pull request.
+
+## Documentation
+
+| | |
+|---|---|
+| `documentation/Architecture.md` | How the parts fit together |
+| `documentation/adr/` | The decisions that shaped it, and why |
+| `documentation/Production_Readiness.md` | The production-readiness programme, phase by phase, with each gate's evidence |
+| `documentation/Deployment_Runbook.md` | Getting it onto Azure |
+| `documentation/Operations_Runbook.md` | Running it: monitoring, alerts, incidents, rollback, secrets |
+| `documentation/Privacy_Notes.md` | The detail behind the Privacy Policy |
+| `documentation/Product_Scout.md` | Product Scout: trending products for owners, its privacy rules, and the demo stores |
+| `documentation/Implementation_Plan.md` | The original plan, and the record of what was built |
+
+The Terms of Service and the Privacy Policy are pages in the app (`/terms`, `/privacy`).
+
+## Tech stack
+
+React · TypeScript · Tailwind CSS · Node.js/Express · PostgreSQL (Prisma) · MongoDB (Mongoose) ·
+Redis + BullMQ · Stripe (Checkout and Billing) · Anthropic Claude API · Python + FastAPI · Docker ·
+Azure Container Apps · Bicep · GitHub Actions
+
 ## Project
 
 Built as a Final Year Project at Shifa Tameer-e-Millat University, where it is registered under the
@@ -13,78 +97,3 @@ academic title **ShopMind AI**.
 - **Syed Sikander Gillani**, BSAI-23F-0062
 - **Supervisor:** Mr. Saad Ilyas
 - Bachelor of Science in Artificial Intelligence
-
-## What this is
-
-ZYRO lets a merchant run an online store and a shop-floor register from one catalog, one
-inventory and one set of orders, with AI built in: product descriptions, tags and SEO text,
-marketing copy, review summaries, a shopping assistant, "products like this one", abandoned-cart
-emails, business insights, and title and description suggestions built around what shoppers really
-search for. Each store is isolated from every other store. Stores start on a
-free plan and can move to Pro or Business (billed through Stripe); AI is capped per plan so its
-cost is known in advance.
-
-The front door is a homepage explaining the product, with a working demonstration of the trending
-suggestions in its hero: type a product and see what the AI would write for it. The demo is capped
-so a visitor can never spend a merchant's AI allowance.
-
-From there a visitor chooses to shop or to open a store, and sees only that
-side: shoppers get a public shop directory, storefronts, baskets and order tracking, while owners get
-the dashboard, catalogue and AI tools. Nobody is a "shopper" or an "owner" in their login token,
-because one person can own one shop and buy from another; the server works out what they may do per
-request and per shop, so hiding a menu is never what protects a shop's data.
-
-Everything the AI writes is shown to the merchant first, AI never handles money, and every price
-and plan comes from the server. See `documentation/` for the scope, the plan and a design
-document for each module.
-
-## Repository layout
-
-```
-documentation/          Implementation plan, scope updates, and a design document per module
-backend/                Node.js/Express API: Prisma (PostgreSQL) and Mongoose (MongoDB),
-                        AI orchestrator, billing, POS; openapi.yaml is the API contract
-frontend/               React storefront, admin dashboard and POS register
-recommendation-service/ Python/FastAPI service: product embeddings and similar-product search
-design/                 Wireframes
-```
-
-## Development process
-
-Work follows `documentation/Implementation_Plan.md` (its checklist is the record of what is
-built). Phases 0 to 6 and Part A of the 2026-09-26 roadmap are complete; testing (Phase 7) and
-deployment (Phase 8) come last. Parts of the roadmap are built on their own branch and merged
-by pull request; nothing is committed that holds a secret (`.env` files are ignored).
-`documentation/SCOPE_UPDATES.md` tracks what has changed from the original scope document.
-
-## Running it locally
-
-Needs PostgreSQL, MongoDB and Redis running; then:
-
-- `backend/`: copy `.env.example` to `.env`, `npx prisma migrate deploy`, `npm run dev` (port 5000).
-- `frontend/`: `npm run dev` (port 5173).
-- `recommendation-service/` (optional): see its README. Without it the store works and
-  recommendations are simply empty.
-- No Stripe or AI keys? `npx tsx scripts/e2e-server.ts` in `backend/` runs the API with fake
-  payments and fake AI, so every screen can be tried.
-
-AI features answer 503 until `ANTHROPIC_API_KEY` is set; payments and plans answer 503 until the
-Stripe keys are set (`documentation/Stripe_Setup_And_Verification.md`).
-
-## Tests
-
-Every phase ends with a test gate and a sign-off before the next begins
-(`documentation/Phase_Gates_Checklist.md`).
-
-- Backend: `npm test` in `backend/` (Jest and Supertest; see `backend/tests/README.md`).
-- Browser: `node e2e/<suite>.e2e.mjs` in `frontend/`, with the e2e server and the frontend running.
-- Python: `.\.venv\Scripts\python.exe -m pytest` in `recommendation-service/`.
-
-## Tech stack
-
-React · TypeScript · Node.js/Express · PostgreSQL (Prisma) · MongoDB (Mongoose) ·
-Redis + BullMQ · Stripe (Checkout and Billing) · Anthropic Claude API · Python + FastAPI ·
-JWT · Tailwind CSS · Docker (planned, Phase 8)
-
-See `documentation/Implementation_Plan.md` for the full architecture and per-module
-technical decisions.

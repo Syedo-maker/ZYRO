@@ -17,7 +17,6 @@ export interface PosProduct {
   price: number
   taxable: boolean
   sku: string | null
-  barcode: string | null
   category: string
   image: string | null
   stock: number

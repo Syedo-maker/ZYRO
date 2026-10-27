@@ -1,5 +1,13 @@
 # Part G (stretch): voice-note store manager and bargaining assistant
 
+> **Bargaining removed on 2026-10-22.** The supervisor's product-listing change removed haggling
+> entirely: the "Lowest price you will accept when haggling" field, the offer box on the product page,
+> the `/products/{productId}/bargain` endpoints, the `BargainSession` table (dropped by the Prisma
+> migration `20261022000000_remove_bargaining`), and its tests. The voice-note store manager below is
+> unchanged and still in the product; its end-to-end tests now live in `voice.test.ts` and
+> `partG-voice.e2e.mjs`. The bargaining sections are kept as the record of what was built and tested
+> at the time. See `Product_Catalogue.md`.
+
 Status: built and tested. 50 unit tests (`bargain`, `voice`), 29 end-to-end tests (`bargain-voice`), 6 new Python tests (20 in that suite), and the browser suite `partG-voice-bargain`; the full gate is listed at the end.
 
 `find-skill`: **nothing installed**, and that is the finding. One real candidate, `speech-to-text` (martinholovsky, 4 stars), is genuine guidance for building faster-whisper into an application and passed the security review cleanly: no network calls, no credential reading, no safety overrides. It was still not installed, because it has 4 stars, comes from a "claude-skills-generator" repository and reads as generated (duplicate section numbers), is written for a "JARVIS voice assistant" rather than a shop, and its `references/` files would need separate downloads. Searching for prompt-injection guardrails returned only academic papers about attacking Agent Skills themselves, which is an argument for installing fewer skills, not more.
