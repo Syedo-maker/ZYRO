@@ -74,7 +74,7 @@ export function ReviewForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-5" aria-label="Write a review">
+    <form onSubmit={submit} className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5" aria-label="Write a review">
       <StarPicker value={rating} onChange={setRating} />
       <Input id="review-title" label="Headline (optional)" maxLength={100} value={title} onChange={(e) => setTitle(e.target.value)} />
       <div className="flex flex-col gap-1.5">
@@ -87,7 +87,7 @@ export function ReviewForm({
           maxLength={2000}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          className="rounded-[10px] border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="rounded-[10px] border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
         <span className="self-end text-xs text-text-muted">{comment.length} / 2000</span>
       </div>

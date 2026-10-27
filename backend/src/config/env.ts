@@ -1,4 +1,11 @@
-import "dotenv/config";
+import path from "node:path";
+import { config as loadDotenv } from "dotenv";
+
+// Settings come from backend/.env, by path, whichever folder the process was started from (the repo
+// root, backend/, or a script's own folder). Variables already set in the environment win, which is
+// how containers and Azure pass theirs; no .env file is shipped there. Secrets in it (the AI, Stripe
+// and email keys) are read here only, and never logged.
+loadDotenv({ path: path.resolve(__dirname, "../../.env") });
 
 function required(name: string): string {
   const value = process.env[name];
@@ -21,6 +28,14 @@ if (isProduction && (jwtAccessSecret.length < 32 || /replace-with|dev-only|chang
   throw new Error("JWT_ACCESS_SECRET must be a random string of at least 32 characters in production");
 }
 
+const storageDriver = process.env.STORAGE_DRIVER === "azure" ? "azure" : "local";
+// A container's disk is thrown away whenever it restarts or moves, so in production every upload
+// would vanish within days. Refuse to start rather than lose merchants' files quietly; a deployment
+// that really does have a persistent disk (a single VM) can say so explicitly.
+if (isProduction && storageDriver === "local" && process.env.ALLOW_LOCAL_STORAGE_IN_PRODUCTION !== "true") {
+  throw new Error("STORAGE_DRIVER must be 'azure' in production (or set ALLOW_LOCAL_STORAGE_IN_PRODUCTION=true on a host with a persistent disk)");
+}
+
 export const env = {
   isProduction,
   port: Number(process.env.PORT ?? 5000),
@@ -29,7 +44,53 @@ export const env = {
   mongoUri: required("MONGODB_URI"),
   uploadsDir: process.env.UPLOADS_DIR ?? "uploads",
   publicUrl: process.env.PUBLIC_URL ?? "http://localhost:5000",
+  // Where uploaded files live (lib/storage.ts). Product images are public; payment receipts and
+  // voice notes are private and only ever handed out as short-lived signed links.
+  storage: {
+    driver: storageDriver as "local" | "azure",
+    /** The local driver's private area. Never served as static files. */
+    privateDir: process.env.PRIVATE_UPLOADS_DIR ?? "uploads-private",
+    /** How long a signed link to a private file works. Long enough for a merchant to review a
+     *  page of receipts, short enough that a link copied out of the dashboard soon stops working. */
+    privateLinkSeconds: num("PRIVATE_FILE_LINK_SECONDS", 60 * 60),
+    /** Signs the local driver's private links. Derived from the JWT secret when not set, under its
+     *  own label, so the two are never interchangeable. */
+    signingSecret: process.env.FILE_SIGNING_SECRET ?? `zyro-file-links:${jwtAccessSecret}`,
+    azure: {
+      /** For the Azurite emulator, or an account key. Takes precedence over the account URL. */
+      connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING,
+      /** https://<account>.blob.core.windows.net, used with the container app's managed identity. */
+      accountUrl: process.env.AZURE_STORAGE_ACCOUNT_URL,
+      /** A user-assigned managed identity's client id; unset for a system-assigned one. */
+      clientId: process.env.AZURE_CLIENT_ID,
+      /** Where browsers fetch files from, when that differs from where the API reaches storage: a
+       *  CDN or custom domain in front of Blob Storage, or the emulator's address as seen from the
+       *  host. Links are rewritten to it; a SAS signature does not cover the host, so they still work. */
+      publicBaseUrl: process.env.AZURE_STORAGE_PUBLIC_URL,
+      publicContainer: process.env.AZURE_STORAGE_PUBLIC_CONTAINER ?? "public",
+      privateContainer: process.env.AZURE_STORAGE_PRIVATE_CONTAINER ?? "private",
+    },
+  },
   redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
+  // How the process starts and stops (lib/lifecycle.ts).
+  lifecycle: {
+    /** Every request is answered within this, or it gets a 503. The longest legitimate wait is an
+     *  AI generation (AI_JOB_TIMEOUT_MS, 60 s), so this sits above it. */
+    requestTimeoutMs: num("REQUEST_TIMEOUT_MS", 90_000),
+    /** Time to finish in-flight work after SIGTERM. Below Container Apps' default 30 s, so the
+     *  process exits by itself rather than being killed. */
+    shutdownGraceMs: num("SHUTDOWN_GRACE_MS", 25_000),
+    /** Each dependency in the readiness probe must answer within this. */
+    readinessTimeoutMs: num("READINESS_TIMEOUT_MS", 2_000),
+  },
+  // The background jobs (AI generations, cart recovery, the weekly advisor and trend reports).
+  // In production they run in their own container (src/worker.ts), so they scale and restart apart
+  // from the API; on a developer's machine they run inside the API so one command starts everything.
+  workers: {
+    inProcess: process.env.RUN_WORKERS_IN_API ? process.env.RUN_WORKERS_IN_API === "true" : !isProduction,
+    /** The worker container's own health endpoint. */
+    healthPort: Number(process.env.WORKER_HEALTH_PORT ?? 5001),
+  },
   cartTtlSeconds: Number(process.env.CART_TTL_SECONDS ?? 7 * 24 * 60 * 60),
   // How many reverse proxies sit in front of the API (0 = none). Needed so rate limits see
   // each visitor's real IP instead of the proxy's; leave at 0 when clients connect directly.
@@ -107,6 +168,15 @@ export const env = {
     graceHours: num("PLAN_GRACE_HOURS", 24),
   },
   // Abandoned-cart recovery (Implementation_Plan.md Phase 5, Module 7 remainder).
+  /** Product Scout (2026-10-22): the privacy rules for the platform-wide product trends. */
+  scout: {
+    /** Fewest different stores a published figure may come from; never below 2. */
+    minStores: Math.max(2, Math.floor(Number(process.env.SCOUT_MIN_STORES ?? 3) || 3)),
+    /** Largest share of a figure's units one store may hold, between 0.3 and 0.95. */
+    maxShare: Math.min(0.95, Math.max(0.3, Number(process.env.SCOUT_MAX_STORE_SHARE ?? 0.6) || 0.6)),
+    /** Largest share the two biggest stores may hold together, between 0.5 and 0.99. */
+    maxTopTwoShare: Math.min(0.99, Math.max(0.5, Number(process.env.SCOUT_MAX_TOP_TWO_SHARE ?? 0.85) || 0.85)),
+  },
   cartRecovery: {
     /** A cart with no activity for this long is "abandoned" (the plan's own example: 2 hours). */
     abandonedAfterHours: num("CART_RECOVERY_ABANDONED_AFTER_HOURS", 2),
@@ -119,7 +189,13 @@ export const env = {
   // Transactional email (recovery emails only, so far). Optional at startup, like Stripe and the
   // AI orchestrator: the scan job runs and logs "would have sent" without a real send until set.
   email: {
+    /** Which provider lib/email.ts sends through; each names the settings it needs there. */
+    provider: (process.env.EMAIL_PROVIDER?.trim() || "sendgrid").toLowerCase(),
     sendgridApiKey: process.env.SENDGRID_API_KEY,
+    brevoApiKey: process.env.BREVO_API_KEY,
+    brevoFromEmail: process.env.BREVO_FROM_EMAIL,
+    /** The name shown with the Brevo sender address. */
+    brevoFromName: process.env.BREVO_FROM_NAME?.trim() || "ZYRO",
     fromEmail: process.env.SENDGRID_FROM_EMAIL,
   },
   // Recommendation microservice (Implementation_Plan.md Phase 6): a separate Python process.

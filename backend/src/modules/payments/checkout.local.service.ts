@@ -2,13 +2,14 @@ import { Types } from "mongoose";
 import { prisma } from "../../lib/prisma";
 import { getRedis } from "../../lib/redis";
 import { Errors } from "../../errors/AppError";
-import { Product } from "../../models/Product.model";
+import { Product, priceOf } from "../../models/Product.model";
 import { inventoryService } from "../inventory/inventory.service";
 import { calculateTotals } from "../commerce/pricing.service";
 import { discountService, type ResolvedDiscount } from "../discounts/discount.service";
 import { createOrder, type OrderSnapshot, type PricedLine } from "../commerce/order.service";
 import { cartKey, type CartOwner } from "../cart/cart.service";
 import { paymentsService, type CodRiskSubject } from "./payments.service";
+import { customerService } from "../customers/customer.service";
 import type { PlaceLocalOrderInput } from "./payments.validation";
 
 /**
@@ -47,7 +48,7 @@ async function priceCart(storeId: string, owner: CartOwner, discountCode?: strin
     return {
       productId: id,
       title: product.title,
-      unitPrice: Number(product.price.toString()),
+      unitPrice: priceOf(product).sale,
       unitCost: product.costPrice ? Number(product.costPrice.toString()) : null,
       quantity,
       taxable: product.taxable !== false,
@@ -151,10 +152,25 @@ export const localCheckoutService = {
       outcome = offer.outcome ?? "allowed";
     }
 
+    // The order belongs to a customer of this store, created on the shopper's first order and linked
+    // to their account when they are signed in, exactly as a card payment does (stripe.webhook.ts).
+    // Without it a shopper's first cash-on-delivery or bank-transfer order was attached to no one:
+    // missing from their "My orders" and from the store's customers. (The risk score above uses
+    // only a customer that already existed, so a new one cannot vouch for itself.)
+    const orderCustomerId = await prisma.$transaction((tx) =>
+      customerService.findOrCreate(tx, {
+        tenantId: storeId,
+        userId: owner.kind === "user" ? owner.id : undefined,
+        email: input.email ?? undefined,
+        name: input.name,
+        phone: input.phone,
+      })
+    );
+
     const order = await createOrder({
       tenantId: storeId,
       channel: "ONLINE",
-      customerId: customerId ?? undefined,
+      customerId: orderCustomerId ?? customerId ?? undefined,
       guestEmail: input.email ?? undefined,
       shipping: {
         name: input.name,

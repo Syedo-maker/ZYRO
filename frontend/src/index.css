@@ -1,77 +1,165 @@
-/* A CSS @import is only valid before every other rule, and "tailwindcss" expands into
-   thousands of rules, so the fonts import must come first or browsers silently drop it. */
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
+/* Fonts are self-hosted (see src/fonts.ts), not imported from Google. */
 @import "tailwindcss";
 
 /*
- * Design tokens from design/wireframes/ComponentInventory.dc.html (Phase 0 Module 2), with
- * one deliberate change: the text and accent colors are darker than the wireframes' values
- * because those measured below the 4.5:1 contrast needed to read small text (muted grey
- * 3.5:1, white on the brand blue 4.4:1, the amber "Processing" badge 2.2:1). Every value
- * below passes 4.5:1 on the surface it is used on (documentation/Audit_Phase0_to_Phase2.md).
- * Hue and family are unchanged, so the look is the same, just readable.
+ * ZYRO's design tokens, in three layers.
+ *
+ *   1. Primitives (:root, below)  The raw palette. Deliberately NOT in @theme, so Tailwind never
+ *                                 generates utilities like `bg-green-900`: a component cannot reach
+ *                                 past the meaning of a colour to its value, so a rebrand stays a
+ *                                 change to this file.
+ *   2. Semantic (@theme)          What a colour is FOR: page, card, text, brand, accent. These are
+ *                                 what components use, and the names are the ones the app was built
+ *                                 on, so re-theming the platform changed this file and not 72 others.
+ *   3. Component                  Variant maps in the components themselves (components/ui/), built
+ *                                 only from semantic tokens.
+ *
+ * One rule matters more than the rest: utilities compile to `var(--color-*)`, never to a fixed value
+ * (plain @theme, not @theme inline). That is what lets a storefront set `--color-brand` on its own
+ * root element and wear its merchant's colour, while the platform around it stays ZYRO's.
+ *
+ * Every pairing below was measured with the WCAG relative-luminance formula before being written.
+ * Text needs 4.5:1; large text, graphics and the boundaries that identify a control need 3:1.
+ *
+ *   body text      on page 14.54   on card 16.16   on subtle 12.37   on the orange band 5.24
+ *   secondary      on page  6.99   on card  7.77   on subtle  5.95
+ *   muted          on page  5.46   on card  6.07   on subtle  4.65
+ *   on the dark surface:  on-inverse 11.20   secondary 7.11   muted 5.41   accent 4.99
+ *   brand as text  on page 11.20   on card 12.44   on-brand on brand 11.20, on its hover 8.09
+ *   accent as text on page  5.78   on card  6.42   on subtle  4.92   white on accent 6.42
+ *   success / warning / danger / ai, text on their soft fill: 5.57 / 5.55 / 5.53 / 6.33
+ *   input border   on card  3.51   on page  3.16   (WCAG 1.4.11; the old #dfe1e5 was 1.31)
+ *   focus ring     accent on card 6.42, on subtle 4.92, cream on inverse 11.20
+ *
+ * Two rules follow from those numbers, and both were learned the hard way:
+ *
+ * 1. Text hierarchy comes from these tokens, NEVER from an opacity modifier. Fading a colour with
+ *    `/60` is how the landing page used to make secondary text, and it measured 3.6 to 4.2:1, which
+ *    fails. Each tier above is a real colour, measured on each surface it is used on.
+ * 2. The brand orange (`accent-display`) measures 2.77 on the page, failing even the 3:1 for large
+ *    text. It is a fill or decoration only. Accent-coloured TEXT is `accent` on a light surface and
+ *    `accent-on-inverse` on the dark one. On the orange band itself only full-strength body text is
+ *    allowed: secondary text there measures 2.52.
  */
+
+:root {
+  /* Greens, from the near-black used for structure to the faint tint behind brand text. */
+  --zyro-green-900: #0b3b33;
+  --zyro-green-800: #14524a;
+  --zyro-green-400: #9dafa8;
+  --zyro-green-300: #b9c7c1;
+  --zyro-green-100: #e2ece7;
+
+  /* Neutrals. Tinted towards the green rather than grey, so text and lines belong to the palette. */
+  --zyro-cream-50: #f4f3ee;
+  --zyro-white: #ffffff;
+  --zyro-sage-200: #dde3db;
+  --zyro-ink-900: #13241f;
+  --zyro-ink-600: #46564f;
+  --zyro-ink-500: #56665f;
+  --zyro-line-200: #d5ddd8;
+  --zyro-line-500: #7e8c86;
+
+  /* The accent family: terracotta for anything small, the brand orange for display use only. */
+  --zyro-terracotta-700: #9e4318;
+  --zyro-terracotta-800: #843611;
+  --zyro-orange-500: #e8703d;
+  --zyro-orange-400: #ee8a5c;
+
+  /* Status. Success is a mid green, deliberately far from the near-black brand green, so a "paid"
+     badge never reads as branding; badges carry an icon and a word as well. */
+  --zyro-success-700: #1d6b42;
+  --zyro-success-50: #e3f1e7;
+  --zyro-warning-700: #8a5300;
+  --zyro-warning-50: #fbefd6;
+  --zyro-danger-700: #b42318;
+  --zyro-danger-50: #fbe7e5;
+  --zyro-violet-700: #5544a8;
+  --zyro-violet-50: #ece9f8;
+  --zyro-amber-600: #b06a12;
+}
+
 @theme {
-  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-sans: "IBM Plex Sans", system-ui, sans-serif;
 
-  /*
-   * The marketing landing page only (src/pages/landing/). Deliberately a separate set: the app's
-   * own indigo tokens above dress forty-odd screens whose contrast was audited in Phase 0, and
-   * re-skinning those was not asked for. Nothing here is used outside the landing page.
-   *
-   * Measured with the sRGB relative-luminance formula, as the tokens above were:
-   *   cream on green   11.2   green on cream  11.2   green on sage  9.53   all comfortably AA
-   *   white on #E8703D  3.08  green on it     4.04   it on cream    2.77
-   *
-   * So the brand orange CANNOT carry small text anywhere: it is for large headings (3:1 suffices
-   * at 24px bold and above), borders, and the call-to-action band's background. Anything small or
-   * button-shaped uses the deeper terracotta below, which measures 5.24 on cream and 5.82 behind
-   * white text. Same accent family, readable.
-   */
-  --font-landing: "Plus Jakarta Sans", system-ui, sans-serif;
-  --color-lp-green: #0b3b33;
-  --color-lp-green-soft: #14524a;
-  --color-lp-cream: #f4f3ee;
-  --color-lp-sage: #dde3db;
-  --color-lp-accent: #e8703d;
-  --color-lp-accent-strong: #a8481b;
+  /* Surfaces */
+  --color-bg: var(--zyro-cream-50); /* the page */
+  --color-surface: var(--zyro-white); /* cards, panels, inputs */
+  --color-subtle: var(--zyro-sage-200); /* alternating sections, quiet fills */
+  --color-inverse: var(--zyro-green-900); /* the dark surface: navigation, register header, hero */
+  --color-on-inverse: var(--zyro-cream-50); /* text and icons on it, 11.20 */
+  --color-on-inverse-secondary: var(--zyro-green-300); /* 7.11 */
+  --color-on-inverse-muted: var(--zyro-green-400); /* 5.41 */
 
-  --color-bg: oklch(98% 0.005 260);
-  --color-surface: oklch(100% 0 0);
-  --color-border: oklch(91% 0.006 260);
-  --color-text: oklch(19% 0.02 265);
-  --color-text-secondary: oklch(46% 0.02 265);
-  --color-text-muted: oklch(49% 0.015 265);
+  /* Lines. Two, because they do different jobs: a card's edge is decoration and needs no minimum,
+     but an input's border is how anyone sees the field is there, so it must reach 3:1. */
+  --color-border: var(--zyro-line-200);
+  --color-border-input: var(--zyro-line-500);
 
-  --color-brand: oklch(52% 0.17 265);
-  --color-brand-hover: oklch(46% 0.17 265);
-  --color-brand-soft: oklch(94% 0.03 265);
+  /* Text */
+  --color-text: var(--zyro-ink-900);
+  --color-text-secondary: var(--zyro-ink-600);
+  --color-text-muted: var(--zyro-ink-500);
 
-  --color-ai: oklch(45% 0.12 200);
-  --color-ai-soft: oklch(94% 0.03 200);
+  /* Brand: ZYRO's green on the platform. A storefront overrides these four with its merchant's own
+     colour (lib/brandTheme.ts), which is why the text on it has a token of its own rather than an
+     assumed white. */
+  --color-brand: var(--zyro-green-900);
+  --color-brand-hover: var(--zyro-green-800);
+  --color-brand-soft: var(--zyro-green-100);
+  --color-on-brand: var(--zyro-cream-50);
 
-  --color-success: oklch(42% 0.12 150);
-  --color-success-soft: oklch(94% 0.03 150);
-  --color-warning: oklch(42% 0.1 80);
-  --color-warning-soft: oklch(95% 0.04 80);
-  --color-danger: oklch(50% 0.19 25);
-  --color-danger-soft: oklch(94% 0.04 25);
+  /* Accent: the call to action. Terracotta, because the brand orange fails small text everywhere. */
+  --color-accent: var(--zyro-terracotta-700);
+  --color-accent-hover: var(--zyro-terracotta-800);
+  --color-on-accent: var(--zyro-white);
+  --color-accent-display: var(--zyro-orange-500); /* a large fill, or decoration; see above */
+  --color-accent-on-inverse: var(--zyro-orange-400); /* accent-coloured text on the dark surface, 4.99 */
 
-  /* Review stars: 3.5:1 against white and the page background, the minimum for a graphic. */
-  --color-star: oklch(62% 0.15 75);
+  /* Focus: one colour for every focus ring on a light surface, so keyboard users learn it once. */
+  --color-ring: var(--zyro-terracotta-700);
 
-  /* Chart series (dataviz reference palette slots 1 and 2, validated with the dataviz skill's checker:
-     worst adjacent color-blind separation 24.7, contrast 3:1 or better on white). Online is always blue,
-     in-store always orange, on every chart. */
+  /* AI-written content is marked in its own colour, kept apart from both brand and status. */
+  --color-ai: var(--zyro-violet-700);
+  --color-ai-soft: var(--zyro-violet-50);
+
+  --color-success: var(--zyro-success-700);
+  --color-success-soft: var(--zyro-success-50);
+  --color-warning: var(--zyro-warning-700);
+  --color-warning-soft: var(--zyro-warning-50);
+  --color-danger: var(--zyro-danger-700);
+  --color-danger-soft: var(--zyro-danger-50);
+
+  /* Review stars: 4.27:1 on a card, above the 3:1 a graphic needs. */
+  --color-star: var(--zyro-amber-600);
+
+  /* Chart series. Unchanged by the rebrand on purpose: they were chosen and checked for colour-blind
+     separation (worst adjacent pair 24.7, 3:1 or better on white), they encode data rather than
+     interface, and keeping them distinct from the interface colours is the point. Online is always
+     blue, in-store always orange, on every chart. */
   --color-series-online: #2a78d6;
   --color-series-pos: #eb6834;
 }
 
-body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-sans);
+@layer base {
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+  }
+
+  /*
+   * Tailwind 4 resets buttons to the browser's default arrow cursor. Anything clickable shows the
+   * pointer here, because on a commerce screen "can I press this?" should never be a guess.
+   */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* Receipts print from a hidden copy placed in <body> (pages/pos/Receipt.tsx): while

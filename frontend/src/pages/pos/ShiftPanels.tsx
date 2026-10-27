@@ -31,7 +31,7 @@ export function OpenShiftCard() {
 
   return (
     <div className="flex items-center justify-center px-4 py-16">
-      <form onSubmit={submit} className="w-full max-w-md bg-white border border-border rounded-2xl p-8 flex flex-col gap-4">
+      <form onSubmit={submit} className="w-full max-w-md bg-surface border border-border rounded-2xl p-8 flex flex-col gap-4">
         <h1 className="font-display text-xl font-bold">Open the register</h1>
         <p className="text-sm text-text-secondary">
           Count the cash in the drawer and enter it as the starting float. Sales can be rung up once a shift is open.

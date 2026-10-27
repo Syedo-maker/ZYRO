@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { StaffPermission } from "@prisma/client";
 import { MAX_PASSWORD_BYTES } from "../../lib/password";
+import { STAFF_ROLES, ROLE_PERMISSIONS } from "../../lib/staffRoles";
 
 // Lowercase on the wire, as in backend/openapi.yaml; uppercase enum names in the database.
 export const STAFF_PERMISSIONS_API = [
@@ -28,8 +29,18 @@ export const createStaffSchema = z.object({
       message: `Password must be at most ${MAX_PASSWORD_BYTES} bytes (about ${MAX_PASSWORD_BYTES} characters)`,
     })
     .optional(),
+  /** The Team page's role (lib/staffRoles.ts). Preferred: the server decides what it allows. */
+  role: z.enum(STAFF_ROLES).optional(),
+  /** An explicit list, for callers written before roles; ignored when a role is given. */
   permissions: z
     .array(z.enum(STAFF_PERMISSIONS_API).transform((p) => p.toUpperCase() as StaffPermission))
-    .min(1),
-});
+    .min(1)
+    .optional(),
+})
+  .refine((v) => v.role !== undefined || v.permissions !== undefined, { message: "Choose a role", path: ["role"] })
+  .transform(({ role, permissions, ...rest }) => ({ ...rest, permissions: role ? ROLE_PERMISSIONS[role] : permissions! }));
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+
+/** The owner changing a staff member's role after adding them. */
+export const updateStaffRoleSchema = z.object({ role: z.enum(STAFF_ROLES) });
+export type UpdateStaffRoleInput = z.infer<typeof updateStaffRoleSchema>;

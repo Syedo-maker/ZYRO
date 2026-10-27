@@ -19,7 +19,7 @@ export function Pagination({ page, pageCount, hrefFor }: { page: number; pageCou
   return (
     <nav aria-label="Pagination" className="flex flex-wrap items-center justify-center gap-2">
       {page > 1 && (
-        <Link to={hrefFor(page - 1)} className={`${item} border-border bg-white hover:bg-bg`}>
+        <Link to={hrefFor(page - 1)} className={`${item} border-border bg-surface hover:bg-bg`}>
           Previous
         </Link>
       )}
@@ -34,14 +34,14 @@ export function Pagination({ page, pageCount, hrefFor }: { page: number; pageCou
             to={hrefFor(p)}
             aria-label={`Page ${p}`}
             aria-current={p === page ? 'page' : undefined}
-            className={`${item} ${p === page ? 'border-brand bg-brand text-white' : 'border-border bg-white hover:bg-bg'}`}
+            className={`${item} ${p === page ? 'border-brand bg-brand text-on-brand' : 'border-border bg-surface hover:bg-bg'}`}
           >
             {p}
           </Link>
         )
       )}
       {page < pageCount && (
-        <Link to={hrefFor(page + 1)} className={`${item} border-border bg-white hover:bg-bg`}>
+        <Link to={hrefFor(page + 1)} className={`${item} border-border bg-surface hover:bg-bg`}>
           Next
         </Link>
       )}

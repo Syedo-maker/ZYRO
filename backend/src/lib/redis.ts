@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 import { env } from "../config/env";
+import { logger } from "./logger";
 
 let client: Redis | undefined;
 let bullClient: Redis | undefined;
@@ -8,7 +9,7 @@ let bullClient: Redis | undefined;
 export function getRedis(): Redis {
   if (!client) {
     client = new Redis(env.redisUrl, { maxRetriesPerRequest: 2 });
-    client.on("error", (err) => console.error("Redis error:", err.message));
+    client.on("error", (err) => logger.error({ err: err.message }, "Redis connection error"));
   }
   return client;
 }
@@ -23,7 +24,7 @@ export function getRedis(): Redis {
 export function getBullRedis(): Redis {
   if (!bullClient) {
     bullClient = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
-    bullClient.on("error", (err) => console.error("BullMQ Redis error:", err.message));
+    bullClient.on("error", (err) => logger.error({ err: err.message }, "BullMQ Redis connection error"));
   }
   return bullClient;
 }

@@ -13,4 +13,7 @@ storeRouter.patch("/branding", requireAuth, requireOwner, storeController.update
 storeRouter.patch("/domain", requireAuth, requireOwner, storeController.updateDomain);
 storeRouter.get("/directory-listing", requireAuth, requireOwner, storeController.getDirectoryListing);
 storeRouter.get("/currency", requireAuth, requireOwner, storeController.getCurrency);
+// "Include my shop's sales in shared platform trends": the owner's alone, like the shop's other settings.
+storeRouter.get("/trend-sharing", requireAuth, requireOwner, storeController.getTrendSharing);
+storeRouter.put("/trend-sharing", requireAuth, requireOwner, storeController.setTrendSharing);
 storeRouter.patch("/currency", requireAuth, requireOwner, storeController.updateCurrency);

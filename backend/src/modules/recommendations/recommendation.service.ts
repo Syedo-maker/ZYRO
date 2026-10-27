@@ -4,6 +4,7 @@ import { Errors } from "../../errors/AppError";
 import { env } from "../../config/env";
 import { getRecommendationClient, type ScoredProduct } from "../../lib/recommendationClient";
 import { productService } from "../products/product.service";
+import { logger } from "../../lib/logger";
 
 /**
  * Implementation_Plan.md Phase 6: "products like this one". Node owns the public endpoint, tenant
@@ -60,7 +61,7 @@ export const recommendationService = {
       try {
         scored = (await getRecommendationClient().recommend(storeId, productId, candidates)) ?? [];
       } catch (err) {
-        console.warn(`[recommendations] unavailable for product ${productId}: ${(err as Error).message}`);
+        logger.warn(`[recommendations] unavailable for product ${productId}: ${(err as Error).message}`);
         return []; // not cached, so it recovers the moment the service does
       }
       cacheSet(key, scored);

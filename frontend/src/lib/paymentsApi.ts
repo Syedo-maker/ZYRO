@@ -125,14 +125,16 @@ export const paymentsApi = {
   // Shopper
   options: (storeId: string, body: LocalOrderInput) => apiFetch<PaymentOptions>(`${base(storeId)}/options`, { method: 'POST', body, headers: guest() }),
   placeOrder: (storeId: string, body: LocalOrderInput) => apiFetch<PlacedOrder>(`${base(storeId)}/orders`, { method: 'POST', body, headers: guest() }),
-  /** Uploads the screenshot. Open to shoppers, but only for an unpaid bank-transfer order in this store. */
-  uploadProofImage: async (storeId: string, orderId: string, file: File): Promise<string> => {
+  /**
+   * Uploads the screenshot. Open to shoppers, but only for an unpaid bank-transfer order in this store.
+   * Receipts are private: the answer is a storage key to submit, and a link that works for an hour.
+   */
+  uploadProofImage: (storeId: string, orderId: string, file: File) => {
     const form = new FormData()
     form.append('file', file)
-    const { url } = await apiFetch<{ url: string }>(`${base(storeId)}/orders/${orderId}/proof-image`, { method: 'POST', body: form })
-    return url
+    return apiFetch<{ key: string; url: string }>(`${base(storeId)}/orders/${orderId}/proof-image`, { method: 'POST', body: form })
   },
-  submitProof: (storeId: string, orderId: string, body: { imageUrl: string; declaredAmount: number; declaredReference?: string }) =>
+  submitProof: (storeId: string, orderId: string, body: { imageKey: string; declaredAmount: number; declaredReference?: string }) =>
     apiFetch<PaymentProof>(`${base(storeId)}/orders/${orderId}/proof`, { method: 'POST', body }),
   proofStatus: (storeId: string, orderId: string) => apiFetch<{ status: string; reason?: string | null }>(`${base(storeId)}/orders/${orderId}/proof`),
   help: (storeId: string, body: { code?: string; providerMessage?: string; language?: 'en' | 'ur' | 'roman' }) =>

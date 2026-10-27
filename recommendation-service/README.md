@@ -12,8 +12,11 @@ Full write-up, including the one deliberate deviation from the plan: `documentat
 ```powershell
 cd recommendation-service
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
+
+`requirements-dev.txt` adds the test tools to `requirements.txt`; the production image installs only
+`requirements.txt`.
 
 ## Run
 

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Alert } from '../../components/ui/Alert'
-import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
@@ -11,33 +10,30 @@ import { posApi } from '../../lib/posApi'
 import { upgradeHintOf } from '../../lib/billingApi'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 
+type Role = 'cashier' | 'manager'
+
 interface StaffMember {
   id: string
   userId: string
   email: string
+  /** "custom": permissions given through the API that match neither role. */
+  role: Role | 'custom'
   permissions: string[]
 }
 
-type Role = 'cashier' | 'manager'
-
-// What each role may do at the register and in the back office; sent as the staff permissions.
-const ROLES: Record<Role, { label: string; permissions: string[]; description: string }> = {
+// What each role may do. The server decides the permissions a role carries (backend
+// lib/staffRoles.ts); this only describes them. Billing, the team, plans and AI packs, and the
+// store's settings stay with the owner whatever the role.
+const ROLES: Record<Role, { label: string; description: string }> = {
   cashier: {
     label: 'Cashier',
-    permissions: ['pos_sell'],
     description: 'Rings up sales, holds and resumes carts, opens and closes their own shift. Discounts are limited to the percentage below.',
   },
   manager: {
     label: 'Manager',
-    permissions: ['pos_sell', 'refunds', 'discounts_write', 'analytics_read', 'orders_write'],
-    description: 'Everything a cashier does, plus returns and refunds, any discount, the daily summary and order management.',
+    description:
+      'Everything a cashier does, plus returns and refunds, any discount, the daily summary and orders, and the catalogue: products, stock, categories and the AI writing tools (which use your store\'s AI allowance).',
   },
-}
-
-function describe(perms: string[]): string {
-  if (perms.includes('refunds')) return 'Manager'
-  if (perms.length === 1 && perms[0] === 'pos_sell') return 'Cashier'
-  return perms.map((p) => p.replace('_', ' ')).join(', ')
 }
 
 /** The owner's page for the people who work the register, and the discount limit they work under. */
@@ -85,7 +81,7 @@ export function TeamPage() {
         body: {
           email: form.email.trim(),
           ...(form.password ? { password: form.password, name: form.name.trim() || undefined } : {}),
-          permissions: ROLES[form.role].permissions,
+          role: form.role,
         },
       })
       setMessage(`${form.email.trim()} was added as a ${ROLES[form.role].label.toLowerCase()}.`)
@@ -97,6 +93,18 @@ export function TeamPage() {
       else setError(errorMessage(err))
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function changeRole(member: StaffMember, role: Role) {
+    setError(null)
+    setMessage(null)
+    try {
+      await apiFetch(`/stores/${storeId}/staff/${member.id}`, { method: 'PATCH', body: { role } })
+      setMessage(`${member.email} is now a ${ROLES[role].label.toLowerCase()}. It applies from the next thing they do.`)
+      await load()
+    } catch (err) {
+      setError(errorMessage(err))
     }
   }
 
@@ -142,7 +150,7 @@ export function TeamPage() {
       <UpgradeNotice error={limitError} />
       {message && <Alert tone="success">{message}</Alert>}
 
-      <section aria-labelledby="staff-heading" className="bg-white border border-border rounded-2xl">
+      <section aria-labelledby="staff-heading" className="bg-surface border border-border rounded-2xl">
         <h2 id="staff-heading" className="font-display text-base font-bold px-5 pt-5">
           Staff
         </h2>
@@ -159,7 +167,26 @@ export function TeamPage() {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate">{m.email}</div>
                 </div>
-                <Badge tone="neutral">{describe(m.permissions)}</Badge>
+                <label htmlFor={`role-${m.id}`} className="sr-only">
+                  Role for {m.email}
+                </label>
+                <select
+                  id={`role-${m.id}`}
+                  value={m.role}
+                  onChange={(e) => void changeRole(m, e.target.value as Role)}
+                  className="h-9 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                >
+                  {m.role === 'custom' && (
+                    <option value="custom" disabled>
+                      Custom permissions
+                    </option>
+                  )}
+                  {(Object.keys(ROLES) as Role[]).map((r) => (
+                    <option key={r} value={r}>
+                      {ROLES[r].label}
+                    </option>
+                  ))}
+                </select>
                 <button onClick={() => void remove(m)} className="text-sm font-semibold text-danger" aria-label={`Remove ${m.email}`}>
                   Remove
                 </button>
@@ -169,7 +196,7 @@ export function TeamPage() {
         )}
       </section>
 
-      <form onSubmit={add} aria-labelledby="add-heading" className="bg-white border border-border rounded-2xl p-5 flex flex-col gap-4">
+      <form onSubmit={add} aria-labelledby="add-heading" className="bg-surface border border-border rounded-2xl p-5 flex flex-col gap-4">
         <h2 id="add-heading" className="font-display text-base font-bold">
           Add a cashier or manager
         </h2>
@@ -208,7 +235,7 @@ export function TeamPage() {
         </div>
       </form>
 
-      <form onSubmit={saveLimit} aria-labelledby="limit-heading" className="bg-white border border-border rounded-2xl p-5 flex flex-col gap-4">
+      <form onSubmit={saveLimit} aria-labelledby="limit-heading" className="bg-surface border border-border rounded-2xl p-5 flex flex-col gap-4">
         <h2 id="limit-heading" className="font-display text-base font-bold">
           Cashier discount limit
         </h2>

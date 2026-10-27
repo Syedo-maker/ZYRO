@@ -76,7 +76,7 @@ export function AccountPage() {
         {error && <Alert>{error}</Alert>}
         {orders === null && !error && <Spinner label="Loading your orders" />}
         {orders?.length === 0 && (
-          <div className="rounded-2xl border border-border bg-white px-6 py-12 text-center">
+          <div className="rounded-2xl border border-border bg-surface px-6 py-12 text-center">
             <p className="text-sm text-text-secondary">You have no orders at {store.name} yet.</p>
             <Link to={`/store/${store.id}/products`} className="mt-3 inline-block text-sm font-semibold text-brand">
               Start shopping
@@ -86,7 +86,7 @@ export function AccountPage() {
         <ul className="flex flex-col gap-3">
           {orders?.map((o) => (
             <li key={o.id}>
-              <Link to={`/store/${store.id}/account/orders/${o.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white p-4 hover:border-brand">
+              <Link to={`/store/${store.id}/account/orders/${o.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4 hover:border-brand">
                 <div>
                   <p className="text-sm font-bold">
                     Order #{o.orderNumber} <span className="ml-2 font-normal text-text-secondary">{formatDate(o.createdAt)}</span>

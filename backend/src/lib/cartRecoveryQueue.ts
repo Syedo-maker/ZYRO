@@ -2,6 +2,7 @@ import { Queue, Worker } from "bullmq";
 import { getBullRedis } from "./redis";
 import { env } from "../config/env";
 import { cartRecoveryService } from "../modules/cart-recovery/cartRecovery.service";
+import { logger } from "./logger";
 
 /**
  * The repeatable scan behind abandoned-cart recovery (Implementation_Plan.md Phase 5, Module 7
@@ -31,7 +32,7 @@ export async function scheduleCartRecoveryScan(): Promise<void> {
 export function startCartRecoveryWorker(): Worker {
   if (worker) return worker;
   worker = new Worker(CART_RECOVERY_QUEUE_NAME, async () => cartRecoveryService.scan(), { connection: getBullRedis(), concurrency: 1 });
-  worker.on("error", (err) => console.error("Cart recovery worker error:", err.message));
+  worker.on("error", (err) => logger.error({ err: err.message }, "cart recovery worker error"));
   return worker;
 }
 

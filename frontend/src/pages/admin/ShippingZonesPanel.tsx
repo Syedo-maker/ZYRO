@@ -81,7 +81,7 @@ export function ShippingZonesPanel({ storeId, currency }: { storeId: string; cur
   }
 
   return (
-    <section aria-labelledby="zones-heading" className="rounded-[14px] border border-border bg-white p-5">
+    <section aria-labelledby="zones-heading" className="rounded-[14px] border border-border bg-surface p-5">
       <div className="mb-3.5 flex items-center justify-between">
         <h2 id="zones-heading" className="text-sm font-bold">Shipping zones</h2>
         {editing.mode === 'closed' && (

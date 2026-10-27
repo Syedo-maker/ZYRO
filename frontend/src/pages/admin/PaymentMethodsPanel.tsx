@@ -5,7 +5,7 @@ import { Input } from '../../components/ui/Input'
 import { errorMessage } from '../../lib/ordersApi'
 import { paymentsApi, type PaymentSettings } from '../../lib/paymentsApi'
 
-const fieldClass = 'h-11 rounded-[10px] border border-border bg-white px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+const fieldClass = 'h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
 
 const BLOCK_BANDS = [
   { value: 'none', label: 'Offer it to everyone' },
@@ -77,7 +77,7 @@ export function PaymentMethodsPanel({ storeId, currency }: { storeId: string; cu
   if (!settings || !form) return null
 
   return (
-    <section aria-label="Payment methods" className="rounded-2xl border border-border bg-white p-5">
+    <section aria-label="Payment methods" className="rounded-2xl border border-border bg-surface p-5">
       <h2 className="font-display text-base font-bold">Ways to pay</h2>
       <p className="mt-1 text-sm text-text-secondary">Card payments are always on. These are the other ways shoppers can pay you.</p>
 

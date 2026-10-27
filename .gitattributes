@@ -1,0 +1,17 @@
+# Prisma records a SHA-256 of each migration file when it is applied, and refuses to continue
+# (`migrate dev`) when the file on disk no longer matches. On Windows, Git's default line-ending
+# conversion turned these files into CRLF after they had been applied as LF, which is how six of
+# them came to "differ" from what the database recorded. Migrations are always LF, on every machine.
+backend/prisma/migrations/**/*.sql text eol=lf
+
+# The shell scripts that run inside Linux containers must stay LF too, or they fail with
+# "bad interpreter" when built from a Windows checkout.
+*.sh text eol=lf
+
+# Dockerfiles are read by Linux builders; keep them LF so a Windows checkout builds the same image.
+Dockerfile text eol=lf
+*.dockerignore text eol=lf
+.dockerignore text eol=lf
+
+# Read by nginx inside the Linux web image.
+frontend/nginx/* text eol=lf

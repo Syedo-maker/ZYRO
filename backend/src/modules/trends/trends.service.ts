@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { sqlNotDemo } from "../../lib/demo";
 import { Types } from "mongoose";
 import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
@@ -9,6 +10,7 @@ import { aggregate, displayCategory, normaliseCategory, DEFAULT_OPTIONS, type Ag
 import { buildFacts, buildPrompt, checkLines, reportWeek, templateLines, SYSTEM_PROMPT, type Fact, type ReportLine } from "./trends.report";
 import { getTrendSources } from "./trends.sources";
 import { parseGoogleTrendsCsv, TrendsFileError } from "./trends.csv";
+import { logger } from "../../lib/logger";
 
 /**
  * The Trend Scout (Part D). Once a week, for every market (store currency) and category, it adds up
@@ -56,7 +58,10 @@ async function salesRows(weekStart: string, opts: AggregateOptions, onlyTenantId
            sum(oi."quantity" - oi."returnedQuantity")::int AS units
     FROM "OrderItem" oi
     JOIN "Order" o ON o."id" = oi."orderId"
+    JOIN "Tenant" t ON t."id" = o."tenantId"
     WHERE o."createdAt" >= ${from}::timestamp AND o."createdAt" < ${end}::timestamp
+      AND ${sqlNotDemo("t")}
+      AND t."shareSalesInTrends" = true
       AND o."status" NOT IN ('CANCELLED', 'REFUNDED')
       AND EXISTS (SELECT 1 FROM "Payment" p WHERE p."orderId" = o."id" AND p."status" IN ('SUCCEEDED', 'REFUNDED'))
       ${only}
@@ -94,7 +99,7 @@ async function externalFacts(market: string, category: string, weekStart: string
     getTrendSources().map((s) =>
       s.factsFor(market, category, weekStart).catch((err: Error) => {
         // One source failing never stops the report; its facts are simply missing this week.
-        console.error(`[trends] source ${s.id} failed for ${market}/${category}: ${err.message}`);
+        logger.error(`[trends] source ${s.id} failed for ${market}/${category}: ${err.message}`);
         return [];
       })
     )
@@ -191,7 +196,7 @@ export const trendsService = {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") outcome.existing++;
         else {
           outcome.failed++;
-          console.error(`[trends] ${market}/${category}: ${(err as Error).message}`);
+          logger.error(`[trends] ${market}/${category}: ${(err as Error).message}`);
         }
       }
     }

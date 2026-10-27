@@ -7,6 +7,9 @@ export const productsApi = {
     apiFetch<Product>(`/stores/${storeId}/products`, { method: 'POST', body: input }),
   update: (storeId: string, productId: string, input: ProductInput) =>
     apiFetch<Product>(`/stores/${storeId}/products/${productId}`, { method: 'PUT', body: input }),
+  /** The stock alone, from the quick control on the products list. */
+  setStock: (storeId: string, productId: string, stock: number) =>
+    apiFetch<{ id: string; stock: number }>(`/stores/${storeId}/products/${productId}/stock`, { method: 'PATCH', body: { stock } }),
   remove: (storeId: string, productId: string) =>
     apiFetch<void>(`/stores/${storeId}/products/${productId}`, { method: 'DELETE' }),
 }

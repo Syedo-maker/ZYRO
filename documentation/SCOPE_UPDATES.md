@@ -34,7 +34,10 @@ Every AI call goes through one orchestrator (provider adapter, job queue, monthl
 | AI Trend Scout (weekly market report per currency and category from anonymised platform sales and imported Google Trends data, every line cited) | built | `PartD_Trend_Scout.md` |
 | AI Payment and Trust module (COD risk, payment screenshot check, courier reconciliation, payment error helper in Urdu) | built | `PartE_Payment_And_Trust.md` |
 | Search that forgives typos and understands Roman Urdu, with semantic search as a last resort | built | `PartF_Search.md` |
-| Voice-note store manager (spoken changes, confirmed by the merchant); bargaining assistant that cannot quote below the merchant's floor | built | `PartG_Voice_And_Bargaining.md` |
+| Voice-note store manager (spoken changes, confirmed by the merchant) | built | `PartG_Voice_And_Bargaining.md` |
+| Bargaining assistant that cannot quote below the merchant's floor | built, then removed on 2026-10-22 by the supervisor's product-listing change | `PartG_Voice_And_Bargaining.md`, `Product_Catalogue.md` |
+| Product Scout: trending products for owners from anonymised sales across shops, AI-explained, with onboarding for new stores | built (2026-10-22) | `Product_Scout.md` |
+| Per-store categories, three prices (MRP, discount, sale) with a "% off" badge, quick stock update; barcode removed | built (supervisor's product-listing change, 2026-10-22) | `Product_Catalogue.md` |
 | Season and festival planner | built as part of the Growth Advisor | `PartC_Growth_Advisor.md` |
 | AI product photo editing | planned, stretch | Phase 6 |
 
@@ -44,9 +47,11 @@ Two deliberate deviations to state honestly: the recommendation service computes
 
 **Landing page (built, 2026-10-06).** A marketing homepage at `/` explaining what the product is, for a small business owner who has been put off by other platforms. Its centrepiece is a live demonstration of the trending-suggestions feature: a visitor types a product and sees real suggestions built from the same keyword sources and the same prompt as the merchant-facing feature. Being public and AI-backed, it is budgeted in four layers (prepared examples cached ahead of time, a cache for repeats, a per-visitor cap and a global daily cap, and the platform paying for whatever gets through) so that no merchant's AI allowance is ever spent by a visitor and the cost has a hard ceiling. Prices are shown in US dollars, which is what Stripe charges, with a clearly-marked rupee approximation beside them. Nothing on the page is invented: no testimonials, user counts, ratings or search volumes, the store directory section hides itself unless there are real shops to show, and the one unbuilt feature mentioned (custom domains) is labelled "coming soon". Tests: `demo-landing` (integration, 23) and the `landing` browser suite (45 checks). Documented in `Landing_Page.md`.
 
+**Accessibility audit (2026-10-07).** Every screen measured in a real browser at phone and desktop widths against the WCAG 2.2 rules for target size, labelling, focus visibility and heading order. Two genuine defects were found and fixed: the merchant's product list had no table semantics, and the storefront catalogue skipped a heading level on a phone. The more useful result was how many findings turned out to be the measuring instrument rather than the product: the first run reported 647, of which 2 were real. The audit is kept in the repository (`frontend/e2e/a11y-audit.e2e.mjs`) and now reports zero across 40 screen visits. Documented in `Accessibility_Audit.md`.
+
 ## 4. Point of sale (was out of scope, now built)
 
-The original scope listed POS as out of scope. It is built as a second sales channel over the same catalog, inventory, customers, discounts and orders: cashier and manager accounts with permissions, product search and barcode lookup, split cash and card payments with change, shifts and cash-drawer counts, a cashier discount limit, held sales, printable receipts, item-level returns (stock goes back, cash comes out of the drawer), transaction history and a daily summary. Documents: `Phase2_5_Module8_POS_Backend.md`, `Phase2_5_POS_Frontend.md`, `Phase2_Commerce_Core_Foundation.md`.
+The original scope listed POS as out of scope. It is built as a second sales channel over the same catalog, inventory, customers, discounts and orders: cashier and manager accounts with permissions, product search and SKU lookup (a barcode field existed until the 2026-10-22 product-listing change removed it), split cash and card payments with change, shifts and cash-drawer counts, a cashier discount limit, held sales, printable receipts, item-level returns (stock goes back, cash comes out of the drawer), transaction history and a daily summary. Documents: `Phase2_5_Module8_POS_Backend.md`, `Phase2_5_POS_Frontend.md`, `Phase2_Commerce_Core_Foundation.md`.
 
 ## 5. Payments: COD and local methods (built: Part E, 2026-10-01)
 
@@ -79,7 +84,7 @@ The local gateway adapter (JazzCash, Easypaisa, Safepay, XPay) is built as a sea
 | Part D | AI Trend Scout | done |
 | Part E | AI Payment and Trust | done |
 | Part F | Search (typo tolerance, Roman Urdu, semantic last resort) | done |
-| Part G | Voice notes and bargaining assistant (festival planner delivered by Part C) | done |
+| Part G | Voice notes and bargaining assistant (festival planner delivered by Part C); bargaining removed 2026-10-22 | done |
 | Issues 1 and 2 | Separate shopper and owner experiences; AI product suggestions from real trending keywords | done (2026-10-05) |
 | Landing page | Marketing homepage at `/` with a live, budget-capped demonstration of trending suggestions | done (2026-10-06) |
 | 7 | Testing (Jest, Supertest, Playwright, pytest, mobile) | done (2026-10-07) |

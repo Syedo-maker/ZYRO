@@ -218,7 +218,7 @@ export function PaymentsPage() {
 
       {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
 
-      <section aria-label="Cash on delivery" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Cash on delivery" className="rounded-2xl border border-border bg-surface p-5">
         <h2 className="font-display text-base font-bold">Waiting for cash on delivery</h2>
         <p className="mt-1 text-sm text-text-secondary">Orders sent out unpaid. Mark each one once the courier hands the money over, or if the parcel came back.</p>
         {cod.length === 0 ? (
@@ -232,7 +232,7 @@ export function PaymentsPage() {
         )}
       </section>
 
-      <section aria-label="Payment screenshots" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Payment screenshots" className="rounded-2xl border border-border bg-surface p-5">
         <h2 className="font-display text-base font-bold">Payment screenshots to check</h2>
         <p className="mt-1 text-sm text-text-secondary">
           Shoppers who transferred the money themselves. The checks below are there to help you look; accepting a payment is always your decision.
@@ -248,7 +248,7 @@ export function PaymentsPage() {
         )}
       </section>
 
-      <section aria-label="Courier cash" className="rounded-2xl border border-border bg-white p-5">
+      <section aria-label="Courier cash" className="rounded-2xl border border-border bg-surface p-5">
         <h2 className="font-display text-base font-bold">Courier cash</h2>
         <p className="mt-1 text-sm text-text-secondary">
           Import the file your courier sends with its cash. It is checked against your own orders and reports what does not line up; no order is marked paid by importing a file.
