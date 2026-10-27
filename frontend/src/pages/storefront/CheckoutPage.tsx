@@ -177,7 +177,9 @@ export function CheckoutPage() {
                 onDeliveryChange={setDelivery}
                 zoneId={zoneId}
                 code={code}
-                onPlaced={(order) => navigate(`/store/${store.id}/checkout/placed?order=${order.orderId}&method=${order.method}`)}
+                onPlaced={(order) =>
+                  navigate(`/store/${store.id}/checkout/placed?order=${order.orderId}&method=${order.method}`, { state: { savings: order.savings, currency: order.currency } })
+                }
               />
             </div>
           </section>

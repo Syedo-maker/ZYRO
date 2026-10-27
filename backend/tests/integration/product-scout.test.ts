@@ -99,6 +99,7 @@ async function order(s: { storeId: string; nextOrder: number }, items: { product
           productId: i.productId,
           productTitleSnapshot: i.title,
           unitPrice: "500.00",
+          unitMrpSnapshot: "500.00",
           quantity: i.qty,
           returnedQuantity: i.returned ?? 0,
           lineTotal: (i.qty * 500).toFixed(2),

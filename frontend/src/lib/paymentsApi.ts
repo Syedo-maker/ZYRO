@@ -41,6 +41,8 @@ export interface PlacedOrder {
   total: number
   currency: string
   method: 'cod' | 'bank_transfer'
+  /** What the shopper saved on the products' own discounts; 0 for none. */
+  savings: number
   payTo?: { accountName: string | null; accountNumber: string | null; bankName: string | null; instructions: string | null }
 }
 

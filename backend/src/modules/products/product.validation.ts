@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DISCOUNT_TYPES, priceProblem, type Discount } from "../../lib/prices";
 
 // Mirrors ProductInput in backend/openapi.yaml.
 export const productInputSchema = z.object({
@@ -6,11 +7,15 @@ export const productInputSchema = z.object({
   description: z.string().max(5000).optional().default(""),
   /**
    * Prices (the supervisor's product-listing change). The owner sets the actual price (the MRP) and,
-   * optionally, a discounted price; the sale price the customer pays is computed from them (the
-   * discount when there is one), never sent. All are positive.
+   * optionally, a discount: an amount off or a percentage off. The selling price the customer pays is
+   * computed from them (lib/prices.ts), never sent.
    */
   actualPrice: z.number().positive("The price must be more than zero").max(10_000_000).optional(),
-  /** Null or absent: no discount. */
+  /** "amount" (money off) or "percent"; null or absent with the value: no discount. */
+  discountType: z.enum(DISCOUNT_TYPES).nullable().optional(),
+  /** The amount or the percentage; 0 means no discount. */
+  discountValue: z.number().min(0, "The discount cannot be below zero").max(10_000_000).nullable().optional(),
+  /** Before the discount modes: the discounted price itself, read as an amount off. Kept for older callers. */
   discountPrice: z.number().positive("A discounted price must be more than zero").max(10_000_000).nullable().optional(),
   /** The single price of the API before the three; read as the actual price. Kept for older callers. */
   price: z.number().positive("The price must be more than zero").max(10_000_000).optional(),
@@ -39,11 +44,37 @@ export const productInputSchema = z.object({
 }).refine((v) => v.discountPrice === undefined || v.discountPrice === null || v.discountPrice <= (v.actualPrice ?? v.price ?? 0), {
   message: "The discounted price cannot be more than the actual price",
   path: ["discountPrice"],
+}).refine((v) => (v.discountType ?? null) === null || (v.discountValue ?? null) !== null, {
+  message: "Give the discount as well as whether it is an amount or a percentage",
+  path: ["discountValue"],
+}).refine((v) => (v.discountValue ?? 0) === 0 || (v.discountType ?? null) !== null, {
+  message: "Say whether the discount is an amount or a percentage",
+  path: ["discountType"],
+}).refine((v) => (v.discountType ?? null) === null || v.discountPrice === undefined || v.discountPrice === null, {
+  message: "Send the discount either as a type and value or as a discounted price, not both",
+  path: ["discountPrice"],
+}).superRefine((v, ctx) => {
+  const problem = priceProblem(v.actualPrice ?? v.price ?? 0, discountFromInput(v));
+  if (problem) ctx.addIssue({ code: "custom", message: problem, path: [problem.includes("MRP) must") ? "actualPrice" : "discountValue"] });
 }).refine((v) => v.categoryId !== undefined || v.category !== undefined, {
   message: "Choose a category",
   path: ["categoryId"],
 });
 export type ProductInput = z.infer<typeof productInputSchema>;
+
+/**
+ * The discount a request asks for: its type and value, or an older caller's discounted price read as
+ * an amount off the MRP. Null for none (absent, or zero).
+ */
+export function discountFromInput(v: Pick<ProductInput, "actualPrice" | "price" | "discountType" | "discountValue" | "discountPrice">): Discount | null {
+  if (v.discountType && v.discountValue !== undefined && v.discountValue !== null) return v.discountValue > 0 ? { type: v.discountType, value: v.discountValue } : null;
+  const mrp = v.actualPrice ?? v.price;
+  if (v.discountPrice !== undefined && v.discountPrice !== null && mrp !== undefined) {
+    const off = Math.round((mrp - v.discountPrice) * 100) / 100;
+    return off > 0 ? { type: "amount", value: off } : null;
+  }
+  return null;
+}
 
 /** An empty box in a search form arrives as "": treat it as not given rather than as an error. */
 const blankToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);

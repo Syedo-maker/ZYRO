@@ -21,6 +21,9 @@ const METHOD_LABEL: Record<Order['payments'][number]['method'], string> = {
   card: 'Card',
   cash: 'Cash',
   other: 'Other',
+  cod: 'Cash on delivery',
+  bank_transfer: 'Bank transfer',
+  gateway: 'Payment gateway',
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -92,6 +95,7 @@ export function OrderDetailPanel({ order, storeId, onChanged, onClose }: OrderDe
         <Row label="Shipping" value={money(order.shippingAmount)} />
         <Row label="Tax" value={money(order.taxAmount)} />
         <div className="flex justify-between text-[15px] font-bold"><span>Total</span><span>{money(order.total)}</span></div>
+        {order.savings > 0 && <Row label="Saved on product discounts" value={money(order.savings)} />}
       </div>
 
       <div className="text-xs text-text-secondary">

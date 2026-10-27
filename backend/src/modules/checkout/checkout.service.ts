@@ -10,6 +10,7 @@ import { inventoryService } from "../inventory/inventory.service";
 import { calculateTotals } from "../commerce/pricing.service";
 import { discountService, type ResolvedDiscount } from "../discounts/discount.service";
 import type { OrderSnapshot, PricedLine } from "../commerce/order.service";
+import { savingsOf } from "../orders/order.presenter";
 import { cartKey, CartOwner } from "../cart/cart.service";
 import type { CreateSessionInput, QuoteInput } from "./checkout.validation";
 
@@ -50,6 +51,7 @@ async function priceCart(storeId: string, owner: CartOwner, input: QuoteInput) {
       productId: id,
       title: product.title,
       unitPrice: priceOf(product).sale,
+      unitMrp: priceOf(product).actual,
       unitCost: product.costPrice ? Number(product.costPrice.toString()) : null,
       quantity,
       taxable: product.taxable !== false,
@@ -241,6 +243,8 @@ export const checkoutService = {
           quantity: i.quantity,
           lineTotal: Number(i.lineTotal.toString()),
         })),
+        /** "You saved": the products' own discounts on what was bought. */
+        savings: savingsOf(order.items),
       },
     };
   },

@@ -4,6 +4,9 @@
 // staff-roles.test.ts covers what each role may do on the server.)
 // Now the products list is read-only for them, it says why, Categories is not in their sidebar, and the
 // dashboard does not ask for AI figures they may not read. The owner still sees everything.
+// 2026-10-27: the other pages outside a cashier's permissions (Orders, Payments, Voice notes, Reviews,
+// Marketing, Dashboard) show only their title and why, and ask for none of their data. Before, Orders
+// still listed the shipping zones and Marketing offered "+ New discount code".
 //
 // Setup: the backend (npm run dev or the e2e server) and `npm run dev` in the frontend, then:
 //   node e2e/staff-permissions.e2e.mjs
@@ -35,6 +38,8 @@ const storeId = (await api('GET', '/users/me/stores', { token })).json[0].id
 await api('POST', `/stores/${storeId}/products`, { token, body: { title: 'Brass Lamp', actualPrice: 3200, stock: 4, category: 'Home' } })
 // A cashier, added by role the way the Team page does it.
 await api('POST', `/stores/${storeId}/staff`, { token, body: { email: managerEmail, password: 'manager-pass-1', role: 'cashier' } })
+const cashierToken = (await api('POST', '/auth/login', { body: { email: managerEmail, password: 'manager-pass-1' } })).json.accessToken
+await api('POST', `/stores/${storeId}/shipping-zones`, { token, body: { name: 'Lahore', region: 'Punjab', rateAmount: 150 } })
 
 const browser = await chromium.launch()
 async function signIn(email, password) {
@@ -72,6 +77,34 @@ try {
   // outside this test and hide themselves when refused.
   const productOrAi = m.refused.filter((u) => /\/(products|categories|ai-usage|ai-description|auto-tag|seo-metadata|marketing-copy|product-ideas|reviews\/summar)/.test(u))
   check('cashier: nothing product- or AI-related they were offered was refused by the server', productOrAi.length === 0, productOrAi.join(', '))
+
+  // Every page outside the cashier's permissions: its title and why, and nothing else.
+  const closed = [
+    ['orders', 'Orders need the Orders permission'],
+    ['payments', 'Payments need the Orders permission'],
+    ['voice-notes', 'Voice notes need the Products permission'],
+    ['reviews', 'Reviews need the Products permission'],
+    ['marketing', 'Marketing needs the Discounts permission'],
+    ['dashboard', 'The dashboard needs the Analytics permission'],
+  ]
+  for (const [path, why] of closed) {
+    const asked = []
+    const onRequest = (r) => r.url().includes(`/api/v1/stores/${storeId}/`) && asked.push(r.url().replace(/.*\/api\/v1/, ''))
+    m.page.on('request', onRequest)
+    await m.page.goto(`${WEB}/admin/${path}`)
+    await m.page.getByRole('status').filter({ hasText: why }).waitFor({ timeout: 15000 })
+    await m.page.waitForTimeout(1000)
+    m.page.off('request', onRequest)
+    const main = m.page.locator('main')
+    let controls = 0
+    for (const role of ['button', 'tab', 'table', 'textbox', 'combobox', 'link']) controls += await main.getByRole(role).count()
+    check(`cashier: ${path} shows only its title and why`, controls === 0, `${controls} controls`)
+    check(`cashier: ${path} asks the server for none of its data`, asked.length === 0, asked.join(', '))
+  }
+  check('cashier: Orders shows no shipping zones', (await m.page.goto(`${WEB}/admin/orders`), await m.page.waitForTimeout(1000), await m.page.getByText('Lahore').count()) === 0)
+  const zones = await api('GET', `/stores/${storeId}/shipping-zones/manage`, { token: cashierToken })
+  check('cashier: the admin list of shipping zones is refused (403)', zones.status === 403, String(zones.status))
+  check('anyone: checkout still reads the public list of shipping zones', (await api('GET', `/stores/${storeId}/shipping-zones`)).json?.length === 1)
   check('cashier: no script errors', m.problems.length === 0, m.problems[0])
 
   // ---- The owner, for contrast
@@ -87,6 +120,11 @@ try {
   await o.page.goto(`${WEB}/admin/dashboard`)
   await o.page.getByRole('region', { name: 'AI usage this month' }).waitFor({ timeout: 15000 })
   check('owner: the dashboard shows the AI meter', true)
+  const managed = o.page.waitForResponse((r) => r.url().endsWith(`/stores/${storeId}/shipping-zones/manage`))
+  await o.page.goto(`${WEB}/admin/orders`)
+  check('owner: Orders reads the admin list of shipping zones', (await managed).status() === 200)
+  await o.page.getByText('Lahore').first().waitFor({ timeout: 15000 })
+  check('owner: Orders shows the shipping zones', true)
 } catch (err) {
   check('browser journey', false, err.message.split('\n')[0])
 } finally {

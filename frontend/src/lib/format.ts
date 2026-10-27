@@ -27,3 +27,12 @@ export function formatDateTime(iso: string): string {
     minute: '2-digit',
   })
 }
+
+/** The currency's sign as prices in it are written ("Rs" for the rupee, "$"), for a Rs / % switch. */
+export function currencySymbol(currency: string): string {
+  try {
+    return new Intl.NumberFormat(homeLocale(currency), { style: 'currency', currency }).formatToParts(0).find((p) => p.type === 'currency')?.value ?? currency
+  } catch {
+    return currency
+  }
+}

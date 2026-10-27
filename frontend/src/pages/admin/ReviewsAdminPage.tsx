@@ -10,6 +10,7 @@ import { formatDate } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { reviewsAdminApi } from '../../lib/shopApi'
 import type { ModerationReview } from '../../types/shop'
+import { NeedsPermission } from './NeedsPermission'
 
 const PAGE = 20
 
@@ -48,7 +49,7 @@ function ReplyDialog({ review, onClose, onSave }: { review: ModerationReview; on
 }
 
 /** Every review in the store, for hiding the ones that should not be shown and replying to the rest. */
-export function ReviewsAdminPage() {
+function ReviewsAdminContent() {
   const { activeStore } = useAuth()
   const storeId = activeStore?.id
   const [status, setStatus] = useState<'' | 'published' | 'hidden'>('')
@@ -162,5 +163,14 @@ export function ReviewsAdminPage() {
         />
       )}
     </div>
+  )
+}
+
+/** Only for someone with products_write; anyone else sees just the page's title and what is missing. */
+export function ReviewsAdminPage() {
+  return (
+    <NeedsPermission permission="products_write" title="Reviews" what="Reviews need the Products permission">
+      <ReviewsAdminContent />
+    </NeedsPermission>
   )
 }

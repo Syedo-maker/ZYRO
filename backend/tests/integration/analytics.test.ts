@@ -246,7 +246,7 @@ async function main() {
       status: (i % 3 === 0 ? "COMPLETED" : "PAID") as "COMPLETED" | "PAID", subtotal: "10.00", total: "10.00", createdAt: new Date(day0 + (i % 200) * 86400000 + (i % 24) * 3600000),
     }));
     await prismaUnscoped.order.createMany({ data: orderRows });
-    await prismaUnscoped.orderItem.createMany({ data: orderRows.map((o, i) => ({ orderId: o.id, productId: "bulkproduct" + (i % 40), productTitleSnapshot: "Bulk " + (i % 40), unitPrice: "5.00", unitCostSnapshot: "2.00", quantity: 2, lineTotal: "10.00" })) });
+    await prismaUnscoped.orderItem.createMany({ data: orderRows.map((o, i) => ({ orderId: o.id, productId: "bulkproduct" + (i % 40), productTitleSnapshot: "Bulk " + (i % 40), unitPrice: "5.00", unitMrpSnapshot: "5.00", unitCostSnapshot: "2.00", quantity: 2, lineTotal: "10.00" })) });
     await prismaUnscoped.payment.createMany({ data: orderRows.map((o) => ({ tenantId: B.storeId, orderId: o.id, method: o.channel === "POS" ? ("CASH" as const) : ("STRIPE" as const), amount: "10.00", status: "SUCCEEDED" as const })) });
     const t0 = performance.now();
     const big = await S("?from=2026-01-01T00:00:00Z&to=2026-12-31T00:00:00Z", B.token, B.storeId);

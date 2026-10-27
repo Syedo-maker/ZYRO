@@ -114,7 +114,7 @@ check('team: the upgrade link opens the billing page', await pb.getByRole('headi
 await pb.goto(`${WEB}/admin/dashboard`)
 await pb.getByRole('button', { name: '90 days' }).click()
 await pb.getByText(/can report on up to 30 days at a time/).waitFor()
-check('dashboard: a 90 day report on Free explains the limit, offers Pro, and falls back to 30 days', (await pb.getByRole('link', { name: 'Upgrade to Pro' }).isVisible()) && (await pb.getByRole('button', { name: '30 days' }).getAttribute('aria-pressed')) === 'true')
+check('dashboard: a 90 day report on Free explains the limit, offers Pro, and falls back to 30 days', (await pb.getByRole('link', { name: 'Upgrade to Pro' }).isVisible()) && (await pb.getByRole('group', { name: 'Period', exact: true }).getByRole('button', { name: '30 days' }).getAttribute('aria-pressed')) === 'true')
 await shot(pb, 'analytics-limit')
 
 // ---- platform view: only for a super admin ----

@@ -8,7 +8,8 @@ import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { AiToolsPanel } from './AiToolsPanel'
 import { WriteWithAi } from './WriteWithAi'
 import { categoriesApi } from '../../lib/categoriesApi'
-import { formatMoney } from '../../lib/format'
+import { currencySymbol, formatMoney } from '../../lib/format'
+import { percentLabel, pricesFromForm, switchDiscountMode, type DiscountSwitchMemo, type DiscountType } from '../../lib/prices'
 import { StockStepper } from './StockStepper'
 import type { Category, Product, ProductInput } from '../../types/api'
 import type { ScoutPrefill } from '../../lib/productScoutApi'
@@ -29,29 +30,24 @@ interface ProductFormProps {
   onCancel: () => void
 }
 
-/**
- * What customers pay, from the two prices as typed: the discount when there is one. The same rule as
- * the server's salePriceFor; null while the prices are incomplete or invalid.
- */
-function salePreview(actual: string, discount: string) {
-  const a = Number(actual)
-  const d = discount.trim() === '' ? null : Number(discount)
-  if (actual.trim() === '' || !(a > 0)) return null
-  if (d !== null && !(d > 0 && d <= a)) return null
-  const sale = d ?? a
-  const off = Math.round(((a - sale) / a) * 100)
-  return { sale, off: off > 0 ? off : null }
-}
-
 export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onCancel }: ProductFormProps) {
   const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? prefill?.description ?? '')
-  // The three prices: the owner sets the actual price (MRP) and, optionally, a discounted one; what
-  // customers pay is computed from them (the supervisor's product-listing change).
+  // The three prices (the supervisor's product-listing change): the owner types the actual price (MRP)
+  // and, optionally, a discount in money or as a percentage; the selling price customers pay is MRP
+  // minus the discount, worked out as they type (lib/prices.ts, the server's rule) and shown as the
+  // third, read-only field.
   const [actualPrice, setActualPrice] = useState(initial ? String(initial.actualPrice) : '')
-  const [discountPrice, setDiscountPrice] = useState(initial?.discountPrice != null ? String(initial.discountPrice) : '')
-  const preview = salePreview(actualPrice, discountPrice)
-  const discountTooHigh = discountPrice.trim() !== '' && actualPrice.trim() !== '' && Number(discountPrice) > Number(actualPrice)
+  const [discountType, setDiscountType] = useState<DiscountType>(initial?.discountType ?? 'amount')
+  const [discountValue, setDiscountValue] = useState(initial?.discountValue != null ? String(initial.discountValue) : '')
+  const [switchMemo, setSwitchMemo] = useState<DiscountSwitchMemo | null>(null)
+  const { prices: preview, problem: priceProblem } = pricesFromForm(actualPrice, discountType, discountValue)
+  function switchDiscount(to: DiscountType) {
+    const next = switchDiscountMode(actualPrice, discountValue, discountType, to, switchMemo)
+    setDiscountType(to)
+    setDiscountValue(next.text)
+    setSwitchMemo(next.memo)
+  }
   const [stock, setStock] = useState(initial?.stock.toString() ?? '')
   // Chosen from the store's own categories, never typed (the supervisor's product-listing change).
   const [categories, setCategories] = useState<Category[] | null>(null)
@@ -125,8 +121,8 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
     e.preventDefault()
     setError(null)
     setLimitError(null)
-    if (discountTooHigh) {
-      setError('The discounted price cannot be more than the price (MRP).')
+    if (priceProblem) {
+      setError(`${priceProblem}.`)
       return
     }
     setSubmitting(true)
@@ -135,8 +131,10 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
         title,
         description,
         actualPrice: Number(actualPrice),
-        // Empty means no discount; on an edit that removes one the product had.
-        discountPrice: discountPrice.trim() === '' ? null : Number(discountPrice),
+        // Empty or 0 means no discount; on an edit that removes one the product had.
+        ...(preview?.discount
+          ? { discountType: preview.discount.type, discountValue: preview.discount.value }
+          : { discountType: null, discountValue: null }),
         stock: Number(stock),
         sku: sku.trim() || undefined,
         taxable,
@@ -215,37 +213,83 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            id="actualPrice"
-            type="number"
-            step="0.01"
-            min="0.01"
-            label="Price (MRP)"
-            required
-            value={actualPrice}
-            onChange={(e) => setActualPrice(e.target.value)}
-          />
-          <Input
-            id="discountPrice"
-            type="number"
-            step="0.01"
-            min="0.01"
-            label="Discounted price (optional)"
-            aria-describedby="price-preview"
-            value={discountPrice}
-            onChange={(e) => setDiscountPrice(e.target.value)}
-          />
+      <fieldset className="flex flex-col gap-3">
+        <legend className="sr-only">Prices</legend>
+        <Input
+          id="actualPrice"
+          type="number"
+          step="0.01"
+          min="0.01"
+          label="Price (MRP)"
+          required
+          value={actualPrice}
+          onChange={(e) => {
+            setActualPrice(e.target.value)
+            setSwitchMemo(null)
+          }}
+        />
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="discountValue" className="text-xs font-semibold text-text-secondary">
+            Discount (optional)
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="discountValue"
+              type="number"
+              step="0.01"
+              min="0"
+              inputMode="decimal"
+              aria-describedby="price-preview"
+              aria-invalid={priceProblem !== null && discountValue.trim() !== '' ? true : undefined}
+              placeholder={discountType === 'percent' ? 'e.g. 15' : 'e.g. 200'}
+              value={discountValue}
+              onChange={(e) => {
+                setDiscountValue(e.target.value)
+                setSwitchMemo(null)
+              }}
+              className="h-11 min-w-0 flex-1 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            />
+            {/* Rs or %: switching converts the value (Rs 150 off a 1,000 MRP is 15%), and switching straight back restores it. */}
+            <div role="group" aria-label="Discount in" className="flex shrink-0 rounded-[10px] border border-border-input p-0.5">
+              {(['amount', 'percent'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={discountType === t}
+                  aria-label={t === 'amount' ? `Discount in ${currency}` : 'Discount in percent'}
+                  onClick={() => switchDiscount(t)}
+                  className={`h-9 min-w-11 rounded-lg px-3 text-sm font-semibold ${discountType === t ? 'bg-brand text-on-brand' : 'text-text-secondary hover:text-text'}`}
+                >
+                  {t === 'amount' ? currencySymbol(currency) : '%'}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <p id="price-preview" aria-live="polite" className={`text-xs ${discountTooHigh ? 'text-danger' : 'text-text-secondary'}`}>
-          {discountTooHigh
-            ? 'The discounted price cannot be more than the price (MRP).'
-            : preview
-              ? `Customers pay ${formatMoney(preview.sale, currency)}${preview.off ? `, ${preview.off}% off the MRP` : ''}.`
-              : 'Leave the discounted price empty to sell at the MRP.'}
+
+        {/* The third price: what customers pay. Shown, never typed, so it cannot disagree with the other two. */}
+        <Input
+          id="sellingPrice"
+          label="Selling price (what customers pay)"
+          readOnly
+          aria-describedby="price-preview"
+          value={preview ? formatMoney(preview.sale, currency) : ''}
+          placeholder="Fills in from the prices above"
+          className="font-semibold"
+        />
+        <p id="price-preview" aria-live="polite" className={`-mt-1.5 text-xs ${priceProblem ? 'text-danger' : 'text-text-secondary'}`}>
+          {priceProblem
+            ? `${priceProblem}.`
+            : preview?.discount
+              ? `${formatMoney(preview.actual, currency)} minus ${
+                  preview.discount.type === 'percent' ? `${percentLabel(preview.discount.value)}% (${formatMoney(preview.discountAmount, currency)})` : formatMoney(preview.discountAmount, currency)
+                }: customers pay ${formatMoney(preview.sale, currency)}.`
+              : preview
+                ? `No discount: customers pay the MRP, ${formatMoney(preview.sale, currency)}.`
+                : 'Leave the discount empty to sell at the MRP.'}
         </p>
-      </div>
+      </fieldset>
 
       <StockStepper id="stock" label="Stock" value={stock} onChange={setStock} />
 
