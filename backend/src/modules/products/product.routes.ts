@@ -36,6 +36,15 @@ productRouter.put(
   requirePermission("PRODUCTS_WRITE"),
   productController.update
 );
+// The quick stock control on the products list (the supervisor's product-listing change): the
+// on-hand count only, recorded as a stock adjustment like a full edit that changes it.
+productRouter.patch(
+  "/:productId/stock",
+  requireAuth,
+  withTenantContext,
+  requirePermission("PRODUCTS_WRITE"),
+  productController.setStock
+);
 productRouter.delete(
   "/:productId",
   requireAuth,

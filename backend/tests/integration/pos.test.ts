@@ -97,13 +97,15 @@ async function main() {
     // ---- Catalog lookup ----
     const p1 = (await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Widget", price: 20, stock: 50, category: "t", barcode: `BC-W-${suffix}`, sku: `SKU-W-${suffix}` } })).json.id as string;
     const p2 = (await api("POST", `/stores/${A.storeId}/products`, { token: A.token, body: { title: "Gadget", price: 10.5, stock: 5, category: "t", taxable: false } })).json.id as string;
-    const byCode = await api("GET", P(`/products?code=BC-W-${suffix}`), { token: cashier.token });
-    check("products: an exact barcode finds the product with its stock", byCode.status === 200 && byCode.json.length === 1 && byCode.json[0].id === p1 && byCode.json[0].stock === 50);
-    check("products: a SKU works as a code too", (await api("GET", P(`/products?code=SKU-W-${suffix}`), { token: cashier.token })).json.length === 1);
+    const byCode = await api("GET", P(`/products?code=SKU-W-${suffix}`), { token: cashier.token });
+    check("products: an exact SKU finds the product with its stock", byCode.status === 200 && byCode.json.length === 1 && byCode.json[0].id === p1 && byCode.json[0].stock === 50);
+    // The barcode field was removed (the supervisor's product-listing change): one sent by an older
+    // caller is ignored, never stored, so it finds nothing and is not in what the register gets back.
+    check("products: a barcode sent with a product is not stored, so it finds nothing", (await api("GET", P(`/products?code=BC-W-${suffix}`), { token: cashier.token })).json.length === 0 && !("barcode" in byCode.json[0]));
     check("products: part of a title finds it, case-insensitively", (await api("GET", P("/products?q=widg"), { token: cashier.token })).json.some((p: { id: string }) => p.id === p1));
     const weird = await api("GET", P("/products?q=" + encodeURIComponent("(.*[")), { token: cashier.token });
     check("products: regex characters in a search are treated as text, not a pattern (200, none)", weird.status === 200 && weird.json.length === 0);
-    check("products: an unknown barcode returns an empty list", (await api("GET", P("/products?code=nope"), { token: cashier.token })).json.length === 0);
+    check("products: an unknown SKU returns an empty list", (await api("GET", P("/products?code=nope"), { token: cashier.token })).json.length === 0);
     check("products: another store's register cannot see this catalog", (await api("GET", `/stores/${B.storeId}/pos/products?q=widget`, { token: B.token })).json.length === 0);
 
     // ---- Pricing and discount limits (nothing sold yet) ----
@@ -360,11 +362,11 @@ declare([
   "auth: staff without pos_sell cannot use the register (403)",
   "session: the cashier sees their own permissions (sell yes, refunds no)",
   "session: the owner is flagged and has every permission",
-  "products: an exact barcode finds the product with its stock",
-  "products: a SKU works as a code too",
+  "products: an exact SKU finds the product with its stock",
+  "products: a barcode sent with a product is not stored, so it finds nothing",
   "products: part of a title finds it, case-insensitively",
   "products: regex characters in a search are treated as text, not a pattern (200, none)",
-  "products: an unknown barcode returns an empty list",
+  "products: an unknown SKU returns an empty list",
   "products: another store's register cannot see this catalog",
   "quote: subtotal 50.50, tax 8% on the taxable 40.00 only (3.20), total 53.70",
   "quote: a 10% discount lowers the taxable base too (total 48.33)",

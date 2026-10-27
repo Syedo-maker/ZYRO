@@ -1,4 +1,5 @@
 import { prismaUnscoped } from "../../lib/prisma";
+import { notDemoTenant } from "../../lib/demo";
 import { Product } from "../../models/Product.model";
 
 /**
@@ -100,6 +101,7 @@ export const directoryService = {
     const candidates = await prismaUnscoped.tenant.findMany({
       where: {
         listedInDirectory: true,
+        ...notDemoTenant,
         ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { description: { contains: q, mode: "insensitive" } }] } : {}),
       },
       select: { id: true, name: true, slug: true, logoUrl: true, themeColor: true, currency: true, description: true },

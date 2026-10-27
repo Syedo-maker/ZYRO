@@ -24,7 +24,12 @@ async function main() {
   const ids = tenants.map((t) => t.id);
 
   const products = await mongoose.connection.collection("products").deleteMany({ storeId: { $in: ids } });
-  const carts = (await getRedis().keys("cart:*")).filter((k) => ids.some((id) => k.startsWith(`cart:${id}:`)));
+  // The carts of these stores, and of any store that no longer exists (a Jest suite deletes its
+  // stores itself, leaving their carts in Redis for up to 7 days, where the recovery scan finds them).
+  const cartKeys = await getRedis().keys("cart:*");
+  const cartStores = [...new Set(cartKeys.map((k) => k.split(":")[1]))];
+  const live = new Set((await p.tenant.findMany({ where: { id: { in: cartStores } }, select: { id: true } })).map((t) => t.id));
+  const carts = cartKeys.filter((k) => ids.includes(k.split(":")[1]) || !live.has(k.split(":")[1]));
   if (carts.length) await getRedis().del(...carts);
 
   await p.tenant.deleteMany({ where: { id: { in: ids } } });
