@@ -18,8 +18,14 @@ const productNamed = async (m, title) => (await api('GET', `/stores/${m.storeId}
  * and the shift closed Rs 200 short, so the report has a drawer that came up short to show.
  */
 async function registerDay(m) {
-  const token = await login(DEMO.cashier)
   const shop = `/stores/${m.storeId}/pos`
+  // Filmed again today? The day is already there: one short drawer is the point, not one per take.
+  const from = new Date()
+  from.setHours(0, 0, 0, 0)
+  const to = new Date(from.getTime() + 24 * 60 * 60 * 1000)
+  const today = (await api('GET', `${shop}/reports/daily?from=${from.toISOString()}&to=${to.toISOString()}`, { token: m.ownerToken })).json
+  if ((today?.shifts ?? []).some((s) => s.note === 'Demo: Rs 200 short')) return
+  const token = await login(DEMO.cashier)
   const open = (await api('GET', `${shop}/shift`, { token })).json
   if (open?.id) await api('POST', `${shop}/shift/close`, { token, body: { countedCash: open.expectedCash ?? open.openingFloat ?? 0 } })
   await api('POST', `${shop}/shift/open`, { token, body: { openingFloat: 5000 } })

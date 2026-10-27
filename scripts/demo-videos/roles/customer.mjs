@@ -271,7 +271,8 @@ export const chapters = [
       await f.say('Continuing at checkout (delivery and code already chosen). Step 1: Pay by card.')
       await f.choose(page.getByRole('radio', { name: /^Card/ }), 'Card')
       await f.click(page.getByRole('button', { name: /^Pay / }), 'Pay')
-      await page.waitForURL(/checkout\.stripe\.com/, { timeout: 30000 })
+      // Stripe's page can be slow to arrive from here; the redirect itself is quick.
+      await page.waitForURL(/checkout\.stripe\.com/, { timeout: 60000 })
       await page.locator('#cardNumber').waitFor({ timeout: 30000 })
       await f.say('Stripe\'s secure page, in test mode ("Sandbox"): no real money moves. Card details never reach the shop.', 5000)
       const email = page.locator('#email')
@@ -352,7 +353,7 @@ export const chapters = [
       await f.click(page.getByRole('link', { name: paid ? new RegExp(`#${paid.orderNumber}\\b`) : /#\d+/ }).first(), paid ? `order #${paid.orderNumber}` : 'the order')
       const tracking = page.getByText(/Tracking number/).first()
       await tracking.waitFor({ timeout: 20000 })
-      await f.result(tracking.locator('xpath=ancestor::section[1]'), 'shipped with TCS: the tracking number to follow it', 5000)
+      await f.result(tracking.locator('xpath=ancestor::section[1]'), 'shipped with TCS, with a tracking number', 5000, { side: 'right' })
     },
   },
 ]

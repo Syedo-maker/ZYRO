@@ -276,11 +276,11 @@ export async function filmChapter(browser, { id, title, storageState, permission
       await overlay('hide')
       await sleep(300)
     },
-    /** Holds on an important result, outlined, so the viewer can take it in. */
-    async result(locator, label, holdMs = 3500) {
+    /** Holds on an important result, outlined, so the viewer can take it in. `side` puts the label there if it fits. */
+    async result(locator, label, holdMs = 3500, { side } = {}) {
       await ensureVisible(locator, label)
       const box = await locator.boundingBox()
-      await overlay('show', { x: box.x, y: box.y, width: box.width, height: box.height }, 'Result: ' + label)
+      await overlay('show', { x: box.x, y: box.y, width: box.width, height: box.height }, 'Result: ' + label, side)
       marks.push({ t: now(), label: 'Result: ' + label })
       await sleep(holdMs)
       await overlay('hide')

@@ -116,9 +116,10 @@
 
   /**
    * Outlines `rect` and points at it with an arrow and a label. The label goes above the element,
-   * or below, right or left, whichever fits on screen without covering the element itself.
+   * or below, right or left, whichever fits on screen without covering the element itself;
+   * `prefer` names the side to try first (when the usual one would cover something that matters).
    */
-  function show(rect, text) {
+  function show(rect, text, prefer) {
     raise()
     const pad = 6
     const r = { left: rect.x - pad, top: rect.y - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }
@@ -143,6 +144,7 @@
       { side: 'left', x: r.left - gap - bw, y: clampY(cy - bh / 2), ok: r.left - gap - bw >= 12 },
     ]
     // A huge element (a whole panel): put the label inside its top edge rather than off screen.
+    if (prefer) options.sort((a, b) => (b.side === prefer) - (a.side === prefer))
     const pick = options.find((o) => o.ok) || { side: 'inside', x: clampX(cx - bw / 2), y: clampY(r.top + 12) }
     css(bubble, { left: `${pick.x}px`, top: `${pick.y}px`, opacity: '1' })
     // The arrow runs from the label's edge to the element's edge.
