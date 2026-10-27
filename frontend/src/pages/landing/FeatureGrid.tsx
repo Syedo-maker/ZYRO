@@ -9,7 +9,7 @@ import { Reveal } from './Reveal'
  * emoji standing in for a drawing.
  */
 const ITEMS: { title: string; body: string; path: string }[] = [
-  { title: 'Product catalogue', body: 'Photos, prices, stock, SKUs, barcodes, tags and categories.', path: 'M4 7h16v13H4zM4 7l2-3h12l2 3M9 12h6' },
+  { title: 'Product catalogue', body: 'Photos, sale and MRP prices, stock, SKUs, tags and your own categories.', path: 'M4 7h16v13H4zM4 7l2-3h12l2 3M9 12h6' },
   { title: 'Cart and checkout', body: 'Guest checkout, so a shopper can buy without making an account.', path: 'M3 5h2l2.5 11h11L21 8H6M9 20a1 1 0 100-2 1 1 0 000 2M18 20a1 1 0 100-2 1 1 0 000 2' },
   { title: 'Orders and shipping', body: 'Shipping zones and rates, order status, refunds and returns.', path: 'M3 8h12v8H3zM15 11h4l2 3v2h-6M6 19a1 1 0 100-2 1 1 0 000 2M18 19a1 1 0 100-2 1 1 0 000 2' },
   { title: 'Discount codes', body: 'Percentage or fixed, with limits on how often a code can be used.', path: 'M4 9l5-5 11 11-5 5zM8.5 8.5h.01M13 14l3 3' },

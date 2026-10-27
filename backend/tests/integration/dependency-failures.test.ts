@@ -18,7 +18,9 @@ process.env.AI_QUEUE_NAME = `ai-generate-verify-deps-${Date.now().toString(36)}`
 process.env.AI_CACHE_SECONDS = "0";
 process.env.AI_JOB_TIMEOUT_MS = "1500";
 process.env.REQUEST_TIMEOUT_MS = "3000";
+// Test-only values, set here so the suite never depends on a developer's own .env (CI has none).
 process.env.STRIPE_SECRET_KEY = "sk_test_verifyonly";
+process.env.STRIPE_WEBHOOK_SECRET = "whsec_verifyonly";
 process.env.RECOMMENDATION_TIMEOUT_MS = "800";
 process.env.RECOMMENDATION_SERVICE_TOKEN = "verify-deps-token";
 
@@ -41,7 +43,12 @@ async function api(method: string, p: string, opts: { token?: string; guest?: st
   let req = (request(app) as any)[method.toLowerCase()](`/api/v1${p}`).set("Content-Type", "application/json");
   if (opts.token) req = req.set("Authorization", `Bearer ${opts.token}`);
   if (opts.guest) req = req.set("X-Guest-Session-Id", opts.guest);
-  const res = await (opts.body === undefined ? req : req.send(JSON.stringify(opts.body)));
+  // Each call gets its own limit, well above anything these tests expect, so that a hang names the
+  // call that hung instead of ending as a bare Jest timeout. (One full run, 2026-10-21, timed out
+  // the AI test after 120 s; it has not reproduced in any run since.)
+  const res = await (opts.body === undefined ? req : req.send(JSON.stringify(opts.body))).timeout(15_000).catch((err: Error) => {
+    throw new Error(`${method} ${p} did not answer within 15 s: ${err.message}`);
+  });
   return { status: res.status as number, json: res.body, ms: Date.now() - started };
 }
 

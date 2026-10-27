@@ -1,5 +1,5 @@
 import { Types, HydratedDocument } from "mongoose";
-import { Product, ProductDocument } from "../../models/Product.model";
+import { Product, ProductDocument, priceOf, salePriceFor } from "../../models/Product.model";
 import { AiGeneratedContent } from "../../models/AiGeneratedContent.model";
 import { prisma } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
@@ -11,6 +11,7 @@ import type { ProductInput, ListProductsQuery } from "./product.validation";
 import { forgetVocabulary, runLadder, semanticIds, type SearchOutcome } from "../search/search.service";
 import { normalise } from "../search/search.query";
 import { recordSearchTerm } from "../search/search.terms";
+import { categoryService } from "../categories/category.service";
 
 interface Rating {
   averageRating: number;
@@ -25,11 +26,21 @@ function toPublicProduct(doc: HydratedDocument<ProductDocument>, stock: number, 
     storeId: doc.storeId,
     title: doc.title,
     description: doc.description,
-    price: Number(doc.price.toString()),
+    ...(() => {
+      const p = priceOf(doc);
+      return {
+        actualPrice: p.actual,
+        discountPrice: p.discount,
+        salePrice: p.sale,
+        discountPercent: p.percentOff,
+        /** The price before the three; the sale price. Kept for older callers. */
+        price: p.sale,
+      };
+    })(),
     stock,
     sku: doc.sku ?? null,
-    barcode: doc.barcode ?? null,
     taxable: doc.taxable !== false,
+    categoryId: doc.categoryId?.toString() ?? null,
     category: doc.category,
     images: doc.images,
     tags: doc.tags ?? [],
@@ -51,10 +62,32 @@ async function aiDescriptionStatusOf(doc: HydratedDocument<ProductDocument>): Pr
   return content?.status ?? null;
 }
 
-/** Splits the API payload into the catalog fields (MongoDB) and the stock target (Postgres). */
-function splitInput(input: ProductInput) {
-  const { stock, costPrice, bargainMinPrice, ...rest } = input;
-  return { stock, catalog: { ...rest, ...(costPrice !== undefined ? { costPrice } : {}), ...(bargainMinPrice !== undefined ? { bargainMinPrice } : {}) } };
+/**
+ * Splits the API payload into the catalog fields (MongoDB) and the stock target (Postgres), and puts
+ * the product in its category: always by id, with the category's own name copied alongside.
+ */
+async function splitInput(storeId: string, input: ProductInput, currentCategoryId?: string) {
+  const { stock, costPrice, categoryId, category, actualPrice, discountPrice, price, ...rest } = input;
+  const resolved = await categoryService.resolveForProduct(storeId, { categoryId, category }, currentCategoryId);
+  const actual = (actualPrice ?? price)!;
+  const discount = discountPrice ?? null;
+  return {
+    stock,
+    catalog: {
+      ...rest,
+      categoryId: resolved.id,
+      category: resolved.name,
+      actualPrice: actual,
+      salePrice: salePriceFor(actual, discount),
+      ...(discount !== null ? { discountPrice: discount } : {}),
+      ...(costPrice !== undefined ? { costPrice } : {}),
+    },
+    /**
+     * Removed on an edit: the discount when none was sent (the form always sends the price fields, an
+     * empty discount meaning there is none), and the single price from before the three prices.
+     */
+    unset: { price: 1, ...(discount === null ? { discountPrice: 1 } : {}) } as Record<string, 1>,
+  };
 }
 
 function isDuplicateKey(err: unknown): boolean {
@@ -92,7 +125,8 @@ export const productService = {
       const price: Record<string, Types.Decimal128> = {};
       if (query.minPrice !== undefined) price.$gte = Types.Decimal128.fromString(query.minPrice.toFixed(2));
       if (query.maxPrice !== undefined) price.$lte = Types.Decimal128.fromString(query.maxPrice.toFixed(2));
-      filter.price = price;
+      // What customers pay.
+      filter.salePrice = price;
     }
     if (query.inStock) {
       const rows = await prisma.inventoryLevel.groupBy({
@@ -136,9 +170,9 @@ export const productService = {
     const sort: Record<string, 1 | -1 | { $meta: "textScore" }> = ranked
       ? { score: { $meta: "textScore" }, _id: -1 }
       : wanted === "price_asc"
-        ? { price: 1, _id: 1 }
+        ? { salePrice: 1, _id: 1 }
         : wanted === "price_desc"
-          ? { price: -1, _id: -1 }
+          ? { salePrice: -1, _id: -1 }
           : wanted === "title" || (outcome !== null && !outcome.ranked && wanted === "relevance")
             ? { title: 1, _id: 1 }
             : { createdAt: -1, _id: -1 };
@@ -216,14 +250,15 @@ export const productService = {
     return present(docs);
   },
   async create(storeId: string, input: ProductInput, userId?: string) {
-    const { stock, catalog } = splitInput(input);
+    // The plan limit first, so a product the plan refuses never creates a category on its way out.
     await planService.assertCanAddProduct(storeId);
+    const { stock, catalog } = await splitInput(storeId, input);
 
     let doc;
     try {
       doc = await Product.create({ storeId, ...catalog });
     } catch (err) {
-      if (isDuplicateKey(err)) throw Errors.validation("SKU or barcode is already used by another product");
+      if (isDuplicateKey(err)) throw Errors.validation("That SKU is already used by another product");
       throw err;
     }
 
@@ -270,15 +305,17 @@ export const productService = {
 
   async update(storeId: string, productId: string, input: ProductInput, userId?: string) {
     if (!Types.ObjectId.isValid(productId)) throw Errors.notFound("Product");
-    const { stock, catalog } = splitInput(input);
+    const before = await Product.findOne({ _id: productId, storeId }).select("categoryId").lean<{ categoryId?: Types.ObjectId }>();
+    if (!before) throw Errors.notFound("Product");
+    const { stock, catalog, unset } = await splitInput(storeId, input, before.categoryId?.toString());
 
     // findOneAndUpdate (not findByIdAndUpdate/findUnique-style) so storeId is part of the
     // filter, not assumed; the same discipline as the Prisma tenant-scoping middleware.
     let doc;
     try {
-      doc = await Product.findOneAndUpdate({ _id: productId, storeId }, catalog, { new: true });
+      doc = await Product.findOneAndUpdate({ _id: productId, storeId }, { $set: catalog, $unset: unset }, { new: true });
     } catch (err) {
-      if (isDuplicateKey(err)) throw Errors.validation("SKU or barcode is already used by another product");
+      if (isDuplicateKey(err)) throw Errors.validation("That SKU is already used by another product");
       throw err;
     }
     if (!doc) throw Errors.notFound("Product");
@@ -287,6 +324,20 @@ export const productService = {
     indexProductInBackground(storeId, productId);
     void forgetVocabulary(storeId);
     return toPublicProduct(doc, stock);
+  },
+
+  /**
+   * Sets the on-hand count at the default location and nothing else, for the quick stock control on
+   * the products list. Recorded as an adjustment by this user, as a full edit would record it; the
+   * shop, the cart and the register read stock live, so the new count shows at once.
+   */
+  async setStock(storeId: string, productId: string, stock: number, userId?: string) {
+    if (!Types.ObjectId.isValid(productId)) throw Errors.notFound("Product");
+    const exists = await Product.exists({ _id: productId, storeId });
+    if (!exists) throw Errors.notFound("Product");
+    await setStock(storeId, productId, stock, "ADJUSTMENT", userId);
+    const current = await inventoryService.getTotals(prisma, storeId, [productId]);
+    return { id: productId, stock: current.get(productId) ?? 0 };
   },
 
   async remove(storeId: string, productId: string) {

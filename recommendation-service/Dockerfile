@@ -48,6 +48,8 @@ ENV RECO_MODEL=${RECO_MODEL} \
 RUN useradd --system --uid 10001 --no-create-home zyro && chown -R zyro /models
 USER zyro
 EXPOSE 8001
+# /health needs the shared secret the API uses, which the container already has.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=3   CMD python -c "import os,urllib.request as u; r=u.Request('http://127.0.0.1:'+os.environ.get('PORT','8001')+'/health', headers={'X-Internal-Token': os.environ.get('RECOMMENDATION_SERVICE_TOKEN','')}); u.urlopen(r, timeout=4)"
 # One process per container: Container Apps adds replicas for more throughput. uvicorn finishes the
 # requests in flight on SIGTERM before it exits.
 CMD ["sh", "-c", "exec uvicorn app.asgi:app --host 0.0.0.0 --port ${PORT} --timeout-graceful-shutdown 20"]

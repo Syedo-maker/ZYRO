@@ -3,7 +3,7 @@ import { Errors } from "../../errors/AppError";
 import { planService } from "../billing/plan.service";
 import { Product } from "../../models/Product.model";
 import { MIN_PRODUCTS } from "./directory.service";
-import type { UpdateBrandingInput, UpdateCurrencyInput, UpdateDomainInput } from "./store.validation";
+import type { UpdateBrandingInput, UpdateCurrencyInput, UpdateDomainInput, UpdateTrendSharingInput } from "./store.validation";
 
 const toPublicProfile = (t: {
   id: string;
@@ -30,6 +30,22 @@ export const storeService = {
     const tenant = await prisma.tenant.findUnique({ where: { id: storeId } });
     if (!tenant) throw Errors.notFound("Store");
     return toPublicProfile(tenant);
+  },
+
+  /**
+   * The owner's choice about the platform's shared trends. On (the default), this shop's paid orders
+   * count toward the anonymous totals of Product Scout and Trend Scout; off, they are left out from
+   * the next daily run. Either way the shop can still see the trends.
+   */
+  async trendSharing(storeId: string) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { shareSalesInTrends: true } });
+    if (!tenant) throw Errors.notFound("Store");
+    return { shareSalesInTrends: tenant.shareSalesInTrends };
+  },
+
+  async setTrendSharing(storeId: string, input: UpdateTrendSharingInput) {
+    const tenant = await prisma.tenant.update({ where: { id: storeId }, data: { shareSalesInTrends: input.shareSalesInTrends }, select: { shareSalesInTrends: true } });
+    return { shareSalesInTrends: tenant.shareSalesInTrends };
   },
 
   async updateBranding(storeId: string, input: UpdateBrandingInput) {

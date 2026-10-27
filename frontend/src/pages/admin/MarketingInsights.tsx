@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CategorySales } from '../../components/charts/DashboardParts'
+import { Alert } from '../../components/ui/Alert'
 import { analyticsApi, cartRecoveryApi } from '../../lib/shopApi'
 import type { AnalyticsSummary, CartRecoveryPerformance } from '../../types/shop'
 
@@ -61,6 +62,14 @@ export function MarketingInsights({ storeId }: { storeId: string }) {
     <div className="grid gap-4 lg:grid-cols-2">
       {recovery && (
         <Card title="Abandoned-cart recovery">
+          {!recovery.emailConfigured && (
+            <div className="mb-4">
+              <Alert tone="info">
+                Email sending is not set up, so abandoned-cart reminders are not being sent. Nothing is used from your AI allowance until it
+                is.
+              </Alert>
+            </div>
+          )}
           {recovery.sent === 0 ? (
             <p className="text-sm text-text-secondary">No recovery emails sent yet. When a signed-in shopper leaves items in their cart, a reminder is sent automatically.</p>
           ) : (

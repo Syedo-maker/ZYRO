@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { uploadsApi } from '../../lib/productsApi'
@@ -6,34 +7,93 @@ import { upgradeHintOf } from '../../lib/billingApi'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
 import { AiToolsPanel } from './AiToolsPanel'
 import { WriteWithAi } from './WriteWithAi'
-import { bargainApi } from '../../lib/voiceBargainApi'
-import type { Product, ProductInput } from '../../types/api'
+import { categoriesApi } from '../../lib/categoriesApi'
+import { formatMoney } from '../../lib/format'
+import { StockStepper } from './StockStepper'
+import type { Category, Product, ProductInput } from '../../types/api'
+import type { ScoutPrefill } from '../../lib/productScoutApi'
+import { Alert } from '../../components/ui/Alert'
+
+/** The same comparison the server makes: case and spacing do not make two category names different. */
+const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, ' ').toLowerCase() === b.trim().replace(/\s+/g, ' ').toLowerCase()
 
 interface ProductFormProps {
   storeId: string
+  /** The store's currency, for the "customers pay" line under the prices. */
+  currency: string
   /** Present when editing; absent when creating. */
   initial?: Product
+  /** A new product started from Product Scout's "Add to my store": name, category and a draft description. */
+  prefill?: ScoutPrefill
   onSubmit: (input: ProductInput) => Promise<void>
   onCancel: () => void
 }
 
-export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFormProps) {
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
-  const [price, setPrice] = useState(initial?.price.toString() ?? '')
-  // The floor price is never on the public product endpoints, so it is fetched on its own here.
-  const [bargainMinPrice, setBargainMinPrice] = useState('')
-  useEffect(() => {
-    if (!initial) return
-    bargainApi
-      .settings(storeId, initial.id)
-      .then((s) => setBargainMinPrice(s.bargainMinPrice === null ? '' : String(s.bargainMinPrice)))
-      .catch(() => undefined)
-  }, [storeId, initial])
+/**
+ * What customers pay, from the two prices as typed: the discount when there is one. The same rule as
+ * the server's salePriceFor; null while the prices are incomplete or invalid.
+ */
+function salePreview(actual: string, discount: string) {
+  const a = Number(actual)
+  const d = discount.trim() === '' ? null : Number(discount)
+  if (actual.trim() === '' || !(a > 0)) return null
+  if (d !== null && !(d > 0 && d <= a)) return null
+  const sale = d ?? a
+  const off = Math.round(((a - sale) / a) * 100)
+  return { sale, off: off > 0 ? off : null }
+}
+
+export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onCancel }: ProductFormProps) {
+  const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? '')
+  const [description, setDescription] = useState(initial?.description ?? prefill?.description ?? '')
+  // The three prices: the owner sets the actual price (MRP) and, optionally, a discounted one; what
+  // customers pay is computed from them (the supervisor's product-listing change).
+  const [actualPrice, setActualPrice] = useState(initial ? String(initial.actualPrice) : '')
+  const [discountPrice, setDiscountPrice] = useState(initial?.discountPrice != null ? String(initial.discountPrice) : '')
+  const preview = salePreview(actualPrice, discountPrice)
+  const discountTooHigh = discountPrice.trim() !== '' && actualPrice.trim() !== '' && Number(discountPrice) > Number(actualPrice)
   const [stock, setStock] = useState(initial?.stock.toString() ?? '')
-  const [category, setCategory] = useState(initial?.category ?? '')
+  // Chosen from the store's own categories, never typed (the supervisor's product-listing change).
+  const [categories, setCategories] = useState<Category[] | null>(null)
+  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? '')
+  const [categoryHint, setCategoryHint] = useState<string | null>(null)
+  useEffect(() => {
+    categoriesApi
+      .list(storeId)
+      .then((list) => {
+        setCategories(list)
+        // A product listed before categories existed: pick its category by name, if it has one.
+        if (initial && !initial.categoryId) {
+          const match = list.find((c) => c.active && sameName(c.name, initial.category))
+          if (match) setCategoryId(match.id)
+        }
+        // A Product Scout suggestion: its category when the store has it.
+        if (!initial && prefill) {
+          const match = list.find((c) => c.active && sameName(c.name, prefill.categoryName))
+          if (match) setCategoryId(match.id)
+        }
+      })
+      .catch(() => setCategories([]))
+  }, [storeId, initial, prefill])
+  // The suggested category, when the store does not have it yet: offered, created only on a click.
+  const missingCategory =
+    !initial && prefill && categories !== null && !categories.some((c) => c.active && sameName(c.name, prefill.categoryName)) ? prefill.categoryName : null
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  async function createSuggestedCategory() {
+    if (!missingCategory) return
+    setCreatingCategory(true)
+    try {
+      const made = await categoriesApi.create(storeId, missingCategory)
+      setCategories(await categoriesApi.list(storeId))
+      setCategoryId(made.id)
+    } catch (err) {
+      setCategoryHint((err as { detail?: string }).detail ?? `Could not create "${missingCategory}".`)
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
+  const chosenCategory = categories?.find((c) => c.id === categoryId)
   const [sku, setSku] = useState(initial?.sku ?? '')
-  const [barcode, setBarcode] = useState(initial?.barcode ?? '')
   const [taxable, setTaxable] = useState(initial?.taxable ?? true)
   const [images, setImages] = useState<string[]>(initial?.images ?? [])
   const [tags, setTags] = useState((initial?.tags ?? []).join(', '))
@@ -65,18 +125,22 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
     e.preventDefault()
     setError(null)
     setLimitError(null)
+    if (discountTooHigh) {
+      setError('The discounted price cannot be more than the price (MRP).')
+      return
+    }
     setSubmitting(true)
     try {
       await onSubmit({
         title,
         description,
-        price: Number(price),
-        bargainMinPrice: bargainMinPrice.trim() === '' ? null : Number(bargainMinPrice),
+        actualPrice: Number(actualPrice),
+        // Empty means no discount; on an edit that removes one the product had.
+        discountPrice: discountPrice.trim() === '' ? null : Number(discountPrice),
         stock: Number(stock),
         sku: sku.trim() || undefined,
-        barcode: barcode.trim() || undefined,
         taxable,
-        category,
+        categoryId,
         images,
         tags: tags
           .split(',')
@@ -90,10 +154,13 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         // The plan's product limit: show what to do about it instead of a vague "could not save".
         setLimitError(err)
       } else {
+        const detail = (err as { detail?: string }).detail ?? ''
         setError(
-          err instanceof Error && /SKU or barcode/.test((err as { detail?: string }).detail ?? '')
-            ? 'That SKU or barcode is already used by another product.'
-            : 'Could not save this product. Please check the fields and try again.'
+          /SKU/.test(detail)
+            ? 'That SKU is already used by another product.'
+            : /price/i.test(detail)
+              ? detail
+              : 'Could not save this product. Please check the fields and try again.'
         )
       }
     } finally {
@@ -104,6 +171,12 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <h2 className="font-display text-base font-bold">{initial ? `Edit ${initial.title}` : 'Add product'}</h2>
+      {prefill && !initial && (
+        <Alert tone="info">
+          Started from Product Scout: a suggested name, category and draft description from what is selling across ZYRO. Check them, add your own
+          details and set your price. Nothing is published until you save.
+        </Alert>
+      )}
 
       {/* Issue 1: offered only when adding a product. An existing product already has a listing, and
           the AI tools panel below it handles rewriting one. */}
@@ -112,13 +185,13 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
           storeId={storeId}
           draft={{
             title: title.trim() || undefined,
-            category: category.trim() || undefined,
+            category: chosenCategory?.name,
             description: description.trim() || undefined,
             tags: tags
               .split(',')
               .map((t) => t.trim())
               .filter(Boolean),
-            price: price.trim() === '' ? undefined : Number(price),
+            price: preview?.sale,
           }}
           onUse={(idea) => {
             setTitle(idea.title)
@@ -142,49 +215,96 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          id="price"
-          type="number"
-          step="0.01"
-          min="0"
-          label="Price"
-          required
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-        <Input
-          id="stock"
-          type="number"
-          min="0"
-          label="Stock"
-          required
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-        />
-      </div>
-
-      <Input id="category" label="Category" required value={category} onChange={(e) => setCategory(e.target.value)} />
-
-      {/* Part G: the lowest price haggling may reach. Left empty, this product has a fixed price. */}
-      <div>
-        <Input
-          id="bargainMinPrice"
-          type="number"
-          step="0.01"
-          min="0"
-          label="Lowest price you will accept when haggling (optional)"
-          value={bargainMinPrice}
-          onChange={(e) => setBargainMinPrice(e.target.value)}
-        />
-        <p className="mt-1 text-xs text-text-secondary">
-          Leave this empty for a fixed price. Fill it in and shoppers can make an offer; the shop will never go below this number, and it is never shown to them.
+      <div className="flex flex-col gap-1.5">
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            id="actualPrice"
+            type="number"
+            step="0.01"
+            min="0.01"
+            label="Price (MRP)"
+            required
+            value={actualPrice}
+            onChange={(e) => setActualPrice(e.target.value)}
+          />
+          <Input
+            id="discountPrice"
+            type="number"
+            step="0.01"
+            min="0.01"
+            label="Discounted price (optional)"
+            aria-describedby="price-preview"
+            value={discountPrice}
+            onChange={(e) => setDiscountPrice(e.target.value)}
+          />
+        </div>
+        <p id="price-preview" aria-live="polite" className={`text-xs ${discountTooHigh ? 'text-danger' : 'text-text-secondary'}`}>
+          {discountTooHigh
+            ? 'The discounted price cannot be more than the price (MRP).'
+            : preview
+              ? `Customers pay ${formatMoney(preview.sale, currency)}${preview.off ? `, ${preview.off}% off the MRP` : ''}.`
+              : 'Leave the discounted price empty to sell at the MRP.'}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <StockStepper id="stock" label="Stock" value={stock} onChange={setStock} />
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="category" className="text-xs font-semibold text-text-secondary">
+          Category
+        </label>
+        {categories !== null && categories.filter((c) => c.active).length === 0 ? (
+          // Nothing to choose from yet: say what to do instead of showing an empty dropdown.
+          <p className="rounded-[10px] border border-border bg-bg px-3.5 py-3 text-sm text-text-secondary">
+            You have no categories yet.{' '}
+            <Link to="/admin/categories" className="font-semibold text-brand underline underline-offset-2">
+              Create a category
+            </Link>{' '}
+            first, then come back to add this product.
+          </p>
+        ) : (
+          <select
+            id="category"
+            required
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value)
+              setCategoryHint(null)
+            }}
+            className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          >
+            <option value="" disabled>
+              {categories === null ? 'Loading categories…' : 'Choose a category'}
+            </option>
+            {(categories ?? [])
+              .filter((c) => c.active || c.id === categoryId)
+              .map((c) => (
+                // A disabled category stays visible for the product already in it, but cannot be saved.
+                <option key={c.id} value={c.id} disabled={!c.active}>
+                  {c.active ? c.name : `${c.name} (disabled)`}
+                </option>
+              ))}
+          </select>
+        )}
+        {chosenCategory && !chosenCategory.active && (
+          <span className="text-xs text-text-secondary">
+            This category is disabled: this product can stay in it, but no other product can be added to it. Enable it on the Categories page to use it again.
+          </span>
+        )}
+        {missingCategory && (
+          <span className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+            “{missingCategory}” is not one of your categories yet.
+            <button type="button" onClick={() => void createSuggestedCategory()} disabled={creatingCategory} className="font-semibold text-brand underline underline-offset-2">
+              {creatingCategory ? 'Creating…' : `Create “${missingCategory}”`}
+            </button>
+          </span>
+        )}
+        {categoryHint && <span className="text-xs text-text-secondary">{categoryHint}</span>}
+      </div>
+
+      <div>
         <Input id="sku" label="SKU (optional)" maxLength={100} value={sku} onChange={(e) => setSku(e.target.value)} />
-        <Input id="barcode" label="Barcode (optional)" maxLength={100} value={barcode} onChange={(e) => setBarcode(e.target.value)} />
+        <p className="mt-1 text-xs text-text-secondary">Unique in your store. The register finds the product by it.</p>
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={taxable} onChange={(e) => setTaxable(e.target.checked)} className="h-4 w-4" />
@@ -246,7 +366,14 @@ export function ProductForm({ storeId, initial, onSubmit, onCancel }: ProductFor
           productId={initial.id}
           onApplyDescription={(text) => setDescription(text)}
           onApplyCategoryAndTags={(suggestedCategory, suggestedTags) => {
-            setCategory(suggestedCategory)
+            // The AI suggests a name; only one of the store's own active categories can be chosen.
+            const match = categories?.find((c) => c.active && sameName(c.name, suggestedCategory))
+            if (match) {
+              setCategoryId(match.id)
+              setCategoryHint(null)
+            } else {
+              setCategoryHint(`The AI suggested "${suggestedCategory}", which is not one of your categories. Create it on the Categories page if you want it.`)
+            }
             setTags(suggestedTags.join(', '))
           }}
           onApplySeo={(title, desc) => {

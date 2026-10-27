@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { LEGAL } from '../../lib/legal'
 
 /**
  * The footer, including the note that this is a university project.
@@ -29,13 +30,20 @@ const COLUMNS: { heading: string; links: { label: string; to: string; external?:
       { label: 'Log in', to: '/login' },
     ],
   },
+  {
+    heading: 'Legal',
+    links: [
+      { label: 'Terms of Service', to: '/terms' },
+      { label: 'Privacy Policy', to: '/privacy' },
+    ],
+  },
 ]
 
 export function LandingFooter() {
   return (
     <footer className="bg-inverse pb-10 pt-14">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <p className="font-display text-lg font-extrabold text-on-inverse">
               ZYRO
@@ -44,8 +52,8 @@ export function LandingFooter() {
               A free place for small businesses in Pakistan to sell online, with the AI built in rather than sold separately.
             </p>
             <p className="mt-4 text-sm text-on-inverse-muted">
-              <a href="mailto:finalyear860@gmail.com" className="underline decoration-on-inverse/30 underline-offset-4 hover:text-on-inverse">
-                finalyear860@gmail.com
+              <a href={`mailto:${LEGAL.contactEmail}`} className="underline decoration-on-inverse/30 underline-offset-4 hover:text-on-inverse">
+                {LEGAL.contactEmail}
               </a>
             </p>
           </div>

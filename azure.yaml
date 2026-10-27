@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+#
+# ZYRO on Azure Container Apps (infra/ holds the Bicep). One azd environment per deployment:
+#   azd env new zyro-staging   ->  staging
+#   azd env new zyro-prod      ->  production (azd env set ZYRO_PRODUCTION true)
+#
+# azd provisions environments and can deploy by hand. Everyday releases go through GitHub Actions
+# (.github/workflows/deploy.yml), which adds migrations, blue-green traffic and rollback.
+# documentation/Deployment_Runbook.md is the order of operations. Nothing has been deployed.
+name: zyro
+metadata:
+  template: zyro@1.0.0
+
+services:
+  web:
+    project: ./frontend
+    language: js
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+
+  api:
+    project: ./backend
+    language: ts
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+      target: runtime
+
+  # The same image as api, run with `node dist/worker.js` (set in infra/modules/apps.bicep).
+  worker:
+    project: ./backend
+    language: ts
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+      target: runtime
+
+  reco:
+    project: ./recommendation-service
+    language: python
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+
+hooks:
+  # Before a manual `azd deploy`, apply database migrations with the migrate image, exactly as the
+  # pipeline does. Needs the Azure CLI signed in to the same subscription.
+  predeploy:
+    posix:
+      shell: sh
+      run: ./infra/scripts/migrate.sh
+      continueOnError: false
+    windows:
+      shell: pwsh
+      run: ./infra/scripts/migrate.ps1
+      continueOnError: false
