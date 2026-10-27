@@ -8,6 +8,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { formatDate, formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { paymentsApi, type PaymentProof, type PendingCodOrder, type RemittanceRun } from '../../lib/paymentsApi'
+import { NeedsPermission } from './NeedsPermission'
 
 const BAND_TONE = { low: 'success', medium: 'warning', high: 'danger' } as const
 const BAND_LABEL = { low: 'Low risk', medium: 'Medium risk', high: 'High risk' } as const
@@ -158,7 +159,7 @@ function ProofCard({ proof, onDone }: { proof: PaymentProof; onDone: (text: stri
  * Payments (Part E): the cash-on-delivery queue, the bank-transfer screenshots waiting to be checked,
  * and reconciling a courier's cash file. For the owner and staff who can work on orders.
  */
-export function PaymentsPage() {
+function PaymentsContent() {
   const { activeStore } = useAuth()
   const storeId = activeStore?.id
   const [cod, setCod] = useState<PendingCodOrder[] | null>(null)
@@ -311,5 +312,14 @@ export function PaymentsPage() {
         )}
       </section>
     </div>
+  )
+}
+
+/** Only for someone with orders_write; anyone else sees just the page's title and what is missing. */
+export function PaymentsPage() {
+  return (
+    <NeedsPermission permission="orders_write" title="Payments" what="Payments need the Orders permission">
+      <PaymentsContent />
+    </NeedsPermission>
   )
 }
