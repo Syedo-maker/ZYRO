@@ -11,6 +11,8 @@ import { categoriesApi } from '../../lib/categoriesApi'
 import { formatMoney } from '../../lib/format'
 import { StockStepper } from './StockStepper'
 import type { Category, Product, ProductInput } from '../../types/api'
+import type { ScoutPrefill } from '../../lib/productScoutApi'
+import { Alert } from '../../components/ui/Alert'
 
 /** The same comparison the server makes: case and spacing do not make two category names different. */
 const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, ' ').toLowerCase() === b.trim().replace(/\s+/g, ' ').toLowerCase()
@@ -21,6 +23,8 @@ interface ProductFormProps {
   currency: string
   /** Present when editing; absent when creating. */
   initial?: Product
+  /** A new product started from Product Scout's "Add to my store": name, category and a draft description. */
+  prefill?: ScoutPrefill
   onSubmit: (input: ProductInput) => Promise<void>
   onCancel: () => void
 }
@@ -39,9 +43,9 @@ function salePreview(actual: string, discount: string) {
   return { sale, off: off > 0 ? off : null }
 }
 
-export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: ProductFormProps) {
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
+export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onCancel }: ProductFormProps) {
+  const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? '')
+  const [description, setDescription] = useState(initial?.description ?? prefill?.description ?? '')
   // The three prices: the owner sets the actual price (MRP) and, optionally, a discounted one; what
   // customers pay is computed from them (the supervisor's product-listing change).
   const [actualPrice, setActualPrice] = useState(initial ? String(initial.actualPrice) : '')
@@ -63,9 +67,31 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
           const match = list.find((c) => c.active && sameName(c.name, initial.category))
           if (match) setCategoryId(match.id)
         }
+        // A Product Scout suggestion: its category when the store has it.
+        if (!initial && prefill) {
+          const match = list.find((c) => c.active && sameName(c.name, prefill.categoryName))
+          if (match) setCategoryId(match.id)
+        }
       })
       .catch(() => setCategories([]))
-  }, [storeId, initial])
+  }, [storeId, initial, prefill])
+  // The suggested category, when the store does not have it yet: offered, created only on a click.
+  const missingCategory =
+    !initial && prefill && categories !== null && !categories.some((c) => c.active && sameName(c.name, prefill.categoryName)) ? prefill.categoryName : null
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  async function createSuggestedCategory() {
+    if (!missingCategory) return
+    setCreatingCategory(true)
+    try {
+      const made = await categoriesApi.create(storeId, missingCategory)
+      setCategories(await categoriesApi.list(storeId))
+      setCategoryId(made.id)
+    } catch (err) {
+      setCategoryHint((err as { detail?: string }).detail ?? `Could not create "${missingCategory}".`)
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
   const chosenCategory = categories?.find((c) => c.id === categoryId)
   const [sku, setSku] = useState(initial?.sku ?? '')
   const [taxable, setTaxable] = useState(initial?.taxable ?? true)
@@ -145,6 +171,12 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <h2 className="font-display text-base font-bold">{initial ? `Edit ${initial.title}` : 'Add product'}</h2>
+      {prefill && !initial && (
+        <Alert tone="info">
+          Started from Product Scout: a suggested name, category and draft description from what is selling across ZYRO. Check them, add your own
+          details and set your price. Nothing is published until you save.
+        </Alert>
+      )}
 
       {/* Issue 1: offered only when adding a product. An existing product already has a listing, and
           the AI tools panel below it handles rewriting one. */}
@@ -257,6 +289,14 @@ export function ProductForm({ storeId, currency, initial, onSubmit, onCancel }: 
         {chosenCategory && !chosenCategory.active && (
           <span className="text-xs text-text-secondary">
             This category is disabled: this product can stay in it, but no other product can be added to it. Enable it on the Categories page to use it again.
+          </span>
+        )}
+        {missingCategory && (
+          <span className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+            “{missingCategory}” is not one of your categories yet.
+            <button type="button" onClick={() => void createSuggestedCategory()} disabled={creatingCategory} className="font-semibold text-brand underline underline-offset-2">
+              {creatingCategory ? 'Creating…' : `Create “${missingCategory}”`}
+            </button>
           </span>
         )}
         {categoryHint && <span className="text-xs text-text-secondary">{categoryHint}</span>}

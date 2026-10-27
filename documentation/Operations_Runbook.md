@@ -106,6 +106,41 @@ as `400`s. Stripe retries for three days, so fixing the secret recovers them.
 Rotating `jwt-access-secret` signs everyone out (their next page load signs them in again if their
 refresh cookie is still valid).
 
+### Turning on email (abandoned-cart reminders)
+
+Email is off until the provider's settings are all set. While it is off:
+- no reminder is written, so no store's AI allowance is spent;
+- each scan logs one warning that names the missing settings (never their values);
+- every store's Marketing page says "Email sending is not set up".
+
+- **Locally:** put the provider's settings in `backend/.env` (names in `backend/.env.example`; the
+  file is read by path, and is never committed). Restart the backend.
+  - SendGrid (the default): `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL`.
+  - Brevo: `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY` (the API key, not the SMTP key) and
+    `BREVO_FROM_EMAIL`, plus `BREVO_FROM_NAME` if you want a name other than ZYRO.
+- **Azure:** set `ZYRO_SENDGRID_API_KEY` and `ZYRO_SENDGRID_FROM_EMAIL` in the azd environment and run
+  `azd provision`. The key goes into Key Vault, and the apps read it as an environment variable.
+
+The from address must be a verified sender in that provider's account, or every send is refused.
+A free-mail address (Gmail and the like) works for testing but tends to land in spam; for a launch,
+authenticate a domain you own with the provider and send from an address on it. A refused
+or failed send gives the store's AI generation back, and the next scan tries again.
+
+Another provider is one adapter in `backend/src/lib/email.*.ts` and one entry in `lib/email.ts`,
+chosen with `EMAIL_PROVIDER`; no feature changes.
+
+### Changing what staff may do
+
+Roles are defined in `backend/src/lib/staffRoles.ts`:
+- **Cashier:** the register.
+- **Manager:** the register, refunds, discounts, analytics and orders, plus the catalogue: products,
+  stock, categories and the AI tools, which draw on the store's own allowance.
+
+Billing, the team, plans and AI packs, and store settings stay with the owner. The owner changes a
+member's role on the Team page. When a role gains a permission, existing staff keep their old list
+until a script like `scripts/migrate-manager-products.ts` moves them: it reports first and changes
+nothing without `--apply`.
+
 ### Restoring the database
 
 PostgreSQL keeps point-in-time backups (7 days on staging, 14 on production). A restore creates a
