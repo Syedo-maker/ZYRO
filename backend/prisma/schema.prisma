@@ -207,6 +207,10 @@ model Tenant {
   /// Whether this shop appears in the public directory at /shop. On by default; the owner may opt out.
   /// A shop with too few products is left out regardless, so empty and test shops never show.
   listedInDirectory     Boolean   @default(true)
+  /// Whether this shop's paid orders count toward the platform's shared trends (Product Scout and
+  /// Trend Scout). On by default; only the owner can switch it off, from Settings. Off: the shop's
+  /// orders are left out from the next daily run, and the shop can still see the trends.
+  shareSalesInTrends    Boolean   @default(true)
   /// One line about the shop, shown beside its name in the public directory. Public by definition,
   /// so the owner writes it knowing anyone can read it.
   description           String?
@@ -223,7 +227,6 @@ model Tenant {
   remittanceRuns   CodRemittanceRun[]
   remittanceItems  CodRemittanceItem[]
   voiceNotes       VoiceNote[]
-  bargainSessions  BargainSession[]
   searchTerms      SearchTermDaily[]
   posShifts        PosShift[]
   orderReturns     OrderReturn[]
@@ -755,6 +758,25 @@ model GrowthTip {
   @@index([tenantId, createdAt])
 }
 
+/// Product Scout (2026-10-22): the platform's anonymised product trends for owners, recomputed daily
+/// per market (store currency) and period (7 or 30 days). Platform data like TrendReport, so no
+/// tenantId: `data` holds only totals that pass the privacy rules (enough stores, none dominating),
+/// never a store id, name, product id or customer. `scope` keeps the demo stores' figures apart from
+/// the real stores': "live" is built from real stores only, "demo" from the demo stores only.
+/// Rolled back with prisma/rollbacks/20261022100000_product_scout_snapshot.down.sql.
+model ProductScoutSnapshot {
+  id         String   @id @default(cuid())
+  scope      String
+  market     String
+  periodDays Int
+  /// The end (exclusive) of the period the figures cover.
+  windowEnd  DateTime
+  data       Json
+  computedAt DateTime @default(now())
+
+  @@unique([scope, market, periodDays])
+}
+
 /// Part D, the Trend Scout: one weekly report per market and category, shared by every store that
 /// sells in that category. Platform data, not any store's own, so there is no tenantId: what goes in
 /// is anonymised first (a category needs enough stores, and no store may dominate it).
@@ -1019,7 +1041,7 @@ model CodRemittanceItem {
   @@index([tenantId, status])
 }
 
-// ── Part G: voice notes and bargaining ──────────────────────────────────────────────────────
+// ── Part G: voice notes ──────────────────────────────────────────────────────
 
 /// A merchant's spoken instruction, turned into a draft the merchant must confirm (Part G).
 /// Nothing here ever changes the catalogue on its own: `draft` is a proposal, and only an explicit
@@ -1048,42 +1070,6 @@ model VoiceNote {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status])
-}
-
-/// One haggling conversation over one product (Part G, "bhao-taao").
-///
-/// The floor price is copied here when the session opens and is never sent to the AI. The assistant
-/// only ever chooses a move from a fixed list; this row holds the prices, and the server works out
-/// every number from them. A session that ends in a deal gets a single-use discount code, which is
-/// the only way the agreed price can actually be paid.
-model BargainSession {
-  id       String @id @default(cuid())
-  tenantId String
-  /// The product being haggled over (a MongoDB id).
-  productId String
-  /// Who is haggling: a signed-in shopper, or a guest session id.
-  userId        String?
-  guestSessionId String?
-  /// Frozen when the session opens, so a price change mid-conversation cannot move the floor.
-  listPrice  Decimal @db.Decimal(10, 2)
-  floorPrice Decimal @db.Decimal(10, 2)
-  /// The best price the shop has offered so far, and what the shopper last asked for.
-  currentOffer  Decimal  @db.Decimal(10, 2)
-  shopperOffer  Decimal? @db.Decimal(10, 2)
-  /// How many times the shopper has pushed. Capped, so a conversation cannot grind the price down.
-  rounds  Int    @default(0)
-  /// "open", "agreed", "declined" or "expired".
-  status  String @default("open")
-  /// The single-use code created when a deal is struck; the only way to pay the agreed price.
-  discountCodeId String?
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, status])
-  @@index([tenantId, productId])
 }
 
 /// What shoppers searched for, counted per store, per day, per term (Issue 1's third keyword source).

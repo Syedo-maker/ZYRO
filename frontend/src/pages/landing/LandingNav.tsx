@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import { landingPathFor, rememberedExperience } from '../../lib/experience'
 
 const LINKS = [
   { label: 'Features', href: '#features' },
@@ -20,6 +22,12 @@ const LINKS = [
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const { isLoading, isAuthenticated, stores, user } = useAuth()
+  // Signed in: one way back to where they belong, instead of "Log in" and "Start free". Having a
+  // shop decides which (lib/experience.ts); the stated preference only breaks the tie.
+  const signedIn = !isLoading && isAuthenticated
+  const home = signedIn ? landingPathFor({ hasStore: stores.length > 0, preference: user?.preferredExperience ?? rememberedExperience() }) : null
+  const homeLabel = home?.startsWith('/admin') ? 'Go to dashboard' : 'Browse shops'
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -62,19 +70,31 @@ export function LandingNav() {
           ))}
         </ul>
 
+        {/* Nothing until we know who this is, so a signed-in owner never sees "Log in" flash first. */}
         <div className="ml-auto hidden items-center gap-3 lg:flex">
-          <Link
-            to="/login"
-            className="rounded-[10px] px-3 py-2 text-sm font-semibold text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
-          >
-            Log in
-          </Link>
-          <Link
-            to="/register"
-            className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
-          >
-            Start free
-          </Link>
+          {isLoading ? null : home ? (
+            <Link
+              to={home}
+              className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+            >
+              {homeLabel}
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="rounded-[10px] px-3 py-2 text-sm font-semibold text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+              >
+                Log in
+              </Link>
+              <Link
+                to="/register"
+                className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+              >
+                Start free
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -102,12 +122,20 @@ export function LandingNav() {
               </li>
             ))}
             <li className="mt-1 flex gap-3 px-2 pb-3 pt-2">
-              <Link to="/login" onClick={() => setOpen(false)} className="rounded-[10px] border border-on-inverse-muted px-4 py-2 text-sm font-semibold text-on-inverse">
-                Log in
-              </Link>
-              <Link to="/register" onClick={() => setOpen(false)} className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text">
-                Start free
-              </Link>
+              {isLoading ? null : home ? (
+                <Link to={home} onClick={() => setOpen(false)} className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text">
+                  {homeLabel}
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" onClick={() => setOpen(false)} className="rounded-[10px] border border-on-inverse-muted px-4 py-2 text-sm font-semibold text-on-inverse">
+                    Log in
+                  </Link>
+                  <Link to="/register" onClick={() => setOpen(false)} className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text">
+                    Start free
+                  </Link>
+                </>
+              )}
             </li>
           </ul>
         </div>

@@ -91,7 +91,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
                           {p.images[0] && <img src={p.images[0]} alt="" className="h-full w-full object-cover" />}
                         </div>
                         <span className="line-clamp-2 text-xs font-semibold">{p.title}</span>
-                        <span className="text-xs font-bold">{p.stock > 0 ? formatMoney(p.price, currency) : 'Sold out'}</span>
+                        <span className="text-xs font-bold">{p.stock > 0 ? formatMoney(p.salePrice ?? p.price, currency) : 'Sold out'}</span>
                       </Link>
                     ))}
                   </div>

@@ -1,4 +1,5 @@
 import { prismaUnscoped } from "../../lib/prisma";
+import { notDemoTenant } from "../../lib/demo";
 import { Product } from "../../models/Product.model";
 import { PLANS, PLAN_ORDER, effectiveTier, planEconomics } from "../../lib/plans";
 import { currentMonth } from "../ai/ai.quota.service";
@@ -26,7 +27,8 @@ interface CounterSum {
 export const platformService = {
   async summary() {
     const month = currentMonth();
-    const tenants = await prismaUnscoped.tenant.findMany({ select: { plan: true, planExpiresAt: true } });
+    // Real stores only: the demo stores (lib/demo.ts) never move a platform figure.
+    const tenants = await prismaUnscoped.tenant.findMany({ where: notDemoTenant, select: { plan: true, planExpiresAt: true } });
     const byPlan = Object.fromEntries(PLAN_ORDER.map((t) => [t, 0])) as Record<string, number>;
     let monthlyRecurringCents = 0;
     for (const t of tenants) {
@@ -35,10 +37,10 @@ export const platformService = {
       monthlyRecurringCents += PLANS[tier].priceCents;
     }
     const [all, thisMonth, quotas] = await Promise.all([
-      prismaUnscoped.tenantMonthlyUsage.aggregate({ _sum: { onlineOrders: true, posOrders: true } }),
-      prismaUnscoped.tenantMonthlyUsage.aggregate({ where: { month }, _sum: { onlineOrders: true, posOrders: true } }),
+      prismaUnscoped.tenantMonthlyUsage.aggregate({ where: { tenant: notDemoTenant }, _sum: { onlineOrders: true, posOrders: true } }),
+      prismaUnscoped.tenantMonthlyUsage.aggregate({ where: { month, tenant: notDemoTenant }, _sum: { onlineOrders: true, posOrders: true } }),
       prismaUnscoped.aiUsageQuota.aggregate({
-        where: { month },
+        where: { month, tenant: notDemoTenant },
         _sum: { generationsUsed: true, chatMessagesUsed: true, inputTokens: true, outputTokens: true, cachedAnswers: true },
       }),
     ]);
@@ -64,9 +66,12 @@ export const platformService = {
 
   async tenants(opts: { limit: number; offset: number; q?: string }) {
     const month = currentMonth();
-    const where = opts.q
-      ? { OR: [{ name: { contains: opts.q, mode: "insensitive" as const } }, { slug: { contains: opts.q, mode: "insensitive" as const } }] }
-      : {};
+    const where = {
+      AND: [
+        notDemoTenant,
+        opts.q ? { OR: [{ name: { contains: opts.q, mode: "insensitive" as const } }, { slug: { contains: opts.q, mode: "insensitive" as const } }] } : {},
+      ],
+    };
     const [rows, total] = await Promise.all([
       prismaUnscoped.tenant.findMany({
         where,

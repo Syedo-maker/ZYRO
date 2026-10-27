@@ -2,7 +2,7 @@
 //
 // What it proves: every section is present and in order; the live demo answers and labels where its
 // answer came from; the FAQ opens with a keyboard; the two calls to action lead to the right halves
-// of the product; a signed-in visitor never sees the page at all; and it fits a phone, a tablet and
+// of the product; a signed-in visitor sees it too, with one button to where they belong; and it fits a phone, a tablet and
 // a desktop without scrolling sideways.
 //
 // Setup and run: backend (npx tsx scripts/e2e-server.ts) and Redis, and `npm run dev` in the
@@ -176,9 +176,9 @@ await step('the calls to action lead to the right places', page, async () => {
   check('"Start your store free" opens the owner sign-up', page.url().endsWith('/register'))
 })
 
-// ---- A signed-in visitor skips the page ----------------------------------------------------------
+// ---- A signed-in visitor sees the page, with one button back to where they belong ----------------
 
-await step('a signed-in owner never sees the landing page', page, async () => {
+await step('a signed-in owner sees the landing page, with a way to their dashboard', page, async () => {
   const email = `e2e-landing-owner-${suffix}@example.com`
   const reg = await api('POST', '/auth/register', {
     body: { email, password, storeName: `E2E Landing ${suffix}`, storeSlug: `e2e-landing-${suffix}`, currency: 'PKR' },
@@ -191,12 +191,20 @@ await step('a signed-in owner never sees the landing page', page, async () => {
   await page.getByRole('button', { name: 'Log in' }).click()
   await page.waitForURL('**/admin/**')
 
+  // The desktop nav: on a phone these buttons live in the menu instead.
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto(WEB)
+  await page.getByRole('heading', { level: 1 }).waitFor({ timeout: 15000 })
+  check('an owner opening "/" sees the landing page', new URL(page.url()).pathname === '/', page.url())
+  const nav = page.getByRole('navigation', { name: 'Main' })
+  await nav.getByRole('link', { name: 'Go to dashboard' }).waitFor({ timeout: 15000 })
+  check('the nav offers "Go to dashboard" instead of "Log in"', (await nav.getByRole('link', { name: 'Go to dashboard' }).count()) > 0 && (await nav.getByRole('link', { name: 'Log in' }).count()) === 0)
+  await nav.getByRole('link', { name: 'Go to dashboard' }).click()
   await page.waitForURL('**/admin/**', { timeout: 15000 })
-  check('an owner opening "/" is taken to their dashboard', page.url().includes('/admin'), page.url())
+  check('"Go to dashboard" opens their dashboard', page.url().includes('/admin'), page.url())
 })
 
-await step('a signed-in shopper is taken to the directory', page, async () => {
+await step('a signed-in shopper sees the landing page, with a way to the shops', page, async () => {
   const email = `e2e-landing-shopper-${suffix}@example.com`
   await api('POST', '/auth/register-customer', { body: { email, password } })
   await page.goto(`${WEB}/login`)
@@ -205,8 +213,12 @@ await step('a signed-in shopper is taken to the directory', page, async () => {
   await page.getByRole('button', { name: 'Log in' }).click()
   await page.waitForURL('**/shop')
   await page.goto(WEB)
+  await page.getByRole('heading', { level: 1 }).waitFor({ timeout: 15000 })
+  check('a shopper opening "/" sees the landing page', new URL(page.url()).pathname === '/', page.url())
+  const nav = page.getByRole('navigation', { name: 'Main' })
+  await nav.getByRole('link', { name: 'Browse shops' }).click()
   await page.waitForURL('**/shop', { timeout: 15000 })
-  check('a shopper opening "/" is taken to the shop directory', page.url().endsWith('/shop'))
+  check('"Browse shops" opens the shop directory', page.url().endsWith('/shop'))
 })
 
 // ---- Sizes ----------------------------------------------------------------------------------------

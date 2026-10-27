@@ -125,6 +125,11 @@ export function RegisterPage() {
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Creating your store…' : 'Create store'}
           </Button>
+          <p className="text-xs text-text-secondary">
+            By creating a store you agree to the{' '}
+            <Link to="/terms" className="font-semibold text-text underline underline-offset-2">Terms of Service</Link> and the{' '}
+            <Link to="/privacy" className="font-semibold text-text underline underline-offset-2">Privacy Policy</Link>.
+          </p>
         </form>
 
         <p className="text-sm text-text-secondary text-center">
