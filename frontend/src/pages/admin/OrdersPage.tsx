@@ -10,6 +10,7 @@ import { storefrontApi } from '../../lib/storefrontApi'
 import type { Order, OrderStatus, SalesChannel } from '../../types/commerce'
 import { OrderDetailPanel } from './OrderDetailPanel'
 import { ShippingZonesPanel } from './ShippingZonesPanel'
+import { NeedsPermission } from './NeedsPermission'
 
 const PAGE_SIZE = 20
 const TABS: { key: OrderStatus | 'all'; label: string }[] = [
@@ -23,7 +24,7 @@ const TABS: { key: OrderStatus | 'all'; label: string }[] = [
 
 const customerName = (o: Order) => o.customer?.name ?? o.customer?.email ?? o.guestEmail ?? 'Guest'
 
-export function OrdersPage() {
+function OrdersContent() {
   const { activeStore } = useAuth()
   const storeId = activeStore?.id
   const [tab, setTab] = useState<OrderStatus | 'all'>('all')
@@ -202,5 +203,14 @@ export function OrdersPage() {
 
       <ShippingZonesPanel storeId={activeStore.id} currency={currency} />
     </div>
+  )
+}
+
+/** Only for someone with orders_write; anyone else sees just the page's title and what is missing. */
+export function OrdersPage() {
+  return (
+    <NeedsPermission permission="orders_write" title="Orders" what="Orders need the Orders permission">
+      <OrdersContent />
+    </NeedsPermission>
   )
 }

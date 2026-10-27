@@ -1734,6 +1734,7 @@ paths:
                             title: { type: string }
                             quantity: { type: integer }
                             lineTotal: { type: number }
+                      savings: { type: number, minimum: 0, description: "What the shopper saved on the products' own discounts, for a \"you saved\" line." }
         "404": { $ref: "#/components/responses/NotFound" }
 
   # ── ORDERS ────────────────────────────────────────────────────────────
@@ -2505,6 +2506,24 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ShippingZone" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /stores/{storeId}/shipping-zones/manage:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [shipping]
+      operationId: shipping_zones_manage_list
+      summary: List a store's shipping zones for the admin
+      description: The Orders page's list. Requires the `orders_write` staff permission (or owner), so staff without it (a cashier) are refused. Checkout uses the public list.
+      responses:
+        "200":
+          description: Shipping zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ShippingZone" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /stores/{storeId}/shipping-zones/{zoneId}:
@@ -4676,6 +4695,7 @@ components:
         total: { type: number }
         currency: { type: string }
         method: { type: string, enum: [cod, bank_transfer] }
+        savings: { type: number, minimum: 0, description: "What the shopper saved on the products' own discounts, for a \"you saved\" line." }
         payTo:
           type: object
           description: Where to send the money; only for a bank transfer.
@@ -4973,16 +4993,21 @@ components:
         matched to the store's category with the same normalized name and creates it if the store has none.
 
         A price is required: `actualPrice` (the MRP), or `price` from callers written before the three
-        prices, read as the actual price. `discountPrice` is optional and may not be more than the actual
-        price. The sale price, what customers pay, is not sent: it is the discounted price when there is
-        one, otherwise the actual price. On an edit, leaving `discountPrice` out (or null) removes the
-        discount.
+        prices, read as the actual price. The discount is optional: `discountType` ("amount" off or
+        "percent" off) with `discountValue`. It must be at least 0 and less than the MRP (or less than
+        100%), and leave a selling price above zero. Amounts are rounded to the hundredth and percentages
+        to two places. A value of 0 is no discount. The sale price, what customers pay, is not sent: it is
+        the MRP minus the discount. On an edit, leaving the discount out (or null) removes it.
+        `discountPrice` (the discounted price itself) is still accepted from older callers and read as an
+        amount off; send it or a type and value, not both.
       required: [title, stock]
       properties:
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
         actualPrice: { type: number, exclusiveMinimum: 0, maximum: 10000000, description: "The full price (MRP), shown struck through when there is a discount." }
-        discountPrice: { type: [number, "null"], exclusiveMinimum: 0, maximum: 10000000, description: "Optional; at most the actual price." }
+        discountType: { type: [string, "null"], enum: [amount, percent, null], description: "Money off the MRP, or a percentage off it. Required with discountValue." }
+        discountValue: { type: [number, "null"], minimum: 0, maximum: 10000000, description: "The amount off, or the percentage off (under 100). 0 or null: no discount." }
+        discountPrice: { type: [number, "null"], exclusiveMinimum: 0, maximum: 10000000, deprecated: true, description: "The discounted price, at most the actual price; read as an amount off. Use discountType and discountValue." }
         price: { type: number, exclusiveMinimum: 0, maximum: 10000000, deprecated: true, description: "Read as actualPrice. Use actualPrice." }
         stock:
           type: integer
@@ -5026,16 +5051,19 @@ components:
         the haggling floor were removed by the product-listing change; a request that still sends
         them has them ignored.
       type: object
-      required: [id, storeId, title, actualPrice, discountPrice, salePrice, discountPercent, price, stock, category]
+      required: [id, storeId, title, actualPrice, discountType, discountValue, discountAmount, discountPrice, salePrice, discountPercent, price, stock, category]
       properties:
         id: { type: string }
         storeId: { type: string }
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
         actualPrice: { type: number, minimum: 0, description: "The full price (MRP)." }
-        discountPrice: { type: [number, "null"], description: "Null when there is no discount." }
+        discountType: { type: [string, "null"], enum: [amount, percent, null], description: "How the owner set the discount: shown as \"Rs X off\" or \"Y% off\". Null when there is none." }
+        discountValue: { type: [number, "null"], description: "The amount or percentage as set; null when there is no discount." }
+        discountAmount: { type: number, minimum: 0, description: "The money taken off the MRP; 0 when there is no discount. actualPrice - discountAmount = salePrice." }
+        discountPrice: { type: [number, "null"], deprecated: true, description: "The sale price when discounted, null otherwise. Kept for callers written before the discount modes." }
         salePrice: { type: number, minimum: 0, description: "What customers pay: the cart, checkout and orders use this." }
-        discountPercent: { type: [integer, "null"], minimum: 1, maximum: 100, description: "How much below the actual price the sale price is, rounded; null when there is no discount." }
+        discountPercent: { type: [integer, "null"], minimum: 1, maximum: 100, description: "How much below the actual price the sale price is, rounded, whatever the discount type; null when there is no discount." }
         price: { type: number, minimum: 0, deprecated: true, description: "The sale price. Kept for callers written before the three prices; use salePrice." }
         stock: { type: integer, minimum: 0, description: "On-hand quantity at the default location (see ProductInput)." }
         sku: { type: [string, "null"], maxLength: 100 }
@@ -5058,6 +5086,9 @@ components:
           title: Wireless Earbuds Pro
           description: Crisp sound, all-day battery, and a snug fit for workouts or commutes.
           actualPrice: 59.00
+          discountType: amount
+          discountValue: 10.00
+          discountAmount: 10.00
           discountPrice: 49.00
           salePrice: 49.00
           discountPercent: 17
@@ -5207,7 +5238,9 @@ components:
         id: { type: string, description: Identifies the line when returning items. }
         productId: { type: string }
         productTitleSnapshot: { type: string }
-        unitPrice: { type: number }
+        unitPrice: { type: number, description: "The price paid per unit." }
+        unitMrp: { type: number, description: "The product's actual price (MRP) per unit at the time of sale. Old orders: the price paid." }
+        unitDiscount: { type: number, minimum: 0, description: "The product's own discount per unit at the time of sale; unitMrp - unitDiscount = unitPrice. Old orders: 0." }
         quantity: { type: integer }
         returnedQuantity: { type: integer, description: Units already taken back through item returns. }
         lineTotal: { type: number }
@@ -5249,6 +5282,7 @@ components:
         taxAmount: { type: number }
         shippingAmount: { type: number }
         total: { type: number }
+        savings: { type: number, minimum: 0, description: "What the shopper saved on the products' own discounts (MRP minus price paid, for every unit bought), for a receipt's \"you saved\" line. Separate from discountAmount (a code or a manual discount)." }
         currency: { type: string }
         items:
           type: array

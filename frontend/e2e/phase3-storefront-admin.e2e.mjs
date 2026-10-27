@@ -413,7 +413,7 @@ await step('dashboard', op, async () => {
   check(`dashboard: the channel split shows both channels with their share (${online}% online)`, split.includes('Online store') && split.includes('In-store (POS)') && split.includes(`${online}%`), split.replace(/\s+/g, ' '))
   check('dashboard: top products are ranked with units and revenue', (await op.getByRole('region', { name: 'Top products' }).innerText()).includes('Ceramic Mug'))
   check('dashboard: recent orders lists both channels', (await op.getByRole('region', { name: 'Recent orders' }).innerText()).includes('In-store') && (await op.getByRole('region', { name: 'Recent orders' }).innerText()).includes('Online'))
-  await op.getByRole('button', { name: '7 days' }).click()
+  await op.getByRole('group', { name: 'Period', exact: true }).getByRole('button', { name: '7 days' }).click()
   await op.getByRole('region', { name: /Sales per day, last 7 days/ }).waitFor()
   check('dashboard: switching to 7 days redraws with 7 columns', (await op.getByRole('region', { name: /Sales per day, last 7 days/ }).getByRole('button', { name: /online \$/ }).count()) === 7)
   check('dashboard: fits the screen', await noOverflow(op))

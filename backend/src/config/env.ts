@@ -177,6 +177,12 @@ export const env = {
     /** Largest share the two biggest stores may hold together, between 0.5 and 0.99. */
     maxTopTwoShare: Math.min(0.99, Math.max(0.5, Number(process.env.SCOUT_MAX_TOP_TWO_SHARE ?? 0.85) || 0.85)),
   },
+  /**
+   * The walkthrough videos (scripts/demo-videos): one demo store, by slug, that the public shop
+   * directory may list, so the customer video can find it there. Demo stores are otherwise never
+   * listed. Development only: ignored when NODE_ENV is production, and only a demo slug counts.
+   */
+  directoryShowcaseSlug: isProduction ? null : process.env.DIRECTORY_SHOWCASE_DEMO_SLUG?.trim() || null,
   cartRecovery: {
     /** A cart with no activity for this long is "abandoned" (the plan's own example: 2 hours). */
     abandonedAfterHours: num("CART_RECOVERY_ABANDONED_AFTER_HOURS", 2),

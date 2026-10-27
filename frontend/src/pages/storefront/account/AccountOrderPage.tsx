@@ -110,6 +110,7 @@ export function AccountOrderPage() {
           <Row label="Shipping" value={money(order.shippingAmount)} />
           <Row label="Tax" value={money(order.taxAmount)} />
           <Row label="Total" value={money(order.total)} strong />
+          {order.savings > 0 && <Row label="You saved" value={money(order.savings)} />}
           {refunded > 0 && <Row label="Refunded" value={money(refunded)} />}
         </div>
       </section>

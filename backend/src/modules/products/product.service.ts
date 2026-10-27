@@ -1,5 +1,6 @@
 import { Types, HydratedDocument } from "mongoose";
-import { Product, ProductDocument, priceOf, salePriceFor } from "../../models/Product.model";
+import { Product, ProductDocument, priceOf } from "../../models/Product.model";
+import { computePrices } from "../../lib/prices";
 import { AiGeneratedContent } from "../../models/AiGeneratedContent.model";
 import { prisma } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
@@ -7,7 +8,7 @@ import { indexProductInBackground } from "../../lib/recommendationClient";
 import { planService } from "../billing/plan.service";
 import { inventoryService } from "../inventory/inventory.service";
 import { ratingsFor, reviewService } from "../reviews/review.service";
-import type { ProductInput, ListProductsQuery } from "./product.validation";
+import { discountFromInput, type ProductInput, type ListProductsQuery } from "./product.validation";
 import { forgetVocabulary, runLadder, semanticIds, type SearchOutcome } from "../search/search.service";
 import { normalise } from "../search/search.query";
 import { recordSearchTerm } from "../search/search.terms";
@@ -30,9 +31,13 @@ function toPublicProduct(doc: HydratedDocument<ProductDocument>, stock: number, 
       const p = priceOf(doc);
       return {
         actualPrice: p.actual,
-        discountPrice: p.discount,
+        discountType: p.discount?.type ?? null,
+        discountValue: p.discount?.value ?? null,
+        discountAmount: p.discountAmount,
         salePrice: p.sale,
         discountPercent: p.percentOff,
+        /** Before the discount modes: the discounted price (what customers pay), or null. Kept for older callers. */
+        discountPrice: p.discount ? p.sale : null,
         /** The price before the three; the sale price. Kept for older callers. */
         price: p.sale,
       };
@@ -67,26 +72,27 @@ async function aiDescriptionStatusOf(doc: HydratedDocument<ProductDocument>): Pr
  * the product in its category: always by id, with the category's own name copied alongside.
  */
 async function splitInput(storeId: string, input: ProductInput, currentCategoryId?: string) {
-  const { stock, costPrice, categoryId, category, actualPrice, discountPrice, price, ...rest } = input;
+  const { stock, costPrice, categoryId, category, actualPrice, discountType, discountValue, discountPrice, price, ...rest } = input;
   const resolved = await categoryService.resolveForProduct(storeId, { categoryId, category }, currentCategoryId);
-  const actual = (actualPrice ?? price)!;
-  const discount = discountPrice ?? null;
+  // The request's rules have already passed (product.validation.ts), so these prices are sound.
+  const prices = computePrices((actualPrice ?? price)!, discountFromInput({ actualPrice, price, discountType, discountValue, discountPrice }));
   return {
     stock,
     catalog: {
       ...rest,
       categoryId: resolved.id,
       category: resolved.name,
-      actualPrice: actual,
-      salePrice: salePriceFor(actual, discount),
-      ...(discount !== null ? { discountPrice: discount } : {}),
+      actualPrice: prices.actual,
+      salePrice: prices.sale,
+      ...(prices.discount ? { discountType: prices.discount.type, discountValue: prices.discount.value } : {}),
       ...(costPrice !== undefined ? { costPrice } : {}),
     },
     /**
      * Removed on an edit: the discount when none was sent (the form always sends the price fields, an
-     * empty discount meaning there is none), and the single price from before the three prices.
+     * empty discount meaning there is none), and the older price shapes (the single price, and the
+     * discounted price from before the discount modes).
      */
-    unset: { price: 1, ...(discount === null ? { discountPrice: 1 } : {}) } as Record<string, 1>,
+    unset: { price: 1, discountPrice: 1, ...(prices.discount ? {} : { discountType: 1, discountValue: 1 }) } as Record<string, 1>,
   };
 }
 

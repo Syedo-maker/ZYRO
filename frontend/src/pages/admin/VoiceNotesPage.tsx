@@ -7,6 +7,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { formatDateTime } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { voiceApi, type VoiceNote } from '../../lib/voiceApi'
+import { NeedsPermission } from './NeedsPermission'
 
 /**
  * Voice notes (Part G). A shopkeeper with their hands full says what they want changed, and the shop
@@ -15,7 +16,7 @@ import { voiceApi, type VoiceNote } from '../../lib/voiceApi'
  * Nothing here applies on its own, and the page says so plainly. Speech across Urdu, Roman Urdu and
  * English is misheard often, and prices and stock are not things to change on a maybe.
  */
-export function VoiceNotesPage() {
+function VoiceNotesContent() {
   const { activeStore } = useAuth()
   const storeId = activeStore?.id
   const [notes, setNotes] = useState<VoiceNote[] | null>(null)
@@ -189,5 +190,14 @@ export function VoiceNotesPage() {
         </section>
       )}
     </div>
+  )
+}
+
+/** Only for someone with products_write; anyone else sees just the page's title and what is missing. */
+export function VoiceNotesPage() {
+  return (
+    <NeedsPermission permission="products_write" title="Voice notes" what="Voice notes need the Products permission">
+      <VoiceNotesContent />
+    </NeedsPermission>
   )
 }

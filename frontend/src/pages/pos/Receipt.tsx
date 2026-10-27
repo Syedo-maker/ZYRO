@@ -44,6 +44,7 @@ export function Receipt({ sale }: { sale: Sale }) {
             </div>
             <div className="text-text-secondary">
               {i.quantity} x {money(i.unitPrice)}
+              {i.unitDiscount > 0 ? `  (MRP ${money(i.unitMrp)})` : ''}
               {i.returnedQuantity > 0 ? `  (${i.returnedQuantity} returned)` : ''}
             </div>
           </li>
@@ -63,6 +64,12 @@ export function Receipt({ sale }: { sale: Sale }) {
         <dd className="text-right tabular-nums">{money(sale.taxAmount)}</dd>
         <dt className="font-bold text-base">Total</dt>
         <dd className="text-right font-bold text-base tabular-nums">{money(sale.total)}</dd>
+        {sale.savings > 0 && (
+          <>
+            <dt>You saved</dt>
+            <dd className="text-right tabular-nums">{money(sale.savings)}</dd>
+          </>
+        )}
       </dl>
 
       <dl className="py-3 grid grid-cols-[1fr_auto] gap-y-0.5">

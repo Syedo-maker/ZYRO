@@ -179,6 +179,17 @@ describe("a Cashier works the register only", () => {
     expect(providerCalls.length).toBe(calls);
   });
 
+  it("is refused the admin's list of shipping zones (403); checkout's public list stays open", async () => {
+    const manage = `/stores/${O.storeId}/shipping-zones/manage`;
+    const refused = await api("GET", manage, { token: cashier.token });
+    expect(refused.status).toBe(403);
+    expect(refused.json.detail).toMatch(/Orders/);
+    expect((await api("GET", manage, { token: manager.token })).status).toBe(200);
+    expect((await api("GET", manage, { token: O.token })).status).toBe(200);
+    expect((await api("GET", manage)).status).toBe(401);
+    expect((await api("GET", `/stores/${O.storeId}/shipping-zones`)).status).toBe(200);
+  });
+
   it("can still use the register", async () => {
     expect((await api("GET", `/stores/${O.storeId}/pos/products?q=kettle`, { token: cashier.token })).status).toBe(200);
   });
