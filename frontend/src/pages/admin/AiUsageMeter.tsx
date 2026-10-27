@@ -18,12 +18,15 @@ function resetDate(month: string): string {
  * use the AI tools can read the figures; for anyone else, or if the request fails, the meter is
  * simply not shown, because a missing bonus panel is better than an error on the dashboard.
  */
-export function AiUsageMeter({ storeId, isOwner = false }: { storeId: string; isOwner?: boolean }) {
+export function AiUsageMeter({ storeId, isOwner = false, canView = true }: { storeId: string; isOwner?: boolean; canView?: boolean }) {
   const [usage, setUsage] = useState<AiUsageQuota | null>(null)
 
   useEffect(() => {
     let cancelled = false
     setUsage(null)
+    // The figures need the Products permission (they belong with the AI tools): not asked for at all
+    // without it, rather than a request the server can only refuse.
+    if (!canView) return
     aiUsageApi
       .get(storeId)
       .then((u) => !cancelled && setUsage(u))
@@ -31,7 +34,7 @@ export function AiUsageMeter({ storeId, isOwner = false }: { storeId: string; is
     return () => {
       cancelled = true
     }
-  }, [storeId])
+  }, [storeId, canView])
 
   if (!usage) return null
   const credits = usage.topUpGenerations + usage.topUpChatMessages

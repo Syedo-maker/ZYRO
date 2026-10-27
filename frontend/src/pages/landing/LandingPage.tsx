@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { usePageMeta } from '../../lib/pageMeta'
 import { LandingNav } from './LandingNav'
 import { Hero } from './Hero'
 import { ProblemSection } from './ProblemSection'
@@ -30,43 +30,10 @@ const TITLE = 'ZYRO: a free online shop for small businesses, with AI built in'
 const DESCRIPTION =
   'Open a free online shop in Pakistan and let AI write your product titles and descriptions from what shoppers are really searching for. Cash on delivery, counter sales and reports included. No card needed.'
 
-function useLandingMeta() {
-  useEffect(() => {
-    const previousTitle = document.title
-    document.title = TITLE
-
-    // Tags index.html does not carry, added here and removed again on the way out so they never
-    // describe the dashboard or somebody's storefront.
-    const added: HTMLMetaElement[] = []
-    const meta = (attr: 'name' | 'property', key: string, content: string) => {
-      const existing = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)
-      if (existing) {
-        existing.content = content
-        return
-      }
-      const tag = document.createElement('meta')
-      tag.setAttribute(attr, key)
-      tag.content = content
-      document.head.appendChild(tag)
-      added.push(tag)
-    }
-
-    meta('name', 'description', DESCRIPTION)
-    meta('property', 'og:title', TITLE)
-    meta('property', 'og:description', DESCRIPTION)
-    meta('property', 'og:type', 'website')
-    meta('property', 'og:image', `${window.location.origin}/og-image.svg`)
-    meta('name', 'twitter:card', 'summary_large_image')
-
-    return () => {
-      document.title = previousTitle
-      for (const tag of added) tag.remove()
-    }
-  }, [])
-}
+const LANDING_META = { title: TITLE, description: DESCRIPTION, type: 'website', image: '/og-image.svg' } as const
 
 export function LandingPage() {
-  useLandingMeta()
+  usePageMeta(LANDING_META)
 
   return (
     <div className="min-h-screen bg-bg font-sans">

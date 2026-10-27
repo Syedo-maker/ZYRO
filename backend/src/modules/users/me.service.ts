@@ -1,4 +1,8 @@
+import { StaffPermission } from "@prisma/client";
 import { prismaUnscoped } from "../../lib/prisma";
+
+/** Permissions as the API spells them ("products_write"), the same form the staff endpoints take. */
+const ALL_PERMISSIONS = Object.values(StaffPermission).map((p) => p.toLowerCase());
 
 /**
  * Which experience this user saw last, remembered so a returning visitor is not asked "shop or
@@ -17,6 +21,11 @@ export interface MyStore {
   logoUrl: string | null;
   themeColor: string | null;
   role: "owner" | "staff";
+  /**
+   * What this user may do in the store: every permission for the owner, the StaffMember row's list
+   * for staff. For the UI only, to offer what will work; every route still checks for itself.
+   */
+  permissions: string[];
 }
 
 export const meService = {
@@ -60,6 +69,7 @@ export const meService = {
         logoUrl: tenant.logoUrl,
         themeColor: tenant.themeColor,
         role: "owner",
+        permissions: ALL_PERMISSIONS,
       });
     }
     for (const staff of staffOf) {
@@ -71,6 +81,7 @@ export const meService = {
           logoUrl: staff.tenant.logoUrl,
           themeColor: staff.tenant.themeColor,
           role: "staff",
+          permissions: staff.permissions.map((p) => p.toLowerCase()),
         });
       }
     }

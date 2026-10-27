@@ -69,6 +69,7 @@ export function PrivacyPage() {
                 <li>Checking a bank-transfer receipt: the receipt image, to read the amount, date and reference printed on it. The AI never decides whether a payment is accepted; the shop does.</li>
                 <li>Voice notes: the recording is turned into text on our own servers; only the text is sent, to suggest the catalogue change, which the merchant must confirm.</li>
                 <li>The weekly tip: the shop's totals, never customer details.</li>
+                <li>Trending products: only the anonymous totals described below, never a shop's, customer's or order's details.</li>
               </ul>
               <p>AI never handles card data, and never sets a price or an amount on its own.</p>
             </>
@@ -85,10 +86,35 @@ export function PrivacyPage() {
                 <li><strong>MongoDB Atlas</strong>: the product catalogue database, hosted on Azure.</li>
                 <li><strong>Stripe</strong>: card payments for orders and plans.</li>
                 <li><strong>Anthropic</strong>: the AI features described above.</li>
-                <li><strong>SendGrid</strong>: sending email, such as cart reminders.</li>
+                <li><strong>Brevo</strong> or <strong>SendGrid</strong> (whichever the platform is set up with): sending email, such as cart reminders.</li>
                 <li>A local payment gateway, when a shop and a shopper choose one, for that payment only.</li>
               </ul>
               <p>We share data with nobody else unless the law requires it.</p>
+            </>
+          ),
+        },
+        {
+          id: 'trends',
+          heading: 'Sales trends across shops',
+          body: (
+            <>
+              <p>
+                To show merchants what is selling (Trending products and the weekly market report), ZYRO adds up paid orders across shops into
+                totals per product type and category, in each currency separately. A total is shown only when, in that period and the one
+                before, at least three different shops sold it, no single shop sold more than 60% of it and no two shops more than 85% of it
+                together. A total that fails any of these is not shown at all, and a total is also held back when taking other totals away from
+                it would reveal a figure that fails them.
+              </p>
+              <p>
+                Taking part is the shop owner's choice. Every shop has the setting "Include my shop's sales in shared platform trends" on its
+                Settings page, on by default. When the owner turns it off, that shop's orders are left out of every shared total from the next
+                daily update. The shop can still see the trends either way.
+              </p>
+              <p>
+                What is shown is numbers of units, orders and shops, and how they changed. Never a shop's name, a customer, an order, a price
+                or any one shop's own sales. Products are named from common words in their titles, not from any shop's listing. The totals are
+                seen only by shop owners and managers in the same currency, and the AI that explains them is given only those totals.
+              </p>
             </>
           ),
         },
