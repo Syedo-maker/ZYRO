@@ -2508,6 +2508,24 @@ paths:
               schema: { $ref: "#/components/schemas/ShippingZone" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /stores/{storeId}/shipping-zones/manage:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [shipping]
+      operationId: shipping_zones_manage_list
+      summary: List a store's shipping zones for the admin
+      description: The Orders page's list. Requires the `orders_write` staff permission (or owner), so staff without it (a cashier) are refused. Checkout uses the public list.
+      responses:
+        "200":
+          description: Shipping zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ShippingZone" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /stores/{storeId}/shipping-zones/{zoneId}:
     parameters:
       - $ref: "#/components/parameters/StoreId"

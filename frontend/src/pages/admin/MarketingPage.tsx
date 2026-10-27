@@ -12,6 +12,7 @@ import { discountsApi } from '../../lib/shopApi'
 import { MarketingInsights } from './MarketingInsights'
 import { storefrontApi } from '../../lib/storefrontApi'
 import type { DiscountCode, DiscountStatus } from '../../types/shop'
+import { NeedsPermission } from './NeedsPermission'
 
 const STATUS: Record<DiscountStatus, { label: string; tone: 'success' | 'neutral' | 'warning' | 'danger' }> = {
   active: { label: 'Active', tone: 'success' },
@@ -127,7 +128,7 @@ function EditDialog({ storeId, code, onClose, onSaved }: { storeId: string; code
 }
 
 /** Discount codes: what exists, how much each has been used, and switching them on and off. */
-export function MarketingPage() {
+function MarketingContent() {
   const { activeStore } = useAuth()
   const storeId = activeStore?.id
   const [codes, setCodes] = useState<DiscountCode[] | null>(null)
@@ -253,5 +254,14 @@ export function MarketingPage() {
         />
       )}
     </div>
+  )
+}
+
+/** Only for someone with discounts_write; anyone else sees just the page's title and what is missing. */
+export function MarketingPage() {
+  return (
+    <NeedsPermission permission="discounts_write" title="Marketing" what="Marketing needs the Discounts permission">
+      <MarketingContent />
+    </NeedsPermission>
   )
 }
