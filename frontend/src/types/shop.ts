@@ -142,6 +142,8 @@ export interface AnalyticsSummary {
 
 /** Abandoned-cart recovery emails over the store's whole history. */
 export interface CartRecoveryPerformance {
+  /** False while the platform's email sending is not set up: no reminders go out until it is. */
+  emailConfigured: boolean
   sent: number
   /** Always 0 today: email opens and clicks are not tracked yet. */
   opened: number

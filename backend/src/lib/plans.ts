@@ -1,5 +1,6 @@
 import type { PlanTier } from "@prisma/client";
 import { env } from "../config/env";
+import { logger } from "./logger";
 
 /**
  * The plan catalog (Part A, revenue model): what Free, Pro and Business include, what they
@@ -150,7 +151,7 @@ export function assertPlanEconomics(): void {
   for (const row of planEconomics()) {
     if (row.priceUsd === 0) {
       if (row.worstCaseCostUsd > FREE_PLAN_COST_BUDGET_USD) {
-        console.warn(`[plans] The Free plan could cost $${row.worstCaseCostUsd} a month per store in the worst case (budget $${FREE_PLAN_COST_BUDGET_USD})`);
+        logger.warn(`[plans] The Free plan could cost $${row.worstCaseCostUsd} a month per store in the worst case (budget $${FREE_PLAN_COST_BUDGET_USD})`);
       }
     } else if (!row.profitable) {
       throw new Error(`Plan ${row.id} costs $${row.priceUsd} but could cost the platform $${row.worstCaseCostUsd} a month`);

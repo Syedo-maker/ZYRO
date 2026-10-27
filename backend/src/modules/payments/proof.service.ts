@@ -1,8 +1,7 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { env } from "../../config/env";
+import { getStorage, linkFor, parseKey } from "../../lib/storage";
 import { Errors } from "../../errors/AppError";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { checkProof, hasProblem, summarise, type ExtractedProof, type ProofFinding } from "./proof.checks";
@@ -35,24 +34,32 @@ type MediaType = "image/jpeg" | "image/png" | "image/webp";
 const MEDIA_BY_EXT: Record<string, MediaType> = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
 
 /**
- * Loads an uploaded image off disk. The URL must be one this server issued for its own uploads
- * folder, and the name is checked to be a single file name: a shopper must never be able to point
- * this at another path on the server and have its contents sent to the AI.
+ * Which stored receipt a submission refers to. A client sends the `key` the upload returned; an older
+ * client may send the link instead, and the key is read out of it. Either way the key must name a
+ * receipt in THIS store: a shopper must never be able to point the check at another store's receipt,
+ * or at any other file, and have it read out to the AI.
  */
-async function loadImage(imageUrl: string): Promise<{ mediaType: MediaType; data: string } | null> {
-  const expected = `${env.publicUrl}/uploads/`;
-  if (!imageUrl.startsWith(expected)) return null;
-  const name = imageUrl.slice(expected.length);
-  if (!name || name !== path.basename(name) || name.includes("..")) return null;
-  const mediaType = MEDIA_BY_EXT[path.extname(name).toLowerCase()];
-  if (!mediaType) return null;
-  try {
-    const bytes = await readFile(path.join(env.uploadsDir, name));
-    if (bytes.byteLength > MAX_IMAGE_BYTES) return null;
-    return { mediaType, data: bytes.toString("base64") };
-  } catch {
-    return null;
+export function receiptKey(tenantId: string, input: Pick<SubmitProofInput, "imageKey" | "imageUrl">): string | null {
+  let candidate = input.imageKey ?? null;
+  if (!candidate && input.imageUrl) {
+    try {
+      candidate = /receipts\/[A-Za-z0-9_-]+\/[0-9a-f-]{36}\.[a-z0-9]{2,4}$/.exec(new URL(input.imageUrl).pathname)?.[0] ?? null;
+    } catch {
+      candidate = null;
+    }
   }
+  if (!candidate) return null;
+  const parsed = parseKey(candidate);
+  return parsed && parsed.area === "receipts" && parsed.storeId === tenantId ? candidate : null;
+}
+
+/** Loads a stored receipt for the AI to read; null when there is no such file or it is not an image. */
+async function loadImage(key: string): Promise<{ mediaType: MediaType; data: string } | null> {
+  const mediaType = MEDIA_BY_EXT[path.extname(key).toLowerCase()];
+  if (!mediaType) return null;
+  const bytes = await getStorage().get(key);
+  if (!bytes || bytes.byteLength > MAX_IMAGE_BYTES) return null;
+  return { mediaType, data: bytes.toString("base64") };
 }
 
 /** Reads the model's JSON, keeping only fields of the right shape. Anything odd becomes null. */
@@ -113,8 +120,9 @@ export const proofService = {
       ? (await prisma.paymentProof.count({ where: { tenantId, declaredReference: input.declaredReference, orderId: { not: orderId } } })) > 0
       : false;
 
-    const image = await loadImage(input.imageUrl);
-    if (!image) throw Errors.validation("The screenshot must be an image uploaded to this store.");
+    const key = receiptKey(tenantId, input);
+    const image = key ? await loadImage(key) : null;
+    if (!key || !image) throw Errors.validation("The screenshot must be an image uploaded to this store.");
 
     let extracted: ExtractedProof | null = null;
     let model: string | null = null;
@@ -152,7 +160,8 @@ export const proofService = {
         data: {
           tenantId,
           orderId,
-          imageUrl: input.imageUrl,
+          // The storage key, never a link: links expire, and a fresh one is signed each time it is shown.
+          imageUrl: key,
           declaredAmount: input.declaredAmount.toFixed(2),
           declaredReference: input.declaredReference ?? null,
           extracted: (extracted ?? undefined) as unknown as Prisma.InputJsonValue,
@@ -160,7 +169,7 @@ export const proofService = {
           model,
         },
       });
-      return present(proof);
+      return await present(proof);
     } catch (err) {
       // The same reference twice in this store: the unique key is the real guard, the count above is
       // only there to say so in the findings.
@@ -190,7 +199,9 @@ export const proofService = {
       take: 100,
       include: { order: { select: { orderNumber: true, total: true, currency: true } } },
     });
-    return proofs.map((p) => ({ ...present(p), order: { orderNumber: p.order.orderNumber, total: Number(p.order.total.toString()), currency: p.order.currency } }));
+    return Promise.all(
+      proofs.map(async (p) => ({ ...(await present(p)), order: { orderNumber: p.order.orderNumber, total: Number(p.order.total.toString()), currency: p.order.currency } }))
+    );
   },
 
   /**
@@ -220,18 +231,19 @@ export const proofService = {
       });
       return tx.paymentProof.findFirst({ where: { id: proofId, tenantId } });
     });
-    return present(updated!);
+    return await present(updated!);
   },
 };
 
 type ProofRow = Prisma.PaymentProofGetPayload<object>;
 
-function present(p: ProofRow) {
+async function present(p: ProofRow) {
   const findings = (p.findings as unknown as ProofFinding[]) ?? [];
   return {
     id: p.id,
     orderId: p.orderId,
-    imageUrl: p.imageUrl,
+    /** A signed link that works for an hour: receipts carry names and account numbers. */
+    imageUrl: await linkFor(p.imageUrl),
     declaredAmount: Number(p.declaredAmount.toString()),
     declaredReference: p.declaredReference,
     /** What the AI read. Shown to the merchant beside the image so they can see what it based this on. */

@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import { prisma, PrismaTx } from "../../lib/prisma";
-import { Product } from "../../models/Product.model";
+import { Product, priceOf } from "../../models/Product.model";
 import { Errors } from "../../errors/AppError";
 import { inventoryService } from "../inventory/inventory.service";
 import { discountService } from "../discounts/discount.service";
@@ -130,7 +130,7 @@ export async function priceFromCatalog(
     return {
       productId: item.productId,
       title: product.title,
-      unitPrice: Number(product.price.toString()),
+      unitPrice: priceOf(product).sale,
       unitCost: product.costPrice ? Number(product.costPrice.toString()) : null,
       quantity: item.quantity,
       taxable: product.taxable !== false,

@@ -34,7 +34,6 @@ export const TENANT_SCOPED_MODELS = new Set([
   "CodRemittanceRun",
   "CodRemittanceItem",
   "VoiceNote",
-  "BargainSession",
   "SearchTermDaily",
 ]);
 

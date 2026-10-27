@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { normalise, tokenise } from "./search.query";
+import { logger } from "../../lib/logger";
 
 /**
  * Counting what shoppers search for, so the keyword source behind AI product suggestions can learn
@@ -82,6 +83,6 @@ export function recordSearchTerm(tenantId: string, raw: string, category: string
         "count" = "SearchTermDaily"."count" + 1`
     .catch((err: Error) => {
       // Counting a search is never worth an error a shopper can see.
-      console.error(`[search] could not count a term: ${err.message}`);
+      logger.error(`[search] could not count a term: ${err.message}`);
     });
 }

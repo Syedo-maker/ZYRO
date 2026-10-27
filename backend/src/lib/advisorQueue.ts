@@ -1,6 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import { getBullRedis } from "./redis";
 import { advisorService } from "../modules/advisor/advisor.service";
+import { logger } from "./logger";
 
 /**
  * The Growth Advisor's weekly run (Part C). Mondays at 06:00 UTC, which is 11:00 in Pakistan, so a
@@ -29,12 +30,12 @@ export function startAdvisorWorker(): Worker {
     ADVISOR_QUEUE_NAME,
     async () => {
       const outcome = await advisorService.runAll();
-      console.log(`[advisor] weekly run: ${outcome.tips} tips, ${outcome.quiet} quiet, ${outcome.failed} failed, ${outcome.stores} stores`);
+      logger.info({ job: "advisor", ...outcome }, "weekly Growth Advisor run finished");
       return outcome;
     },
     { connection: getBullRedis(), concurrency: 1 }
   );
-  worker.on("error", (err) => console.error("Advisor worker error:", err.message));
+  worker.on("error", (err) => logger.error({ err: err.message }, "advisor worker error"));
   return worker;
 }
 

@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { notDemoTenant } from "../../lib/demo";
 import { prisma, prismaUnscoped } from "../../lib/prisma";
 import { tenantContext } from "../../lib/tenantContext";
 import { Errors } from "../../errors/AppError";
@@ -11,6 +12,7 @@ import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { planService } from "../billing/plan.service";
 import { upcomingFestivals } from "./festivals";
 import { chooseTopics, evaluateRules, type AdvisorFacts, type FiredRule, type RuleKey } from "./advisor.rules";
+import { logger } from "../../lib/logger";
 
 /**
  * The Growth Advisor (Part C, extending the Phase 5 business insights). Once a week it checks each
@@ -199,7 +201,7 @@ export const advisorService = {
    */
   async runAll(now = new Date(), onlyTenantIds?: string[]) {
     const tenants = await prismaUnscoped.tenant.findMany({
-      where: { growthTipsEnabled: true, ...(onlyTenantIds ? { id: { in: onlyTenantIds } } : {}) },
+      where: { growthTipsEnabled: true, ...notDemoTenant, ...(onlyTenantIds ? { id: { in: onlyTenantIds } } : {}) },
       select: { id: true },
     });
     const outcome = { stores: tenants.length, tips: 0, quiet: 0, failed: 0 };
@@ -210,7 +212,7 @@ export const advisorService = {
         else outcome.quiet++;
       } catch (err) {
         outcome.failed++;
-        console.error(`[advisor] store ${t.id}: ${(err as Error).message}`);
+        logger.error(`[advisor] store ${t.id}: ${(err as Error).message}`);
       }
     }
     return outcome;

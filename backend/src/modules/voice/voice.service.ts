@@ -1,8 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { Types } from "mongoose";
 import { prisma } from "../../lib/prisma";
+import { linkFor } from "../../lib/storage";
 import { Errors } from "../../errors/AppError";
-import { Product } from "../../models/Product.model";
+import { Product, priceOf } from "../../models/Product.model";
 import { getRecommendationClient, RecommendationUnavailableError, TranscriptionRefusedError } from "../../lib/recommendationClient";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { productService } from "../products/product.service";
@@ -73,7 +74,7 @@ export const voiceService = {
   async list(storeId: string, status?: string) {
     const notes = await prisma.voiceNote.findMany({ where: { tenantId: storeId, ...(status ? { status } : {}) }, orderBy: { createdAt: "desc" }, take: 50 });
     const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { currency: true } });
-    return notes.map((n) => present(n, tenant?.currency ?? "PKR"));
+    return Promise.all(notes.map((n) => present(n, tenant?.currency ?? "PKR")));
   },
 
   /**
@@ -104,12 +105,13 @@ export const voiceService = {
       const input = {
         title: current.title,
         description: current.description ?? undefined,
-        price: draft.kind === "set_price" ? draft.price! : current.price,
+        // A spoken price is the new actual price, with no discount; a stock change keeps all three prices.
+        actualPrice: draft.kind === "set_price" ? draft.price! : current.actualPrice,
+        discountPrice: draft.kind === "set_price" ? null : current.discountPrice,
         stock: draft.kind === "set_stock" ? draft.stock! : current.stock,
-        category: current.category,
+        ...(current.categoryId ? { categoryId: current.categoryId } : { category: current.category }),
         images: current.images,
         sku: current.sku ?? undefined,
-        barcode: current.barcode ?? undefined,
         taxable: current.taxable,
         tags: current.tags,
       };
@@ -136,9 +138,9 @@ async function matchProduct(storeId: string, spoken: string): Promise<CandidateP
   if (!outcome.filter) return null;
   const doc = await Product.findOne(outcome.filter, outcome.ranked ? { score: { $meta: "textScore" } } : undefined)
     .sort(outcome.ranked ? { score: { $meta: "textScore" } } : { title: 1 })
-    .select("title price");
+    .select("title actualPrice discountPrice salePrice price");
   if (!doc) return null;
-  return { id: doc._id.toString(), title: doc.title, price: Number(doc.price.toString()) };
+  return { id: doc._id.toString(), title: doc.title, price: priceOf(doc).sale };
 }
 
 async function save(
@@ -168,13 +170,14 @@ async function save(
 
 type NoteRow = Prisma.VoiceNoteGetPayload<object>;
 
-function present(note: NoteRow, currency: string) {
+async function present(note: NoteRow, currency: string) {
   const draft = (note.draft as unknown as VoiceDraft) ?? null;
   return {
     id: note.id,
     transcript: note.transcript,
     language: note.language,
-    audioUrl: note.audioUrl,
+    /** A signed link that works for an hour; the stored value is a private storage key. */
+    audioUrl: await linkFor(note.audioUrl),
     draft,
     /** The change in plain words, for the merchant to read before confirming. */
     summary: draft ? describeDraft(draft, currency) : null,

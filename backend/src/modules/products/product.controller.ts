@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 import { productService } from "./product.service";
-import { productInputSchema, listProductsQuerySchema, suggestQuerySchema } from "./product.validation";
+import { productInputSchema, listProductsQuerySchema, suggestQuerySchema, stockUpdateSchema } from "./product.validation";
 import { Errors } from "../../errors/AppError";
 
 export const productController = {
@@ -62,6 +62,16 @@ export const productController = {
     try {
       const product = await productService.update(req.params.storeId, req.params.productId, parsed.data, req.userId);
       res.status(200).json(product);
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  setStock: (async (req, res, next) => {
+    const parsed = stockUpdateSchema.safeParse(req.body);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      res.status(200).json(await productService.setStock(req.params.storeId, req.params.productId, parsed.data.stock, req.userId));
     } catch (err) {
       next(err);
     }

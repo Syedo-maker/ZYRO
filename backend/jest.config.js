@@ -10,6 +10,8 @@ module.exports = {
   testPathIgnorePatterns: ["/node_modules/", "/tests/real/"],
   transform: { "^.+\\.ts$": ["ts-jest", { tsconfig: "tsconfig.test.json", isolatedModules: true, diagnostics: false }] },
   testTimeout: 120000,
+  // Every JSON response in every test is checked against openapi.yaml (tests/helpers/conformance.ts).
+  setupFilesAfterEnv: ["<rootDir>/tests/helpers/conformance.setup.ts"],
   maxWorkers: 1,
   // BullMQ and Redis connections are closed by each suite; this only stops a stray handle from hanging the run.
   forceExit: true,

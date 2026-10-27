@@ -17,20 +17,33 @@ export interface ProductDocument {
   title: string;
   description: string;
   aiDescriptionId?: Types.ObjectId; // ref -> AiGeneratedContent, set once a draft/published description exists
-  price: Types.Decimal128;
+  /**
+   * Three prices (the supervisor's product-listing change). The owner sets the actual price (the MRP)
+   * and, optionally, a discounted price; the sale price is what the customer pays, and is always the
+   * discounted price when there is one and the actual price otherwise. The server computes it, so
+   * the three can never disagree, and cart, checkout and orders read only it (see priceOf below).
+   */
+  actualPrice?: Types.Decimal128;
+  discountPrice?: Types.Decimal128;
+  salePrice?: Types.Decimal128;
+  /** The single price products had before the three. Read only as a fallback until
+   *  scripts/migrate-product-fields.ts has converted a product; never written any more. */
+  price?: Types.Decimal128;
   images: string[]; // object-storage URLs only, never binary data (Implementation_Plan.md Phase 1)
   // Stock is NOT stored here. On-hand quantity lives in Postgres (InventoryLevel) so that
   // deducting it is atomic with order creation for both the online store and the POS.
   sku?: string;
-  barcode?: string; // scanned at the POS
   taxable: boolean;
   costPrice?: Types.Decimal128; // enables margin analytics; never exposed to shoppers
+  /** The store's own category (Category.model.ts). The source of truth for which category this is. */
+  categoryId?: Types.ObjectId;
   /**
-   * Part G: the lowest price the merchant will accept when haggling. Never sent to a shopper and
-   * never put in an AI prompt: the bargaining assistant chooses a move, and the server works out the
-   * price from this. Absent means this product is not open to bargaining.
+   * A copy of the category's name, written only by the server (on create, on edit, and when the
+   * category is renamed). Search, the storefront menu, the shop directory, Trend Scout and the AI
+   * prompts read a name, and a text index cannot reach into another collection, so the name is kept
+   * here as well. Products listed before categories existed have only this, until
+   * scripts/migrate-categories.ts links them.
    */
-  bargainMinPrice?: Types.Decimal128;
   category: string;
   /** Set by the merchant, often from an AI auto-tag suggestion (Phase 4, Module 6); never
    *  written by the AI tool itself, which only ever returns a suggestion to accept or edit. */
@@ -63,7 +76,10 @@ const productSchema = new Schema<ProductDocument>(
     title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, default: "", maxlength: 5000 },
     aiDescriptionId: { type: Schema.Types.ObjectId, ref: "AiGeneratedContent" },
-    price: { type: Schema.Types.Decimal128, required: true },
+    actualPrice: { type: Schema.Types.Decimal128 },
+    discountPrice: { type: Schema.Types.Decimal128 },
+    salePrice: { type: Schema.Types.Decimal128 },
+    price: { type: Schema.Types.Decimal128 },
     images: {
       type: [String],
       default: [],
@@ -73,10 +89,9 @@ const productSchema = new Schema<ProductDocument>(
       },
     },
     sku: { type: String, trim: true, maxlength: 100 },
-    barcode: { type: String, trim: true, maxlength: 100 },
     taxable: { type: Boolean, default: true },
     costPrice: { type: Schema.Types.Decimal128 },
-    bargainMinPrice: { type: Schema.Types.Decimal128 },
+    categoryId: { type: Schema.Types.ObjectId, ref: "Category" },
     category: { type: String, required: true, index: true },
     tags: {
       type: [String],
@@ -111,18 +126,46 @@ productSchema.index({ title: "text", category: "text", description: "text" }, { 
 
 // Browsing/filtering by category within a store; storeId alone covers plain catalog listing
 productSchema.index({ storeId: 1, category: 1 });
+// Counting a category's products (the Categories page, and refusing to delete one still in use).
+productSchema.index({ storeId: 1, categoryId: 1 });
 productSchema.index({ storeId: 1 });
 
-// SKU and barcode are unique per store when present (partial index ignores products without one).
+// A SKU is unique per store when present (partial index ignores products without one). The register
+// finds a product by its SKU.
 productSchema.index(
   { storeId: 1, sku: 1 },
   { unique: true, partialFilterExpression: { sku: { $type: "string" } } }
 );
-productSchema.index(
-  { storeId: 1, barcode: 1 },
-  { unique: true, partialFilterExpression: { barcode: { $type: "string" } } }
-);
+
+// Sorting and filtering a store's catalogue by what customers pay.
+productSchema.index({ storeId: 1, salePrice: 1 });
 
 productSchema.plugin(tenantScopePlugin);
+
+/**
+ * A product's prices as numbers, from whichever shape it is stored in. Every reader of a price goes
+ * through this, so a product not yet converted by the migration (only `price`) still sells at that
+ * price instead of failing, and the rest of the code has one place to look.
+ */
+export function priceOf(doc: Pick<ProductDocument, "actualPrice" | "discountPrice" | "salePrice" | "price">) {
+  const num = (d?: Types.Decimal128) => (d === undefined || d === null ? undefined : Number(d.toString()));
+  const legacy = num(doc.price);
+  const actual = num(doc.actualPrice) ?? legacy ?? 0;
+  const discount = num(doc.discountPrice);
+  const sale = num(doc.salePrice) ?? discount ?? actual;
+  const percent = sale < actual && actual > 0 ? Math.round(((actual - sale) / actual) * 100) : 0;
+  return {
+    actual,
+    discount: discount ?? null,
+    sale,
+    /** Whole percent off, for a "% off" badge; null when there is none to show (no discount, or under 0.5%). */
+    percentOff: percent > 0 ? percent : null,
+  };
+}
+
+/** The sale price the owner's two inputs produce. The one place that rule lives. */
+export function salePriceFor(actualPrice: number, discountPrice?: number | null): number {
+  return discountPrice === undefined || discountPrice === null ? actualPrice : discountPrice;
+}
 
 export const Product = model<ProductDocument>("Product", productSchema);
