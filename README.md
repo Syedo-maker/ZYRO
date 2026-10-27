@@ -77,6 +77,7 @@ every push and pull request.
 | `documentation/Deployment_Runbook.md` | Getting it onto Azure |
 | `documentation/Operations_Runbook.md` | Running it: monitoring, alerts, incidents, rollback, secrets |
 | `documentation/Privacy_Notes.md` | The detail behind the Privacy Policy |
+| `documentation/Product_Scout.md` | Product Scout: trending products for owners, its privacy rules, and the demo stores |
 | `documentation/Implementation_Plan.md` | The original plan, and the record of what was built |
 
 The Terms of Service and the Privacy Policy are pages in the app (`/terms`, `/privacy`).

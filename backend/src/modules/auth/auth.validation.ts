@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEMO_SLUG_PREFIX } from "../../lib/demo";
 import { MAX_PASSWORD_BYTES } from "../../lib/password";
 import { STORE_CURRENCY_CODES } from "../../lib/currencies";
 
@@ -14,7 +15,8 @@ export const registerSchema = z.object({
   storeName: z.string().min(1).max(120),
   storeSlug: z
     .string()
-    .regex(/^[a-z0-9-]{3,50}$/, "Slug must be 3-50 lowercase letters, digits, or hyphens"),
+    .regex(/^[a-z0-9-]{3,50}$/, "Slug must be 3-50 lowercase letters, digits, or hyphens")
+    .refine((s) => !s.startsWith(DEMO_SLUG_PREFIX), `Store addresses starting with "${DEMO_SLUG_PREFIX}" are reserved`),
   /** The currency the store sells in (lib/currencies.ts). Optional so older clients keep working: they get US dollars, as before. */
   currency: z.enum(STORE_CURRENCY_CODES).optional().default("USD"),
 });

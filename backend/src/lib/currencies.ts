@@ -35,3 +35,12 @@ export function minChargeMinor(currency: string): number {
   const found = STORE_CURRENCIES.find((c) => c.code === currency.toUpperCase());
   return found ? found.minChargeMinor : Math.max(...STORE_CURRENCIES.map((c) => c.minChargeMinor));
 }
+
+/** The price as a shopper in this store sees it ("Rs 450.00", "$19.99"), so any price the AI repeats carries the right currency. */
+export function formatPrice(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-PK", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount).replace(/ /g, " "); // Intl's non-breaking space, as a plain one
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`; // a code Intl does not know still names the currency
+  }
+}

@@ -407,7 +407,7 @@ for (const [width, height] of [[375, 812], [1440, 900]]) {
   if (await openShift.isVisible().catch(() => false)) {
     await page.getByLabel(/Starting cash/).fill('100')
     await page.getByRole('button', { name: 'Open shift' }).click()
-    await page.getByLabel('Scan a barcode or search products').waitFor({ timeout: 15000 }).catch(() => undefined)
+    await page.getByLabel('Scan a SKU or search products').waitFor({ timeout: 15000 }).catch(() => undefined)
   }
   await audit(page, 'register (touch, 44px)', width, 44)
 
