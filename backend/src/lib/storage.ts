@@ -96,6 +96,13 @@ const CONTENT_TYPE_BY_EXT: Record<string, string> = {
 };
 export const contentTypeFor = (key: string) => CONTENT_TYPE_BY_EXT[path.extname(key)] ?? "application/octet-stream";
 
+/** Swaps the start of a link from where the API reaches storage to where browsers do. */
+export function rebaseUrl(url: string, from: string, to: string | undefined): string {
+  if (!to) return url;
+  const a = from.replace(/\/+$/, "");
+  return url.startsWith(a) ? to.replace(/\/+$/, "") + url.slice(a.length) : url;
+}
+
 // ---- The local driver's signed links --------------------------------------------------------------
 
 const sign = (key: string, expires: number) =>
@@ -260,7 +267,7 @@ class AzureBlobDriver implements StorageDriver {
   }
 
   publicUrl(key: string) {
-    return this.blob(key).url;
+    return rebaseUrl(this.blob(key).url, this.service.url, env.storage.azure.publicBaseUrl);
   }
 
   async signedUrl(key: string, seconds: number) {
@@ -280,7 +287,7 @@ class AzureBlobDriver implements StorageDriver {
     const sas = this.sharedKey
       ? generateBlobSASQueryParameters(options, this.sharedKey)
       : generateBlobSASQueryParameters(options, await this.userDelegationKey(expiresOn), this.service.accountName);
-    return `${blob.url}?${sas.toString()}`;
+    return rebaseUrl(`${blob.url}?${sas.toString()}`, this.service.url, env.storage.azure.publicBaseUrl);
   }
 
   /** A delegation key lasts up to seven days; one is fetched per day and reused for every link. */

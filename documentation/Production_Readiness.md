@@ -14,8 +14,8 @@ afterwards. Each phase ends with a test gate.
 | 3 | Production hardening | done, awaiting review |
 | 4 | Whole-system workflow tests | done, awaiting review |
 | 5 | Azure deployment structure | done, awaiting review (nothing deployed) |
-| 6 | Smoke tests on a local production stack | |
-| 7 | Documentation and handover | |
+| 6 | Smoke tests on a local production stack | done, awaiting review |
+| 7 | Documentation and handover | done, awaiting review |
 
 ## Decisions taken before starting
 
@@ -717,3 +717,189 @@ cleaned in the same layer, was a false positive: the cleanup is in the same `RUN
 | `actionlint` | **not run**: its image could not be downloaded (the same network failures as Phase 3) |
 | Images | web, api (and worker), migrate and the recommendation service all build; the recommendation image loads both its models with networking switched off |
 | A real `azd provision` | **not run, deliberately**: nothing is created in Azure until the owners say so |
+
+---
+
+## Phase 6: Smoke tests on a local production stack
+
+### The stack
+
+`compose.yaml` runs ZYRO on one machine the way Azure runs it: the same four images, `NODE_ENV=production`,
+the web container as the only door to the API, the worker in its own container, migrations as a
+one-off container before the API starts, PostgreSQL 17, MongoDB 8, Redis 7 with eviction off (as on
+Azure Managed Redis), and Blob Storage through the Azurite emulator. Every secret in it is a
+throwaway for that machine.
+
+```sh
+docker compose up -d --build      # then http://localhost:8080
+node frontend/e2e/smoke.e2e.mjs   # the smoke test
+docker compose down -v            # remove it all, data included
+```
+
+### The smoke test
+
+`frontend/e2e/smoke.e2e.mjs` goes through the front door only, as a visitor would, and checks what
+only the assembled system can show: every container healthy and migrations completed first; the
+security headers; the API answering through the proxy with a request id; a merchant staying signed
+in across a reload (the reason the site and the API share one origin); a product image served by
+Blob Storage; a receipt stored privately, opened by a signed link and refused without one; the
+recommendation service answering; a real browser with no script errors and nothing blocked by the
+security policy; and the API restarting with its data intact after a clean shutdown. The same script
+runs against any deployment with `BASE=https://<site>`.
+
+### What it found
+
+The first run failed three checks, and **two were real defects in Phase 5's security policy**, the
+kind that only show in a real browser against the real images:
+
+- **The site's fonts were blocked.** The build inlines the smallest font files into the stylesheet
+  as `data:` URLs, and the policy allowed fonts from the site itself only. Fixed: `font-src 'self' data:`.
+- **Receipts and product images could not load locally.** The policy allowed images from any HTTPS
+  address (right for Azure, where Blob Storage is HTTPS), but the emulator serves plain HTTP. The
+  policy is now a template with a `FILES_ORIGIN` setting for where files come from when it is not
+  HTTPS; it is empty on Azure.
+
+One more fix came from making the stack work at all: **file links need two addresses** when the API
+and the browser reach storage differently (inside Docker the API sees `azurite:10000`, the browser
+`localhost:10000`). `AZURE_STORAGE_PUBLIC_URL` now rewrites the address in the links the API hands
+out; a SAS signature does not cover the host, so they stay valid. The same setting is how a CDN or a
+custom files domain will be put in front of Blob Storage later.
+
+The third failure was the test's own: it asked whether the web container was healthy seconds after
+restarting it. It now waits for health checks to settle. It also no longer counts the 401 the
+sign-in page correctly receives when it asks whether a session already exists; script errors and
+blocked content still fail it.
+
+### CI's first run
+
+Opening the Phase 5 pull request ran the new CI on GitHub for the first time. The frontend, Python
+and image jobs passed. The backend job failed before running a test: **MongoDB 8.0 refuses to start
+on Linux 6.19 or newer** (MongoDB's issue SERVER-121912), the kernel GitHub's Ubuntu 24.04 runners
+had just moved to. The backend job now runs on Ubuntu 22.04, with a note to move back once MongoDB
+ships the fix. Production uses MongoDB Atlas and is not affected.
+
+### The recommendation image, at last
+
+The connection that failed in Phase 3 recovered, and the image built: 2.97 GB with 525 MB of models.
+Run with networking switched off entirely, it loads both the embedding model and the speech model,
+which is the proof that nothing is downloaded at start any more.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Smoke test against the production images | **31 of 31** |
+| Containers | all nine up; every health check passing; migrations exited 0 before the API started |
+| Whole stack stopped (`docker compose stop`) | every service exited 0, in 1.8 seconds |
+| Recommendation image, no network | both models load |
+| Backend suites touching the file links | 4 suites, 201 tests, all passing |
+
+---
+
+## Phase 7: Documentation and handover
+
+### What was written
+
+| Document | For | What it holds |
+|---|---|---|
+| `README.md` | Anyone opening the repository | The product first; running it three ways (developer, local production stack, Azure); tests; a map of the documentation |
+| `documentation/Architecture.md` | Engineers | A diagram of the system, each part, where data lives and why, one request end to end, environments, testing layers |
+| `documentation/adr/` | Engineers, later | Eight decisions that would be expensive to reverse, each with context, alternatives and consequences |
+| `documentation/Deployment_Runbook.md` | The owners, on deployment day | Phase 5; the order of operations onto Azure |
+| `documentation/Operations_Runbook.md` | Whoever is on call | Where to look, queries, alerts to set up, what to do for each kind of failure, rotating secrets, restoring the database, the reviewer's checklist |
+| `/terms`, `/privacy` (pages in the app) | Merchants and shoppers | The Terms of Service and the Privacy Policy |
+
+### The Terms of Service and the Privacy Policy
+
+Both are pages in the app, linked from the landing page footer, the sign-up form ("By creating a
+store you agree to...") and every storefront's footer. Who runs ZYRO and how to reach them come from
+one constant (`frontend/src/lib/legal.ts`), which the footer now uses too, so the three can never
+disagree. They carry the details the site already published: the two of you, and the contact email
+already in the footer. Nothing was invented.
+
+The Privacy Policy was written from the code, not from a template, and checked against it. That
+check removed three overstatements from the first draft: it had said no IP address is ever held (the
+rate limiter holds one for its window, at most an hour), that backups expire within 14 days (true for
+PostgreSQL, not necessarily for Atlas), and that email is sent only when a shop switches it on (no
+such switch was confirmed). It states plainly what a reader would want to know and might not expect:
+bank-transfer receipts are read by an AI provider; voice notes are transcribed on ZYRO's own servers
+and only the text goes to AI; shoppers' order details are held for the shop, which is the seller.
+
+**They need a qualified review before launch.** They are written to be accurate and readable, not by
+a lawyer. Three things in them are commitments the owners make by publishing: answering data requests
+within 30 days, telling merchants before a change that affects them, and the choice of Pakistani law.
+
+### Found on the way
+
+**The first CI run on GitHub with MongoDB working** (after Phase 6's fix) passed 49 of 51 backend
+suites. The two that failed relied on the developer's own `backend/.env` for Stripe settings, which a
+clean CI machine does not have: one written in Phase 4, one older. Both now set test-only values
+themselves, and were re-run locally with `.env` hidden and every Stripe, AI and email key removed.
+
+**Two flaky checks.** Two final full runs each failed one bargaining test: both checked that a
+product's floor price (700) never reaches a shopper by searching raw JSON for the text "700", and each
+run happened to produce a random id containing those digits (a store id with "...o70012...", a session
+id with "...c7000..."). They would have failed at random, whatever the code did. Both now check the
+values themselves, ids aside.
+
+**One hang that did not come back.** In one full run the dependency-failure suite's AI test timed out
+after 120 seconds, which its own 3-second request limit should make impossible. It passed in four runs
+of the suite alone, in a run of the exact sequence of suites that preceded it, and in every full run
+before and since. Its cause was not found, and this record does not pretend otherwise. Each request in
+that suite now has its own 15-second limit, so if it ever happens again the failure names the call that
+stalled.
+
+### Gate
+
+| Check | Result |
+|---|---|
+| Accessibility audit, with the two new pages | **0 findings** across 44 screen visits, 1,832 text elements measured |
+| Browser suites touching the footer and sign-up | `landing` 54, `phase1-auth-catalog` 25, `golden-path` 27, `responsive` 65, `partE-payments` 19: all passing |
+| Frontend type check, build, lint | pass; lint 37 warnings, 0 errors |
+| Final full backend run, every fix in | **51 suites, 1,769 tests, all passing**; coverage 92.32% statements, 77.31% branches, 93.60% functions, 94.80% lines |
+| The three suites CI failed, run with `.env` hidden and no keys | all passing |
+| **CI on GitHub** (pull request #26, a clean machine with no secrets) | **all four jobs pass**: backend (every test, the contract checks, the coverage floors), frontend, Python, and every production image |
+
+---
+
+## Where the programme ends
+
+| Phase | Pull request | State |
+|---|---|---|
+| 1. Rebrand to ZYRO | #20 | open, awaiting the owners' review |
+| 2. One design system | #21 | open; the owners' screenshot review is part of its gate |
+| 3. Production hardening | #22 | open |
+| 4. Whole-system tests | #23 | open |
+| 5. Azure deployment structure | #24 | open; nothing deployed |
+| 6. Local production stack and smoke test | #25 | open |
+| 7. Documentation and handover | this branch | open |
+
+Each pull request is stacked on the one before and is merged in order, by the owners.
+
+### Defects found and fixed across the programme
+
+Not counting test mistakes, which are recorded where they happened:
+
+1. Stored cross-site scripting through uploads (Phase 3).
+2. The MongoDB connection string, with its password on Atlas, logged at every start (Phase 3).
+3. Receipts (names, bank details) in a public folder; uploads on a disk that containers discard (Phase 3).
+4. Migration drift that made `prisma migrate dev` demand a database reset (Phase 3).
+5. 51 buttons rendering larger than their screens asked for (Phase 2).
+6. Every form field's border too faint to see (1.31:1) and 29 kinds of landing text below 4.5:1 (Phase 2).
+7. The merchant's colour stored but never shown (Phase 2).
+8. 24 places where the API contract did not match the server (Phase 4).
+9. A signed-in shopper's first cash or transfer order missing from their own orders (Phase 4).
+10. Outbound calls to Anthropic, Stripe and SendGrid without time limits (Phase 4).
+11. A sign-in that would not have survived a reload on two domains, caught before deployment (Phase 5).
+12. A security policy that blocked the site's own fonts and file images (Phase 6).
+13. Tests relying on a developer's own `.env`, and a test that failed at random (Phase 7).
+
+### Still open, for the owners
+
+- **Merge** pull requests #19 to #26, in order.
+- **Review** the Phase 2 before/after screenshots.
+- **Decide** what the footer says about who runs ZYRO, and have the Terms and Privacy Policy
+  reviewed by someone qualified, with the operator's legal name filled in (`frontend/src/lib/legal.ts`).
+- **Choose** the Azure subscription and region, and say go; then `Deployment_Runbook.md` from step 0.
+- **Upgrade Prisma to 7** in its own change, to clear the one accepted audit advisory.
+- **Delete the old Anthropic key** in the Anthropic console (rolled on 2026-10-20).

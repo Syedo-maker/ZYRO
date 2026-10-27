@@ -362,6 +362,8 @@ for (const [width, height] of [[375, 812], [1440, 900]]) {
     ['shop directory', `${WEB}/shop`],
     ['merchant sign in', `${WEB}/login`],
     ['merchant sign up', `${WEB}/register`],
+    ['terms of service', `${WEB}/terms`],
+    ['privacy policy', `${WEB}/privacy`],
     ['storefront home', `${WEB}/store/${storeId}`],
     ['storefront catalog', `${WEB}/store/${storeId}/products`],
     ['storefront cart', `${WEB}/store/${storeId}/cart`],
@@ -405,7 +407,7 @@ for (const [width, height] of [[375, 812], [1440, 900]]) {
   if (await openShift.isVisible().catch(() => false)) {
     await page.getByLabel(/Starting cash/).fill('100')
     await page.getByRole('button', { name: 'Open shift' }).click()
-    await page.getByLabel('Scan a barcode or search products').waitFor({ timeout: 15000 }).catch(() => undefined)
+    await page.getByLabel('Scan a SKU or search products').waitFor({ timeout: 15000 }).catch(() => undefined)
   }
   await audit(page, 'register (touch, 44px)', width, 44)
 

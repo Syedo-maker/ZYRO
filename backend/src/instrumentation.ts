@@ -7,7 +7,11 @@
  * anywhere. Each container names itself with OTEL_SERVICE_NAME (zyro-api, zyro-worker), which is
  * how the two show up separately on the Application Map.
  */
-import "dotenv/config";
+import path from "node:path";
+import { config as loadDotenv } from "dotenv";
+
+// The same file config/env.ts reads: backend/.env, by path.
+loadDotenv({ path: path.resolve(__dirname, "../.env") });
 
 let enabled = false;
 

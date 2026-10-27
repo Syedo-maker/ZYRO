@@ -1,4 +1,11 @@
-import "dotenv/config";
+import path from "node:path";
+import { config as loadDotenv } from "dotenv";
+
+// Settings come from backend/.env, by path, whichever folder the process was started from (the repo
+// root, backend/, or a script's own folder). Variables already set in the environment win, which is
+// how containers and Azure pass theirs; no .env file is shipped there. Secrets in it (the AI, Stripe
+// and email keys) are read here only, and never logged.
+loadDotenv({ path: path.resolve(__dirname, "../../.env") });
 
 function required(name: string): string {
   const value = process.env[name];
@@ -56,6 +63,10 @@ export const env = {
       accountUrl: process.env.AZURE_STORAGE_ACCOUNT_URL,
       /** A user-assigned managed identity's client id; unset for a system-assigned one. */
       clientId: process.env.AZURE_CLIENT_ID,
+      /** Where browsers fetch files from, when that differs from where the API reaches storage: a
+       *  CDN or custom domain in front of Blob Storage, or the emulator's address as seen from the
+       *  host. Links are rewritten to it; a SAS signature does not cover the host, so they still work. */
+      publicBaseUrl: process.env.AZURE_STORAGE_PUBLIC_URL,
       publicContainer: process.env.AZURE_STORAGE_PUBLIC_CONTAINER ?? "public",
       privateContainer: process.env.AZURE_STORAGE_PRIVATE_CONTAINER ?? "private",
     },
@@ -157,6 +168,15 @@ export const env = {
     graceHours: num("PLAN_GRACE_HOURS", 24),
   },
   // Abandoned-cart recovery (Implementation_Plan.md Phase 5, Module 7 remainder).
+  /** Product Scout (2026-10-22): the privacy rules for the platform-wide product trends. */
+  scout: {
+    /** Fewest different stores a published figure may come from; never below 2. */
+    minStores: Math.max(2, Math.floor(Number(process.env.SCOUT_MIN_STORES ?? 3) || 3)),
+    /** Largest share of a figure's units one store may hold, between 0.3 and 0.95. */
+    maxShare: Math.min(0.95, Math.max(0.3, Number(process.env.SCOUT_MAX_STORE_SHARE ?? 0.6) || 0.6)),
+    /** Largest share the two biggest stores may hold together, between 0.5 and 0.99. */
+    maxTopTwoShare: Math.min(0.99, Math.max(0.5, Number(process.env.SCOUT_MAX_TOP_TWO_SHARE ?? 0.85) || 0.85)),
+  },
   cartRecovery: {
     /** A cart with no activity for this long is "abandoned" (the plan's own example: 2 hours). */
     abandonedAfterHours: num("CART_RECOVERY_ABANDONED_AFTER_HOURS", 2),
@@ -169,7 +189,13 @@ export const env = {
   // Transactional email (recovery emails only, so far). Optional at startup, like Stripe and the
   // AI orchestrator: the scan job runs and logs "would have sent" without a real send until set.
   email: {
+    /** Which provider lib/email.ts sends through; each names the settings it needs there. */
+    provider: (process.env.EMAIL_PROVIDER?.trim() || "sendgrid").toLowerCase(),
     sendgridApiKey: process.env.SENDGRID_API_KEY,
+    brevoApiKey: process.env.BREVO_API_KEY,
+    brevoFromEmail: process.env.BREVO_FROM_EMAIL,
+    /** The name shown with the Brevo sender address. */
+    brevoFromName: process.env.BREVO_FROM_NAME?.trim() || "ZYRO",
     fromEmail: process.env.SENDGRID_FROM_EMAIL,
   },
   // Recommendation microservice (Implementation_Plan.md Phase 6): a separate Python process.

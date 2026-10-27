@@ -1,0 +1,145 @@
+# ZYRO as it runs in production, on one machine.
+#
+#   docker compose up -d --build        then open http://localhost:8080
+#   node frontend/e2e/smoke.e2e.mjs     the smoke test (Deployment_Runbook.md, Operations_Runbook.md)
+#   docker compose down -v              stop and delete everything, data included
+#
+# The same images, settings and topology as Azure (infra/): the web container serves the site and is
+# the only door to the API; the API and worker run from one image with NODE_ENV=production; files go
+# to Blob Storage (here the Azurite emulator); Redis is 7, the major version Azure Managed Redis runs.
+# Every secret below is a throwaway for this machine only. Real ones never go in this file.
+name: zyro
+
+x-backend-env: &backend-env
+  NODE_ENV: production
+  LOG_FORMAT: json
+  DATABASE_URL: postgresql://zyro:local-only-postgres@postgres:5432/zyro?schema=public
+  MONGODB_URI: mongodb://mongo:27017/zyro
+  REDIS_URL: redis://redis:6379
+  JWT_ACCESS_SECRET: ${ZYRO_JWT_ACCESS_SECRET:-k3J9vQ2mX8rT5wL1nB7cZ4yH6sD0fG9pA2uE5iO8tY1r}
+  PUBLIC_URL: http://localhost:8080
+  CORS_ORIGIN: http://localhost:8080
+  STOREFRONT_URL: http://localhost:8080
+  # One proxy in front of the API here (the web container's nginx); three on Azure.
+  TRUST_PROXY: "1"
+  RUN_WORKERS_IN_API: "false"
+  STORAGE_DRIVER: azure
+  # Azurite's published development account: not a secret. The API reaches it as azurite:10000;
+  # your browser reaches the same files as localhost:10000, so links are rewritten to that.
+  AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
+  AZURE_STORAGE_PUBLIC_URL: http://localhost:10000/devstoreaccount1
+  RECOMMENDATION_SERVICE_URL: http://reco:8001
+  RECOMMENDATION_SERVICE_TOKEN: ${ZYRO_RECOMMENDATION_SERVICE_TOKEN:-local-only-reco-token-6f1c2a9e}
+  # Optional: pass real test keys through from your shell to try payments or AI here.
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+x-limits: &small
+  deploy:
+    resources:
+      limits: { cpus: "0.5", memory: 1g }
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment: { POSTGRES_USER: zyro, POSTGRES_PASSWORD: local-only-postgres, POSTGRES_DB: zyro }
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U zyro"], interval: 3s, retries: 30 }
+    networks: [zyro]
+
+  mongo:
+    image: mongo:8.0
+    volumes: [mongo-data:/data/db]
+    healthcheck: { test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"], interval: 5s, retries: 30 }
+    networks: [zyro]
+
+  redis:
+    image: redis:7-alpine
+    # As on Azure Managed Redis: never drop keys (BullMQ jobs) under memory pressure.
+    command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
+    volumes: [redis-data:/data]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 3s, retries: 30 }
+    networks: [zyro]
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.35.0
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--loose", "--skipApiVersionCheck", "--location", "/data"]
+    volumes: [azurite-data:/data]
+    ports: ["127.0.0.1:10000:10000"]
+    networks: [zyro]
+
+  migrate:
+    build: { context: ./backend, target: migrate }
+    image: zyro-migrate:local
+    environment:
+      DATABASE_URL: postgresql://zyro:local-only-postgres@postgres:5432/zyro?schema=public
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [zyro]
+
+  api:
+    build: { context: ./backend, target: runtime }
+    image: zyro-api:local
+    environment:
+      <<: *backend-env
+      OTEL_SERVICE_NAME: zyro-api
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      azurite: { condition: service_started }
+    stop_grace_period: 30s
+    <<: *small
+    networks: [zyro]
+
+  worker:
+    image: zyro-api:local
+    command: ["node", "--enable-source-maps", "dist/worker.js"]
+    environment:
+      <<: *backend-env
+      OTEL_SERVICE_NAME: zyro-worker
+      WORKER_HEALTH_PORT: "5001"
+      HEALTHCHECK_URL: http://127.0.0.1:5001/health
+    depends_on:
+      api: { condition: service_started }
+    stop_grace_period: 30s
+    <<: *small
+    networks: [zyro]
+
+  reco:
+    build: { context: ./recommendation-service }
+    image: zyro-reco:local
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/zyro
+      RECOMMENDATION_SERVICE_TOKEN: ${ZYRO_RECOMMENDATION_SERVICE_TOKEN:-local-only-reco-token-6f1c2a9e}
+    depends_on:
+      mongo: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 2g }
+    networks: [zyro]
+
+  web:
+    build: { context: ./frontend }
+    image: zyro-web:local
+    environment:
+      API_UPSTREAM: http://api:5000
+      # Files come from the emulator over plain HTTP here; the site's security policy must allow it.
+      FILES_ORIGIN: http://localhost:10000
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      api: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 256m }
+    networks: [zyro]
+
+networks:
+  zyro: {}
+
+volumes:
+  postgres-data: {}
+  mongo-data: {}
+  redis-data: {}
+  azurite-data: {}

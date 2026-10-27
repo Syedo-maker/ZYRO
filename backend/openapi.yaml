@@ -341,11 +341,15 @@ paths:
                   allOf:
                     - $ref: "#/components/schemas/Store"
                     - type: object
-                      required: [role]
+                      required: [role, permissions]
                       properties:
                         role:
                           type: string
                           enum: [owner, staff]
+                        permissions:
+                          type: array
+                          items: { type: string, enum: [products_write, orders_write, discounts_write, analytics_read, pos_sell, inventory_write, refunds] }
+                          description: "What this user may do in the store: every permission for the owner, the staff member's own list otherwise. For the UI to offer only what will work; every route still checks for itself."
 
   # ── STORES ────────────────────────────────────────────────────────────
   /stores:
@@ -480,6 +484,47 @@ paths:
                   reason: { type: [string, "null"], description: "Why it is not listed, in words for the merchant; null when it is." }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /stores/{storeId}/trend-sharing:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [stores]
+      operationId: store_trend_sharing_get
+      summary: Whether this shop's sales count toward the platform's shared trends
+      description: Owner-only (a Manager is refused). See `put`.
+      responses:
+        "200":
+          description: The setting
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrendSharing" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [stores]
+      operationId: store_trend_sharing_update
+      summary: Include or leave out this shop's sales in the shared trends
+      description: |
+        Owner-only. "Include my shop's sales in shared platform trends", on by default. Off: this shop's
+        paid orders are left out of every shared total (Product Scout and Trend Scout) from the next
+        daily run. The shop can still see the trends either way.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TrendSharing" }
+      responses:
+        "200":
+          description: The saved setting
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrendSharing" }
+        "400":
+          description: The setting is missing or not true or false
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /stores/{storeId}/staff:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -500,17 +545,23 @@ paths:
     post:
       tags: [stores]
       operationId: store_staff_create
-      summary: Invite a staff account with scoped permissions
-      description: Owner-only. Permissions gate access to specific routes (Section 6/7.2 role-based access).
+      summary: Invite a staff account with a role
+      description: |
+        Owner-only. Give a `role`: `cashier` (the register) or `manager` (the register, refunds, any
+        discount, analytics, orders, and the catalogue: products, stock, categories and the AI tools).
+        Billing, staff, plans and AI packs, and store settings stay with the owner whatever the role.
+        An explicit `permissions` list is still accepted from callers written before roles, and is
+        ignored when a role is given.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [email, permissions]
+              required: [email]
               properties:
                 email: { type: string, format: email }
+                role: { $ref: "#/components/schemas/StaffRole" }
                 name:
                   type: string
                   maxLength: 120
@@ -525,17 +576,18 @@ paths:
                 permissions:
                   type: array
                   items: { $ref: "#/components/schemas/StaffPermission" }
+                  description: "For callers written before roles. Either this or `role` is required."
             examples:
-              catalog_staff:
+              manager:
                 value:
                   email: jordan@auroragoods.example
-                  permissions: [products_write]
+                  role: manager
               new_cashier:
                 value:
                   email: riley@auroragoods.example
                   name: Riley Chen
                   password: a-starting-password
-                  permissions: [pos_sell]
+                  role: cashier
       responses:
         "201":
           description: Staff account created
@@ -543,7 +595,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/StaffMember" }
         "400":
-          description: Invalid email, empty or unknown permissions (names are lowercase), a too-short or too-long password, or a password sent for an email that already has an account
+          description: Invalid email, no role (or permissions), an unknown role or permission (names are lowercase), a too-short or too-long password, or a password sent for an email that already has an account
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -566,6 +618,35 @@ paths:
         in: path
         required: true
         schema: { type: string }
+    patch:
+      tags: [stores]
+      operationId: store_staff_update_role
+      summary: Change a staff member's role
+      description: |
+        Owner-only, so a staff member can change neither their own role nor anyone else's. The owner
+        has no staff record and cannot be changed here. Takes effect on that person's next request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: "#/components/schemas/StaffRole" }
+      responses:
+        "200":
+          description: The staff member with the new role
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StaffMember" }
+        "400":
+          description: No role, or an unknown one
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     delete:
       tags: [stores]
       operationId: store_staff_delete
@@ -753,6 +834,53 @@ paths:
       description: Requires the `products_write` staff permission (or owner).
       responses:
         "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stores/{storeId}/products/{productId}/stock:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/ProductId"
+    patch:
+      tags: [catalog]
+      operationId: products_set_stock
+      summary: Set a product's stock, and nothing else
+      description: |
+        The quick stock control on the admin products list (for example 11 to 7). Sets the on-hand
+        count at the store's default location and records a stock adjustment by the caller, as a
+        full edit that changes the stock would. The shop, the cart and the register read stock live,
+        so the new count applies at once. Requires the `products_write` staff permission (or owner).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stock]
+              additionalProperties: false
+              properties:
+                stock: { type: integer, minimum: 0, maximum: 1000000 }
+      responses:
+        "200":
+          description: The product's stock now
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, stock]
+                properties:
+                  id: { type: string }
+                  stock: { type: integer, minimum: 0, description: "On-hand across the store's locations, as Product.stock." }
+        "400":
+          description: Stock missing, negative or not a whole number
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -1901,7 +2029,7 @@ paths:
       operationId: pos_products_search
       summary: Find products by scanned code or by name
       description: |
-        `code` matches a barcode or SKU exactly (what a scanner types). `q` matches part of a
+        `code` matches a SKU exactly (what a scanner or the cashier types). `q` matches part of a
         title or SKU, ignoring case; characters such as `(` and `*` are plain text. Each result
         carries on-hand stock at the store's location.
       parameters:
@@ -2413,6 +2541,93 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── DISCOUNTS ─────────────────────────────────────────────────────────
+  /stores/{storeId}/categories:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [catalog]
+      operationId: categories_list
+      summary: List a store's categories
+      description: |
+        Requires the `products_write` staff permission (or owner). Active categories first, then by
+        name, each with how many of the store's products are in it.
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Category" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [catalog]
+      operationId: categories_create
+      summary: Create a category
+      description: |
+        Requires the `products_write` staff permission (or owner). Names are unique within a store
+        regardless of capitals and spacing: "Toys", "toys" and " TOYS " are the same category, and a
+        second one is refused with 409. The name is kept as typed (edges trimmed, inner spaces made one).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+        "400": { description: "No name, or a name over 60 characters" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "A category with the same name already exists in this store" }
+  /stores/{storeId}/categories/{categoryId}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: categoryId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [catalog]
+      operationId: categories_update
+      summary: Rename, enable or disable a category
+      description: |
+        Requires the `products_write` staff permission (or owner). A rename reaches every product in
+        the category at once, because products refer to it by id. A disabled category keeps its
+        products but cannot be chosen for a new or edited product.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                active: { type: boolean }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+        "400": { description: "Neither a name nor active was sent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Another category in this store already has that name" }
+    delete:
+      tags: [catalog]
+      operationId: categories_delete
+      summary: Delete a category
+      description: |
+        Requires the `products_write` staff permission (or owner). Refused with 409 while any product
+        is in the category: move those products to another category first.
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Products are still in this category" }
   /stores/{storeId}/discount-codes:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -2622,8 +2837,9 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [sent, opened, clicked, converted, conversionRate]
+                required: [emailConfigured, sent, opened, clicked, converted, conversionRate]
                 properties:
+                  emailConfigured: { type: boolean, description: "False while the platform's email sending is not set up: no reminder can be sent until it is, and none is written or charged for." }
                   sent: { type: integer, description: "Recovery emails sent in total." }
                   opened: { type: integer }
                   clicked: { type: integer }
@@ -3290,7 +3506,7 @@ paths:
                   trendDataAvailable: { type: boolean, description: "False when no source had real data; the keyword list is then empty." }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  # ── VOICE NOTES AND BARGAINING (Part G) ───────────────────────────────
+  # ── VOICE NOTES (Part G) ───────────────────────────────
   /stores/{storeId}/voice-notes:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -3382,102 +3598,6 @@ paths:
       responses:
         "204": { description: Discarded }
         "404": { $ref: "#/components/responses/NotFound" }
-  /stores/{storeId}/products/{productId}/bargain:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-    get:
-      tags: [catalog]
-      operationId: bargain_offer
-      summary: Whether this product can be haggled over
-      description: Public. True only when the merchant has set a lowest acceptable price on the product.
-      security: []
-      responses:
-        "200":
-          description: Whether haggling is open
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  available: { type: boolean }
-    post:
-      tags: [catalog]
-      operationId: bargain_start
-      summary: Start haggling over this product
-      description: |
-        Public; a guest session is enough. The merchant's lowest price is copied into the conversation when
-        it opens, so a price change part-way through cannot move it, and it is never sent to the shopper
-        or to the AI.
-      security: []
-      responses:
-        "201":
-          description: The conversation
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/BargainTurn" }
-        "400": { description: "This product's price is not open to negotiation" }
-  /stores/{storeId}/products/{productId}/bargain/settings:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-    get:
-      tags: [catalog]
-      operationId: bargain_settings_get
-      summary: The merchant's own floor price for this product
-      description: |
-        Requires `products_write`. The public product endpoints deliberately never return this: a shopper
-        who knew the lowest acceptable price would simply ask for it. The merchant's product form reads it
-        from here instead.
-      responses:
-        "200":
-          description: The floor price, or null when this product has a fixed price
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  bargainMinPrice: { type: [number, "null"] }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-  /stores/{storeId}/products/{productId}/bargain/{sessionId}/turn:
-    parameters:
-      - $ref: "#/components/parameters/StoreId"
-      - $ref: "#/components/parameters/ProductId"
-      - name: sessionId
-        in: path
-        required: true
-        schema: { type: string }
-    post:
-      tags: [catalog]
-      operationId: bargain_turn
-      summary: Say something to the shop
-      description: |
-        Public. **The assistant cannot name a price.** It is given the listed price, the shop's current
-        offer and the number the shopper named, and replies with one word from a fixed list plus a
-        sentence; the server works out every price from the merchant's own floor and clamps it there.
-        A number the assistant puts in its own sentence is stripped before the shopper sees it, and an
-        unrecognised reply is read as holding firm. No prompt injection can reach a price, because there
-        is no channel through which the model can express one.
-        A struck deal creates a single-use, short-lived discount code: the only way the agreed price is payable.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [message]
-              properties:
-                message: { type: string, maxLength: 500 }
-      responses:
-        "200":
-          description: The shop's answer and its new price
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/BargainTurn" }
-        "404": { description: "No such conversation for this shopper" }
-        "409": { description: "This conversation has finished or expired" }
 
   # ── PAYMENT AND TRUST (Part E) ────────────────────────────────────────
   /stores/{storeId}/payments/options:
@@ -4014,6 +4134,60 @@ paths:
               schema: { $ref: "#/components/schemas/TrendImport" }
         "400": { description: "Not a Google Trends export (the reason is given), or a market that is not offered" }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /stores/{storeId}/product-scout:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [catalog]
+      operationId: product_scout_get
+      summary: What is selling across ZYRO, for this store's market (Product Scout)
+      description: |
+        The anonymised product trends for the store's market (its currency), from the saved daily
+        snapshot: no heavy query and no AI call happen here. A figure is shown only if, in both its
+        period and the one before, at least `rules.minStores` stores sold it, no store sold more than
+        `rules.maxSharePercent`% of its units and the two biggest no more than
+        `rules.maxTopTwoSharePercent`% together; otherwise it is hidden whole. Shops whose owners
+        switched off trend sharing are left out. Nothing identifies a store, an order or a customer.
+        Where the platform has too little data, `marketData` carries the external Trend Scout report,
+        labelled as market data. Demo stores see the demo stores' figures only (`demo: true`).
+        Products permission (the owner and Managers).
+      parameters:
+        - { name: period, in: query, schema: { type: integer, enum: [7, 30], default: 7 } }
+        - { name: category, in: query, schema: { type: string, maxLength: 80 }, description: "A category name; matched without regard to capitals or spacing." }
+      responses:
+        "200":
+          description: "The trends, or status no_data when the market has no snapshot yet"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductScout" }
+        "400":
+          description: An unknown period or an over-long category
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /platform/product-scout/refresh:
+    post:
+      tags: [platform]
+      operationId: platform_product_scout_refresh
+      summary: Recompute Product Scout now instead of waiting for the daily run
+      description: Super administrators only. Queued; the snapshots are replaced when it finishes.
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued: { type: boolean }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /platform/trends/run:
     post:
       tags: [platform]
@@ -4237,6 +4411,108 @@ components:
         date: { type: string, format: date, description: "The last date the fact covers." }
         url: { type: string, format: uri, description: "Where to look the figure up, when there is such a page." }
 
+    TrendSharing:
+      type: object
+      required: [shareSalesInTrends]
+      properties:
+        shareSalesInTrends: { type: boolean }
+
+    ScoutFigures:
+      type: object
+      required: [units, orders, stores, previousUnits, growthPercent, isNew]
+      properties:
+        units: { type: integer }
+        orders: { type: integer }
+        stores: { type: integer, description: "Different stores that sold it in the period; always at least rules.minStores." }
+        previousUnits: { type: [integer, "null"], description: "Null only when nothing was sold in the previous period (isNew). A product whose previous period fails a rule is not shown at all." }
+        growthPercent: { type: [integer, "null"] }
+        isNew: { type: boolean, description: "Nothing sold in the previous period." }
+
+    ScoutProduct:
+      allOf:
+        - $ref: "#/components/schemas/ScoutFigures"
+        - type: object
+          required: [id, name, category, categoryName, why, whySource, starter, starterSource]
+          properties:
+            id: { type: string, description: "The product type within the market: normalised category and title words." }
+            name: { type: string, description: "Named from the normalised words, never a title any one store wrote." }
+            category: { type: string }
+            categoryName: { type: string }
+            why: { type: string, description: "Why it is trending: every number in it is from these figures." }
+            whySource: { type: string, enum: [ai, template] }
+            starter: { type: string, description: "A starter description to edit before publishing; never published by itself." }
+            starterSource: { type: string, enum: [ai, template] }
+
+    ProductScout:
+      type: object
+      required: [status, demo, market, periodDays, window, generatedAt, rules, categories, topSellers, fastestGrowing, rising, marketData, notEnoughData, store]
+      properties:
+        status: { type: string, enum: [ready, no_data] }
+        demo: { type: boolean, description: "True for a demo store: the figures are the demo stores' only." }
+        market: { type: string }
+        periodDays: { type: integer, enum: [7, 30] }
+        window:
+          type: [object, "null"]
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+        generatedAt: { type: [string, "null"], format: date-time }
+        rules:
+          type: object
+          required: [minStores, maxSharePercent, maxTopTwoSharePercent]
+          properties:
+            minStores: { type: integer }
+            maxSharePercent: { type: integer, description: "The most one shop may have sold of a shown figure." }
+            maxTopTwoSharePercent: { type: integer, description: "The most the two biggest shops may have sold of it together." }
+        categories:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/ScoutFigures"
+              - type: object
+                required: [key, name]
+                properties:
+                  key: { type: string }
+                  name: { type: string }
+        topSellers: { type: array, items: { $ref: "#/components/schemas/ScoutProduct" } }
+        fastestGrowing: { type: array, items: { $ref: "#/components/schemas/ScoutProduct" } }
+        rising:
+          type: array
+          items:
+            type: object
+            required: [category, name, products]
+            properties:
+              category: { type: string }
+              name: { type: string }
+              products: { type: array, items: { $ref: "#/components/schemas/ScoutProduct" } }
+        marketData:
+          type: array
+          description: "External market data (the Trend Scout's outside sources) for categories ZYRO has too little data on. Not ZYRO sales."
+          items:
+            type: object
+            required: [category, name, weekStart, lines, sources]
+            properties:
+              category: { type: string }
+              name: { type: string }
+              weekStart: { type: string, format: date }
+              lines: { type: array, items: { type: string } }
+              sources: { type: array, items: { type: string } }
+        notEnoughData: { type: array, items: { type: string }, description: "This store's own categories with neither ZYRO data nor market data yet." }
+        store:
+          type: object
+          required: [productCount, categories]
+          description: "What onboarding needs about this store itself."
+          properties:
+            productCount: { type: integer }
+            categories:
+              type: array
+              items:
+                type: object
+                required: [id, name]
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+
     TrendReport:
       type: object
       required: [id, market, category, name, weekStart, covers, status, source, lines, facts, createdAt]
@@ -4316,27 +4592,6 @@ components:
         problem: { type: [string, "null"], description: "Why no draft could be made." }
         status: { type: string, enum: [pending, applied, discarded] }
         createdAt: { type: string, format: date-time }
-
-    BargainTurn:
-      type: object
-      required: [sessionId, productId, listPrice, offer, roundsLeft, status, reply, expiresAt]
-      properties:
-        sessionId: { type: string }
-        productId: { type: string }
-        listPrice: { type: number }
-        offer: { type: number, description: "What the shop will accept right now. Worked out by the server, never by the assistant." }
-        roundsLeft: { type: integer, description: "How many more times the shopper may push before the shop stops moving." }
-        status: { type: string, enum: [open, agreed, declined, expired] }
-        reply: { type: string, description: "The assistant's sentence, with any number it wrote stripped out." }
-        settled: { type: boolean }
-        deal:
-          type: object
-          description: Present once a price is agreed. The code is the only way that price is payable.
-          properties:
-            code: { type: string, example: BHAO1A2B3C4D }
-            price: { type: number }
-            expiresAt: { type: string, format: date-time }
-        expiresAt: { type: string, format: date-time }
 
     SearchInterpretation:
       type: object
@@ -4691,24 +4946,44 @@ components:
       type: string
       enum: [products_write, orders_write, discounts_write, analytics_read, pos_sell, inventory_write, refunds]
 
+    StaffRole:
+      type: string
+      enum: [cashier, manager]
+      description: "cashier: the register. manager: the register, refunds, any discount, analytics, orders, and the catalogue (products, stock, categories, AI tools)."
+
     StaffMember:
       type: object
-      required: [id, userId, permissions]
+      required: [id, userId, role, permissions]
       properties:
         id: { type: string }
         userId: { type: string }
         email: { type: string, format: email }
+        role:
+          type: string
+          enum: [cashier, manager, custom]
+          description: "The role these permissions are; custom when they match neither (an explicit list given through the API)."
         permissions:
           type: array
           items: { $ref: "#/components/schemas/StaffPermission" }
 
     ProductInput:
       type: object
-      required: [title, price, stock, category]
+      description: |
+        A category is required: `categoryId` (what the admin form sends), or a `category` name, which is
+        matched to the store's category with the same normalized name and creates it if the store has none.
+
+        A price is required: `actualPrice` (the MRP), or `price` from callers written before the three
+        prices, read as the actual price. `discountPrice` is optional and may not be more than the actual
+        price. The sale price, what customers pay, is not sent: it is the discounted price when there is
+        one, otherwise the actual price. On an edit, leaving `discountPrice` out (or null) removes the
+        discount.
+      required: [title, stock]
       properties:
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
-        price: { type: number, minimum: 0 }
+        actualPrice: { type: number, exclusiveMinimum: 0, maximum: 10000000, description: "The full price (MRP), shown struck through when there is a discount." }
+        discountPrice: { type: [number, "null"], exclusiveMinimum: 0, maximum: 10000000, description: "Optional; at most the actual price." }
+        price: { type: number, exclusiveMinimum: 0, maximum: 10000000, deprecated: true, description: "Read as actualPrice. Use actualPrice." }
         stock:
           type: integer
           minimum: 0
@@ -4720,10 +4995,6 @@ components:
           type: string
           maxLength: 100
           description: Unique per store when set.
-        barcode:
-          type: string
-          maxLength: 100
-          description: Unique per store when set. Used for barcode lookup at the POS.
         taxable:
           type: boolean
           default: true
@@ -4732,7 +5003,8 @@ components:
           type: number
           minimum: 0
           description: Merchant-only cost, used for margin analytics. Never shown to shoppers.
-        category: { type: string }
+        categoryId: { type: string, description: "One of the store's active categories." }
+        category: { type: string, maxLength: 60, description: "A category by name, for callers without an id; see above." }
         images:
           type: array
           items: { type: string, format: uri }
@@ -4747,24 +5019,30 @@ components:
 
     Product:
       description: |
-        A product as the API returns it. The same fields as ProductInput, except that sku, barcode,
-        seoTitle and seoDescription are null when the merchant has not set them (a request leaves them
-        out; it never sends null). Listed in full rather than built on ProductInput, because a schema
-        composed with allOf would still apply ProductInput's "must be a string" to those four.
+        A product as the API returns it. The same fields as ProductInput, except that sku, seoTitle
+        and seoDescription are null when the merchant has not set them (a request leaves them out; it
+        never sends null). Listed in full rather than built on ProductInput, because a schema composed
+        with allOf would still apply ProductInput's "must be a string" to those three. The barcode and
+        the haggling floor were removed by the product-listing change; a request that still sends
+        them has them ignored.
       type: object
-      required: [id, storeId, title, price, stock, category]
+      required: [id, storeId, title, actualPrice, discountPrice, salePrice, discountPercent, price, stock, category]
       properties:
         id: { type: string }
         storeId: { type: string }
         title: { type: string, maxLength: 200 }
         description: { type: string, maxLength: 5000 }
-        price: { type: number, minimum: 0 }
+        actualPrice: { type: number, minimum: 0, description: "The full price (MRP)." }
+        discountPrice: { type: [number, "null"], description: "Null when there is no discount." }
+        salePrice: { type: number, minimum: 0, description: "What customers pay: the cart, checkout and orders use this." }
+        discountPercent: { type: [integer, "null"], minimum: 1, maximum: 100, description: "How much below the actual price the sale price is, rounded; null when there is no discount." }
+        price: { type: number, minimum: 0, deprecated: true, description: "The sale price. Kept for callers written before the three prices; use salePrice." }
         stock: { type: integer, minimum: 0, description: "On-hand quantity at the default location (see ProductInput)." }
         sku: { type: [string, "null"], maxLength: 100 }
-        barcode: { type: [string, "null"], maxLength: 100 }
         taxable: { type: boolean }
         costPrice: { type: number, minimum: 0, description: "Merchant-only; absent for shoppers." }
-        category: { type: string }
+        categoryId: { type: [string, "null"], description: "The store's category. Null only for a product listed before categories existed and not yet migrated." }
+        category: { type: string, description: "The category's name, kept in step with it by the server." }
         images: { type: array, items: { type: string, format: uri }, maxItems: 10 }
         tags: { type: array, items: { type: string, maxLength: 30 }, maxItems: 10 }
         seoTitle: { type: [string, "null"], maxLength: 70 }
@@ -4779,6 +5057,10 @@ components:
           storeId: store_01ABCD
           title: Wireless Earbuds Pro
           description: Crisp sound, all-day battery, and a snug fit for workouts or commutes.
+          actualPrice: 59.00
+          discountPrice: 49.00
+          salePrice: 49.00
+          discountPercent: 17
           price: 49.00
           stock: 42
           category: Electronics
@@ -5067,7 +5349,6 @@ components:
         price: { type: number }
         taxable: { type: boolean }
         sku: { type: [string, "null"] }
-        barcode: { type: [string, "null"] }
         category: { type: string }
         image: { type: [string, "null"] }
         stock: { type: integer, description: On hand at the store's location. }
@@ -5338,6 +5619,24 @@ components:
         usageLimit: { type: integer, minimum: 1, description: Omit for unlimited. }
         expiresAt: { type: string, format: date-time, description: Must be in the future when creating. }
         active: { type: boolean, default: true }
+
+    Category:
+      type: object
+      description: "One of a store's own product categories."
+      required: [id, name, active, productCount]
+      properties:
+        id: { type: string }
+        name: { type: string, description: "As the owner typed it." }
+        active: { type: boolean }
+        productCount: { type: integer, description: "How many of the store's products are in it." }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
 
     DiscountCode:
       type: object

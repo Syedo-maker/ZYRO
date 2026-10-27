@@ -1,11 +1,14 @@
 import { Link, NavLink, Navigate, Outlet } from 'react-router-dom'
 import { Wordmark } from '../../components/ui/Wordmark'
 import { useAuth } from '../../context/AuthContext'
+import { can, type StorePermission } from '../../lib/permissions'
 
 interface NavItem {
   label: string
   to: string
   enabled: boolean
+  /** Shown only to someone with this permission in the store (the page would only refuse them). */
+  needs?: StorePermission
 }
 
 // Matches the sidebar in design/wireframes/AdminDashboard.dc.html / AdminCatalog.dc.html.
@@ -14,6 +17,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/admin/dashboard', enabled: true },
   { label: 'Products', to: '/admin/products', enabled: true },
+  { label: 'Categories', to: '/admin/categories', enabled: true, needs: 'products_write' },
   { label: 'Orders', to: '/admin/orders', enabled: true },
   { label: 'Payments', to: '/admin/payments', enabled: true },
   { label: 'Voice notes', to: '/admin/voice-notes', enabled: true },
@@ -41,7 +45,7 @@ export function AdminLayout() {
   if (stores.length === 0) return <Navigate to="/shop" replace />
 
   const items = [
-    ...NAV_ITEMS.filter((i) => i.enabled),
+    ...NAV_ITEMS.filter((i) => i.enabled && (!i.needs || can(activeStore, i.needs))),
     ...(activeStore?.role === 'owner' ? OWNER_ITEMS : []),
     ...(user?.platformAdmin ? [PLATFORM_ITEM] : []),
     ...NAV_ITEMS.filter((i) => !i.enabled),

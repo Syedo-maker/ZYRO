@@ -9,4 +9,5 @@ export const staffRouter = Router({ mergeParams: true });
 
 staffRouter.get("/", requireAuth, withTenantContext, requireOwner, staffController.list);
 staffRouter.post("/", requireAuth, withTenantContext, requireOwner, staffController.create);
+staffRouter.patch("/:staffId", requireAuth, withTenantContext, requireOwner, staffController.updateRole);
 staffRouter.delete("/:staffId", requireAuth, withTenantContext, requireOwner, staffController.remove);
