@@ -1,4 +1,5 @@
 import { formatMoney } from '../lib/format'
+import { percentLabel } from '../lib/prices'
 import type { Product } from '../types/api'
 
 const SIZES = {
@@ -8,21 +9,23 @@ const SIZES = {
 
 /**
  * A product's price as shoppers see it: what they pay, prominent; when it is discounted, the MRP
- * struck through after it and a "% off" badge. Screen readers hear "was" and "now" rather than a
- * strike they cannot see. Used on the product card, the product page and the admin product list.
+ * struck through after it and a badge in the owner's own terms, "Rs 200 off" or "15% off". Screen
+ * readers hear "was" and "now" rather than a strike they cannot see. Used on the product card, the
+ * product page and the admin product list.
  */
 export function PriceTag({
   product,
   currency,
   size = 'sm',
 }: {
-  product: Pick<Product, 'salePrice' | 'actualPrice' | 'discountPercent'>
+  product: Pick<Product, 'salePrice' | 'actualPrice' | 'discountType' | 'discountValue' | 'discountAmount'>
   currency: string
   size?: keyof typeof SIZES
 }) {
   const s = SIZES[size]
-  const discounted = product.discountPercent !== null && product.salePrice < product.actualPrice
+  const discounted = product.discountType !== null && product.discountValue !== null && product.discountAmount > 0
   if (!discounted) return <p className={s.sale}>{formatMoney(product.salePrice, currency)}</p>
+  const badge = product.discountType === 'percent' ? `${percentLabel(product.discountValue!)}% off` : `${formatMoney(product.discountAmount, currency)} off`
   return (
     <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
       <span className={s.sale}>
@@ -33,7 +36,7 @@ export function PriceTag({
         <span className="sr-only">was </span>
         {formatMoney(product.actualPrice, currency)}
       </s>
-      <span className={`self-center rounded-full bg-success-soft font-bold text-success ${s.badge}`}>{product.discountPercent}% off</span>
+      <span className={`self-center rounded-full bg-success-soft font-bold text-success ${s.badge}`}>{badge}</span>
     </p>
   )
 }

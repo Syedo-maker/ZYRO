@@ -107,6 +107,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx tsc -b
       - run: npm run lint
+      - run: npm test
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high
 

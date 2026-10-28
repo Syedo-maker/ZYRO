@@ -53,7 +53,11 @@ export type ShipmentStatus = 'pending' | 'shipped' | 'delivered' | 'cancelled'
 export interface OrderItem {
   productId: string
   productTitleSnapshot: string
+  /** The price paid per unit. */
   unitPrice: number
+  /** The product's MRP and its own discount per unit at the time of sale; unitMrp - unitDiscount = unitPrice. */
+  unitMrp: number
+  unitDiscount: number
   quantity: number
   lineTotal: number
 }
@@ -69,7 +73,8 @@ export interface ShippingAddress {
 
 export interface OrderPayment {
   id: string
-  method: 'cash' | 'card' | 'stripe' | 'other'
+  /** cod, bank_transfer and gateway are the local ways to pay (Part E). */
+  method: 'cash' | 'card' | 'stripe' | 'other' | 'cod' | 'bank_transfer' | 'gateway'
   amount: number
   status: 'pending' | 'succeeded' | 'failed' | 'refunded'
 }
@@ -112,6 +117,8 @@ export interface Order {
   currency: string
   /** Items taken back from an in-store sale (whole-order refunds are in `refunds`). */
   returns?: { id: string; amount: number }[]
+  /** What the shopper saved on the products' own discounts (MRP minus price, every unit bought), for "you saved". */
+  savings: number
   items: OrderItem[]
   payments: OrderPayment[]
   refunds: OrderRefund[]
@@ -144,5 +151,7 @@ export interface CheckoutSessionStatus {
     email: string | null
     shippingName: string | null
     items: { title: string; quantity: number; lineTotal: number }[]
+    /** What the shopper saved on the products' own discounts; 0 for none. */
+    savings: number
   } | null
 }

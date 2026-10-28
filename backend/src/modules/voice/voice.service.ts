@@ -107,7 +107,8 @@ export const voiceService = {
         description: current.description ?? undefined,
         // A spoken price is the new actual price, with no discount; a stock change keeps all three prices.
         actualPrice: draft.kind === "set_price" ? draft.price! : current.actualPrice,
-        discountPrice: draft.kind === "set_price" ? null : current.discountPrice,
+        discountType: draft.kind === "set_price" ? null : current.discountType,
+        discountValue: draft.kind === "set_price" ? null : current.discountValue,
         stock: draft.kind === "set_stock" ? draft.stock! : current.stock,
         ...(current.categoryId ? { categoryId: current.categoryId } : { category: current.category }),
         images: current.images,
@@ -138,7 +139,7 @@ async function matchProduct(storeId: string, spoken: string): Promise<CandidateP
   if (!outcome.filter) return null;
   const doc = await Product.findOne(outcome.filter, outcome.ranked ? { score: { $meta: "textScore" } } : undefined)
     .sort(outcome.ranked ? { score: { $meta: "textScore" } } : { title: 1 })
-    .select("title actualPrice discountPrice salePrice price");
+    .select("title actualPrice discountType discountValue salePrice price discountPrice");
   if (!doc) return null;
   return { id: doc._id.toString(), title: doc.title, price: priceOf(doc).sale };
 }

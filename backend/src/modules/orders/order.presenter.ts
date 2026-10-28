@@ -25,6 +25,14 @@ export function toShopperOrderView(view: ReturnType<typeof toOrderView>) {
   return { ...rest, returns: rest.returns.map(({ createdByUserId: _u, ...r }) => (void _u, r)) };
 }
 
+/**
+ * What an order's lines saved on the products' own discounts at the time of sale: each line's
+ * discount per unit times the units bought, in hundredths so it adds up. For a receipt's "you saved".
+ */
+export function savingsOf(items: { unitDiscountSnapshot: Prisma.Decimal | string; quantity: number }[]): number {
+  return items.reduce((s, i) => s + Math.round(Number(i.unitDiscountSnapshot.toString()) * 100) * i.quantity, 0) / 100;
+}
+
 /** The Order shape in openapi.yaml: numbers for money, lowercase enums. */
 export function toOrderView(o: OrderWithRelations) {
   return {
@@ -55,10 +63,15 @@ export function toOrderView(o: OrderWithRelations) {
       productId: i.productId,
       productTitleSnapshot: i.productTitleSnapshot,
       unitPrice: num(i.unitPrice),
+      /** The MRP and the discount per unit when sold; unitMrp - unitDiscount = unitPrice. */
+      unitMrp: num(i.unitMrpSnapshot),
+      unitDiscount: num(i.unitDiscountSnapshot),
       quantity: i.quantity,
       returnedQuantity: i.returnedQuantity,
       lineTotal: num(i.lineTotal),
     })),
+    /** What the shopper saved on the products' own discounts ("you saved Rs 200"), on what they bought. */
+    savings: savingsOf(o.items),
     payments: o.payments.map((p) => ({
       id: p.id,
       method: toApi(p.method),

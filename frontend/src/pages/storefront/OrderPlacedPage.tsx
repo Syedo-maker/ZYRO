@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import { useStore } from '../../context/StoreContext'
 import { Alert } from '../../components/ui/Alert'
@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { errorMessage } from '../../lib/ordersApi'
 import { paymentsApi } from '../../lib/paymentsApi'
+import { formatMoney } from '../../lib/format'
 
 /**
  * After a cash-on-delivery or bank-transfer order is placed (Part E). Cash on delivery just needs
@@ -19,6 +20,8 @@ export function OrderPlacedPage() {
   const [params] = useSearchParams()
   const orderId = params.get('order') ?? ''
   const method = params.get('method') ?? 'cod'
+  // What the shopper saved on the products' own discounts, handed over by checkout (gone after a reload).
+  const saved = useLocation().state as { savings?: number; currency?: string } | null
 
   const [file, setFile] = useState<File | null>(null)
   const [amount, setAmount] = useState('')
@@ -73,6 +76,7 @@ export function OrderPlacedPage() {
   return (
     <div className="flex max-w-xl flex-col gap-5">
       <h1 className="font-display text-2xl font-bold">Thank you, your order is placed</h1>
+      {saved?.savings && saved.currency ? <p className="text-sm font-semibold text-success">You saved {formatMoney(saved.savings, saved.currency)} on this order.</p> : null}
 
       {method === 'cod' ? (
         <Alert tone="success">Pay the courier in cash when your parcel arrives. The shop will be in touch to arrange delivery.</Alert>

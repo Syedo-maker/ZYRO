@@ -187,7 +187,7 @@ export function ProductScoutPanel({
           ) : (
             <>
               <div className="flex flex-wrap items-end gap-2">
-                <div role="group" aria-label="Period" className="flex rounded-[10px] border border-border-input p-0.5">
+                <div role="group" aria-label="Trending period" className="flex rounded-[10px] border border-border-input p-0.5">
                   {([7, 30] as const).map((d) => (
                     <button
                       key={d}

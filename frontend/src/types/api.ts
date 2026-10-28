@@ -33,11 +33,17 @@ export interface Product {
   description: string
   /** The full price (MRP), shown struck through when there is a discount. */
   actualPrice: number
-  /** Null when there is no discount. */
+  /** How the owner set the discount: money off ("Rs 200 off") or a percentage ("15% off"); null for none. */
+  discountType: 'amount' | 'percent' | null
+  /** The amount or the percentage as set; null for no discount. */
+  discountValue: number | null
+  /** The money taken off the MRP; 0 for no discount. actualPrice - discountAmount = salePrice. */
+  discountAmount: number
+  /** The sale price when discounted, null otherwise. From before the discount modes; prefer the fields above. */
   discountPrice: number | null
   /** What customers pay: the cart, checkout and orders use this. */
   salePrice: number
-  /** Whole percent below the MRP, for the "% off" badge; null when there is none. */
+  /** Whole percent below the MRP, whatever the discount type; null when there is none. */
   discountPercent: number | null
   /** The sale price under its name from before the three prices. Prefer salePrice. */
   price: number
@@ -64,8 +70,10 @@ export interface ProductInput {
   description?: string
   /** The full price (MRP). */
   actualPrice: number
-  /** Empty (null) for no discount; on an edit, that removes one. At most the actual price. */
-  discountPrice: number | null
+  /** Money off or a percentage off; null with discountValue for no discount (on an edit, that removes one). */
+  discountType: 'amount' | 'percent' | null
+  /** At least 0 and less than the MRP (or under 100%); the selling price must stay above zero. */
+  discountValue: number | null
   stock: number
   /** Scanned at the register; unique per store. */
   sku?: string

@@ -1,5 +1,6 @@
 import { Schema, model, Types } from "mongoose";
 import { tenantScopePlugin } from "./plugins/tenantScope.plugin";
+import { computePrices, DISCOUNT_TYPES, type Discount, type DiscountType } from "../lib/prices";
 
 /**
  * Product catalog entry. Bounded fields (images, basic attributes) are embedded directly,
@@ -19,16 +20,22 @@ export interface ProductDocument {
   aiDescriptionId?: Types.ObjectId; // ref -> AiGeneratedContent, set once a draft/published description exists
   /**
    * Three prices (the supervisor's product-listing change). The owner sets the actual price (the MRP)
-   * and, optionally, a discounted price; the sale price is what the customer pays, and is always the
-   * discounted price when there is one and the actual price otherwise. The server computes it, so
-   * the three can never disagree, and cart, checkout and orders read only it (see priceOf below).
+   * and, optionally, a discount: an amount off or a percentage off (`discountType`, `discountValue`,
+   * 2026-10-23). The sale price is what the customer pays, MRP minus the discount, computed by the
+   * server (lib/prices.ts) and stored, so the three can never disagree and cart, checkout and orders
+   * read only it (see priceOf below). No discount: neither discount field is set.
    */
   actualPrice?: Types.Decimal128;
-  discountPrice?: Types.Decimal128;
+  discountType?: DiscountType;
+  discountValue?: Types.Decimal128;
   salePrice?: Types.Decimal128;
-  /** The single price products had before the three. Read only as a fallback until
-   *  scripts/migrate-product-fields.ts has converted a product; never written any more. */
+  /**
+   * Older shapes, read only as a fallback until scripts/migrate-product-fields.ts has converted a
+   * product, and never written any more: the single price from before the three prices, and the
+   * discounted price (what customers paid) from before the discount modes.
+   */
   price?: Types.Decimal128;
+  discountPrice?: Types.Decimal128;
   images: string[]; // object-storage URLs only, never binary data (Implementation_Plan.md Phase 1)
   // Stock is NOT stored here. On-hand quantity lives in Postgres (InventoryLevel) so that
   // deducting it is atomic with order creation for both the online store and the POS.
@@ -77,9 +84,11 @@ const productSchema = new Schema<ProductDocument>(
     description: { type: String, default: "", maxlength: 5000 },
     aiDescriptionId: { type: Schema.Types.ObjectId, ref: "AiGeneratedContent" },
     actualPrice: { type: Schema.Types.Decimal128 },
-    discountPrice: { type: Schema.Types.Decimal128 },
+    discountType: { type: String, enum: DISCOUNT_TYPES },
+    discountValue: { type: Schema.Types.Decimal128 },
     salePrice: { type: Schema.Types.Decimal128 },
     price: { type: Schema.Types.Decimal128 },
+    discountPrice: { type: Schema.Types.Decimal128 },
     images: {
       type: [String],
       default: [],
@@ -142,30 +151,43 @@ productSchema.index({ storeId: 1, salePrice: 1 });
 
 productSchema.plugin(tenantScopePlugin);
 
-/**
- * A product's prices as numbers, from whichever shape it is stored in. Every reader of a price goes
- * through this, so a product not yet converted by the migration (only `price`) still sells at that
- * price instead of failing, and the rest of the code has one place to look.
- */
-export function priceOf(doc: Pick<ProductDocument, "actualPrice" | "discountPrice" | "salePrice" | "price">) {
+/** The fields a price is read from, in any of the shapes a product may be stored in. */
+export type PriceFields = Pick<ProductDocument, "actualPrice" | "discountType" | "discountValue" | "salePrice" | "price" | "discountPrice">;
+
+/** The discount a product has, from whichever shape it is stored in; null for none. */
+export function discountOf(doc: PriceFields): Discount | null {
   const num = (d?: Types.Decimal128) => (d === undefined || d === null ? undefined : Number(d.toString()));
-  const legacy = num(doc.price);
-  const actual = num(doc.actualPrice) ?? legacy ?? 0;
-  const discount = num(doc.discountPrice);
-  const sale = num(doc.salePrice) ?? discount ?? actual;
-  const percent = sale < actual && actual > 0 ? Math.round(((actual - sale) / actual) * 100) : 0;
-  return {
-    actual,
-    discount: discount ?? null,
-    sale,
-    /** Whole percent off, for a "% off" badge; null when there is none to show (no discount, or under 0.5%). */
-    percentOff: percent > 0 ? percent : null,
-  };
+  if (doc.discountType && doc.discountValue !== undefined && doc.discountValue !== null) return { type: doc.discountType, value: num(doc.discountValue)! };
+  // Before the discount modes: the discounted price itself, read as an amount off the MRP.
+  const discounted = num(doc.discountPrice);
+  const actual = num(doc.actualPrice) ?? num(doc.price);
+  if (discounted !== undefined && actual !== undefined && discounted < actual) return { type: "amount", value: Math.round((actual - discounted) * 100) / 100 };
+  return null;
 }
 
-/** The sale price the owner's two inputs produce. The one place that rule lives. */
-export function salePriceFor(actualPrice: number, discountPrice?: number | null): number {
-  return discountPrice === undefined || discountPrice === null ? actualPrice : discountPrice;
+/**
+ * A product's prices as numbers, from whichever shape it is stored in. Every reader of a price goes
+ * through this, so a product not yet converted by the migration (only `price`, or the older
+ * `discountPrice`) still sells at its price instead of failing, and the rest of the code has one
+ * place to look. The stored sale price is what customers pay; the rest is worked out the same way the
+ * server worked it out when the product was saved.
+ */
+export function priceOf(doc: PriceFields) {
+  const num = (d?: Types.Decimal128) => (d === undefined || d === null ? undefined : Number(d.toString()));
+  const computed = computePrices(num(doc.actualPrice) ?? num(doc.price) ?? 0, discountOf(doc));
+  const sale = num(doc.salePrice) ?? computed.sale;
+  const off = Math.max(0, Math.round((computed.actual - sale) * 100)) / 100;
+  const percent = off > 0 && computed.actual > 0 ? Math.round((off / computed.actual) * 100) : 0;
+  return {
+    actual: computed.actual,
+    /** The discount as the owner set it (an amount or a percentage), or null. */
+    discount: off > 0 ? computed.discount : null,
+    /** The amount off the MRP, in money; 0 for none. */
+    discountAmount: off,
+    sale,
+    /** Whole percent off, whatever the mode; null when there is none to show (no discount, or under 0.5%). */
+    percentOff: percent > 0 ? percent : null,
+  };
 }
 
 export const Product = model<ProductDocument>("Product", productSchema);
