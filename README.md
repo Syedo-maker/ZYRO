@@ -19,7 +19,18 @@ plan comes from the server.
 
 ## Running it
 
-**On a developer's machine** (fast reloads). Needs PostgreSQL, MongoDB and Redis running:
+**On a developer's machine** (fast reloads). On Windows, once everything below is set up, one
+command starts it all and prints the links:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start-dev.ps1        # -Stop stops it all
+```
+
+- The script starts Redis, the API, the web app, the recommendation service and the Stripe
+  forwarder; anything already running is left alone.
+- It reads the keys from `backend/.env` without printing them.
+
+Step by step instead. Needs PostgreSQL, MongoDB and Redis running:
 
 - `backend/`: copy `.env.example` to `.env`, `npx prisma migrate deploy`, `npm run dev` (port 5000).
 - `frontend/`: `npm run dev` (port 5173).
