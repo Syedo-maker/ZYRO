@@ -9,9 +9,11 @@ import { join } from 'node:path'
 import { FFMPEG, FFPROBE, OUT, SIZE, BAND, readJson, ensureDir } from './lib.mjs'
 
 const role = process.argv[2]
+// --cards-only: after a change to the title or end card only, keep every chapter's encoded clip.
+const cardsOnly = process.argv.includes('--cards-only')
 const ROLE_NAMES = { owner: 'Owner', manager: 'Manager', cashier: 'Cashier', customer: 'Customer' }
 if (!ROLE_NAMES[role]) {
-  console.log('Usage: node scripts/demo-videos/assemble.mjs <owner|manager|cashier|customer>')
+  console.log('Usage: node scripts/demo-videos/assemble.mjs <owner|manager|cashier|customer> [--cards-only]')
   process.exit(1)
 }
 const CARD_SECONDS = 6
@@ -92,6 +94,13 @@ for (const c of chapters) {
   const ass = `${c.id}.ass`
   captions(join(work, ass), `${ROLE_NAMES[role]} · Chapter ${c.index}: ${c.title}`, meta.cues, length)
   const out = join(work, `${c.id}.mp4`)
+  if (cardsOnly && existsSync(out)) {
+    marks.push({ index: c.index, title: c.title, start: at })
+    at += duration(out)
+    parts.push(out)
+    console.log(`  kept     ${c.id}`)
+    continue
+  }
   // Run from the work folder, so the subtitles filter gets a plain relative path (no drive colon to escape).
   ff(['-ss', meta.start.toFixed(2), '-i', meta.file, '-t', length.toFixed(2), '-vf', `fps=${FPS},${frame(meta.file)},subtitles=${ass}:fontsdir=fonts,format=yuv420p`, '-an', '-c:v', 'libx264', '-preset', 'medium', '-crf', '24', out], work)
   marks.push({ index: c.index, title: c.title, start: at })
@@ -107,7 +116,7 @@ parts.push(end)
 const total = at + CARD_SECONDS
 
 // Chapter markers, so a player (VLC, MPC, QuickTime) can jump straight to a feature.
-const meta = [';FFMETADATA1', `title=ShopMind AI: ${ROLE_NAMES[role]} walkthrough`, 'artist=Muhammad Ibrahim and Syed Sikander Gillani']
+const meta = [';FFMETADATA1', `title=Zyro: ${ROLE_NAMES[role]} walkthrough`, 'artist=Muhammad Ibrahim and Syed Sikander Gillani']
 const allMarks = [{ title: 'Title', start: 0 }, ...marks, { title: 'End', start: total - CARD_SECONDS }]
 allMarks.forEach((m, i) => {
   const next = i + 1 < allMarks.length ? allMarks[i + 1].start : total
@@ -116,12 +125,12 @@ allMarks.forEach((m, i) => {
 writeFileSync(join(work, 'chapters.ffmeta'), meta.join('\n') + '\n')
 writeFileSync(join(work, 'parts.txt'), parts.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n') + '\n')
 
-const video = join(OUT, `shopmind-ai-${role}-walkthrough.mp4`)
+const video = join(OUT, `zyro-${role}-walkthrough.mp4`)
 rmSync(video, { force: true })
 ff(['-f', 'concat', '-safe', '0', '-i', join(work, 'parts.txt'), '-i', join(work, 'chapters.ffmeta'), '-map_metadata', '1', '-map_chapters', '1', '-c', 'copy', '-movflags', '+faststart', video])
 
 const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
-const list = [`# ShopMind AI: ${ROLE_NAMES[role]} walkthrough`, '', `Length ${stamp(total)}. Silent; the captions say what is happening.`, '', '| Time | Chapter |', '|---|---|', ...marks.map((m) => `| ${stamp(m.start)} | ${m.index}. ${m.title} |`), '']
-writeFileSync(join(OUT, `shopmind-ai-${role}-chapters.md`), list.join('\n'))
+const list = [`# Zyro: ${ROLE_NAMES[role]} walkthrough`, '', `Length ${stamp(total)}. Silent; the captions say what is happening.`, '', '| Time | Chapter |', '|---|---|', ...marks.map((m) => `| ${stamp(m.start)} | ${m.index}. ${m.title} |`), '']
+writeFileSync(join(OUT, `zyro-${role}-chapters.md`), list.join('\n'))
 writeFileSync(join(work, 'marks.json'), JSON.stringify({ video, total, marks }, null, 2))
 console.log(`\n${video}\n${(statSync(video).size / 1024 / 1024).toFixed(1)} MB, ${stamp(total)}, ${marks.length} chapters`)
