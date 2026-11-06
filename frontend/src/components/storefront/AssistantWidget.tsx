@@ -8,6 +8,7 @@ import { errorMessage } from '../../lib/ordersApi'
 import { ApiError } from '../../lib/apiClient'
 import { assistantApi } from '../../lib/assistantApi'
 import { getConversationId } from '../../lib/assistantId'
+import { suggestionsFor } from '../../lib/assistantSuggestions'
 import type { Product } from '../../types/api'
 
 interface ChatMessage {
@@ -22,6 +23,8 @@ function friendlyError(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 402) return "Sorry, I'm not available right now. Please browse the catalog, or contact the store directly."
     if (err.status === 429) return "You're sending messages a little fast - please wait a moment and try again."
+    // The AI provider is down or its key is bad (A1): one plain sentence, never the provider's error.
+    if (err.status === 503) return 'The AI assistant is temporarily unavailable. Please try again later, or browse the shop in the meantime.'
   }
   return errorMessage(err, "Sorry, something went wrong. Please try again.")
 }
@@ -45,9 +48,10 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
     requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }))
   }
 
-  async function handleSend(e: FormEvent) {
-    e.preventDefault()
-    const message = input.trim()
+  // A typed message and a tapped suggestion go the same way: one request to the assistant, so a
+  // suggestion has exactly the quota, rate limit and permissions of anything the shopper types.
+  async function send(text: string) {
+    const message = text.trim()
     if (!message || sending) return
     setInput('')
     setError(null)
@@ -64,6 +68,14 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
       scrollToBottom()
     }
   }
+
+  function handleSend(e: FormEvent) {
+    e.preventDefault()
+    void send(input)
+  }
+
+  // Offered until the shopper sends their first message, then gone for the rest of the conversation.
+  const showSuggestions = !messages.some((m) => m.role === 'user')
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
@@ -104,6 +116,21 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
                 )}
               </div>
             ))}
+            {showSuggestions && (
+              <div role="group" aria-label="Suggested questions" className="flex flex-wrap gap-2">
+                {suggestionsFor(currency).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={sending}
+                    onClick={() => void send(s)}
+                    className="min-h-9 rounded-full border border-border-input bg-bg px-3.5 py-1.5 text-left text-xs font-semibold text-text transition-colors duration-150 hover:border-brand hover:bg-subtle disabled:opacity-60"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
             {sending && (
               <span role="status" className="flex items-center gap-2 self-start rounded-2xl rounded-bl-md border border-border bg-subtle px-3.5 py-2.5 text-sm text-text-secondary">
                 <span aria-hidden="true" className="flex gap-1">
@@ -121,7 +148,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
             )}
           </div>
 
-          <form onSubmit={(e) => void handleSend(e)} className="flex gap-2 border-t border-border p-3">
+          <form onSubmit={handleSend} className="flex gap-2 border-t border-border p-3">
             <label htmlFor="assistant-message" className="sr-only">
               Your message
             </label>

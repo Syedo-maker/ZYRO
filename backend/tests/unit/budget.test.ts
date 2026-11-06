@@ -20,6 +20,22 @@ describe("reading a budget from what the shopper typed", () => {
     expect(parseBudget(message, "PKR")).toEqual({ max });
   });
 
+  // The assistant's suggested question (frontend/src/lib/assistantSuggestions.ts, B4) must read as a
+  // budget in the shop's own currency, whatever that currency is.
+  it.each([
+    ["Something under 3,000 PKR", "PKR", 3000],
+    ["Something under 2,000 INR", "INR", 2000],
+    ["Something under 5,000 LKR", "LKR", 5000],
+    ["Something under 3,000 NPR", "NPR", 3000],
+    ["Something under 3,000 BDT", "BDT", 3000],
+    ["Something under 50 USD", "USD", 50],
+    ["Something under 50 EUR", "EUR", 50],
+    ["Something under 50 GBP", "GBP", 50],
+    ["Something under 50 AED", "AED", 50],
+  ])("the suggested question %s reads as a budget in %s", (message, currency, max) => {
+    expect(parseBudget(message, currency)).toEqual({ max });
+  });
+
   it("finds no budget when none is given", () => {
     expect(parseBudget("Do you have clay chai cups?", "PKR")).toBeNull();
     expect(parseBudget("What is the price of the brass lamp?", "PKR")).toBeNull();
