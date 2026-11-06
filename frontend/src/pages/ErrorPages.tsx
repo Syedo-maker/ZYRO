@@ -61,19 +61,20 @@ function CrashPage() {
  * Catches a page that throws while rendering, so one broken page shows the error page instead of a blank
  * screen. `resetKey` (the current address) clears it when the visitor goes somewhere else.
  */
-export class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string }, { failed: boolean }> {
-  state = { failed: false }
+export class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string }, { failed: boolean; key: string }> {
+  state = { failed: false, key: this.props.resetKey }
 
   static getDerivedStateFromError() {
     return { failed: true }
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Page error', error, info.componentStack)
+  // A new address clears the failure before rendering, so the next page gets its chance.
+  static getDerivedStateFromProps(props: { resetKey: string }, state: { key: string }) {
+    return props.resetKey === state.key ? null : { failed: false, key: props.resetKey }
   }
 
-  componentDidUpdate(prev: { resetKey: string }) {
-    if (this.state.failed && prev.resetKey !== this.props.resetKey) this.setState({ failed: false })
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Page error', error, info.componentStack)
   }
 
   render() {

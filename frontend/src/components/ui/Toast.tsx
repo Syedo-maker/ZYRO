@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react'
 import { addToast, removeToast, TOAST_DURATION_MS, type Toast, type ToastTone } from '../../lib/toasts'
+import { ToastContext, type ToastApi } from './useToast'
 
 /**
  * One toast system for the whole app (B3). A toast confirms an action that has no other visible
@@ -12,10 +13,6 @@ import { addToast, removeToast, TOAST_DURATION_MS, type Toast, type ToastTone } 
  * info, assertive for errors and warnings); the visible stack itself is a plain list so its close
  * buttons can be reached. With reduced motion asked for, toasts simply appear.
  */
-
-type ToastApi = Record<ToastTone, (message: string) => void>
-
-const ToastContext = createContext<ToastApi | null>(null)
 
 const TONE_CLASSES: Record<ToastTone, string> = {
   success: 'bg-success-soft text-success border-success/40',
@@ -113,11 +110,4 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       </button>
     </li>
   )
-}
-
-/** `toast.success('Product saved')`, and the same for error, warning and info. */
-export function useToast(): ToastApi {
-  const api = useContext(ToastContext)
-  if (!api) throw new Error('useToast needs a ToastProvider above it')
-  return api
 }
