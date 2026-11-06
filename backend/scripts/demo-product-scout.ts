@@ -4,6 +4,9 @@
  *   npx tsx scripts/demo-product-scout.ts add      adds 6 demo stores, their products and 4 weeks of orders,
  *                                                  then builds the demo snapshot (npm run demo:scout:add)
  *   npx tsx scripts/demo-product-scout.ts remove   removes every one of them again (npm run demo:scout:remove)
+ *   npx tsx scripts/demo-product-scout.ts refresh  moves the demo sales up to yesterday and rebuilds the demo
+ *                                                  snapshot (npm run demo:scout:refresh). The daily Product Scout
+ *                                                  run does the same by itself; this is for a demo right now.
  *
  * Every demo record is marked: store slugs start with "demo-scout-", store names with "Demo: ", owner
  * emails end in "@demo.zyro.local" (not a real domain, so nothing can be emailed), and customer
@@ -238,6 +241,22 @@ async function add() {
   console.log(`  ${DEMO_SLUG_PREFIX}${STORES[0].key}@${DEMO_EMAIL_DOMAIN}   password: ${DEMO_PASSWORD}`);
 }
 
+/** Moves the demo sales up to yesterday (lib/demoDates.ts) and rebuilds the demo snapshot. */
+async function refresh() {
+  const existing = await prisma.tenant.count({ where: { slug: { startsWith: DEMO_SLUG_PREFIX } } });
+  if (existing === 0) {
+    console.log('There is no demo yet. Run "add" first.');
+    return;
+  }
+  const { scoutService } = await import("../src/modules/scout/scout.service");
+  const { startAiWorker, closeAiQueue } = await import("../src/lib/aiQueue");
+  startAiWorker();
+  const result = await scoutService.refresh({ scopes: ["demo"] }); // moves the dates first, then builds
+  await closeAiQueue();
+  console.log(`Demo sales are up to date; snapshot: ${result.snapshots.join(", ") || "none (too little data)"}`);
+  await checkSnapshots();
+}
+
 /**
  * The demo is built to pass all three privacy rules for every product meant to be seen, and to fail
  * them for the two meant to stay hidden. Say plainly if a snapshot does not show exactly that.
@@ -287,8 +306,8 @@ async function remove() {
 }
 
 async function main() {
-  if (command !== "add" && command !== "remove") {
-    console.log('Usage: npx tsx scripts/demo-product-scout.ts add | remove');
+  if (command !== "add" && command !== "remove" && command !== "refresh") {
+    console.log('Usage: npx tsx scripts/demo-product-scout.ts add | remove | refresh');
     process.exit(1);
   }
   refuseOutsideDevelopment();
@@ -296,6 +315,7 @@ async function main() {
   await connectMongo();
   try {
     if (command === "add") await add();
+    else if (command === "refresh") await refresh();
     else await remove();
   } finally {
     await mongoose.disconnect();

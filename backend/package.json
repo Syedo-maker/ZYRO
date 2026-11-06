@@ -11,6 +11,7 @@
         "ai:check": "tsx scripts/check-ai.ts",
         "demo:scout:add": "tsx scripts/demo-product-scout.ts add",
         "demo:scout:remove": "tsx scripts/demo-product-scout.ts remove",
+        "demo:scout:refresh": "tsx scripts/demo-product-scout.ts refresh",
         "demo:videos:add": "tsx scripts/demo-videos.ts add",
         "demo:videos:remove": "tsx scripts/demo-videos.ts remove",
         "demo:videos:remove-signups": "tsx scripts/demo-videos.ts remove-signups",
