@@ -5,6 +5,8 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { brandStyle } from '../../lib/brandTheme'
+import { ThemeToggle } from '../../components/ui/ThemeToggle'
+import { useTheme } from '../../context/themeContext'
 import { directoryApi } from '../../lib/directoryApi'
 import { errorMessage } from '../../lib/ordersApi'
 import type { DirectoryStore } from '../../types/directory'
@@ -19,6 +21,7 @@ import type { DirectoryStore } from '../../types/directory'
  * reason a trolley does not move between two different shops on a high street.
  */
 export function ShopDirectoryPage() {
+  const { theme } = useTheme()
   const [stores, setStores] = useState<DirectoryStore[] | null>(null)
   const [categories, setCategories] = useState<string[]>([])
   const [category, setCategory] = useState('')
@@ -58,9 +61,12 @@ export function ShopDirectoryPage() {
           <Link to="/" className="font-display text-xl font-bold">
             ZYRO
           </Link>
-          <Link to="/register" className="text-sm font-semibold text-brand hover:text-brand-hover">
-            Open your own store
-          </Link>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Link to="/register" className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
+              Open your own store
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -83,7 +89,7 @@ export function ShopDirectoryPage() {
                 id="directory-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="h-11 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-11 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
               >
                 <option value="">All categories</option>
                 {categories.map((c) => (
@@ -129,7 +135,7 @@ export function ShopDirectoryPage() {
                     <span
                       aria-hidden="true"
                       className="flex h-10 w-10 items-center justify-center rounded-control bg-brand text-sm font-bold text-on-brand"
-                      style={brandStyle(store.themeColor)}
+                      style={brandStyle(store.themeColor, theme)}
                     >
                       {store.name.slice(0, 1).toUpperCase()}
                     </span>
@@ -146,7 +152,7 @@ export function ShopDirectoryPage() {
                   <span className="text-xs text-text-secondary">
                     {store.productCount} {store.productCount === 1 ? 'product' : 'products'}
                   </span>
-                  <Link to={`/store/${store.id}`} className="text-sm font-semibold text-brand hover:text-brand-hover">
+                  <Link to={`/store/${store.id}`} className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
                     Visit shop
                   </Link>
                 </div>

@@ -69,7 +69,7 @@ export function OrderConfirmationPage() {
   }, [store.id, sessionId])
 
   const shopLink = (
-    <Link to={`/store/${store.id}`} className="text-[13px] font-semibold text-brand hover:text-brand-hover">
+    <Link to={`/store/${store.id}`} className="text-[13px] font-semibold text-brand-ink hover:text-brand-ink-hover">
       Continue shopping
     </Link>
   )
@@ -151,7 +151,7 @@ export function OrderConfirmationPage() {
           refunded in full; it can take 5 to 10 days to show on your statement. Your cart is still saved, with the
           sold-out item marked so you can adjust it.
         </p>
-        <Link to={`/store/${store.id}/cart`} className="text-[13px] font-semibold text-brand hover:text-brand-hover">
+        <Link to={`/store/${store.id}/cart`} className="text-[13px] font-semibold text-brand-ink hover:text-brand-ink-hover">
           Review your cart
         </Link>
         {shopLink}
@@ -169,7 +169,7 @@ export function OrderConfirmationPage() {
           ? 'You have not been charged, and your cart is still saved.'
           : 'Your cart is still saved. If you see a charge on your statement, contact the store and mention this page.'}
       </p>
-      <Link to={`/store/${store.id}/cart`} className="text-[13px] font-semibold text-brand hover:text-brand-hover">
+      <Link to={`/store/${store.id}/cart`} className="text-[13px] font-semibold text-brand-ink hover:text-brand-ink-hover">
         Back to cart
       </Link>
     </Card>

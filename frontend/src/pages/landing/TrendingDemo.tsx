@@ -71,7 +71,7 @@ export function TrendingDemo() {
         <h2 id="demo-heading" className="font-display text-lg font-bold">
           Try it now
         </h2>
-        <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">Trending in Pakistan</span>
+        <span className="rounded-full border border-accent-ink/30 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent-ink">Trending in Pakistan</span>
       </div>
       <p className="mt-2 text-sm text-text-secondary">Type something you sell. This is the same AI that helps you write a listing.</p>
 
@@ -85,7 +85,7 @@ export function TrendingDemo() {
           onChange={(e) => setPhrase(e.target.value)}
           maxLength={60}
           placeholder="lawn suit"
-          className="h-11 min-h-11 shrink-0 rounded-control border border-border-input bg-bg px-3.5 text-sm text-text outline-none placeholder:text-text-muted focus-visible:border-brand focus-visible:ring-4 focus-visible:ring-brand/15 sm:flex-1"
+          className="h-11 min-h-11 shrink-0 rounded-control border border-border-input bg-bg px-3.5 text-sm text-text outline-none placeholder:text-text-muted focus-visible:border-brand-ink focus-visible:ring-4 focus-visible:ring-brand-ink/15 sm:flex-1"
         />
         <button
           type="submit"
@@ -118,7 +118,7 @@ export function TrendingDemo() {
       </p>
 
       {error && (
-        <p role="alert" className="mt-4 rounded-control bg-surface px-3.5 py-2.5 text-sm text-accent">
+        <p role="alert" className="mt-4 rounded-control bg-surface px-3.5 py-2.5 text-sm text-accent-ink">
           {error}
         </p>
       )}
@@ -150,7 +150,7 @@ export function TrendingDemo() {
                 <p className="font-display text-sm font-bold">{s.title}</p>
                 <p className="mt-1 text-sm text-text-secondary">{s.description}</p>
                 {s.keywordsUsed.length > 0 && (
-                  <p className="mt-2 text-xs font-medium text-accent">Uses popular searches: {s.keywordsUsed.join(', ')}</p>
+                  <p className="mt-2 text-xs font-medium text-accent-ink">Uses popular searches: {s.keywordsUsed.join(', ')}</p>
                 )}
               </li>
             ))}

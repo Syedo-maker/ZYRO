@@ -176,7 +176,7 @@ export function ProductsPage() {
                 <button
                   onClick={() => setPanel({ mode: 'edit', product })}
                   aria-label={`Edit ${product.title}`}
-                  className="text-brand font-semibold text-xs"
+                  className="text-brand-ink font-semibold text-xs"
                 >
                   Edit
                 </button>

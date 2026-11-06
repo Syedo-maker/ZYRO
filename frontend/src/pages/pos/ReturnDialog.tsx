@@ -137,7 +137,7 @@ export function ReturnDialog({ sale, onClose, onReturned }: { sale: Sale; onClos
                 aria-pressed={method === m}
                 onClick={() => setMethod(m)}
                 className={`flex-1 h-11 rounded-control border text-sm font-semibold capitalize ${
-                  method === m ? 'border-brand bg-brand-soft text-brand' : 'border-border hover:bg-bg'
+                  method === m ? 'border-brand-ink bg-brand-soft text-brand-ink' : 'border-border hover:bg-bg'
                 }`}
               >
                 {m}
@@ -155,7 +155,7 @@ export function ReturnDialog({ sale, onClose, onReturned }: { sale: Sale; onClos
             maxLength={500}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="h-11 rounded-control border border-border-input px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-control border border-border-input px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
           />
         </div>
 

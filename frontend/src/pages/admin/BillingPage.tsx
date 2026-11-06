@@ -172,7 +172,7 @@ export function BillingPage() {
             const price = p.priceCents === 0 ? 'Free' : `${formatPlanPrice(p.priceCents, currency)}/month`
             return (
               <li key={p.tier}>
-                <section aria-label={`${p.name} plan`} className={`flex h-full flex-col gap-4 rounded-2xl border bg-surface p-5 ${current ? 'border-brand' : 'border-border'}`}>
+                <section aria-label={`${p.name} plan`} className={`flex h-full flex-col gap-4 rounded-2xl border bg-surface p-5 ${current ? 'border-brand-ink' : 'border-border'}`}>
                   <div>
                     <h3 className="font-display text-base font-bold">{p.name}</h3>
                     <p className="mt-1 font-display text-2xl font-bold">{price}</p>

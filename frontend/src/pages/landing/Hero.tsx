@@ -28,13 +28,13 @@ export function Hero() {
 
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-8 lg:pb-28 lg:pt-20">
         <div className="flex flex-col items-start gap-6 motion-safe:animate-fade-up">
-          <p className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 font-display text-xs font-bold uppercase tracking-[0.16em] text-accent">
+          <p className="inline-flex items-center gap-2 rounded-full border border-accent-ink/30 bg-accent/10 px-3 py-1 font-display text-xs font-bold uppercase tracking-[0.16em] text-accent-ink">
             <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent" />
             Apni dukaan online lao
           </p>
 
           <h1 className="font-serif text-display font-normal tracking-tight text-text">
-            Add a product. See what Pakistan is <em className="italic text-accent">actually searching for</em>.
+            Add a product. See what Pakistan is <em className="italic text-accent-ink">actually searching for</em>.
           </h1>
 
           <p className="max-w-xl text-base text-text-secondary sm:text-lg">

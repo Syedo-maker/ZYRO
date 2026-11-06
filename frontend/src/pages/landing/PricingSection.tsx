@@ -45,7 +45,7 @@ function PricingCard({ plan, featured }: { plan: PlanInfo; featured: boolean }) 
   return (
     <div
       className={`flex h-full flex-col gap-5 rounded-2xl border p-6 ${
-        featured ? 'border-accent/70 bg-surface-2 text-text shadow-glow' : 'border-border bg-surface text-text'
+        featured ? 'border-accent-ink/70 bg-surface-2 text-text shadow-glow' : 'border-border bg-surface text-text'
       }`}
     >
       <div>
@@ -72,7 +72,7 @@ function PricingCard({ plan, featured }: { plan: PlanInfo; featured: boolean }) 
             <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="mt-0.5 shrink-0">
               <path
                 d="M4 10.4l3.4 3.4L16 5.6"
-                className="stroke-accent"
+                className="stroke-accent-ink"
                 strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -108,7 +108,7 @@ export function PricingSection() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
-            Start free. Pay only when it is <em className="italic text-accent">worth it</em>.
+            Start free. Pay only when it is <em className="italic text-accent-ink">worth it</em>.
           </h2>
           <p className="mt-4 max-w-2xl text-base text-text-secondary">
             Every plan includes the AI, the counter sales and everything in the list above. Paid plans raise the limits. Plans are billed

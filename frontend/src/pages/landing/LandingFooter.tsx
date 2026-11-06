@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { LEGAL } from '../../lib/legal'
+import { ThemeToggle } from '../../components/ui/ThemeToggle'
 
 /**
  * The footer, including the note that this is a university project.
@@ -81,7 +82,10 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-12 flex flex-col gap-3 border-t border-on-inverse/15 pt-6 text-sm text-on-inverse-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} ZYRO</p>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <p>&copy; {new Date().getFullYear()} ZYRO</p>
+          </div>
           <p className="max-w-xl sm:text-right">
             A final year project by Muhammad Ibrahim and Syed Sikander Gillani, supervised by Mr. Saad Ilyas. Built as coursework, not as a
             registered company.

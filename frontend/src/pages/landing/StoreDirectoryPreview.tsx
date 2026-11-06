@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { buttonStyles } from '../../components/ui/Button'
 import { Reveal } from './Reveal'
 import { brandStyle } from '../../lib/brandTheme'
+import { useTheme } from '../../context/themeContext'
 import { directoryApi } from '../../lib/directoryApi'
 import type { DirectoryStore } from '../../types/directory'
 
@@ -17,6 +18,7 @@ import type { DirectoryStore } from '../../types/directory'
 const MINIMUM_TO_SHOW = 3
 
 export function StoreDirectoryPreview() {
+  const { theme } = useTheme()
   const [stores, setStores] = useState<DirectoryStore[] | null>(null)
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export function StoreDirectoryPreview() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
-            Shops already <em className="italic text-accent">selling</em> on ZYRO
+            Shops already <em className="italic text-accent-ink">selling</em> on ZYRO
           </h2>
           <p className="mt-4 max-w-2xl text-base text-text-secondary">Real shops, listed by their owners. Have a look around.</p>
         </Reveal>
@@ -54,7 +56,7 @@ export function StoreDirectoryPreview() {
                       <span
                         aria-hidden="true"
                         className="flex h-10 w-10 items-center justify-center rounded-control bg-brand font-display text-sm font-bold text-on-brand"
-                        style={brandStyle(store.themeColor)}
+                        style={brandStyle(store.themeColor, theme)}
                       >
                         {store.name.slice(0, 1).toUpperCase()}
                       </span>

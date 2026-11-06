@@ -45,7 +45,7 @@ export function RefundDialog({ order, storeId, open, onClose, onRefunded }: Refu
         {error && <Alert>{error}</Alert>}
 
         <label className="flex items-start gap-2.5 text-sm">
-          <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand" />
+          <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-ink" />
           <span>Put the items back in stock</span>
         </label>
 
@@ -57,7 +57,7 @@ export function RefundDialog({ order, storeId, open, onClose, onRefunded }: Refu
             onChange={(e) => setReason(e.target.value)}
             maxLength={500}
             rows={3}
-            className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
           />
         </div>
 

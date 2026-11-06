@@ -5,7 +5,7 @@ import { Input } from '../../components/ui/Input'
 import { errorMessage } from '../../lib/ordersApi'
 import { paymentsApi, type PaymentSettings } from '../../lib/paymentsApi'
 
-const fieldClass = 'h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+const fieldClass = 'h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30'
 
 const BLOCK_BANDS = [
   { value: 'none', label: 'Offer it to everyone' },
@@ -17,7 +17,7 @@ const BLOCK_BANDS = [
 function Toggle({ id, label, checked, onChange }: { id: string; label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label htmlFor={id} className="flex items-center gap-2.5 text-sm font-semibold">
-      <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 rounded border-border text-brand focus:ring-brand/30" />
+      <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 rounded border-border text-brand-ink focus:ring-brand-ink/30" />
       {label}
     </label>
   )

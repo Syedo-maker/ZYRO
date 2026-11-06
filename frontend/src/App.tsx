@@ -9,6 +9,7 @@ import { ForgotPasswordPage } from './pages/ForgotPassword'
 import { ResetPasswordPage } from './pages/ResetPassword'
 import { NotFoundPage, RouteErrorBoundary } from './pages/ErrorPages'
 import { ToastProvider } from './components/ui/Toast'
+import { ThemeProvider } from './context/ThemeProvider'
 
 /*
  * The landing page, the shop directory and the two sign-in screens load straight away: they are
@@ -62,6 +63,7 @@ const Loading = <div className="min-h-screen bg-bg" />
 
 export default function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
@@ -130,5 +132,6 @@ export default function App() {
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

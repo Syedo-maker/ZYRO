@@ -124,7 +124,7 @@ export function PlatformPage() {
               placeholder="Store name or address"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
             />
             <Button type="submit" variant="secondary" className="h-10">
               Search

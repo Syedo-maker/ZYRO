@@ -56,7 +56,7 @@ export function StorefrontHome() {
           <h2 id="new-heading" className="font-display text-xl font-bold">
             New arrivals
           </h2>
-          <Link to={`/store/${store.id}/products`} className="text-sm font-semibold text-brand hover:text-brand-hover">
+          <Link to={`/store/${store.id}/products`} className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
             See all
           </Link>
         </div>
@@ -83,7 +83,7 @@ export function StorefrontHome() {
               <li key={c.name}>
                 <Link
                   to={`/store/${store.id}/products?category=${encodeURIComponent(c.name)}`}
-                  className="flex h-full flex-col gap-1 rounded-2xl border border-border bg-surface p-4 hover:border-brand"
+                  className="flex h-full flex-col gap-1 rounded-2xl border border-border bg-surface p-4 hover:border-brand-ink"
                 >
                   <span className="text-sm font-semibold">{c.name}</span>
                   <span className="text-xs text-text-secondary">

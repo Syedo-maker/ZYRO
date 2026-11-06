@@ -139,7 +139,7 @@ export function TeamPage() {
         <h1 className="font-display text-xl font-bold">Team and register</h1>
         <p className="text-sm text-text-secondary mt-1">
           People who work the register sign in at{' '}
-          <a href="/pos" target="_blank" rel="noreferrer" className="font-semibold text-brand">
+          <a href="/pos" target="_blank" rel="noreferrer" className="font-semibold text-brand-ink">
             /pos
           </a>{' '}
           with the email and password you set here.
@@ -174,7 +174,7 @@ export function TeamPage() {
                   id={`role-${m.id}`}
                   value={m.role}
                   onChange={(e) => void changeRole(m, e.target.value as Role)}
-                  className="h-9 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  className="h-9 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
                 >
                   {m.role === 'custom' && (
                     <option value="custom" disabled>
@@ -218,7 +218,7 @@ export function TeamPage() {
           {(Object.keys(ROLES) as Role[]).map((r) => (
             <label
               key={r}
-              className={`rounded-xl border p-4 cursor-pointer flex flex-col gap-1 ${form.role === r ? 'border-brand bg-brand-soft' : 'border-border'}`}
+              className={`rounded-xl border p-4 cursor-pointer flex flex-col gap-1 ${form.role === r ? 'border-brand-ink bg-brand-soft' : 'border-border'}`}
             >
               <span className="flex items-center gap-2 text-sm font-semibold">
                 <input type="radio" name="role" checked={form.role === r} onChange={() => setForm({ ...form, role: r })} />

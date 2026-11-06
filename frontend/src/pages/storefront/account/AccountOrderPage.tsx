@@ -43,7 +43,7 @@ export function AccountOrderPage() {
   if (!isAuthenticated) return <Navigate to={`/store/${store.id}/account/login?next=${encodeURIComponent(`/store/${store.id}/account/orders/${orderId}`)}`} replace />
 
   const back = (
-    <Link to={`/store/${store.id}/account`} className="text-sm font-semibold text-brand hover:text-brand-hover">
+    <Link to={`/store/${store.id}/account`} className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
       Back to your orders
     </Link>
   )

@@ -40,7 +40,7 @@ function Summary({ page, filter, onFilter }: { page: ReviewPage; filter: number 
                 disabled={count === 0}
                 className="grid w-full grid-cols-[52px_1fr_36px] items-center gap-3 rounded text-left text-sm disabled:opacity-60"
               >
-                <span className={filter === n ? 'font-bold text-brand' : 'text-text-secondary'}>{n} stars</span>
+                <span className={filter === n ? 'font-bold text-brand-ink' : 'text-text-secondary'}>{n} stars</span>
                 <span className="h-2.5 overflow-hidden rounded-full bg-bg">
                   <span className="block h-full rounded-full bg-star" style={{ width: `${pct}%` }} />
                 </span>
@@ -184,7 +184,7 @@ export function ReviewsSection({ productId, onChanged }: { productId: string; on
                 <p className="text-sm text-text-secondary" role="status" aria-live="polite">
                   {filter ? `Showing ${page.pagination.total} ${filter}-star ${page.pagination.total === 1 ? 'review' : 'reviews'}` : `${page.pagination.total} ${page.pagination.total === 1 ? 'review' : 'reviews'}`}
                   {filter && (
-                    <button onClick={() => setFilter(null)} className="ml-2 font-semibold text-brand">
+                    <button onClick={() => setFilter(null)} className="ml-2 font-semibold text-brand-ink">
                       Show all
                     </button>
                   )}
@@ -193,7 +193,7 @@ export function ReviewsSection({ productId, onChanged }: { productId: string; on
                   <label htmlFor="review-sort" className="text-xs font-semibold text-text-secondary">
                     Sort by
                   </label>
-                  <select id="review-sort" value={sort} onChange={(e) => setSort(e.target.value as ReviewSort)} className="h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30">
+                  <select id="review-sort" value={sort} onChange={(e) => setSort(e.target.value as ReviewSort)} className="h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30">
                     {Object.entries(SORTS).map(([v, l]) => (
                       <option key={v} value={v}>
                         {l}

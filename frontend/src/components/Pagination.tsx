@@ -34,7 +34,7 @@ export function Pagination({ page, pageCount, hrefFor }: { page: number; pageCou
             to={hrefFor(p)}
             aria-label={`Page ${p}`}
             aria-current={p === page ? 'page' : undefined}
-            className={`${item} ${p === page ? 'border-brand bg-brand text-on-brand' : 'border-border bg-surface hover:bg-bg'}`}
+            className={`${item} ${p === page ? 'border-brand-ink bg-brand text-on-brand' : 'border-border bg-surface hover:bg-bg'}`}
           >
             {p}
           </Link>

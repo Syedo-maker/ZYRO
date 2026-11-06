@@ -103,9 +103,9 @@ export function LocalPaymentSection({
   const choice = (value: PayMethod, title: string, note: string, disabled = false) => (
     <label
       key={value}
-      className={`flex cursor-pointer items-start gap-3 rounded-control bg-surface px-4 py-3.5 ${method === value ? 'border-2 border-brand' : 'border border-border'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+      className={`flex cursor-pointer items-start gap-3 rounded-control bg-surface px-4 py-3.5 ${method === value ? 'border-2 border-brand-ink' : 'border border-border'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
     >
-      <input type="radio" name="pay-method" value={value} checked={method === value} disabled={disabled} onChange={() => onMethodChange(value)} className="mt-0.5 h-4 w-4 accent-brand" />
+      <input type="radio" name="pay-method" value={value} checked={method === value} disabled={disabled} onChange={() => onMethodChange(value)} className="mt-0.5 h-4 w-4 accent-brand-ink" />
       <span>
         <span className="block text-[13px] font-semibold">{title}</span>
         <span className="block text-xs text-text-muted">{note}</span>
@@ -115,7 +115,7 @@ export function LocalPaymentSection({
 
   return (
     <section aria-labelledby="pay-method-heading" className="flex flex-col gap-4">
-      <h2 id="pay-method-heading" className="text-xs font-bold text-brand">
+      <h2 id="pay-method-heading" className="text-xs font-bold text-brand-ink">
         HOW YOU WOULD LIKE TO PAY
       </h2>
       <fieldset className="flex flex-col gap-2.5">

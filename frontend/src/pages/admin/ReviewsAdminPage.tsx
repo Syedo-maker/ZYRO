@@ -36,7 +36,7 @@ function ReplyDialog({ review, onClose, onSave }: { review: ModerationReview; on
         <p className="rounded-control bg-bg px-4 py-3 text-sm text-text-secondary">{review.comment ?? review.title ?? `${review.rating} stars, no comment`}</p>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="reply" className="text-xs font-semibold text-text-secondary">Your public reply (leave empty to remove it)</label>
-          <textarea id="reply" rows={4} maxLength={1000} autoFocus value={text} onChange={(e) => setText(e.target.value)} className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+          <textarea id="reply" rows={4} maxLength={1000} autoFocus value={text} onChange={(e) => setText(e.target.value)} className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30" />
         </div>
         {error && <Alert>{error}</Alert>}
         <div className="flex gap-3">
@@ -76,7 +76,7 @@ function ReviewsAdminContent() {
   }
 
   if (!activeStore) return <p className="text-sm text-text-secondary">Create a store first.</p>
-  const select = 'h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+  const select = 'h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30'
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
@@ -129,12 +129,12 @@ function ReviewsAdminContent() {
             <div className="flex gap-4 pt-1 text-sm">
               <button
                 onClick={() => void moderate(r, { status: r.status === 'hidden' ? 'published' : 'hidden' }).catch((e) => setError(errorMessage(e)))}
-                className="font-semibold text-brand hover:text-brand-hover"
+                className="font-semibold text-brand-ink hover:text-brand-ink-hover"
                 aria-label={`${r.status === 'hidden' ? 'Show' : 'Hide'} the review by ${r.authorName}`}
               >
                 {r.status === 'hidden' ? 'Show' : 'Hide'}
               </button>
-              <button onClick={() => setReplying(r)} className="font-semibold text-brand hover:text-brand-hover" aria-label={`${r.merchantReply ? 'Edit reply to' : 'Reply to'} ${r.authorName}`}>
+              <button onClick={() => setReplying(r)} className="font-semibold text-brand-ink hover:text-brand-ink-hover" aria-label={`${r.merchantReply ? 'Edit reply to' : 'Reply to'} ${r.authorName}`}>
                 {r.merchantReply ? 'Edit reply' : 'Reply'}
               </button>
             </div>

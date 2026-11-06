@@ -62,7 +62,7 @@ function CodRow({ order, onDone }: { order: PendingCodOrder; onDone: (text: stri
       </div>
       {order.risk && order.risk.reasons.length > 0 && (
         <div>
-          <button type="button" onClick={() => setShowWhy(!showWhy)} className="text-xs font-semibold text-brand hover:text-brand-hover">
+          <button type="button" onClick={() => setShowWhy(!showWhy)} className="text-xs font-semibold text-brand-ink hover:text-brand-ink-hover">
             {showWhy ? 'Hide why' : 'Why this score?'}
           </button>
           {showWhy && (

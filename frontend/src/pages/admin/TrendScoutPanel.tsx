@@ -14,7 +14,7 @@ const STATUS: Record<TrendReport['status'], { label: string; tone: 'success' | '
   no_data: { label: 'No data', tone: 'neutral' },
 }
 
-const fieldClass = 'h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+const fieldClass = 'h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30'
 
 /**
  * The Trend Scout on the platform page (Part D): import a Google Trends file, run the week's reports

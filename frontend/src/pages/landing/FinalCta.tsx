@@ -18,7 +18,7 @@ export function FinalCta() {
           </div>
           <div className="relative">
             <h2 className="font-serif text-h1 font-normal tracking-tight text-text">
-              Your shop could be online <em className="italic text-accent">tonight</em>.
+              Your shop could be online <em className="italic text-accent-ink">tonight</em>.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg font-medium text-text-secondary">Free to start, no card, and the AI is already included.</p>
 

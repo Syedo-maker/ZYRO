@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Wordmark } from '../../components/ui/Wordmark'
+import { ThemeToggle } from '../../components/ui/ThemeToggle'
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { PosProvider, usePos } from '../../context/PosContext'
@@ -82,7 +83,7 @@ export function PosLayout() {
           <Button variant="secondary" onClick={() => void logout()}>
             Sign out
           </Button>
-          <Link to="/pos" className="inline-flex items-center text-sm font-semibold text-brand">
+          <Link to="/pos" className="inline-flex items-center text-sm font-semibold text-brand-ink">
             Choose another store
           </Link>
         </div>
@@ -137,6 +138,7 @@ function PosFrame() {
           )}
         </nav>
         <div className="ml-auto flex flex-wrap items-center gap-4 text-sm">
+          <ThemeToggle touch />
           {shift ? (
             <>
               <span className="text-on-inverse/75">Shift open since {formatDateTime(shift.openedAt)}</span>

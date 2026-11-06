@@ -156,7 +156,7 @@ export function WriteWithAi({ storeId, draft, onUse }: WriteWithAiProps) {
                       <button
                         type="button"
                         onClick={() => onUse(idea)}
-                        className="text-xs font-semibold text-brand hover:text-brand-hover"
+                        className="text-xs font-semibold text-brand-ink hover:text-brand-ink-hover"
                       >
                         Use this
                       </button>

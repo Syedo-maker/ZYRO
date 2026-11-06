@@ -41,7 +41,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
   ghost: 'text-text-secondary hover:bg-subtle hover:text-text focus-visible:outline-ring',
   inverse: `bg-accent text-on-accent hover:bg-accent-hover hover:shadow-glow active:bg-accent-pressed ${LIFT} focus-visible:outline-ring`,
   'outline-inverse': 'border border-on-inverse/25 text-on-inverse hover:border-on-inverse/60 hover:bg-on-inverse/5 focus-visible:outline-ring',
-  outline: 'border border-accent/60 text-text hover:border-accent hover:bg-accent/10 focus-visible:outline-ring',
+  outline: 'border border-accent-ink/60 text-text hover:border-accent-ink hover:bg-accent/10 focus-visible:outline-ring',
 }
 
 // Every size clears the 24px minimum target (WCAG 2.5.8); md is the default because 44px is

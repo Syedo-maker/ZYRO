@@ -34,7 +34,7 @@ function ErrorLayout({ code, title, body }: { code: string; title: ReactNode; bo
       <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/3 h-80 w-80 -translate-x-1/2 rounded-full bg-accent/10 blur-[110px]" />
       <div className="relative flex max-w-lg flex-col items-center gap-5 text-center">
         <Wordmark className="text-xl text-text" />
-        <p aria-hidden="true" className="font-serif text-[clamp(5rem,18vw,9rem)] italic leading-none text-accent">
+        <p aria-hidden="true" className="font-serif text-[clamp(5rem,18vw,9rem)] italic leading-none text-accent-ink">
           {code}
         </p>
         <h1 className="font-display text-h2 font-bold">{title}</h1>

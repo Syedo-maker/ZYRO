@@ -199,7 +199,7 @@ export function CategoriesPage() {
                           setRenaming({ id: c.id, name: e.target.value })
                           if (renameError) setRenameError(null)
                         }}
-                        className="h-9 min-w-0 flex-1 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                        className="h-9 min-w-0 flex-1 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
                       />
                       <Button type="submit" size="sm" disabled={busyId === c.id}>
                         {busyId === c.id ? 'Saving…' : 'Save'}
@@ -230,7 +230,7 @@ export function CategoriesPage() {
                 <div role="cell" className="flex gap-3">
                   {renaming?.id !== c.id && (
                     <>
-                      <button type="button" onClick={() => setRenaming({ id: c.id, name: c.name })} aria-label={`Rename ${c.name}`} className="text-xs font-semibold text-brand">
+                      <button type="button" onClick={() => setRenaming({ id: c.id, name: c.name })} aria-label={`Rename ${c.name}`} className="text-xs font-semibold text-brand-ink">
                         Rename
                       </button>
                       <button

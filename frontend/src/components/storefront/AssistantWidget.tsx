@@ -103,7 +103,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
                       <Link
                         key={p.id}
                         to={`/store/${storeId}/products/${p.id}`}
-                        className="flex w-32 shrink-0 flex-col gap-1 rounded-xl border border-border bg-bg p-2 transition-colors duration-150 hover:border-brand"
+                        className="flex w-32 shrink-0 flex-col gap-1 rounded-xl border border-border bg-bg p-2 transition-colors duration-150 hover:border-brand-ink"
                       >
                         <div className="aspect-square w-full overflow-hidden rounded-lg bg-subtle">
                           {p.images[0] && <img src={p.images[0]} alt="" className="h-full w-full object-cover" />}
@@ -124,7 +124,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
                     type="button"
                     disabled={sending}
                     onClick={() => void send(s)}
-                    className="min-h-9 rounded-full border border-border-input bg-bg px-3.5 py-1.5 text-left text-xs font-semibold text-text transition-colors duration-150 hover:border-brand hover:bg-subtle disabled:opacity-60"
+                    className="min-h-9 rounded-full border border-border-input bg-bg px-3.5 py-1.5 text-left text-xs font-semibold text-text transition-colors duration-150 hover:border-brand-ink hover:bg-subtle disabled:opacity-60"
                   >
                     {s}
                   </button>

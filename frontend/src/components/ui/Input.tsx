@@ -11,7 +11,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
  */
 export const FIELD =
   'rounded-control border bg-surface px-3.5 text-sm text-text placeholder:text-text-muted outline-none ' +
-  'transition-[border-color,box-shadow] duration-150 ease-standard focus:border-brand focus:ring-4 focus:ring-brand/15'
+  'transition-[border-color,box-shadow] duration-150 ease-standard focus:border-brand-ink focus:ring-4 focus:ring-brand-ink/15'
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { label, error, id, className = '', ...props },

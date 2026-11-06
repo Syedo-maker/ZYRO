@@ -29,7 +29,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
               onChange(Math.max(1, (value || 2) - 1))
             }
           }}
-          className={`rounded p-0.5 ${n <= value ? 'text-star' : 'text-border'} hover:text-star focus-visible:outline-2 focus-visible:outline-brand`}
+          className={`rounded p-0.5 ${n <= value ? 'text-star' : 'text-border'} hover:text-star focus-visible:outline-2 focus-visible:outline-brand-ink`}
         >
           <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true">
             <path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.5l-5.9 3.2 1.2-6.6L2.5 9.5l6.6-.9L12 2.5z" fill="currentColor" />
@@ -87,7 +87,7 @@ export function ReviewForm({
           maxLength={2000}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
         />
         <span className="self-end text-xs text-text-muted">{comment.length} / 2000</span>
       </div>

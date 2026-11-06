@@ -41,7 +41,7 @@ export function SalesByDayChart({ daily, currency }: { daily: Day[]; currency: s
     return (
       <div>
         <div className="mb-3 flex justify-end">
-          <button onClick={() => setTable(false)} className="text-sm font-semibold text-brand hover:text-brand-hover">
+          <button onClick={() => setTable(false)} className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
             View as chart
           </button>
         </div>
@@ -84,7 +84,7 @@ export function SalesByDayChart({ daily, currency }: { daily: Day[]; currency: s
             <span aria-hidden="true" className="h-2.5 w-2.5 rounded-[3px] bg-series-pos" /> In-store
           </li>
         </ul>
-        <button onClick={() => setTable(true)} className="text-sm font-semibold text-brand hover:text-brand-hover" aria-controls={tableId}>
+        <button onClick={() => setTable(true)} className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover" aria-controls={tableId}>
           View as table
         </button>
       </div>

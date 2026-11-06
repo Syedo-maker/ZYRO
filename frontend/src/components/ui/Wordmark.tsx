@@ -9,7 +9,7 @@
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
     <span className={`font-display font-extrabold tracking-tight ${className}`}>
-      ZYRO<span aria-hidden="true" className="text-accent">.</span>
+      ZYRO<span aria-hidden="true" className="text-accent-ink">.</span>
     </span>
   )
 }

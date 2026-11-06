@@ -22,7 +22,7 @@ const TONE_CLASSES: Record<ToastTone, string> = {
   info: 'bg-surface-2 text-text border-border',
 }
 const ICONS = { success: CircleCheck, error: CircleAlert, warning: TriangleAlert, info: Info }
-const ICON_COLOUR: Record<ToastTone, string> = { success: 'text-success', error: 'text-danger', warning: 'text-warning', info: 'text-brand' }
+const ICON_COLOUR: Record<ToastTone, string> = { success: 'text-success', error: 'text-danger', warning: 'text-warning', info: 'text-brand-ink' }
 const LABEL: Record<ToastTone, string> = { success: 'Done', error: 'Error', warning: 'Warning', info: 'Note' }
 
 export function ToastProvider({ children }: { children: ReactNode }) {

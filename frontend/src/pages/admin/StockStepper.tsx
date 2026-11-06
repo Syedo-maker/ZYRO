@@ -54,7 +54,7 @@ export function StockStepper({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
-          className="h-9 w-16 min-w-0 border-y border-border-input bg-surface text-center text-sm tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-9 w-16 min-w-0 border-y border-border-input bg-surface text-center text-sm tabular-nums outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <button
           type="button"
@@ -140,7 +140,7 @@ export function QuickStock({
         }}
       />
       {changed && (
-        <button type="button" onClick={() => void save()} disabled={saving} aria-label={`Save stock for ${title}`} className="text-xs font-semibold text-brand">
+        <button type="button" onClick={() => void save()} disabled={saving} aria-label={`Save stock for ${title}`} className="text-xs font-semibold text-brand-ink">
           {saving ? 'Saving…' : 'Save'}
         </button>
       )}

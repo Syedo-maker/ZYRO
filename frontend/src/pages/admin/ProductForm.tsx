@@ -209,7 +209,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
           rows={3}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
         />
       </div>
 
@@ -248,7 +248,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
                 setDiscountValue(e.target.value)
                 setSwitchMemo(null)
               }}
-              className="h-11 min-w-0 flex-1 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-11 min-w-0 flex-1 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
             />
             {/* Rs or %: switching converts the value (Rs 150 off a 1,000 MRP is 15%), and switching straight back restores it. */}
             <div role="group" aria-label="Discount in" className="flex shrink-0 rounded-control border border-border-input p-0.5">
@@ -301,7 +301,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
           // Nothing to choose from yet: say what to do instead of showing an empty dropdown.
           <p className="rounded-control border border-border bg-bg px-3.5 py-3 text-sm text-text-secondary">
             You have no categories yet.{' '}
-            <Link to="/admin/categories" className="font-semibold text-brand underline underline-offset-2">
+            <Link to="/admin/categories" className="font-semibold text-brand-ink underline underline-offset-2">
               Create a category
             </Link>{' '}
             first, then come back to add this product.
@@ -315,7 +315,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
               setCategoryId(e.target.value)
               setCategoryHint(null)
             }}
-            className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
           >
             <option value="" disabled>
               {categories === null ? 'Loading categories…' : 'Choose a category'}
@@ -338,7 +338,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
         {missingCategory && (
           <span className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
             “{missingCategory}” is not one of your categories yet.
-            <button type="button" onClick={() => void createSuggestedCategory()} disabled={creatingCategory} className="font-semibold text-brand underline underline-offset-2">
+            <button type="button" onClick={() => void createSuggestedCategory()} disabled={creatingCategory} className="font-semibold text-brand-ink underline underline-offset-2">
               {creatingCategory ? 'Creating…' : `Create “${missingCategory}”`}
             </button>
           </span>
