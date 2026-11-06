@@ -148,6 +148,7 @@ model User {
   ownedTenants     Tenant[]       @relation("TenantOwner")
   staffMemberOf    StaffMember[]
   refreshTokens    RefreshToken[]
+  passwordResets   PasswordResetToken[]
   customerProfiles Customer[]
   cashierOrders    Order[]        @relation("OrderCashier")
 
@@ -164,6 +165,22 @@ model RefreshToken {
   tokenHash String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// A "forgot password" link (B1, 2026-11). Only a SHA-256 hash of the random token is stored, so a copy of
+/// the database cannot be used to reset anyone's password. Valid for 30 minutes, once; asking for a new
+/// link marks every older unused one used, and a successful reset ends all of the user's sessions.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

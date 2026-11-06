@@ -57,6 +57,18 @@ export const loginIpLimiter = limiter("login-ip", windowMs, env.rateLimit.loginI
   keyGenerator: clientIp,
 });
 
+/**
+ * "Forgot password" (B1): per IP per window, and per email per hour whatever the address, so nobody can
+ * flood one inbox with reset emails or use the form to send mail in bulk. Counted whether or not the
+ * email is registered, so the limit itself reveals nothing.
+ */
+export const forgotIpLimiter = limiter("forgot-ip", windowMs, env.rateLimit.forgotIpMax, { keyGenerator: clientIp });
+export const forgotEmailLimiter = limiter("forgot-email", 60 * 60 * 1000, env.rateLimit.forgotEmailMax, {
+  keyGenerator: (req) => `e:${String(req.body?.email ?? "").trim().toLowerCase()}`,
+});
+/** Resets tried with a link, per IP per window. The tokens cannot be guessed; this keeps anyone from trying. */
+export const resetLimiter = limiter("reset", windowMs, env.rateLimit.resetMax, { keyGenerator: clientIp });
+
 /** Registrations per IP per hour: slows bulk account creation. */
 export const registerLimiter = limiter("register", 60 * 60 * 1000, env.rateLimit.registerMax, { keyGenerator: clientIp });
 

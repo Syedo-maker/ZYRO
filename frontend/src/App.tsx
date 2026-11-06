@@ -5,6 +5,8 @@ import { LandingPage } from './pages/landing/LandingPage'
 import { ShopDirectoryPage } from './pages/shop/ShopDirectoryPage'
 import { LoginPage } from './pages/Login'
 import { RegisterPage } from './pages/Register'
+import { ForgotPasswordPage } from './pages/ForgotPassword'
+import { ResetPasswordPage } from './pages/ResetPassword'
 
 /*
  * The landing page, the shop directory and the two sign-in screens load straight away: they are
@@ -64,6 +66,8 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
 

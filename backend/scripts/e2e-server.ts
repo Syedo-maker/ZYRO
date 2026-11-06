@@ -7,6 +7,7 @@
  *   POST /__e2e/set-tax    { storeId, rate }  sets a store's tax rate
  *   POST /__e2e/billing    { storeId, kind, plan? | pack? }  completes a fake plan or AI pack payment
  *   POST /__e2e/backdate-orders, /__e2e/set-currency, /__e2e/make-admin, /__e2e/trends-run   Trend Scout set-up
+ *   GET  /__e2e/last-email?to=   the newest email the fake gateway "sent" to that address (B1's reset link)
  *
  * These routes exist only in this script, never in the real app.
  * Usage: npx tsx scripts/e2e-server.ts   (listens on PORT, default 5000)
@@ -150,6 +151,15 @@ async function main() {
   });
   startAiWorker();
 
+  // Email: a fake gateway that keeps what it would have sent, so a browser test can open a reset link.
+  const outbox: { to: string; subject: string; text: string; at: number }[] = [];
+  (await import("../src/lib/email")).setEmailGateway({
+    async send(message) {
+      outbox.push({ ...message, at: Date.now() });
+      if (outbox.length > 200) outbox.shift();
+    },
+  });
+
   // Product Scout's demo snapshot, rebuilt now with the fake AI above: the demo stores' sales are moved
   // up to yesterday first (lib/demoDates.ts), so the browser test sees the demo whenever it was seeded.
   if ((await prismaUnscoped.tenant.count({ where: { slug: { startsWith: "demo-scout-" } } })) > 0) {
@@ -180,6 +190,12 @@ async function main() {
   const outer = express();
   outer.get("/__fake-stripe/:id", (req, res) => {
     res.type("html").send(`<title>Fake Stripe</title><h1>Fake Stripe checkout</h1><p>${req.params.id}</p>`);
+  });
+  outer.get("/__e2e/last-email", (req, res) => {
+    const to = String(req.query.to ?? "");
+    const mail = [...outbox].reverse().find((m) => m.to === to);
+    if (!mail) return res.status(404).json({ error: "no email to that address" });
+    res.json(mail);
   });
   outer.post("/__e2e/set-tax", express.json(), async (req, res) => {
     await prismaUnscoped.tenant.update({ where: { id: req.body.storeId }, data: { taxRate: String(req.body.rate) } });

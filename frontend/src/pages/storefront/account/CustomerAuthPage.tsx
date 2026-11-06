@@ -66,6 +66,13 @@ export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {!register && (
+          <div className="-mt-2 text-right">
+            <Link to={`/forgot-password?store=${store.id}`} className="text-sm font-semibold text-text-secondary underline-offset-4 hover:text-text hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+        )}
         {error && (
           <p role="alert" className="text-sm text-danger">
             {error}

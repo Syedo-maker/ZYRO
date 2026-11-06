@@ -112,6 +112,11 @@ export const env = {
     discountMax: num("RATE_LIMIT_DISCOUNT_MAX", 20),
     /** Reviews written, edited or deleted per person per hour. */
     reviewMax: num("RATE_LIMIT_REVIEW_MAX", 10),
+    /** "Forgot password" requests per IP per window, and per email per hour (B1). */
+    forgotIpMax: num("RATE_LIMIT_FORGOT_IP_MAX", 5),
+    forgotEmailMax: num("RATE_LIMIT_FORGOT_EMAIL_MAX", 3),
+    /** Password resets tried (with a link) per IP per window. */
+    resetMax: num("RATE_LIMIT_RESET_MAX", 10),
     /** Chat messages sent to the AI shopping assistant per person per minute. */
     chatMax: num("RATE_LIMIT_CHAT_MAX", 10),
     /** All API requests per IP per minute. */
