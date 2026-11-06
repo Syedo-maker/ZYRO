@@ -14,10 +14,11 @@ const suffix = Date.now().toString(36);
 const now = new Date(Date.UTC(2026, 10, 6, 9, 30)); // 6 Nov 2026, 09:30 UTC
 const ids = { users: [] as string[], tenants: [] as string[] };
 
-async function store(slug: string, orderDaysAgo: number[]) {
+async function store(slug: string, orderDaysAgo: number[], seededDaysAgo = 15) {
   const owner = await prismaUnscoped.user.create({ data: { email: `verify-demo-dates-${slug}@example.com`, name: "Owner", passwordHash: "x" } });
   ids.users.push(owner.id);
-  const tenant = await prismaUnscoped.tenant.create({ data: { name: `Verify ${slug}`, slug, ownerId: owner.id, currency: "PKR", listedInDirectory: false } });
+  // createdAt is the seed day the demo dates were made relative to.
+  const tenant = await prismaUnscoped.tenant.create({ data: { name: `Verify ${slug}`, slug, ownerId: owner.id, currency: "PKR", listedInDirectory: false, createdAt: new Date(now.getTime() - seededDaysAgo * DAY) } });
   ids.tenants.push(tenant.id);
   for (const [i, daysAgo] of orderDaysAgo.entries()) {
     await prismaUnscoped.order.create({
@@ -49,16 +50,21 @@ afterAll(async () => {
 });
 
 describe("how far to move", () => {
-  it("lands the newest order on yesterday, by whole days", () => {
-    expect(daysToShift(new Date(now.getTime() - 15 * DAY), now)).toBe(14);
-    expect(daysToShift(new Date(now.getTime() - 1 * DAY), now)).toBe(0); // already yesterday
-    expect(daysToShift(new Date(now.getTime() - 2 * 3600_000), now)).toBe(0); // today: never moved back
+  const ago = (days: number) => new Date(now.getTime() - days * DAY);
+  it("moves by the whole days since the store was seeded", () => {
+    expect(daysToShift(ago(14), ago(16), now)).toBe(14);
+    expect(daysToShift(ago(0), ago(2), now)).toBe(0); // seeded today: nothing to move
+  });
+  it("never further than would put the newest order on yesterday (a sale made by hand after the seed)", () => {
+    expect(daysToShift(ago(14), ago(3), now)).toBe(2);
+    expect(daysToShift(ago(14), ago(1), now)).toBe(0);
+    expect(daysToShift(ago(14), ago(0), now)).toBe(0); // never moved back
   });
 });
 
 describe("keeping the demo stores' sales recent", () => {
-  it("moves an old demo store's sales so the newest is yesterday, keeping their spacing and time of day", async () => {
-    const demo = await store(`demo-scout-verify-${suffix}`, [26, 20, 15]);
+  it("moves an old demo store's sales by the days since its seed, keeping their spacing and time of day", async () => {
+    const demo = await store(`demo-scout-verify-${suffix}`, [26, 20, 15], 14);
     const before = await orderDates(demo.id);
     const moved = await refreshDemoSalesDates(now, [demo.id]);
     expect(moved).toEqual([{ store: `demo-scout-verify-${suffix}`, days: 14 }]);
@@ -74,6 +80,13 @@ describe("keeping the demo stores' sales recent", () => {
     const before = await orderDates(demo);
     expect(await refreshDemoSalesDates(now, [demo])).toEqual([]);
     expect(await orderDates(demo)).toEqual(before);
+  });
+
+  it("a store with a later hand-made sale moves only as far as yesterday, so nothing is dated in the future", async () => {
+    const demo = await store(`demo-scout-verify-late-${suffix}`, [20, 3], 14);
+    expect(await refreshDemoSalesDates(now, [demo.id])).toEqual([{ store: `demo-scout-verify-late-${suffix}`, days: 2 }]);
+    const after = await orderDates(demo.id);
+    expect(Math.max(...after)).toBeLessThan(Date.UTC(2026, 10, 6));
   });
 
   it("never touches a store without the demo prefix", async () => {

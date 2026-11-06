@@ -3,7 +3,8 @@
  *
  *   npx tsx scripts/demo-product-scout.ts add      adds 6 demo stores, their products and 4 weeks of orders,
  *                                                  then builds the demo snapshot (npm run demo:scout:add)
- *   npx tsx scripts/demo-product-scout.ts remove   removes every one of them again (npm run demo:scout:remove)
+ *   npx tsx scripts/demo-product-scout.ts remove   removes every demo store again (npm run demo:scout:remove);
+ *                                                  add --scout-only to keep the video showcase store
  *   npx tsx scripts/demo-product-scout.ts refresh  moves the demo sales up to yesterday and rebuilds the demo
  *                                                  snapshot (npm run demo:scout:refresh). The daily Product Scout
  *                                                  run does the same by itself; this is for a demo right now.
@@ -150,8 +151,11 @@ function seeded(seed: number) {
   };
 }
 
+/** This script's own six stores (the video showcase store, scripts/demo-videos.ts, shares the demo prefix). */
+const ownSlugs = () => STORES.map((s) => `${DEMO_SLUG_PREFIX}${s.key}`);
+
 async function add() {
-  const existing = await prisma.tenant.count({ where: { slug: { startsWith: DEMO_SLUG_PREFIX } } });
+  const existing = await prisma.tenant.count({ where: { slug: { in: ownSlugs() } } });
   if (existing > 0) {
     console.log(`The demo is already there (${existing} demo stores). Run "remove" first to start again.`);
     return;
@@ -280,7 +284,9 @@ async function checkSnapshots() {
 
 async function remove() {
   const before = await realCounts();
-  const tenants = await prisma.tenant.findMany({ where: { slug: { startsWith: DEMO_SLUG_PREFIX } }, select: { id: true } });
+  // --scout-only keeps the video showcase store (scripts/demo-videos.ts) and removes just this script's stores.
+  const scoutOnly = process.argv.includes("--scout-only");
+  const tenants = await prisma.tenant.findMany({ where: scoutOnly ? { slug: { in: ownSlugs() } } : { slug: { startsWith: DEMO_SLUG_PREFIX } }, select: { id: true } });
   const ids = tenants.map((t) => t.id);
 
   // Every MongoDB document that belongs to a demo store, in any collection that has storeId.
@@ -297,7 +303,10 @@ async function remove() {
     }
   }
   const stores = await prisma.tenant.deleteMany({ where: { id: { in: ids } } }); // orders, staff and the rest go with them
-  const users = await prisma.user.deleteMany({ where: { email: { endsWith: `@${DEMO_EMAIL_DOMAIN}` }, ownedTenants: { none: {} } } });
+  // With --scout-only, only this script's owners (demo-scout-...): the video accounts share the domain.
+  const users = await prisma.user.deleteMany({
+    where: { email: { endsWith: `@${DEMO_EMAIL_DOMAIN}`, ...(scoutOnly ? { startsWith: DEMO_SLUG_PREFIX } : {}) }, ownedTenants: { none: {} } },
+  });
   const snapshots = await prisma.productScoutSnapshot.deleteMany({ where: { scope: "demo" } });
 
   const after = await realCounts();
