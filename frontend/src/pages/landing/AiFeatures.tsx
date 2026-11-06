@@ -1,3 +1,4 @@
+import { CircleCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Reveal } from './Reveal'
 import { AssistantMockup, CartRecoveryMockup, InsightsMockup, RecommendationsMockup, TrendingMockup } from './Mockups'
@@ -38,10 +39,7 @@ function AiFeatureSection({ id, kicker, title, body, points, mockup, lead = fals
           <ul role="list" className="mt-5 flex flex-col gap-2.5">
             {points.map((p) => (
               <li key={p} className="flex items-start gap-2.5 text-sm text-text-secondary">
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="mt-0.5 shrink-0">
-                  <circle cx="10" cy="10" r="9" className="fill-brand" />
-                  <path d="M6 10.4l2.6 2.6L14 7.6" className="stroke-on-brand" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <CircleCheck aria-hidden="true" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-accent" strokeWidth={2} />
                 <span>{p}</span>
               </li>
             ))}

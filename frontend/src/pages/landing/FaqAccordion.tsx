@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { Reveal } from './Reveal'
 
 /**
@@ -54,22 +55,12 @@ export function FaqAccordion() {
         <div className="mt-9 flex flex-col gap-3">
           {QUESTIONS.map((item, i) => (
             <Reveal key={item.q} delayMs={Math.min(i, 4) * 60}>
-              <details className="group rounded-2xl border border-border bg-surface px-5 py-4 open:border-border-input">
+              <details className="group rounded-2xl border border-border bg-surface px-5 py-4 transition-colors duration-200 open:border-accent/40">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-bold text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
                   {item.q}
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    aria-hidden="true"
-                    className="shrink-0 transition-transform group-open:rotate-45 motion-reduce:transition-none"
-                  >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-accent transition-transform duration-200 group-open:rotate-45 motion-reduce:transition-none">
+                    <Plus aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
+                  </span>
                 </summary>
                 <p className="mt-3 text-sm leading-relaxed text-text-secondary">{item.a}</p>
               </details>

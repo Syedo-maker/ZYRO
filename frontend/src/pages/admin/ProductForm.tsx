@@ -365,7 +365,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
                 type="button"
                 aria-label="Remove image"
                 onClick={() => setImages((prev) => prev.filter((u) => u !== url))}
-                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 text-white text-[10px] leading-4"
+                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-bg/80 text-text text-[10px] leading-4"
               >
                 ×
               </button>

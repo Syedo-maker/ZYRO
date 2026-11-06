@@ -9,7 +9,7 @@
  * Every string here is wording the product genuinely uses. Nothing invents a number.
  */
 
-const frame = 'rounded-xl border border-border bg-surface p-4 shadow-lg shadow-black/5'
+const frame = 'rounded-xl border border-border bg-surface p-4 shadow-md'
 
 /** The feature itself: suggestions with their keyword attribution, as the Add product form shows it. */
 export function TrendingMockup() {

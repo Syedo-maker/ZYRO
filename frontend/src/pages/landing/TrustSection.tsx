@@ -1,3 +1,4 @@
+import { ShieldCheck, CreditCard, LockKeyhole, Scale } from 'lucide-react'
 import { Reveal } from './Reveal'
 
 /**
@@ -11,31 +12,31 @@ const POINTS = [
   {
     title: 'Your shop is sealed off from every other shop',
     body: 'Isolation is enforced in the layer that talks to the database, not left to each query to remember. A query that forgets which shop it is about is refused rather than quietly answered with the wrong data.',
-    path: 'M12 3l8 3v6c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V6z',
+    icon: ShieldCheck,
   },
   {
     title: 'We never see your customers’ card numbers',
     body: 'Card payments go through Stripe’s own checkout page. The card details are typed on Stripe, not on us, and a plan only ever changes after Stripe confirms the money moved.',
-    path: 'M3 7h18v10H3zM3 11h18M7 15h3',
+    icon: CreditCard,
   },
   {
     title: 'Passwords are hashed, never stored',
     body: 'Nobody here can read your password, because it is not kept. Sessions use short-lived tokens, and signing out really ends the session.',
-    path: 'M7 11V8a5 5 0 0110 0v3M5 11h14v9H5zM12 15v2',
+    icon: LockKeyhole,
   },
   {
     title: 'The AI never touches money or stock by itself',
     body: 'It drafts and suggests; you decide. Every price, discount and plan is worked out on the server, so nothing a shopper or the AI types can change what something costs.',
-    path: 'M12 4v16M8 8h8M6 12h12M8 16h8',
+    icon: Scale,
   },
 ]
 
 export function TrustSection() {
   return (
-    <section className="bg-inverse py-16 lg:py-24">
+    <section className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-on-inverse">
+          <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
             Built so your shop, and your customers, stay <em className="italic text-accent">safe</em>.
           </h2>
         </Reveal>
@@ -44,24 +45,13 @@ export function TrustSection() {
           {POINTS.map((point, i) => (
             <li key={point.title}>
               <Reveal delayMs={(i % 2) * 90}>
-                <div className="flex h-full gap-4 rounded-2xl border border-on-inverse/15 bg-on-inverse/[0.06] p-6">
-                  <svg
-                    width="26"
-                    height="26"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                    className="mt-0.5 shrink-0 text-accent-display"
-                  >
-                    <path d={point.path} />
-                  </svg>
+                <div className="flex h-full gap-4 rounded-2xl border border-border bg-surface p-6">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-landing-cobalt/25 text-text">
+                    <point.icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.75} />
+                  </span>
                   <div>
-                    <h3 className="font-display text-base font-bold text-on-inverse">{point.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-on-inverse-muted">{point.body}</p>
+                    <h3 className="font-display text-base font-bold text-text">{point.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-text-muted">{point.body}</p>
                   </div>
                 </div>
               </Reveal>

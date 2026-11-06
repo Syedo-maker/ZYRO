@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react'
 import { formatMoney } from '../../lib/format'
 import type { CartItem } from '../../types/commerce'
 
@@ -63,11 +64,7 @@ export function CartItemRow({ item, currency, busy, onSetQuantity, onRemove }: C
               onClick={onRemove}
               className="text-text-muted hover:text-danger disabled:opacity-40"
             >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14H6L5 6" />
-                <path d="M10 11v6M14 11v6" />
-              </svg>
+              <Trash2 aria-hidden="true" className="h-[17px] w-[17px]" strokeWidth={1.75} />
             </button>
           </div>
         </div>

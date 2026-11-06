@@ -37,7 +37,7 @@ export function StatTile({
   return (
     <div className="flex flex-col gap-1 rounded-2xl border border-border bg-surface p-5">
       <p className="text-xs font-semibold text-text-secondary">{label}</p>
-      <p className="font-display text-3xl font-bold tabular-nums">{value}</p>
+      <p className="font-display text-3xl font-bold tabular-nums text-brand">{value}</p>
       {change && <p className={`text-xs font-medium ${change.good === null ? 'text-text-secondary' : change.good ? 'text-success' : 'text-danger'}`}>{change.text}</p>}
       {note && <p className="text-xs text-text-secondary">{note}</p>}
     </div>
@@ -90,8 +90,8 @@ export function CategorySales({ categories, currency }: { categories: AnalyticsS
               {formatMoney(c.revenue, currency)} · {total > 0 ? Math.round((c.revenue / total) * 100) : 0}% · {c.unitsSold} sold
             </span>
           </div>
-          <span className="h-2 overflow-hidden rounded-full bg-bg" aria-hidden="true">
-            <span className="block h-full rounded-full bg-text-secondary/60" style={{ width: `${(c.revenue / max) * 100}%` }} />
+          <span className="h-2 overflow-hidden rounded-full bg-subtle" aria-hidden="true">
+            <span className="block h-full rounded-full bg-accent" style={{ width: `${(c.revenue / max) * 100}%` }} />
           </span>
         </li>
       ))}
@@ -115,8 +115,8 @@ export function TopProducts({ products, currency }: { products: AnalyticsSummary
               {p.unitsSold} sold · {formatMoney(p.revenue, currency)}
             </span>
           </div>
-          <span className="h-2 overflow-hidden rounded-full bg-bg" aria-hidden="true">
-            <span className="block h-full rounded-full bg-text-secondary/60" style={{ width: `${(p.unitsSold / max) * 100}%` }} />
+          <span className="h-2 overflow-hidden rounded-full bg-subtle" aria-hidden="true">
+            <span className="block h-full rounded-full bg-accent" style={{ width: `${(p.unitsSold / max) * 100}%` }} />
           </span>
         </li>
       ))}
