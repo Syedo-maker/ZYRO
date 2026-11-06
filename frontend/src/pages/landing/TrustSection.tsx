@@ -35,8 +35,8 @@ export function TrustSection() {
     <section className="bg-inverse py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-on-inverse sm:text-4xl">
-            Built so your shop, and your customers, stay safe.
+          <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-on-inverse">
+            Built so your shop, and your customers, stay <em className="italic text-accent">safe</em>.
           </h2>
         </Reveal>
 

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Menu, X } from 'lucide-react'
+import { Wordmark } from '../../components/ui/Wordmark'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { landingPathFor, rememberedExperience } from '../../lib/experience'
@@ -48,13 +50,13 @@ export function LandingNav() {
     // transparent background would put cream text on the page's cream and make the whole nav
     // invisible until the visitor scrolled. Scrolling only adds the blur and the shadow.
     <header
-      className={`sticky top-0 z-50 bg-inverse transition-shadow duration-300 ${
-        scrolled || open ? 'shadow-lg shadow-black/20 backdrop-blur-sm' : ''
+      className={`sticky top-0 z-50 border-b transition-[background-color,border-color,box-shadow] duration-300 ${
+        scrolled || open ? 'border-border bg-bg/80 shadow-lg backdrop-blur-md' : 'border-transparent bg-bg'
       }`}
     >
       <nav aria-label="Main" className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
-        <Link to="/" className="font-display text-lg font-extrabold text-on-inverse">
-          ZYRO
+        <Link to="/" className="text-lg text-on-inverse">
+          <Wordmark />
         </Link>
 
         <ul role="list" className="ml-6 hidden items-center gap-6 lg:flex">
@@ -62,7 +64,7 @@ export function LandingNav() {
             <li key={l.href}>
               <a
                 href={l.href}
-                className="rounded text-sm font-medium text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-on-inverse"
+                className="rounded text-sm font-medium text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
               >
                 {l.label}
               </a>
@@ -75,7 +77,7 @@ export function LandingNav() {
           {isLoading ? null : home ? (
             <Link
               to={home}
-              className="rounded-control bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+              className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-on-accent transition-[background-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:bg-accent-hover hover:shadow-glow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {homeLabel}
             </Link>
@@ -83,13 +85,13 @@ export function LandingNav() {
             <>
               <Link
                 to="/login"
-                className="rounded-control px-3 py-2 text-sm font-semibold text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+                className="rounded-control px-3 py-2 text-sm font-semibold text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 Log in
               </Link>
               <Link
                 to="/register"
-                className="rounded-control bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+                className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-on-accent transition-[background-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:bg-accent-hover hover:shadow-glow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 Start free
               </Link>
@@ -102,12 +104,10 @@ export function LandingNav() {
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls="landing-mobile-menu"
-          className="ml-auto rounded-control p-2 text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse lg:hidden"
+          className="ml-auto grid h-11 w-11 place-items-center rounded-full text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:hidden"
         >
           <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            {open ? <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" /> : <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />}
-          </svg>
+          {open ? <X aria-hidden="true" className="h-6 w-6" /> : <Menu aria-hidden="true" className="h-6 w-6" />}
         </button>
       </nav>
 
@@ -123,15 +123,15 @@ export function LandingNav() {
             ))}
             <li className="mt-1 flex gap-3 px-2 pb-3 pt-2">
               {isLoading ? null : home ? (
-                <Link to={home} onClick={() => setOpen(false)} className="rounded-control bg-bg px-4 py-2 text-sm font-bold text-text">
+                <Link to={home} onClick={() => setOpen(false)} className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-on-accent">
                   {homeLabel}
                 </Link>
               ) : (
                 <>
-                  <Link to="/login" onClick={() => setOpen(false)} className="rounded-control border border-on-inverse-muted px-4 py-2 text-sm font-semibold text-on-inverse">
+                  <Link to="/login" onClick={() => setOpen(false)} className="rounded-full border border-text/25 px-4 py-2 text-sm font-semibold text-on-inverse">
                     Log in
                   </Link>
-                  <Link to="/register" onClick={() => setOpen(false)} className="rounded-control bg-bg px-4 py-2 text-sm font-bold text-text">
+                  <Link to="/register" onClick={() => setOpen(false)} className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-on-accent">
                     Start free
                   </Link>
                 </>

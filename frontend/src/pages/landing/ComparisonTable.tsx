@@ -24,8 +24,8 @@ export function ComparisonTable() {
     <section className="bg-subtle py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
-            Why ZYRO
+          <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
+            Why <em className="italic text-accent">ZYRO</em>
           </h2>
           <p className="mt-4 max-w-2xl text-base text-text-secondary">
             We have not named anyone, because platforms change their prices and we would rather be accurate than clever.

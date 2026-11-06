@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { AuthShell, AUTH_LINK, AUTH_TITLE } from '../components/ui/AuthShell'
 import { authErrorMessage } from '../lib/apiClient'
 import { landingPathFor, rememberedExperience } from '../lib/experience'
 
@@ -30,11 +31,9 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-8 flex flex-col gap-5">
+    <AuthShell>
         <div>
-          <div className="font-display text-2xl font-bold">ZYRO</div>
-          <h1 className="font-display text-lg font-semibold mt-4">Log in</h1>
+          <h1 className={AUTH_TITLE}>Log in</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -66,15 +65,14 @@ export function LoginPage() {
 
         <p className="text-sm text-text-secondary text-center">
           Don&apos;t have a store yet?{' '}
-          <Link to="/register" className="text-brand font-semibold">
+          <Link to="/register" className={AUTH_LINK}>
             Create one
           </Link>{' '}
           or{' '}
-          <Link to="/shop" className="text-brand font-semibold">
+          <Link to="/shop" className={AUTH_LINK}>
             browse shops
           </Link>
         </p>
-      </div>
-    </div>
+    </AuthShell>
   )
 }

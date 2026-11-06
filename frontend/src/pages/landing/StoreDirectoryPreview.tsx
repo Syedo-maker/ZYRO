@@ -33,8 +33,8 @@ export function StoreDirectoryPreview() {
     <section className="bg-subtle py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
-            Shops already selling on ZYRO
+          <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
+            Shops already <em className="italic text-accent">selling</em> on ZYRO
           </h2>
           <p className="mt-4 max-w-2xl text-base text-text-secondary">Real shops, listed by their owners. Have a look around.</p>
         </Reveal>

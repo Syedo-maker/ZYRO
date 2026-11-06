@@ -65,8 +65,8 @@ export function AiFeatures() {
       <section className="bg-bg pt-16 lg:pt-24">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <h2 className="max-w-3xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
-              The AI is the product, not an add-on.
+            <h2 className="max-w-3xl font-serif text-h1 font-normal tracking-tight text-text">
+              The AI is the <em className="italic text-accent">product</em>, not an add-on.
             </h2>
             <p className="mt-4 max-w-2xl text-base text-text-secondary">
               Five things it does for you and your shoppers, included on every plan. All of it is built and running today.

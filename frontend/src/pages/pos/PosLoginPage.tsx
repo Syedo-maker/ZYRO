@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
+import { AuthShell, AUTH_TITLE } from '../../components/ui/AuthShell'
 import { authErrorMessage } from '../../lib/apiClient'
 
 /** Sign-in for the till. Same accounts as the admin, but it lands on the register. */
@@ -32,12 +33,10 @@ export function PosLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-inverse">
-      <div className="w-full max-w-md bg-surface rounded-2xl p-8 flex flex-col gap-5">
+    <AuthShell>
         <div>
-          <div className="font-display text-2xl font-bold">ZYRO</div>
-          <h1 className="font-display text-lg font-semibold mt-4">Sign in to the register</h1>
-          <p className="text-sm text-text-secondary mt-1">Use the account your manager gave you.</p>
+          <h1 className={AUTH_TITLE}>Sign in to the register</h1>
+          <p className="text-sm text-text-secondary mt-2">Use the account your manager gave you.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -60,7 +59,6 @@ export function PosLoginPage() {
             {submitting ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
-      </div>
-    </div>
+    </AuthShell>
   )
 }

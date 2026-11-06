@@ -45,8 +45,8 @@ export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-surface p-8">
-      <h1 className="font-display text-2xl font-bold">{register ? 'Create your account' : 'Sign in'}</h1>
+    <div className="mx-auto w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-lg sm:p-10">
+      <h1 className="font-serif text-h2 font-normal italic leading-tight">{register ? 'Create your account' : 'Sign in'}</h1>
       <p className="mt-1 text-sm text-text-secondary">
         {register
           ? `Track your orders and review what you buy at ${store.name}. You can also check out as a guest without an account.`

@@ -48,7 +48,7 @@ export function FaqAccordion() {
     <section id="faq" className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">Questions, answered straight</h2>
+          <h2 className="font-serif text-h1 font-normal tracking-tight text-text">Questions, answered <em className="italic text-accent">straight</em></h2>
         </Reveal>
 
         <div className="mt-9 flex flex-col gap-3">
