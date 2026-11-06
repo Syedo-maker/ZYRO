@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
+import { useToast } from '../../components/ui/Toast'
 import { ApiError } from '../../lib/apiClient'
 import { upgradeHintOf } from '../../lib/billingApi'
 import { UpgradeNotice } from '../../components/billing/UpgradeNotice'
@@ -70,6 +71,7 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     let cancelled = false
@@ -100,7 +102,12 @@ export function AiToolsPanel({ storeId, productId, onApplyDescription, onApplyCa
     } catch (e) {
       // A used-up allowance is a 402 carrying an upgrade hint: show that, not a bare error.
       if (quotaExhausted(e) && upgradeHintOf(e)) setLimitError(e)
-      else setError(errorMessage(e))
+      else {
+        setError(errorMessage(e))
+        // The notice with the reason sits at the top of a long panel, out of sight of a button further
+        // down (the marketing copy). The toast points to it rather than repeating it.
+        toast.error('That did not work. The reason is at the top of the AI tools.')
+      }
       return undefined
     } finally {
       setBusy(null)

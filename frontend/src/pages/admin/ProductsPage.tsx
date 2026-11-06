@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
 import { PriceTag } from '../../components/PriceTag'
 import { errorMessage } from '../../lib/ordersApi'
 import { productsApi } from '../../lib/productsApi'
@@ -25,6 +26,7 @@ export function ProductsPage() {
   const [panel, setPanel] = useState<PanelState>({ mode: 'closed' })
   const location = useLocation()
   const navigate = useNavigate()
+  const toast = useToast()
 
   const storeId = activeStore?.id
 
@@ -63,6 +65,7 @@ export function ProductsPage() {
     if (!storeId) return
     await productsApi.create(storeId, input)
     setPanel({ mode: 'closed' })
+    toast.success(`Added "${input.title}" to your products.`)
     await reload()
   }
 
@@ -70,6 +73,7 @@ export function ProductsPage() {
     if (!storeId || panel.mode !== 'edit') return
     await productsApi.update(storeId, panel.product.id, input)
     setPanel({ mode: 'closed' })
+    toast.success(`Saved "${input.title}".`)
     await reload()
   }
 
@@ -78,6 +82,7 @@ export function ProductsPage() {
     if (!confirm(`Delete "${product.title}"? This can't be undone.`)) return
     try {
       await productsApi.remove(storeId, product.id)
+      toast.success(`Deleted "${product.title}".`)
       await reload()
     } catch (e) {
       setError(errorMessage(e, `Could not delete "${product.title}".`))

@@ -3,6 +3,7 @@ import { OrderStatusBadge } from '../../components/OrderStatusBadge'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Dialog } from '../../components/ui/Dialog'
+import { useToast } from '../../components/ui/Toast'
 import { formatDateTime, formatMoney } from '../../lib/format'
 import { errorMessage, ordersApi } from '../../lib/ordersApi'
 import type { Order } from '../../types/commerce'
@@ -40,6 +41,7 @@ export function OrderDetailPanel({ order, storeId, onChanged, onClose }: OrderDe
   const [error, setError] = useState<string | null>(null)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
+  const toast = useToast()
 
   const money = (n: number) => formatMoney(n, order.currency)
   const customer = order.customer?.name ?? order.customer?.email ?? order.guestEmail ?? 'Guest'
@@ -55,6 +57,7 @@ export function OrderDetailPanel({ order, storeId, onChanged, onClose }: OrderDe
     try {
       onChanged(await ordersApi.updateStatus(storeId, order.id, status))
       setCancelOpen(false)
+      toast.success(status === 'fulfilled' ? 'Order marked as fulfilled.' : 'Order cancelled.')
     } catch (e) {
       setError(errorMessage(e))
       setCancelOpen(false)

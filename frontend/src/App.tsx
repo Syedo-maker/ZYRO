@@ -8,6 +8,7 @@ import { RegisterPage } from './pages/Register'
 import { ForgotPasswordPage } from './pages/ForgotPassword'
 import { ResetPasswordPage } from './pages/ResetPassword'
 import { NotFoundPage, RouteErrorBoundary } from './pages/ErrorPages'
+import { ToastProvider } from './components/ui/Toast'
 
 /*
  * The landing page, the shop directory and the two sign-in screens load straight away: they are
@@ -63,6 +64,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ToastProvider>
         <RouteErrorBoundary>
         <Suspense fallback={Loading}>
           <Routes>
@@ -125,6 +127,7 @@ export default function App() {
           </Routes>
         </Suspense>
         </RouteErrorBoundary>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   )
