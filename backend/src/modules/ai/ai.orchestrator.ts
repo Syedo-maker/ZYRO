@@ -3,7 +3,8 @@ import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
 import { getAiQueue, readyAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
 import type { AiGenerateResult } from "../../lib/aiProvider";
-import { allowsImage, modelFor } from "../../lib/aiModels";
+import { allowsImage, modelFor, tierFor } from "../../lib/aiModels";
+import { FRIENDLY_AI_UNAVAILABLE } from "../../lib/aiErrors";
 import { getRedis } from "../../lib/redis";
 import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, currentMonth, type AiUsageKind } from "./ai.quota.service";
 import { logger } from "../../lib/logger";
@@ -113,6 +114,7 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
       tenantId: input.tenantId,
       promptType: input.promptType,
       model,
+      tier: tierFor(input.promptType),
       system: input.system,
       prompt,
       maxTokens,
@@ -140,7 +142,7 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
       { err: err instanceof Error ? err.message : String(err), tenantId: input.tenantId, promptType: input.promptType, model },
       "AI generation failed"
     );
-    throw Errors.serviceUnavailable("The AI service is unavailable right now. Nothing was used from your AI allowance; please try again in a minute.");
+    throw Errors.serviceUnavailable(FRIENDLY_AI_UNAVAILABLE);
   }
 
   // Only a successful call reaches this point: its tokens are what the store's AI actually cost (Part B).

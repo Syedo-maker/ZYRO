@@ -1,11 +1,19 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../config/env";
 import { Errors } from "../errors/AppError";
-import { directAnswerParams } from "./aiModels";
+import { directAnswerParams, type ModelTier } from "./aiModels";
+import { AiProviderError, isPermanentAiError } from "./aiErrors";
+import { openAiProvider } from "./aiOpenAi";
+import { logger } from "./logger";
 
 export interface AiGenerateParams {
   /** Which model to use, chosen by the orchestrator from the prompt type (lib/aiModels.ts). */
   model: string;
+  /**
+   * The model tier the prompt type asked for, so a fallback provider can pick its own model of the same
+   * class (`model` names the primary provider's model). Absent in jobs queued before this field existed.
+   */
+  tier?: ModelTier;
   /** Frozen instructions for this promptType; never shopper/merchant-supplied text. */
   system: string;
   /** The one piece of caller-supplied context (product fields, review text, ...). */
@@ -31,37 +39,45 @@ export interface AiGenerateResult {
  * What the rest of the app needs from an LLM provider. Kept to one method, same as
  * StripeGateway (lib/stripe.ts), so tests and the verify script can substitute a fake instead
  * of spending real API calls. The plan (Implementation_Plan.md Phase 4) calls for the choice
- * of vendor (OpenAI/Anthropic) to sit behind this interface rather than be hardcoded; only an
- * Anthropic adapter is implemented so far, so this is the seam a second adapter would fill.
+ * of vendor (OpenAI/Anthropic) to sit behind this interface rather than be hardcoded: the real
+ * provider is a chain of the configured vendors (Anthropic, then OpenAI as a fallback), tried in
+ * AI_PROVIDER_ORDER until one answers.
  */
 export interface AiProvider {
   generate(params: AiGenerateParams): Promise<AiGenerateResult>;
 }
 
-function createRealProvider(): AiProvider {
-  const { anthropicApiKey } = env.ai;
-  if (!anthropicApiKey) {
-    throw Errors.serviceUnavailable("AI features are not configured (set ANTHROPIC_API_KEY)");
-  }
+export interface NamedProvider extends AiProvider {
+  name: string;
+}
+
+function anthropicProvider(apiKey: string): NamedProvider {
   // One client instance per process, like the Stripe client in lib/stripe.ts.
   // The SDK waits up to 10 minutes by default. The API stops waiting for a generation after
   // AI_JOB_TIMEOUT_MS (60 s); without a limit here the worker would keep that slot busy long after
   // anyone was waiting for the answer. 25 s and one retry finish inside the 60 s.
-  const client = new Anthropic({ apiKey: anthropicApiKey, timeout: 25_000, maxRetries: 1 });
+  const client = new Anthropic({ apiKey, timeout: 25_000, maxRetries: 1 });
 
   return {
+    name: "anthropic",
     async generate({ model, system, prompt, maxTokens, image }) {
       const content: Anthropic.ContentBlockParam[] = image
         ? [{ type: "image", source: { type: "base64", media_type: image.mediaType, data: image.data } }, { type: "text", text: prompt }]
         : [{ type: "text", text: prompt }];
-      const response = await client.messages.create({
-        model,
-        max_tokens: maxTokens,
-        system,
-        messages: [{ role: "user", content }],
-        // These are short answers: no reasoning tokens (they count against max_tokens and cost output price).
-        ...directAnswerParams(model),
-      });
+      let response: Anthropic.Message;
+      try {
+        response = await client.messages.create({
+          model,
+          max_tokens: maxTokens,
+          system,
+          messages: [{ role: "user", content }],
+          // These are short answers: no reasoning tokens (they count against max_tokens and cost output price).
+          ...directAnswerParams(model),
+        });
+      } catch (err) {
+        if (err instanceof Anthropic.APIError) throw new AiProviderError("anthropic", err.status, err.message);
+        throw new AiProviderError("anthropic", undefined, (err as Error).message);
+      }
 
       const text = response.content
         .filter((block): block is Anthropic.TextBlock => block.type === "text")
@@ -72,7 +88,7 @@ function createRealProvider(): AiProvider {
       if (!text) {
         // stop_reason "refusal" or a model that only emitted non-text blocks: nothing to
         // save as a draft, and nothing worth charging the tenant's quota for.
-        throw new Error(`AI provider returned no text (stop_reason: ${response.stop_reason})`);
+        throw new AiProviderError("anthropic", undefined, `returned no text (stop_reason: ${response.stop_reason})`);
       }
 
       return {
@@ -83,6 +99,50 @@ function createRealProvider(): AiProvider {
       };
     },
   };
+}
+
+/** The configured providers, in AI_PROVIDER_ORDER; only those with a key take part. */
+export function configuredProviders(): NamedProvider[] {
+  const { anthropicApiKey, openAiApiKey, openAiModels, providerOrder } = env.ai;
+  const available: Record<string, () => NamedProvider | null> = {
+    anthropic: () => (anthropicApiKey?.trim() ? anthropicProvider(anthropicApiKey.trim()) : null),
+    openai: () => (openAiApiKey?.trim() ? openAiProvider(openAiApiKey.trim(), openAiModels) : null),
+  };
+  return providerOrder.map((name) => available[name]?.() ?? null).filter((p): p is NamedProvider => p !== null);
+}
+
+/**
+ * Tries each provider in turn and returns the first answer. When every one fails, the error thrown is
+ * the last provider's, and it counts as permanent only if every failure was (so the queue does not
+ * retry a request no provider can ever answer, such as with every key rejected).
+ */
+export function chainProviders(providers: NamedProvider[]): AiProvider {
+  return {
+    async generate(params) {
+      const failures: unknown[] = [];
+      for (const provider of providers) {
+        try {
+          return await provider.generate(params);
+        } catch (err) {
+          failures.push(err);
+          const rest = providers.length - failures.length;
+          logger.warn({ provider: provider.name, err: (err as Error).message }, rest > 0 ? "AI provider failed, trying the next one" : "AI provider failed");
+        }
+      }
+      const last = failures[failures.length - 1];
+      if (failures.every(isPermanentAiError)) throw last;
+      // At least one failure was temporary: report a temporary one, so the queue may retry.
+      throw failures.find((f) => !isPermanentAiError(f)) ?? last;
+    },
+  };
+}
+
+function createRealProvider(): AiProvider {
+  const providers = configuredProviders();
+  if (providers.length === 0) {
+    throw Errors.serviceUnavailable("AI features are not configured (set ANTHROPIC_API_KEY, or OPENAI_API_KEY as a fallback)");
+  }
+  return chainProviders(providers);
 }
 
 let override: AiProvider | undefined;

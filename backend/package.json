@@ -8,6 +8,7 @@
         "dev": "tsx watch src/index.ts",
         "dev:worker": "tsx watch src/worker.ts",
         "sync-indexes": "tsx scripts/sync-indexes.ts",
+        "ai:check": "tsx scripts/check-ai.ts",
         "demo:scout:add": "tsx scripts/demo-product-scout.ts add",
         "demo:scout:remove": "tsx scripts/demo-product-scout.ts remove",
         "demo:videos:add": "tsx scripts/demo-videos.ts add",

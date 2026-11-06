@@ -185,7 +185,7 @@ describe("the provider and the quota", () => {
     const res = await api("POST", `/stores/${A.storeId}/products/${kettle}/seo-metadata/generate`, { token: A.token });
     failWith = null;
     expect(res.status).toBe(503);
-    expect(res.json.detail).toBe("The AI service is unavailable right now. Nothing was used from your AI allowance; please try again in a minute.");
+    expect(res.json.detail).toBe("The AI assistant is temporarily unavailable. Nothing was used from your AI allowance; please try again later.");
     expect(JSON.stringify(res.json)).not.toMatch(/x-api-key|authentication_error/);
     expect((await usage(A)).generationsUsed).toBe(before);
     // The details are in the log, where they can be acted on.
