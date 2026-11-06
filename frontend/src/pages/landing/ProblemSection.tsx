@@ -31,7 +31,7 @@ export function ProblemSection() {
             <li key={pain.title}>
               <Reveal delayMs={i * 90}>
                 <div className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-surface p-6">
-                  <span aria-hidden="true" className="font-display text-3xl font-extrabold text-accent-display">
+                  <span aria-hidden="true" className="font-display text-3xl font-extrabold text-accent">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <h3 className="font-display text-lg font-bold text-text">{pain.title}</h3>

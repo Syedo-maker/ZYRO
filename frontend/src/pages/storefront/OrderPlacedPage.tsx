@@ -100,7 +100,7 @@ export function OrderPlacedPage() {
             <label htmlFor="proof-file" className="text-xs font-semibold text-text-secondary">
               Screenshot
             </label>
-            <input id="proof-file" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            <input id="proof-file" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full min-w-0 max-w-full text-sm text-text-secondary file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border file:border-text/25 file:bg-transparent file:px-4 file:text-sm file:font-semibold file:text-text hover:file:border-text/60" />
           </div>
           <Input id="proof-amount" label="Amount you sent" type="number" min={0} step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} />
           <Input id="proof-reference" label="Transfer reference (helps the shop find it)" maxLength={64} value={reference} onChange={(e) => setReference(e.target.value)} />

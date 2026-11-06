@@ -261,7 +261,7 @@ function PaymentsContent() {
             <label htmlFor="remittance-file" className="text-xs font-semibold text-text-secondary">
               CSV file
             </label>
-            <input id="remittance-file" type="file" accept=".csv,text/csv" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            <input id="remittance-file" type="file" accept=".csv,text/csv" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full min-w-0 max-w-full text-sm text-text-secondary file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border file:border-text/25 file:bg-transparent file:px-4 file:text-sm file:font-semibold file:text-text hover:file:border-text/60" />
           </div>
           <Button type="submit" className="h-10" disabled={busy !== null || !file || !courier.trim()}>
             {busy === 'import' ? 'Checking...' : 'Check against my orders'}

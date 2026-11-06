@@ -148,8 +148,6 @@
   --color-accent-hover: var(--zyro-lime-300);
   --color-accent-pressed: var(--zyro-lime-500);
   --color-on-accent: var(--zyro-black);
-  --color-accent-display: var(--zyro-lime-400);
-  --color-accent-on-inverse: var(--zyro-lime-400);
 
   /* Focus: one lime ring everywhere, so keyboard users learn it once. */
   --color-ring: var(--zyro-lime-400);

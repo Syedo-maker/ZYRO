@@ -54,7 +54,7 @@ const STEPS = [
         </div>
         <div className="flex items-center justify-between rounded-lg bg-inverse px-2.5 py-2">
           <div className="h-2 w-16 rounded bg-on-inverse/50" />
-          <div className="h-2 w-8 rounded bg-accent-display" />
+          <div className="h-2 w-8 rounded bg-accent" />
         </div>
       </div>
     ),
