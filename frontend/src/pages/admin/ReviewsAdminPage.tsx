@@ -33,10 +33,10 @@ function ReplyDialog({ review, onClose, onSave }: { review: ModerationReview; on
   return (
     <Dialog open title={`Reply to ${review.authorName}`} onClose={onClose} size="lg">
       <form onSubmit={submit} className="flex flex-col gap-4">
-        <p className="rounded-[10px] bg-bg px-4 py-3 text-sm text-text-secondary">{review.comment ?? review.title ?? `${review.rating} stars, no comment`}</p>
+        <p className="rounded-control bg-bg px-4 py-3 text-sm text-text-secondary">{review.comment ?? review.title ?? `${review.rating} stars, no comment`}</p>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="reply" className="text-xs font-semibold text-text-secondary">Your public reply (leave empty to remove it)</label>
-          <textarea id="reply" rows={4} maxLength={1000} autoFocus value={text} onChange={(e) => setText(e.target.value)} className="rounded-[10px] border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+          <textarea id="reply" rows={4} maxLength={1000} autoFocus value={text} onChange={(e) => setText(e.target.value)} className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
         </div>
         {error && <Alert>{error}</Alert>}
         <div className="flex gap-3">
@@ -76,7 +76,7 @@ function ReviewsAdminContent() {
   }
 
   if (!activeStore) return <p className="text-sm text-text-secondary">Create a store first.</p>
-  const select = 'h-10 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+  const select = 'h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
@@ -122,7 +122,7 @@ function ReviewsAdminContent() {
             {r.title && <p className="text-sm font-bold">{r.title}</p>}
             {r.comment && <p className="whitespace-pre-line text-sm text-text-secondary">{r.comment}</p>}
             {r.merchantReply && (
-              <p className="rounded-[10px] bg-bg px-4 py-2.5 text-sm text-text-secondary">
+              <p className="rounded-control bg-bg px-4 py-2.5 text-sm text-text-secondary">
                 <span className="font-semibold text-text">Your reply: </span>{r.merchantReply}
               </p>
             )}

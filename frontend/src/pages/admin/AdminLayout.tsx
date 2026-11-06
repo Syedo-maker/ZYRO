@@ -62,7 +62,7 @@ export function AdminLayout() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `whitespace-nowrap rounded-[10px] px-4 py-2.5 text-sm font-medium transition-colors ${
+                `whitespace-nowrap rounded-control px-4 py-2.5 text-sm font-medium transition-colors ${
                   isActive ? 'bg-on-inverse/15 text-on-inverse font-semibold' : 'text-on-inverse/75 hover:text-on-inverse'
                 }`
               }
@@ -73,7 +73,7 @@ export function AdminLayout() {
             <span
               key={item.to}
               title="Not available on your plan yet"
-              className="whitespace-nowrap rounded-[10px] px-4 py-2.5 text-sm font-medium text-on-inverse/40 cursor-not-allowed"
+              className="whitespace-nowrap rounded-control px-4 py-2.5 text-sm font-medium text-on-inverse/40 cursor-not-allowed"
             >
               {item.label}
             </span>

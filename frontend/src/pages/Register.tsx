@@ -109,7 +109,7 @@ export function RegisterPage() {
               id="currency"
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             >
               {STORE_CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>

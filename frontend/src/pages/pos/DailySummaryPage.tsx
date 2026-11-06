@@ -68,7 +68,7 @@ export function DailySummaryPage() {
               value={date}
               max={localToday()}
               onChange={(e) => setDate(e.target.value)}
-              className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
           </div>
           <Button variant="secondary" onClick={() => window.print()} disabled={!report}>

@@ -85,12 +85,12 @@ export function TrendingDemo() {
           onChange={(e) => setPhrase(e.target.value)}
           maxLength={60}
           placeholder="lawn suit"
-          className="h-11 flex-1 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm text-text outline-none placeholder:text-text-muted focus-visible:border-text focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-11 flex-1 rounded-control border border-border-input bg-surface px-3.5 text-sm text-text outline-none placeholder:text-text-muted focus-visible:border-text focus-visible:ring-2 focus-visible:ring-ring"
         />
         <button
           type="submit"
           disabled={loading || phrase.trim().length < 2}
-          className="h-11 rounded-[10px] bg-accent px-5 text-sm font-semibold text-on-accent transition-colors hover:bg-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
+          className="h-11 rounded-control bg-accent px-5 text-sm font-semibold text-on-accent transition-colors hover:bg-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
         >
           {loading ? 'Thinking…' : 'Suggest'}
         </button>
@@ -118,7 +118,7 @@ export function TrendingDemo() {
       </p>
 
       {error && (
-        <p role="alert" className="mt-4 rounded-[10px] bg-surface px-3.5 py-2.5 text-sm text-accent">
+        <p role="alert" className="mt-4 rounded-control bg-surface px-3.5 py-2.5 text-sm text-accent">
           {error}
         </p>
       )}
@@ -144,7 +144,7 @@ export function TrendingDemo() {
             {result.suggestions.map((s, i) => (
               <li
                 key={`${run}-${i}`}
-                className="rounded-[10px] bg-surface p-3.5 motion-safe:animate-[demoCardIn_480ms_ease-out_both]"
+                className="rounded-control bg-surface p-3.5 motion-safe:animate-[demoCardIn_480ms_ease-out_both]"
                 style={{ animationDelay: `${i * CARD_STAGGER_MS}ms` }}
               >
                 <p className="font-display text-sm font-bold">{s.title}</p>

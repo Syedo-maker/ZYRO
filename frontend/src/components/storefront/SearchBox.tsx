@@ -109,7 +109,7 @@ export function SearchBox({ storeId }: { storeId: string }) {
         </button>
       </form>
       {showList && (
-        <ul id={listId} role="listbox" aria-label="Suggestions" className="absolute inset-x-0 top-12 z-20 overflow-hidden rounded-[10px] border border-border bg-surface">
+        <ul id={listId} role="listbox" aria-label="Suggestions" className="absolute inset-x-0 top-12 z-20 overflow-hidden rounded-control border border-border bg-surface">
           {suggestions.map((s, i) => (
             <li
               key={s.id}

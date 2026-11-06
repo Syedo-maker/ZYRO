@@ -49,11 +49,11 @@ export function StoreDirectoryPreview() {
                 >
                   <div className="flex items-center gap-3">
                     {store.logoUrl ? (
-                      <img src={store.logoUrl} alt="" loading="lazy" className="h-10 w-10 rounded-[10px] object-cover" />
+                      <img src={store.logoUrl} alt="" loading="lazy" className="h-10 w-10 rounded-control object-cover" />
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand font-display text-sm font-bold text-on-brand"
+                        className="flex h-10 w-10 items-center justify-center rounded-control bg-brand font-display text-sm font-bold text-on-brand"
                         style={brandStyle(store.themeColor)}
                       >
                         {store.name.slice(0, 1).toUpperCase()}

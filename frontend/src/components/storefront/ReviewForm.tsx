@@ -87,7 +87,7 @@ export function ReviewForm({
           maxLength={2000}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          className="rounded-[10px] border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
         <span className="self-end text-xs text-text-muted">{comment.length} / 2000</span>
       </div>

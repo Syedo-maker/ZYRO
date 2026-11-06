@@ -193,7 +193,7 @@ export function ReviewsSection({ productId, onChanged }: { productId: string; on
                   <label htmlFor="review-sort" className="text-xs font-semibold text-text-secondary">
                     Sort by
                   </label>
-                  <select id="review-sort" value={sort} onChange={(e) => setSort(e.target.value as ReviewSort)} className="h-10 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30">
+                  <select id="review-sort" value={sort} onChange={(e) => setSort(e.target.value as ReviewSort)} className="h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30">
                     {Object.entries(SORTS).map(([v, l]) => (
                       <option key={v} value={v}>
                         {l}

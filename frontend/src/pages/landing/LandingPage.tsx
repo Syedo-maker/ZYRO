@@ -40,7 +40,7 @@ export function LandingPage() {
       {/* Skip link: this page is long, and a keyboard user should not have to tab the whole nav. */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[10px] focus:bg-bg focus:px-4 focus:py-2 focus:font-semibold focus:text-text"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-control focus:bg-bg focus:px-4 focus:py-2 focus:font-semibold focus:text-text"
       >
         Skip to content
       </a>

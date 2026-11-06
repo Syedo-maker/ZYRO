@@ -75,7 +75,7 @@ export function LandingNav() {
           {isLoading ? null : home ? (
             <Link
               to={home}
-              className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+              className="rounded-control bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
             >
               {homeLabel}
             </Link>
@@ -83,13 +83,13 @@ export function LandingNav() {
             <>
               <Link
                 to="/login"
-                className="rounded-[10px] px-3 py-2 text-sm font-semibold text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+                className="rounded-control px-3 py-2 text-sm font-semibold text-on-inverse-secondary transition-colors hover:text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
               >
                 Log in
               </Link>
               <Link
                 to="/register"
-                className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
+                className="rounded-control bg-bg px-4 py-2 text-sm font-bold text-text transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse"
               >
                 Start free
               </Link>
@@ -102,7 +102,7 @@ export function LandingNav() {
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls="landing-mobile-menu"
-          className="ml-auto rounded-[10px] p-2 text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse lg:hidden"
+          className="ml-auto rounded-control p-2 text-on-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-inverse lg:hidden"
         >
           <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -123,15 +123,15 @@ export function LandingNav() {
             ))}
             <li className="mt-1 flex gap-3 px-2 pb-3 pt-2">
               {isLoading ? null : home ? (
-                <Link to={home} onClick={() => setOpen(false)} className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text">
+                <Link to={home} onClick={() => setOpen(false)} className="rounded-control bg-bg px-4 py-2 text-sm font-bold text-text">
                   {homeLabel}
                 </Link>
               ) : (
                 <>
-                  <Link to="/login" onClick={() => setOpen(false)} className="rounded-[10px] border border-on-inverse-muted px-4 py-2 text-sm font-semibold text-on-inverse">
+                  <Link to="/login" onClick={() => setOpen(false)} className="rounded-control border border-on-inverse-muted px-4 py-2 text-sm font-semibold text-on-inverse">
                     Log in
                   </Link>
-                  <Link to="/register" onClick={() => setOpen(false)} className="rounded-[10px] bg-bg px-4 py-2 text-sm font-bold text-text">
+                  <Link to="/register" onClick={() => setOpen(false)} className="rounded-control bg-bg px-4 py-2 text-sm font-bold text-text">
                     Start free
                   </Link>
                 </>

@@ -174,7 +174,7 @@ export function TeamPage() {
                   id={`role-${m.id}`}
                   value={m.role}
                   onChange={(e) => void changeRole(m, e.target.value as Role)}
-                  className="h-9 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  className="h-9 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
                 >
                   {m.role === 'custom' && (
                     <option value="custom" disabled>

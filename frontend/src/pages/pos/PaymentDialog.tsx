@@ -96,7 +96,7 @@ export function PaymentDialog({ quote, onClose, onCompleted }: { quote: PosQuote
                       type="button"
                       aria-pressed={r.method === m.value}
                       onClick={() => update(r.id, { method: m.value, tendered: '' })}
-                      className={`flex-1 h-11 rounded-[10px] border text-sm font-semibold ${
+                      className={`flex-1 h-11 rounded-control border text-sm font-semibold ${
                         r.method === m.value ? 'border-brand bg-brand-soft text-brand' : 'border-border hover:bg-bg'
                       }`}
                     >
@@ -129,7 +129,7 @@ export function PaymentDialog({ quote, onClose, onCompleted }: { quote: PosQuote
                     step="0.01"
                     value={r.amount}
                     onChange={(e) => update(r.id, { amount: e.target.value })}
-                    className="h-12 rounded-[10px] border border-border-input px-3.5 text-base tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                    className="h-12 rounded-control border border-border-input px-3.5 text-base tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 {r.method === 'cash' && (
@@ -146,7 +146,7 @@ export function PaymentDialog({ quote, onClose, onCompleted }: { quote: PosQuote
                       value={r.tendered}
                       onChange={(e) => update(r.id, { tendered: e.target.value })}
                       placeholder={r.amount}
-                      className="h-12 rounded-[10px] border border-border-input px-3.5 text-base tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                      className="h-12 rounded-control border border-border-input px-3.5 text-base tabular-nums outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
                     />
                   </div>
                 )}

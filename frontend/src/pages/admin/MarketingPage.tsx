@@ -63,7 +63,7 @@ function CreateDialog({ storeId, currency, onClose, onCreated }: { storeId: stri
         <fieldset className="flex gap-2">
           <legend className="sr-only">Type</legend>
           {(['percentage', 'fixed'] as const).map((t) => (
-            <label key={t} className={`flex-1 cursor-pointer rounded-[10px] border px-3 py-3 text-center text-sm font-semibold ${type === t ? 'border-brand bg-brand-soft text-brand' : 'border-border'}`}>
+            <label key={t} className={`flex-1 cursor-pointer rounded-control border px-3 py-3 text-center text-sm font-semibold ${type === t ? 'border-brand bg-brand-soft text-brand' : 'border-border'}`}>
               <input type="radio" name="dc-type" className="sr-only" checked={type === t} onChange={() => setType(t)} />
               {t === 'percentage' ? 'Percent off' : `Amount off (${currency})`}
             </label>

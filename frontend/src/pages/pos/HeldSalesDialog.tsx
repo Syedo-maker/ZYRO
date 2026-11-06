@@ -51,7 +51,7 @@ export function HeldSalesDialog({ onClose, onChanged }: { onClose: () => void; o
         ) : held && held.length === 0 ? (
           <p className="text-sm text-text-secondary">No held sales.</p>
         ) : (
-          <ul className="divide-y divide-border border border-border rounded-[10px]">
+          <ul className="divide-y divide-border border border-border rounded-control">
             {held?.map((h) => (
               <li key={h.id} className="px-4 py-3 flex items-center gap-3">
                 <div className="flex-1 min-w-0">

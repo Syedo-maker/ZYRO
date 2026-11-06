@@ -77,7 +77,7 @@ export function HistoryPage() {
               setQ(e.target.value)
               setOffset(0)
             }}
-            className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           />
         </div>
       </div>

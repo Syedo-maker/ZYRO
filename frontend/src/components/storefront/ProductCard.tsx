@@ -25,7 +25,7 @@ export function ProductCard({
   return (
     <li className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface">
       <Link to={`/store/${storeId}/products/${product.id}`} className="group flex flex-1 flex-col gap-2 p-3 outline-offset-[-2px]">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-[10px] bg-bg">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-bg">
           {product.images[0] ? (
             <img src={product.images[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]" />
           ) : (

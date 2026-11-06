@@ -37,7 +37,7 @@ export function DiscountDialog({ onClose }: { onClose: () => void }) {
           {(['percentage', 'fixed'] as const).map((t) => (
             <label
               key={t}
-              className={`flex-1 rounded-[10px] border px-3 py-3 text-center text-sm font-semibold cursor-pointer ${
+              className={`flex-1 rounded-control border px-3 py-3 text-center text-sm font-semibold cursor-pointer ${
                 type === t ? 'border-brand bg-brand-soft text-brand' : 'border-border'
               }`}
             >

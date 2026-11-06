@@ -131,7 +131,7 @@ function OrdersContent() {
               placeholder="Search by order number or email"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="h-10 min-w-[220px] flex-1 rounded-[10px] border border-border-input px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-10 min-w-[220px] flex-1 rounded-control border border-border-input px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
             <select
               aria-label="Sales channel"
@@ -140,7 +140,7 @@ function OrdersContent() {
                 setChannel(e.target.value as SalesChannel | '')
                 setOffset(0)
               }}
-              className="h-10 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             >
               <option value="">All channels</option>
               <option value="online">Online</option>

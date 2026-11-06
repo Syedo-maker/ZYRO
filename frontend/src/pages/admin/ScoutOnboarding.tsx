@@ -183,7 +183,7 @@ export function ScoutOnboarding({
                   <button
                     type="button"
                     onClick={() => onAdd(prefillFrom(p))}
-                    className="shrink-0 rounded-[8px] border border-brand px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
+                    className="shrink-0 rounded-md border border-brand px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
                     aria-label={`Add ${p.name} to my store`}
                   >
                     Add to my store

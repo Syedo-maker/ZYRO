@@ -84,7 +84,7 @@ function PricingCard({ plan, featured }: { plan: PlanInfo; featured: boolean }) 
 
       <Link
         to="/register"
-        className={`inline-flex h-11 items-center justify-center rounded-[10px] font-display text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
+        className={`inline-flex h-11 items-center justify-center rounded-control font-display text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
           featured
             ? 'bg-bg text-text outline-on-inverse hover:bg-surface'
             : 'bg-inverse text-on-inverse outline-ring hover:bg-brand-hover'

@@ -85,7 +85,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
                       <Link
                         key={p.id}
                         to={`/store/${storeId}/products/${p.id}`}
-                        className="flex w-32 shrink-0 flex-col gap-1 rounded-[10px] border border-border p-2 hover:border-brand"
+                        className="flex w-32 shrink-0 flex-col gap-1 rounded-control border border-border p-2 hover:border-brand"
                       >
                         <div className="aspect-square w-full overflow-hidden rounded-lg bg-bg">
                           {p.images[0] && <img src={p.images[0]} alt="" className="h-full w-full object-cover" />}
@@ -100,7 +100,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
             ))}
             {sending && <Spinner label="Thinking…" />}
             {error && (
-              <p role="alert" className="rounded-[10px] bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
+              <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
                 {error}
               </p>
             )}
@@ -117,7 +117,7 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
               placeholder="Ask about a product..."
               maxLength={1000}
               disabled={sending}
-              className="h-10 flex-1 rounded-[10px] border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30 disabled:opacity-60"
+              className="h-10 flex-1 rounded-control border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30 disabled:opacity-60"
             />
             <Button type="submit" className="h-10 px-4" disabled={sending || !input.trim()}>
               Send
