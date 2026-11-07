@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { apiFetch, refreshAccessToken, setAccessToken } from '../lib/apiClient'
+import { forgetConversation } from '../lib/assistantId'
 import type { AuthSession, User } from '../types/api'
 import type { MyStore } from '../types/store'
 
@@ -86,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(input: LoginInput) {
     const session = await apiFetch<AuthSession>('/auth/login', { method: 'POST', body: input })
     setAccessToken(session.accessToken)
+    forgetConversation() // a different person may be signing in on this browser
     // The sign-in answer has no platformAdmin flag; /users/me does.
     const [profile, mine] = await Promise.all([apiFetch<User>('/users/me'), apiFetch<MyStore[]>('/users/me/stores')])
     setUser(profile)
@@ -109,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function logout() {
     await apiFetch('/auth/logout', { method: 'POST' })
+    forgetConversation() // the next person on this browser starts their own chat
     setAccessToken(null)
     setUser(null)
     setStores([])
