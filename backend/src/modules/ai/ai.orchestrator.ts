@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
 import { getAiQueue, readyAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
+import type { Job } from "bullmq";
 import type { AiGenerateResult } from "../../lib/aiProvider";
 import { allowsImage, modelFor, tierFor } from "../../lib/aiModels";
 import { FRIENDLY_AI_UNAVAILABLE } from "../../lib/aiErrors";
@@ -133,7 +134,10 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
     const raw: AiGenerateResult = await job.waitUntilFinished(events, env.ai.jobTimeoutMs);
     result = { ...raw, text: tidyText(raw.text) };
   } catch (err) {
-    if (source) await releaseQuota(input.tenantId, kind, source, month); // give the reservation back, to where it came from; this attempt never happened
+    // Give the reservation back, to where it came from, only if no provider call will happen: a
+    // wait that timed out while the worker is already calling the provider is real spend, and
+    // refunding it let the monthly allowance stop bounding the cost (audit 2026-11).
+    if (source && (await abandonJob(job))) await releaseQuota(input.tenantId, kind, source, month);
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
     // being unable to fulfil the request right now, not something the caller did wrong. The
     // provider's own words go to the log, where they can be acted on; the merchant or shopper gets
@@ -160,6 +164,27 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
     await releaseQuota(input.tenantId, kind, source, month);
   };
   return { result, release };
+}
+
+/**
+ * After a failed wait: true when no provider call will happen for this job, so its reservation can
+ * be given back. A job that has failed outright, or is still queued and can be removed, costs
+ * nothing more; a job the worker is running (or has just finished) is being paid for.
+ */
+async function abandonJob(job: Job): Promise<boolean> {
+  try {
+    const state = await job.getState();
+    if (state === "failed") return true;
+    if (state === "waiting" || state === "delayed" || state === "prioritized" || state === "waiting-children") {
+      await job.remove();
+      return true;
+    }
+    return false;
+  } catch {
+    // Removal refused because the worker picked it up in the meantime, or the queue is unreachable:
+    // assume the call goes ahead rather than refund spend that may be real.
+    return false;
+  }
 }
 
 /**
