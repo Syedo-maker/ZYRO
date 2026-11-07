@@ -166,3 +166,41 @@ describe("a cash-on-delivery order settles exactly once (finding: COD outcome ch
     expect(await signal("03004440002")).toBeNull();
   });
 });
+
+describe("a sale is never refunded for more than was paid (finding: refund versus partial return race)", () => {
+  it("a partial return that lands while a whole-order refund is starting stops the refund", async () => {
+    const P = (p: string) => `/stores/${A.storeId}/pos${p}`;
+    await api("POST", P("/shift/open"), { token: A.token, body: { openingFloat: 0 } });
+    const sale = await api("POST", P("/sales"), { token: A.token, body: { items: [{ productId: cup, quantity: 2 }], payments: [{ method: "cash", amount: 900, tendered: 900 }] } });
+    expect(sale.status).toBe(201);
+    const itemId = sale.json.items.find((i: { productId: string }) => i.productId === cup).id as string;
+
+    // The refund has already passed its "nothing returned yet" check when the return commits:
+    // the return is run just before the refund's transaction starts.
+    const { prisma } = await import("../../src/lib/prisma");
+    const original = prisma.$transaction.bind(prisma);
+    let injected = false;
+    const spy = jest.spyOn(prisma, "$transaction").mockImplementation((async (...args: Parameters<typeof prisma.$transaction>) => {
+      if (!injected) {
+        injected = true;
+        const ret = await api("POST", P(`/sales/${sale.json.id}/returns`), { token: A.token, body: { items: [{ orderItemId: itemId, quantity: 1 }] } });
+        expect(ret.status).toBe(201);
+      }
+      return (original as (...a: unknown[]) => unknown)(...args);
+    }) as never);
+    let refund;
+    try {
+      refund = await api("POST", `/stores/${A.storeId}/orders/${sale.json.id}/refund`, { token: A.token, body: {} });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(injected).toBe(true);
+    expect(refund.status).toBe(409);
+
+    const returned = await prismaUnscoped.orderReturn.aggregate({ where: { orderId: sale.json.id }, _sum: { amount: true } });
+    const refunded = await prismaUnscoped.refund.aggregate({ where: { orderId: sale.json.id }, _sum: { amount: true } });
+    const paidBack = Number(returned._sum.amount ?? 0) + Number(refunded._sum.amount ?? 0);
+    expect(paidBack).toBeLessThanOrEqual(900);
+    await api("POST", P("/shift/close"), { token: A.token, body: { countedCash: 450 } });
+  });
+});
