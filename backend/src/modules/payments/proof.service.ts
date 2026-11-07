@@ -116,9 +116,13 @@ export const proofService = {
     const existing = await prisma.paymentProof.findFirst({ where: { tenantId, orderId, status: { in: ["pending", "accepted"] } } });
     if (existing) throw Errors.conflict("A payment screenshot for this order is already waiting to be checked.");
 
+    // A reference already used in this store is refused by the unique key below anyway. Refusing it
+    // here, before the AI reads the picture, stops a public request from buying a platform-paid
+    // vision call each time it repeats a known reference (audit 2026-11).
     const referenceAlreadyUsed = input.declaredReference
-      ? (await prisma.paymentProof.count({ where: { tenantId, declaredReference: input.declaredReference, orderId: { not: orderId } } })) > 0
+      ? (await prisma.paymentProof.count({ where: { tenantId, declaredReference: input.declaredReference } })) > 0
       : false;
+    if (referenceAlreadyUsed) throw Errors.conflict("That transfer reference has already been used in this store.");
 
     const key = receiptKey(tenantId, input);
     const image = key ? await loadImage(key) : null;

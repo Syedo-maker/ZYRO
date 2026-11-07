@@ -204,3 +204,31 @@ describe("a sale is never refunded for more than was paid (finding: refund versu
     await api("POST", P("/shift/close"), { token: A.token, body: { countedCash: 450 } });
   });
 });
+
+describe("a reused transfer reference costs no AI call (finding: vision call before the reference check)", () => {
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+  const bankOrder = async (tag: string) => {
+    const g = `guest-${suffix}-${tag}`;
+    await api("POST", `/stores/${A.storeId}/cart/items`, { guest: g, body: { productId: cup, quantity: 1 } });
+    const o = await api("POST", `/stores/${A.storeId}/payments/orders`, { guest: g, body: { name: "Bank", phone: "03005550000", email: `verify-audit-${tag}-${suffix}@example.com`, address, method: "bank_transfer" } });
+    const up = await request(app).post(`/api/v1/stores/${A.storeId}/payments/orders/${o.json.orderId}/proof-image`).set("X-Guest-Session-Id", g).attach("file", png, { filename: "r.png", contentType: "image/png" });
+    created.keys.push(up.body.key);
+    return { orderId: o.json.orderId as string, key: up.body.key as string };
+  };
+
+  it("submitting a reference already used in the store is refused before the receipt is sent to the AI", async () => {
+    aiReply = { readable: true, amount: 450, currency: "PKR", date: new Date().toISOString().slice(0, 10), reference: "TRX-AUDIT-1", bank: "Test Bank", sender: "S", note: null };
+    const first = await bankOrder("ref-a");
+    const ok = await api("POST", `/stores/${A.storeId}/payments/orders/${first.orderId}/proof`, { body: { imageKey: first.key, declaredAmount: 450, declaredReference: "TRX-AUDIT-1" } });
+    expect(ok.status).toBe(201);
+
+    const second = await bankOrder("ref-b");
+    const before = aiCalls.length;
+    for (let i = 0; i < 3; i++) {
+      const again = await api("POST", `/stores/${A.storeId}/payments/orders/${second.orderId}/proof`, { body: { imageKey: second.key, declaredAmount: 450, declaredReference: "TRX-AUDIT-1" } });
+      expect(again.status).toBe(409);
+    }
+    expect(aiCalls.length).toBe(before);
+    expect(await prismaUnscoped.paymentProof.count({ where: { orderId: second.orderId } })).toBe(0);
+  });
+});
