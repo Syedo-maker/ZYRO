@@ -119,6 +119,8 @@ export const env = {
     resetMax: num("RATE_LIMIT_RESET_MAX", 10),
     /** Chat messages sent to the AI shopping assistant per person per minute. */
     chatMax: num("RATE_LIMIT_CHAT_MAX", 10),
+    /** Chat messages per IP per minute across every shopper on that address (above chatMax). */
+    chatIpMax: num("RATE_LIMIT_CHAT_IP_MAX", 60),
     /** All API requests per IP per minute. */
     apiMax: num("RATE_LIMIT_API_MAX", 600),
   },
