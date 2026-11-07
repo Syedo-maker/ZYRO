@@ -126,3 +126,43 @@ describe("an account is linked only to its own customer record (finding: unverif
     expect(ids).toEqual(expect.arrayContaining([earlier.json.orderId, later.json.orderId]));
   });
 });
+
+describe("a cash-on-delivery order settles exactly once (finding: COD outcome check-then-act)", () => {
+  const stockOf = async () => (await prismaUnscoped.inventoryLevel.findFirst({ where: { tenantId: A.storeId, productId: cup }, select: { quantity: true } }))?.quantity ?? 0;
+  const placeCod = async (tag: string, phone: string) => {
+    const g = `guest-${suffix}-${tag}`;
+    await api("POST", `/stores/${A.storeId}/cart/items`, { guest: g, body: { productId: cup, quantity: 2 } });
+    const res = await api("POST", `/stores/${A.storeId}/payments/orders`, { guest: g, body: { name: "Cod", phone, email: `verify-audit-${tag}-${suffix}@example.com`, address, method: "cod" } });
+    expect(res.status).toBe(201);
+    return res.json.orderId as string;
+  };
+  const signal = async (phone: string) => {
+    const { hashPhone } = await import("../../src/modules/payments/payments.service");
+    return prismaUnscoped.codPhoneSignal.findFirst({ where: { phoneHash: hashPhone(phone)! } });
+  };
+  afterAll(async () => {
+    const { hashPhone } = await import("../../src/modules/payments/payments.service");
+    await prismaUnscoped.codPhoneSignal.deleteMany({ where: { phoneHash: { in: ["03004440001", "03004440002"].map((p) => hashPhone(p)!) } } });
+  });
+
+  it("two refusals recorded at the same moment put the stock back once and count one refusal", async () => {
+    const orderId = await placeCod("cod-race", "03004440001");
+    const before = await stockOf();
+    const outcome = () => api("POST", `/stores/${A.storeId}/payments/cod/orders/${orderId}/outcome`, { token: A.token, body: { outcome: "refused" } });
+    const [r1, r2] = await Promise.all([outcome(), outcome()]);
+    expect([r1.status, r2.status].sort()).toEqual([200, 409]);
+    expect(await stockOf()).toBe(before + 2);
+    expect((await signal("03004440001"))?.refused).toBe(1);
+  });
+
+  it("a cancelled order cannot be brought back by recording the cash as collected", async () => {
+    const orderId = await placeCod("cod-cancelled", "03004440002");
+    expect((await api("PATCH", `/stores/${A.storeId}/orders/${orderId}/status`, { token: A.token, body: { status: "cancelled" } })).status).toBe(200);
+    const res = await api("POST", `/stores/${A.storeId}/payments/cod/orders/${orderId}/outcome`, { token: A.token, body: { outcome: "collected" } });
+    expect(res.status).toBe(409);
+    const order = await prismaUnscoped.order.findFirst({ where: { id: orderId }, include: { payments: true } });
+    expect(order?.status).toBe("CANCELLED");
+    expect(order?.payments.every((p) => p.status !== "SUCCEEDED")).toBe(true);
+    expect(await signal("03004440002")).toBeNull();
+  });
+});
