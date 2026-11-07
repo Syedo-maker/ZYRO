@@ -250,3 +250,31 @@ describe("payment-failure help spends no AI for a store that does not exist (fin
     expect(aiCalls.length).toBe(before + 1);
   });
 });
+
+describe("the landing demo's saved examples respect the daily AI ceiling (finding: example path skips the claim)", () => {
+  it("an uncached example asks the AI only while the global daily budget has room", async () => {
+    const redis = (await import("../../src/lib/redis")).getRedis();
+    const { demoInternals } = await import("../../src/modules/demo/demo.service");
+    const exampleKey = demoInternals.cacheKey("lawn suit", "clothing");
+    const dayKey = `demo:rate:day:${new Date().toISOString().slice(0, 10)}`;
+    const savedExample = await redis.get(exampleKey);
+    const savedDay = await redis.get(dayKey);
+    try {
+      await redis.del(exampleKey);
+      await redis.set(dayKey, String(demoInternals.GLOBAL_PER_DAY), "EX", 600);
+      aiReply = "not json at all";
+      const before = aiCalls.length;
+      for (let i = 0; i < 3; i++) {
+        const res = await request(app).post("/api/v1/demo/product-ideas").set("Content-Type", "application/json").send({ phrase: "lawn suit" });
+        expect(res.status).toBe(200);
+        expect(res.body.origin).toBe("example");
+      }
+      expect(aiCalls.length).toBe(before);
+    } finally {
+      if (savedExample) await redis.set(exampleKey, savedExample, "EX", 7 * 24 * 60 * 60);
+      else await redis.del(exampleKey);
+      if (savedDay) await redis.set(dayKey, savedDay, "EX", 2 * 24 * 60 * 60);
+      else await redis.del(dayKey);
+    }
+  });
+});
