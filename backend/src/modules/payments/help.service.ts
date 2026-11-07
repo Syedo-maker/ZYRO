@@ -1,3 +1,4 @@
+import { prismaUnscoped } from "../../lib/prisma";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
 import { buildPrompt, checkHelpSentence, fallbackHelp, knownHelp, SYSTEM_PROMPT, type PaymentHelp } from "./payment.help";
 import type { PaymentHelpInput } from "./payments.validation";
@@ -17,6 +18,8 @@ export const helpService = {
 
     const fallback = fallbackHelp(language);
     if (!input.providerMessage) return fallback;
+    // Only a real store's shopper gets the AI: the route is public and the platform pays for it.
+    if (!(await prismaUnscoped.tenant.findUnique({ where: { id: tenantId }, select: { id: true } }))) return fallback;
 
     try {
       const result = await aiGenerate({

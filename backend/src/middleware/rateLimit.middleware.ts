@@ -103,3 +103,7 @@ export const chatMessageLimiter = limiter("chat", 60 * 1000, env.rateLimit.chatM
  *  still works. A guest session id is whatever the caller sends, so a new one per message escaped
  *  the per-shopper limit and could spend the store's whole chat allowance (audit 2026-11). */
 export const chatIpLimiter = limiter("chat-ip", 60 * 1000, env.rateLimit.chatIpMax, { keyGenerator: clientIp });
+
+/** Payment-failure help per address per hour. Public, and an unrecognised failure is explained by
+ *  the platform-paid AI, which had no limit of its own (audit 2026-11). */
+export const paymentHelpLimiter = limiter("payment-help", 60 * 60 * 1000, env.rateLimit.helpMax, { keyGenerator: clientIp });

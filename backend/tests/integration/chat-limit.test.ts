@@ -8,6 +8,7 @@ process.env.RATE_LIMIT_ENABLED = "true";
 process.env.RATE_LIMIT_PREFIX = `rl-chat-test-${Date.now().toString(36)}:`;
 process.env.RATE_LIMIT_CHAT_MAX = "2";
 process.env.RATE_LIMIT_CHAT_IP_MAX = "4";
+process.env.RATE_LIMIT_HELP_MAX = "2";
 process.env.RATE_LIMIT_API_MAX = "1000";
 process.env.RATE_LIMIT_REGISTER_MAX = "100";
 process.env.AI_QUEUE_NAME = `ai-generate-verify-chatlimit-${Date.now().toString(36)}`;
@@ -71,4 +72,13 @@ it("a fresh guest id on every message no longer escapes: the address limit stops
   // The address already spent 3 of its 4 above (two answered, one refused by the shopper limit).
   expect(statuses[0]).toBe(200);
   expect(statuses.slice(1).every((s) => s === 429)).toBe(true);
+});
+
+it("the public payment-failure help has a per-address limit (finding: uncapped platform AI spend)", async () => {
+  const statuses = [];
+  for (let i = 0; i < 3; i++) {
+    const res = await request(app).post(`/api/v1/stores/${storeId}/payments/help`).set("Content-Type", "application/json").send({ code: "zz_unknown", providerMessage: `declined ${i}` });
+    statuses.push(res.status);
+  }
+  expect(statuses).toEqual([200, 200, 429]);
 });

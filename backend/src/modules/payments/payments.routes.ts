@@ -8,6 +8,7 @@ import { requireOwner } from "../../middleware/requireOwner.middleware";
 import { withTenantContext } from "../../middleware/tenantContext.middleware";
 import { requirePermission } from "../../middleware/requirePermission.middleware";
 import { resolveCartOwner } from "../../middleware/cartOwner.middleware";
+import { paymentHelpLimiter } from "../../middleware/rateLimit.middleware";
 import { Errors } from "../../errors/AppError";
 import { listGateways } from "./gateways";
 import { paymentsService } from "./payments.service";
@@ -119,6 +120,7 @@ paymentsRouter.get(
 paymentsRouter.post(
   "/help",
   withTenantContext,
+  paymentHelpLimiter,
   run((req) => helpService.explain(req.params.storeId, parse(paymentHelpSchema, req.body)))
 );
 

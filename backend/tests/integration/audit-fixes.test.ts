@@ -232,3 +232,21 @@ describe("a reused transfer reference costs no AI call (finding: vision call bef
     expect(await prismaUnscoped.paymentProof.count({ where: { orderId: second.orderId } })).toBe(0);
   });
 });
+
+describe("payment-failure help spends no AI for a store that does not exist (finding: uncapped platform AI spend)", () => {
+  it("an unknown store gets the written fallback without an AI call", async () => {
+    const before = aiCalls.length;
+    const res = await api("POST", "/stores/no-such-store-0000000000/payments/help", { body: { code: "zz_unknown", providerMessage: "Transaction declined by issuer" } });
+    expect(res.status).toBe(200);
+    expect(res.json.source).not.toBe("ai");
+    expect(aiCalls.length).toBe(before);
+  });
+
+  it("a real store's shopper still gets the AI's plain sentence for an unknown failure", async () => {
+    aiReply = "Your bank declined this payment.";
+    const before = aiCalls.length;
+    const res = await api("POST", `/stores/${A.storeId}/payments/help`, { body: { code: "zz_unknown", providerMessage: "Transaction declined by issuer" } });
+    expect(res.status).toBe(200);
+    expect(aiCalls.length).toBe(before + 1);
+  });
+});
