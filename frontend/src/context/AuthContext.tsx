@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { apiFetch, refreshAccessToken, setAccessToken } from '../lib/apiClient'
+import { apiFetch, restoreSession, setAccessToken } from '../lib/apiClient'
+import { writeSessionHint } from '../lib/sessionHint'
 import { forgetConversation } from '../lib/assistantId'
 import type { AuthSession, User } from '../types/api'
 import type { MyStore } from '../types/store'
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasAttemptedRestore.current = true
 
     void (async () => {
-      const refreshed = await refreshAccessToken()
+      const refreshed = await restoreSession()
       if (refreshed) {
         try {
           const session = await loadSessionData()
@@ -87,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(input: LoginInput) {
     const session = await apiFetch<AuthSession>('/auth/login', { method: 'POST', body: input })
     setAccessToken(session.accessToken)
+    writeSessionHint(true)
     forgetConversation() // a different person may be signing in on this browser
     // The sign-in answer has no platformAdmin flag; /users/me does.
     const [profile, mine] = await Promise.all([apiFetch<User>('/users/me'), apiFetch<MyStore[]>('/users/me/stores')])
@@ -98,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function register(input: RegisterInput) {
     const session = await apiFetch<AuthSession>('/auth/register', { method: 'POST', body: input })
     setAccessToken(session.accessToken)
+    writeSessionHint(true)
     forgetConversation()
     setUser(session.user)
     setStores(await apiFetch<MyStore[]>('/users/me/stores'))
@@ -106,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function registerCustomer(input: CustomerRegisterInput) {
     const session = await apiFetch<AuthSession>('/auth/register-customer', { method: 'POST', body: input })
     setAccessToken(session.accessToken)
+    writeSessionHint(true)
     forgetConversation()
     setUser(session.user)
     setStores([])
@@ -115,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     forgetConversation() // the next person on this browser starts their own chat, even if the request below fails
     await apiFetch('/auth/logout', { method: 'POST' })
     setAccessToken(null)
+    writeSessionHint(false)
     setUser(null)
     setStores([])
   }

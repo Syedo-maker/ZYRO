@@ -2,6 +2,8 @@
 // go through Vite's dev-server proxy (vite.config.ts) and stay same-origin: needed for
 // the httpOnly refresh-token cookie to be sent reliably. Override via VITE_API_URL for a
 // deployment where the frontend and backend aren't proxied together.
+import { readSessionHint, shouldTryRestore, writeSessionHint } from './sessionHint'
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
 
 // Access token lives in memory only (not localStorage) so it isn't reachable by an
@@ -47,10 +49,20 @@ interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
 
 async function refreshAccessToken(): Promise<boolean> {
   const res = await fetch(`${API_BASE_URL}/auth/refresh`, { method: 'POST', credentials: 'include' })
-  if (!res.ok) return false
+  if (!res.ok) {
+    writeSessionHint(false)
+    return false
+  }
   const data = (await res.json()) as { accessToken: string }
   setAccessToken(data.accessToken)
+  writeSessionHint(true)
   return true
+}
+
+/** The page-load restore: skipped for a visitor known to be signed out, so their console stays clean. */
+async function restoreSession(): Promise<boolean> {
+  if (!shouldTryRestore(readSessionHint())) return false
+  return refreshAccessToken()
 }
 
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
@@ -86,4 +98,4 @@ export function authErrorMessage(err: unknown): string {
   return 'Something went wrong. Please try again.'
 }
 
-export { refreshAccessToken }
+export { refreshAccessToken, restoreSession }
