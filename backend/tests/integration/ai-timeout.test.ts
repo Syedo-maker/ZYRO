@@ -1,8 +1,9 @@
 /**
  * What an AI wait timeout does to the store's allowance (audit 2026-11, finding: a timeout refunded
- * the quota while the queued job still ran). When the waiter gives up but the worker is already calling
- * the provider, that call is real spend, so the reservation must stay; a job that never started is
- * removed from the queue and its reservation given back. A fake provider that sleeps; throwaway store.
+ * the quota while the queued job still ran, so the spend went unaccounted). A request that gets nothing
+ * is not charged; but if the job the worker was already running finishes after all, that turn and its
+ * tokens are charged then, and a job that never started is taken off the queue. A fake provider that
+ * sleeps; throwaway store.
  */
 process.env.RATE_LIMIT_ENABLED = "false";
 process.env.AI_JOB_TIMEOUT_MS = "300";
@@ -61,16 +62,17 @@ const ask = async (prompt: string) => {
 };
 const slow = () => ask("slow");
 
-it("a timed-out request whose job is already running keeps its reservation, because the provider is being paid", async () => {
+it("a timed-out request is refunded at once, and charged after all if its running job finishes", async () => {
   await ask("warm up"); // the worker is now polling
   const before = await used();
   await expect(slow()).rejects.toThrow();
+  expect(await used()).toBe(before); // nothing received, nothing charged yet
   await sleep(1200);
   expect(providerCalls).toBe(1);
   expect(await used()).toBe(before + 1);
 });
 
-it("a timed-out request whose job never started is taken off the queue and refunded", async () => {
+it("a timed-out request whose job never started is taken off the queue and never charged", async () => {
   providerCalls = 0;
   const before = await used();
   // Four fill the worker's four slots; the fifth is still queued when its wait times out.
