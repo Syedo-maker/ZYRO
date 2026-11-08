@@ -98,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function register(input: RegisterInput) {
     const session = await apiFetch<AuthSession>('/auth/register', { method: 'POST', body: input })
     setAccessToken(session.accessToken)
+    forgetConversation()
     setUser(session.user)
     setStores(await apiFetch<MyStore[]>('/users/me/stores'))
   }
@@ -105,13 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function registerCustomer(input: CustomerRegisterInput) {
     const session = await apiFetch<AuthSession>('/auth/register-customer', { method: 'POST', body: input })
     setAccessToken(session.accessToken)
+    forgetConversation()
     setUser(session.user)
     setStores([])
   }
 
   async function logout() {
+    forgetConversation() // the next person on this browser starts their own chat, even if the request below fails
     await apiFetch('/auth/logout', { method: 'POST' })
-    forgetConversation() // the next person on this browser starts their own chat
     setAccessToken(null)
     setUser(null)
     setStores([])
