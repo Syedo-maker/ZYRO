@@ -58,7 +58,7 @@ beforeAll(async () => {
     async function merchant(tag: string) {
       const email = `verify-ri-${tag}-${suffix}@example.com`;
       const reg = await api("POST", "/auth/register", {
-        body: { email, password: "password123", storeName: `Verify ${tag}`, storeSlug: `verify-ri-${tag}-${suffix}`, currency: "PKR" },
+        body: { email, password: "password123", storeName: `Verify ${tag} ${suffix}`, storeSlug: `verify-ri-${tag}-${suffix}`, currency: "PKR" },
       });
       if (reg.status !== 201) throw new Error(`register ${tag}: ${reg.status} ${JSON.stringify(reg.json)}`);
       const storeId = (await api("GET", "/users/me/stores", { token: reg.json.accessToken })).json[0].id as string;
@@ -106,7 +106,7 @@ beforeAll(async () => {
       refusals.every((r) => r.status === 401 || r.status === 403),
       refusals.map((r) => r.status).join(",")
     );
-    check("the shop's name was not changed by that attempt", (await api("GET", `/stores/${owner.storeId}`)).json.name === "Verify owner");
+    check("the shop's name was not changed by that attempt", (await api("GET", `/stores/${owner.storeId}`)).json.name === `Verify owner ${suffix}`);
 
     // ---- Issue 2: the experience preference is a hint, never a permission ----------------------
 
@@ -129,7 +129,9 @@ beforeAll(async () => {
     await addProduct(empty, "Only One Thing");
     await api("PATCH", `/stores/${listed.storeId}/branding`, { token: listed.token, body: { description: "Lawn and cotton stitched in Faisalabad." } });
 
-    const directory = await api("GET", "/stores");
+    // Searched by this run's own suffix: the directory is paged, and a local database with many
+    // listed shops would otherwise push this one off the first page (audit health check 2026-11).
+    const directory = await api("GET", `/stores?q=${suffix}`);
     const find = (id: string) => (directory.json.stores as { id: string }[]).find((s) => s.id === id);
     check("the directory needs no login: a shopper with no account can read it", directory.status === 200 && Array.isArray(directory.json.stores));
     check("a shop with a real catalogue is listed", Boolean(find(listed.storeId)));
@@ -147,7 +149,7 @@ beforeAll(async () => {
 
     const off = await api("PATCH", `/stores/${listed.storeId}/branding`, { token: listed.token, body: { listedInDirectory: false } });
     check("the owner can turn the listing off", off.status === 200 && off.json.listedInDirectory === false);
-    check("and the shop disappears from the directory", !(await api("GET", "/stores")).json.stores.some((s: { id: string }) => s.id === listed.storeId));
+    check("and the shop disappears from the directory", !(await api("GET", `/stores?q=${suffix}`)).json.stores.some((s: { id: string }) => s.id === listed.storeId));
     check("while the shop itself keeps working for anyone with its link", (await api("GET", `/stores/${listed.storeId}`)).status === 200);
     check(
       "the public shop profile does not leak the directory setting to shoppers",
