@@ -27,3 +27,34 @@
   var meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.setAttribute('content', theme === 'light' ? '#f4f5f0' : '#030407')
 })()
+
+// Store Themes: a returning shopper's browser remembers each shop's published colours (src/lib/
+// storeTheme.ts, key zyro-store-theme:<storeId>). Set here, before the first paint, so not even the
+// loading screen shows Zyro's colours first. Every name and value passes the same allowlist as
+// safeTokens in src/lib/storeTheme.ts (tests/storeTheme.test.ts checks they agree); the storefront
+// replaces or clears these as soon as the server answers.
+;(function () {
+  try {
+    var match = /^\/store\/([A-Za-z0-9_-]{1,64})(\/|$)/.exec(window.location.pathname)
+    if (!match) return
+    var raw = window.localStorage.getItem('zyro-store-theme:' + match[1])
+    if (!raw) return
+    var tokens = JSON.parse(raw)
+    if (!tokens || typeof tokens !== 'object') return
+    var NAME = /^--(color|font|radius|shadow)-[a-z0-9-]{1,40}$/
+    var VALUE = /^[#a-zA-Z0-9 .,%()/"'-]{1,160}$/
+    var FORBIDDEN = /url\s*\(|expression|javascript|@import|\\/i
+    var root = document.documentElement
+    for (var name in tokens) {
+      if (!Object.prototype.hasOwnProperty.call(tokens, name)) continue
+      var value = tokens[name]
+      if (name === 'color-scheme') {
+        if (value === 'dark' || value === 'light') root.style.colorScheme = value
+      } else if (typeof value === 'string' && NAME.test(name) && VALUE.test(value) && !FORBIDDEN.test(value)) {
+        root.style.setProperty(name, value)
+      }
+    }
+  } catch {
+    // No storage, or a damaged entry: the page simply starts in Zyro's colours.
+  }
+})()

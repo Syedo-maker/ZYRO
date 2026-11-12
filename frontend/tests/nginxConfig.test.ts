@@ -31,3 +31,14 @@ describe('the web access log', () => {
     }
   })
 })
+
+// Store Themes: the owner's Theme Studio frames the real storefront on the same site, so framing is
+// allowed from the same origin and from nowhere else (clickjacking stays blocked for other sites).
+describe('framing', () => {
+  const headers = readFileSync(new URL('../nginx/security-headers.inc.template', import.meta.url), 'utf8').replace(/#.*$/gm, '')
+  it('same origin only, in both the old header and the CSP', () => {
+    assert.match(headers, /X-Frame-Options "SAMEORIGIN"/)
+    assert.match(headers, /frame-ancestors 'self'[;"]/)
+    assert.doesNotMatch(headers, /frame-ancestors[^;"]*(\*|https?:)/)
+  })
+})

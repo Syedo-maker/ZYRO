@@ -107,3 +107,13 @@ export const chatIpLimiter = limiter("chat-ip", 60 * 1000, env.rateLimit.chatIpM
 /** Payment-failure help per address per hour. Public, and an unrecognised failure is explained by
  *  the platform-paid AI, which had no limit of its own (audit 2026-11). */
 export const paymentHelpLimiter = limiter("payment-help", 60 * 60 * 1000, env.rateLimit.helpMax, { keyGenerator: clientIp });
+
+/** Theme Studio design assistant (Store Themes): per person per minute, so one tab cannot hammer it. */
+export const themeAiUserLimiter = limiter("theme-ai", 60 * 1000, env.rateLimit.themeAiMax, {
+  keyGenerator: (req) => (req.userId ? `u:${req.userId}` : clientIp(req)),
+});
+
+/** And per store per hour, across everyone who can reach it: each request also costs AI quota. */
+export const themeAiStoreLimiter = limiter("theme-ai-store", 60 * 60 * 1000, env.rateLimit.themeAiStoreMax, {
+  keyGenerator: (req) => `s:${req.params.storeId}`,
+});

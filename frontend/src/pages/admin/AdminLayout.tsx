@@ -7,6 +7,7 @@ import {
   Menu,
   Mic,
   Package,
+  Paintbrush,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -49,6 +50,8 @@ const NAV_ITEMS: NavItem[] = [
 /** Only the store owner spends money or changes the store's settings, and only a platform operator sees the platform view. */
 const OWNER_ITEMS: NavItem[] = [
   { label: 'Plan & billing', to: '/admin/billing', enabled: true, icon: CreditCard },
+  // Store Themes: the Theme Studio (draft, AI design assistant, publish) is the owner's alone.
+  { label: 'Theme', to: '/admin/theme', enabled: true, icon: Paintbrush },
   { label: 'Settings', to: '/admin/settings', enabled: true, icon: Settings },
 ]
 const PLATFORM_ITEM: NavItem = { label: 'Platform', to: '/admin/platform', enabled: true, icon: ShieldCheck }

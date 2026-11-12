@@ -121,6 +121,41 @@ async function main() {
           outputTokens: 120,
         };
       }
+      // Store Themes (Part 2): the design assistant's strict JSON. A request that says "unclear" gets a
+      // question back; one that says "broken" gets an unusable reply, so the browser test sees the
+      // server ask again and then give up without charging. Bolder and simpler answer differently.
+      if (/design assistant in Zyro's Theme Studio/.test(system)) {
+        const request = /<owner_request>\n([\s\S]*?)\n<\/owner_request>/.exec(prompt)?.[1] ?? "";
+        if (/broken/i.test(request)) return { text: "Sorry, I cannot help with that.", model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+        const bolder = /bolder look/.test(prompt);
+        const simpler = /Make it simpler/.test(prompt);
+        const options = bolder
+          ? [
+              { name: "Electric night", reason: "Black with a loud red, for a confident shop.", changes: { colors: { primary: "#ff5a51", accent: "#ffd60a", background: "#0a0a0a", text: "#ffffff" }, font: "poppins-bold", radius: "none", buttonStyle: "square", surfaceStyle: "contrast" } },
+              { name: "Lime punch", reason: "Zyro's lime on deep black.", changes: { colors: { primary: "#d4ff24", accent: "#d4ff24", background: "#030407", text: "#f4f5f0" }, font: "poppins-bold" } },
+            ]
+          : simpler
+            ? [
+                { name: "Quiet white", reason: "Plain and calm so products stand out.", changes: { colors: { primary: "#111827", accent: "#1f4fd1", background: "#ffffff", text: "#111827" }, font: "inter-clean", cardStyle: "bordered", buttonStyle: "rounded" } },
+                { name: "Soft grey", reason: "Gentle grey with one blue.", changes: { colors: { primary: "#1f4fd1", accent: "#1f4fd1", background: "#f4f5f7", text: "#1f2937" }, font: "inter-clean" } },
+              ]
+            : [
+                { name: "Terracotta", reason: "Warm clay tones suit handmade goods.", changes: { colors: { primary: "#9a3412", accent: "#845006", background: "#f6efe6", text: "#2b1d14" }, font: "inter-lora", radius: "medium", buttonStyle: "rounded", cardStyle: "flat", heroHeadline: /headline/i.test(request) ? "Handmade with love" : undefined } },
+                { name: "Rose garden", reason: "Soft pinks for a friendly gift shop.", changes: { colors: { primary: "#a9306b", accent: "#7247bc", background: "#fff5f9", text: "#3b2440" }, font: "nunito-friendly", radius: "large", buttonStyle: "pill", cardStyle: "shadow" } },
+                { name: "Clean blue", reason: "Crisp white with a trustworthy blue.", changes: { colors: { primary: "#1f4fd1", accent: "#0e6f67", background: "#ffffff", text: "#111827" }, font: "inter-clean", radius: "small" } },
+              ];
+        const urdu = /\b(mujhe|chahiye|acha|kar do|banao)\b/i.test(request);
+        return {
+          text: JSON.stringify({
+            reply: urdu ? "Maine aap ki shop ke liye ek garam, haath se bana look lagaya hai." : "I applied a look that suits your shop, with two more to try.",
+            question: /unclear/i.test(request) ? "Do you prefer a light or a dark page?" : null,
+            options,
+          }),
+          model: "fake-model-e2e",
+          inputTokens: 300,
+          outputTokens: 220,
+        };
+      }
       // Voice notes (Part G): the strict JSON shape the real model is held to.
       if (/spoken instruction/.test(system)) {
         return {

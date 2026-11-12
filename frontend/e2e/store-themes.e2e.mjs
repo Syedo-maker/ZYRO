@@ -189,7 +189,20 @@ try {
   await page.getByText('Loading store').waitFor()
   const loadingBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
   check('the loading screen of a returning visit wears the shop background, not Zyro\'s', loadingBg === 'rgb(255, 255, 255)', loadingBg)
+  // Before any app code runs: the before-paint script has already put the shop's colour on <html>.
+  await page.goto(`${WEB}/store/${storeId}`, { waitUntil: 'domcontentloaded' })
+  const early = await page.evaluate(() => document.documentElement.style.getPropertyValue('--color-bg'))
+  check('the shop colour is on the page before the app has even started', early === '#ffffff', early || '(none)')
   await page.unroute(`${API}/stores/${storeId}`)
+
+  // Leaving the shop inside the app (no page load) takes its colours off the platform pages.
+  await page.getByText('Ceramic Chai Cup').first().waitFor()
+  await page.getByRole('link', { name: 'All shops' }).first().click()
+  await page.waitForURL('**/shop')
+  // React keeps the shop on screen until the next page's code has loaded, then swaps; give it that moment.
+  const cleared = await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--color-bg') === '', null, { timeout: 8000 }).then(() => true, () => false)
+  const after = await page.evaluate(() => document.documentElement.style.getPropertyValue('--color-bg'))
+  check('following a link out of the shop leaves no shop colour on the platform', cleared, after || '(none)')
 } catch (err) {
   failures += 1
   console.log('FAIL  the journey stopped:', err.message)

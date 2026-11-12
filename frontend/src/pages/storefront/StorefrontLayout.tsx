@@ -13,6 +13,8 @@ import { catalogApi } from '../../lib/shopApi'
 import { brandStyle } from '../../lib/brandTheme'
 import { readCachedTokens, themeStyle, writeCachedTokens, type StoreTheme } from '../../lib/storeTheme'
 import { loadThemeFont } from '../../lib/themeFonts'
+import { isStudioPreview, PREVIEW_READY, readPreviewMessage } from '../../lib/themePreview'
+import type { PublishedTheme } from '../../lib/storeTheme'
 import { storefrontApi } from '../../lib/storefrontApi'
 import type { StoreProfile } from '../../types/commerce'
 import type { CategoryCount } from '../../types/shop'
@@ -80,28 +82,30 @@ function CategoryNav({ storeId, categories }: { storeId: string; categories: Cat
   )
 }
 
+/** Takes every design token off <html>: only a shop's theme puts them there (here, or public/theme-init.js). */
+function clearDocumentTheme(root: HTMLElement) {
+  const names: string[] = []
+  for (let i = 0; i < root.style.length; i++) if (root.style[i].startsWith('--')) names.push(root.style[i])
+  for (const n of names) root.style.removeProperty(n)
+  // Back to the visitor's own Dark or Light, as public/theme-init.js set it.
+  root.style.colorScheme = root.getAttribute('data-theme') ?? ''
+}
+
 /**
  * The shop's theme on <html> as well as on the shop's root, while the shop is on screen: toasts and
- * dialogs render outside the root, and the page behind an overscroll is <html>'s. Set before paint,
- * and taken off again when the shopper leaves for the platform, which keeps Zyro's look.
+ * dialogs render outside the root, and the page behind an overscroll is <html>'s. Set before paint;
+ * replaces whatever the before-paint script took from this browser's cache, and clears it when the
+ * shop turns out to have no theme; taken off again when the shopper leaves for the platform.
  */
 function useDocumentTheme(style: CSSProperties | undefined) {
   useLayoutEffect(() => {
-    if (!style) return
     const root = document.documentElement
+    clearDocumentTheme(root)
+    if (!style) return
     const values = style as Record<string, string>
-    const names = Object.keys(values).filter((k) => k.startsWith('--'))
-    const previous = names.map((n) => [n, root.style.getPropertyValue(n)] as const)
-    for (const n of names) root.style.setProperty(n, values[n])
-    const scheme = root.style.colorScheme
+    for (const n of Object.keys(values).filter((k) => k.startsWith('--'))) root.style.setProperty(n, values[n])
     if (style.colorScheme) root.style.colorScheme = String(style.colorScheme)
-    return () => {
-      for (const [n, v] of previous) {
-        if (v) root.style.setProperty(n, v)
-        else root.style.removeProperty(n)
-      }
-      root.style.colorScheme = scheme
-    }
+    return () => clearDocumentTheme(root)
   }, [style])
 }
 
@@ -173,6 +177,24 @@ export function StorefrontLayout() {
     const tokens = readCachedTokens(storeId)
     return tokens ? themeStyle(tokens) : undefined
   })
+  // Inside the owner's Theme Studio, the draft arrives by message from the Studio window
+  // (lib/themePreview.ts); everywhere else this stays null and the published theme is used.
+  const [inPreview] = useState(() => isStudioPreview())
+  const [previewTheme, setPreviewTheme] = useState<PublishedTheme | null>(null)
+
+  useEffect(() => {
+    if (!inPreview) return
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window.parent || event.origin !== window.location.origin) return
+      const next = readPreviewMessage(event.data)
+      if (!next) return
+      loadThemeFont(next.theme.font)
+      setPreviewTheme(next)
+    }
+    window.addEventListener('message', onMessage)
+    window.parent.postMessage({ type: PREVIEW_READY, path: window.location.pathname }, window.location.origin)
+    return () => window.removeEventListener('message', onMessage)
+  }, [inPreview])
 
   useEffect(() => {
     let cancelled = false
@@ -182,7 +204,7 @@ export function StorefrontLayout() {
       .getStore(storeId)
       .then((s) => {
         if (cancelled) return
-        writeCachedTokens(storeId, s.theme?.tokens ?? null)
+        if (!inPreview) writeCachedTokens(storeId, s.theme?.tokens ?? null)
         loadThemeFont(s.theme?.theme.font)
         setStore(s)
       })
@@ -194,9 +216,10 @@ export function StorefrontLayout() {
     return () => {
       cancelled = true
     }
-  }, [storeId])
+  }, [storeId, inPreview])
 
-  const published = store?.theme ?? null
+  const published = previewTheme ?? store?.theme ?? null
+  const shownStore = useMemo(() => (store && previewTheme ? { ...store, theme: previewTheme } : store), [store, previewTheme])
   const themedStyle = useMemo(() => (published ? themeStyle(published.tokens) : undefined), [published])
   const rootStyle = store ? (themedStyle ?? brandStyle(store.themeColor, theme)) : cachedStyle
   useDocumentTheme(store ? themedStyle : cachedStyle)
@@ -219,7 +242,7 @@ export function StorefrontLayout() {
   }
 
   return (
-    <StoreContext.Provider value={store}>
+    <StoreContext.Provider value={shownStore ?? store}>
       <CartProvider storeId={store.id}>
         {/* The shop wears its merchant's colour from here down (lib/brandTheme.ts); the platform keeps ZYRO's. */}
         {/* A published store theme (lib/storeTheme.ts) when there is one: the shop's own colours, fonts

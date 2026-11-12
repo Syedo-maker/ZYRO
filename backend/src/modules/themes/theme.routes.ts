@@ -5,6 +5,9 @@ import { requireOwner } from "../../middleware/requireOwner.middleware";
 import { withTenantContext } from "../../middleware/tenantContext.middleware";
 import { Errors } from "../../errors/AppError";
 import { themeService } from "./theme.service";
+import { assistantInputSchema, themeAssistant } from "./theme.assistant";
+import { themePolish } from "./theme.polish";
+import { themeAiStoreLimiter, themeAiUserLimiter } from "../../middleware/rateLimit.middleware";
 
 /**
  * Store Themes (2026-11), mounted at /stores/:storeId/theme. Every route is the owner's alone: the
@@ -49,3 +52,18 @@ themeRouter.post(
     return themeService.restore(req.params.storeId, id.data);
   })
 );
+
+// The design assistant (Part 2): one AI call per request, from the store's quota, rate limited per
+// person and per store. The best look is applied to the draft; nothing is published.
+themeRouter.post(
+  "/assistant",
+  themeAiUserLimiter,
+  themeAiStoreLimiter,
+  handle((req) => {
+    const body = assistantInputSchema.safeParse(req.body ?? {});
+    if (!body.success) throw Errors.validation(body.error.issues.map((i) => i.message).join("; "));
+    return themeAssistant.ask(req.params.storeId, body.data);
+  })
+);
+// Finish and polish: rule-based checks and fixes on the draft, no AI.
+themeRouter.post("/polish", handle((req) => themePolish.run(req.params.storeId)));

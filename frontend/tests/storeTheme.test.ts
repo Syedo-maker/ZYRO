@@ -94,3 +94,45 @@ describe('the homepage sections', () => {
     assert.deepEqual(visibleSections(null), ['hero', 'featured', 'categories', 'reviews', 'about'])
   })
 })
+
+// public/theme-init.js, run as the browser would run it, on a storefront address with a cached theme.
+import { readFileSync } from 'node:fs'
+import { runInNewContext } from 'node:vm'
+
+function runInit(path: string, cached: string | null) {
+  const set: Record<string, string> = {}
+  const root = { setAttribute: () => undefined, style: { colorScheme: '', setProperty: (k: string, v: string) => void (set[k] = v) } }
+  const window = {
+    location: { pathname: path },
+    localStorage: { getItem: (k: string) => (k === 'zyro-store-theme:store-a' ? cached : k === 'zyro-theme' ? 'dark' : null) },
+    matchMedia: () => ({ matches: false }),
+  }
+  const document = { documentElement: root, querySelector: () => null }
+  runInNewContext(readFileSync(new URL('../public/theme-init.js', import.meta.url), 'utf8'), { window, document })
+  return { set, scheme: root.style.colorScheme }
+}
+
+describe('the before-paint cache (public/theme-init.js)', () => {
+  const tokens = {
+    '--color-bg': '#ffffff',
+    '--font-sans': '"Inter", ui-sans-serif, sans-serif',
+    '--color-text': 'red;}body{display:none',
+    '--color-brand': 'url(https://evil.example/x)',
+    position: 'fixed',
+    'color-scheme': 'light',
+  }
+
+  it('applies exactly what safeTokens allows, before the first paint', () => {
+    const { set, scheme } = runInit('/store/store-a/products', JSON.stringify(tokens))
+    const allowed = safeTokens(tokens)
+    const { 'color-scheme': allowedScheme, ...allowedVars } = allowed
+    assert.deepEqual(set, allowedVars)
+    assert.equal(scheme, allowedScheme)
+  })
+
+  it('does nothing off a storefront, without a cache, or with a damaged one', () => {
+    assert.deepEqual(runInit('/admin/products', JSON.stringify(tokens)).set, {})
+    assert.deepEqual(runInit('/store/store-a', null).set, {})
+    assert.deepEqual(runInit('/store/store-a', '{oops').set, {})
+  })
+})

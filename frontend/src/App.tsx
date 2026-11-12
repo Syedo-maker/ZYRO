@@ -34,6 +34,7 @@ const PlatformPage = lazy(() => import('./pages/admin/PlatformPage').then((m) =>
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const MarketingPage = lazy(() => import('./pages/admin/MarketingPage').then((m) => ({ default: m.MarketingPage })))
 const ReviewsAdminPage = lazy(() => import('./pages/admin/ReviewsAdminPage').then((m) => ({ default: m.ReviewsAdminPage })))
+const ThemeStudioPage = lazy(() => import('./pages/admin/theme/ThemeStudioPage').then((m) => ({ default: m.ThemeStudioPage })))
 const TermsPage = lazy(() => import('./pages/legal/TermsPage').then((m) => ({ default: m.TermsPage })))
 const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
 const StorefrontLayout = lazy(() => import('./pages/storefront/StorefrontLayout').then((m) => ({ default: m.StorefrontLayout })))
@@ -90,6 +91,7 @@ export default function App() {
               <Route path="payments" element={<PaymentsPage />} />
               <Route path="voice-notes" element={<VoiceNotesPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="theme" element={<ThemeStudioPage />} />
               <Route path="platform" element={<PlatformPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>

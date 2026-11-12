@@ -59,7 +59,7 @@ These were added in later phases; the screen itself was designed in code.
 | Write with AI, on the Add product form | Issue 1 | product_ideas_suggest, product_ideas_keywords, products_create |
 | Categories page, and the category dropdown on the product form | Product listing change (2026-10-22) | categories_list, categories_create, categories_update, categories_delete |
 | Landing page (marketing homepage at /) | Landing page | demo_product_ideas, demo_product_ideas_examples, plans_list, stores_directory_list |
-| Theme Studio (store theme: draft, publish, versions, undo), and the storefront wearing it | Store Themes | store_theme_get, store_theme_options, store_theme_draft_save, store_theme_undo, store_theme_redo, store_theme_publish, store_theme_versions, store_theme_restore, stores_get, uploads_image_create, reviews_featured |
+| Theme Studio (store theme: draft, publish, versions, undo), and the storefront wearing it | Store Themes | store_theme_get, store_theme_options, store_theme_draft_save, store_theme_undo, store_theme_redo, store_theme_publish, store_theme_versions, store_theme_restore, store_theme_assistant, store_theme_polish, ai_usage_get, stores_get, uploads_image_create, reviews_featured |
 
 ## Not called by any screen
 
