@@ -150,6 +150,10 @@ try {
     check(`${look.id}: the page wears the theme's background`, m.page === look.page, m.page)
     check(`${look.id}: the body font is the theme's`, m.font === look.font, m.font)
     check(`${look.id}: the button shape follows the theme`, m.buttonRadius === look.radius, m.buttonRadius)
+    // The chat button's glow is the shop's main colour, never Zyro's lime.
+    const glow = await page.getByRole('button', { name: 'Open shopping assistant' }).evaluate((b) => getComputedStyle(b).boxShadow)
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(theme.colors.primary.slice(i, i + 2), 16))
+    check(`${look.id}: the glow is the shop's colour, not Zyro's lime`, glow.includes(`${r}, ${g}, ${b}`) && !glow.includes('212, 255, 36'), glow.slice(0, 60))
     check(`${look.id}: every measured text pairing is AA or better`, m.worst[1] >= 4.5, `${m.worst[0]} ${m.worst[1]}`)
     check(`${look.id}: the hero says what the owner wrote`, (await page.getByRole('heading', { level: 1 }).textContent()).includes(look.id))
     const order = m.headings.filter((h) => /About|New arrivals|Shop by category/.test(h))

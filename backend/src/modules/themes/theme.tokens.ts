@@ -168,11 +168,11 @@ export function deriveTheme(input: Theme): Derived {
     "--radius-3xl": radius["3xl"],
     "--radius-control": radius.control,
     "--radius-button": { pill: "9999px", rounded: radius.control, square: "0.125rem" }[theme.buttonStyle],
-    "--shadow-sm": `0 1px 2px rgb(${shadowColor} / ${dark ? 0.5 : 0.08})`,
-    "--shadow-md": shadowMd,
-    "--shadow-lg": `0 24px 60px -20px rgb(${shadowColor} / ${dark ? 0.85 : 0.28})`,
-    "--shadow-glow": `0 0 0 1px ${primary}59, 0 10px 32px -10px ${primary}8c`,
-    "--shadow-glow-lg": `0 0 0 1px ${primary}66, 0 18px 56px -14px ${primary}99`,
+    "--shadow-depth-sm": `0 1px 2px rgb(${shadowColor} / ${dark ? 0.5 : 0.08})`,
+    "--shadow-depth-md": shadowMd,
+    "--shadow-depth-lg": `0 24px 60px -20px rgb(${shadowColor} / ${dark ? 0.85 : 0.28})`,
+    "--shadow-depth-glow": `0 0 0 1px ${primary}59, 0 10px 32px -10px ${primary}8c`,
+    "--shadow-depth-glow-lg": `0 0 0 1px ${primary}66, 0 18px 56px -14px ${primary}99`,
     "color-scheme": dark ? "dark" : "light",
   };
 

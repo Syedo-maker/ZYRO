@@ -55,6 +55,8 @@ Fonts are self-hosted (`@fontsource`, SIL Open Font License) and loaded only whe
 
 **How a theme reaches the page.** The server turns a theme into design tokens (`theme.tokens.ts`): only CSS custom properties from a fixed list (`--color-*`, `--font-*`, `--radius-*`, `--shadow-*`, `color-scheme`) with plain values. The storefront sets those on its root element; every component already reads them (`frontend/src/index.css`). The browser checks every name and value against an allowlist again (`frontend/src/lib/storeTheme.ts`) before using it. No CSS or HTML is ever stored or rendered from a theme.
 
+Shadows are the one place Tailwind copies a value into its utilities when it builds, so the `shadow-*` utilities read run-time variables (`--shadow-depth-sm`, `-md`, `-lg`, `-glow`, `-glow-lg`, defined in `index.css` for the dark and light platform themes) and a store theme sets those. The glow follows the brand colour: Zyro's lime on the platform, the shop's own colour on a themed storefront. This also made the platform's light theme use the soft shadows it was designed with, which the build had been ignoring.
+
 **No flash of the default look.** A returning shopper's browser remembers each store's published tokens (`localStorage`, key `zyro-store-theme:<storeId>`); `frontend/public/theme-init.js` applies them before the first paint, through the same allowlist. The server's answer replaces or clears them, and they are removed when the shopper leaves the store.
 
 ## 4. Contrast rules (WCAG 2.2 AA)
@@ -134,11 +136,23 @@ Without a key, everything works except the assistant, which shows the "temporari
 
 The browser suites need the e2e server and `npm run dev` in `frontend/`; run `npx tsx scripts/cleanup-test-data.ts` in `backend/` afterwards.
 
-## 11. Known limits
+## 11. Screenshots
+
+Taken by the browser suites, in `documentation/screenshots/store-themes/`:
+
+| | |
+|---|---|
+| The Studio on a desktop, with the Customize controls | ![](screenshots/store-themes/studio-desktop.png) |
+| The assistant answering in Roman Urdu, with recommendation cards | ![](screenshots/store-themes/assistant-recommendations.png) |
+| Finish and polish, listing its fixes | ![](screenshots/store-themes/polish-summary.png) |
+| The Studio on a phone, tools as a bottom sheet | ![](screenshots/store-themes/studio-mobile.png) |
+| Clean Light, Warm Earth and Bold Contrast on a real storefront | ![](screenshots/store-themes/storefront-clean-light.png) ![](screenshots/store-themes/storefront-warm-earth.png) ![](screenshots/store-themes/storefront-bold-contrast.png) |
+
+## 12. Known limits
 
 - The assistant has not yet been tested against the real Anthropic API: the key in this environment is still rejected (HTTP 401). All AI tests use a stand-in provider.
 - *Match my logo colors* reads a logo that was uploaded in this Studio session, or one served from a host that allows the browser to read it; otherwise the owner is asked to upload it again.
 - The six font pairs cover Latin script only; Urdu text in a headline falls back to the device's own font.
 - The draft history and versions are per store, not per person; two owners' windows editing at once get a "reload" message rather than a merge.
 - Themes apply to the storefront and checkout. Stripe's own hosted payment page keeps Stripe's look.
-- In one of 15 runs of `store-themes.e2e.mjs`, one check failed once and could not be reproduced in 12 further runs; which check it was is not known.
+- Early in Part 3, one check in `store-themes.e2e.mjs` failed once in a single run and was never reproduced in more than 20 further runs; which check it was is not known.
