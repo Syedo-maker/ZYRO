@@ -1,6 +1,7 @@
 import { apiFetch } from './apiClient'
 import { getGuestSessionId } from './guestSession'
 import type { Cart, CheckoutSessionStatus, Quote, ShippingZone, StoreProfile } from '../types/commerce'
+import type { Review } from '../types/shop'
 
 // Cart and checkout calls identify the shopper by login when there is one, otherwise by
 // the guest session id (the API prefers the bearer token when both are present).
@@ -9,6 +10,8 @@ const guest = () => ({ 'X-Guest-Session-Id': getGuestSessionId() })
 export const storefrontApi = {
   getStore: (storeId: string) => apiFetch<StoreProfile>(`/stores/${storeId}`),
   listShippingZones: (storeId: string) => apiFetch<ShippingZone[]>(`/stores/${storeId}/shipping-zones`),
+  /** The storefront's "What customers say" section: recent 4 and 5 star written reviews (Store Themes). */
+  featuredReviews: (storeId: string) => apiFetch<{ data: (Review & { productTitle: string })[] }>(`/stores/${storeId}/reviews/featured`),
 }
 
 export const cartApi = {

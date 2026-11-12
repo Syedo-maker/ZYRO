@@ -264,6 +264,8 @@ model Tenant {
   aiUsageQuotas    AiUsageQuota[]
   cartRecoveryLogs CartRecoveryEvent[]
   aiBusinessInsight AiBusinessInsight?
+  storeTheme        StoreTheme?
+  storeThemeVersions StoreThemeVersion[]
 
   @@index([ownerId])
 }
@@ -1117,4 +1119,36 @@ model SearchTermDaily {
 
   @@unique([tenantId, term, category, day])
   @@index([category, day])
+}
+
+/// A store's storefront look (Store Themes, 2026-11). One row per store: the draft the owner is
+/// editing, the published theme every shopper sees, and the draft's own edit history for Undo and
+/// Redo. Both themes are validated, contrast-checked JSON (modules/themes/theme.schema.ts); no CSS or
+/// HTML is ever stored.
+model StoreTheme {
+  id          String    @id @default(cuid())
+  tenantId    String    @unique
+  draft       Json
+  published   Json?
+  publishedAt DateTime?
+  /// Snapshots of the draft, oldest first, at most 30; `cursor` is the one the draft shows now.
+  history     Json
+  cursor      Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+/// A theme as it was published, kept so the owner can restore it. The newest 10 per store are kept.
+model StoreThemeVersion {
+  id                String   @id @default(cuid())
+  tenantId          String
+  theme             Json
+  publishedByUserId String?
+  createdAt         DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
 }

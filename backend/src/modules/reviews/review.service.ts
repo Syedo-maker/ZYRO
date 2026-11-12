@@ -178,6 +178,23 @@ export const reviewService = {
     if (deletedCount === 0) throw Errors.notFound("Your review");
   },
 
+  /**
+   * Store Themes: the storefront's "What customers say" section. The newest published reviews of four
+   * or five stars that have something written, across the whole store, with the product they are about.
+   * Only what each product page already shows publicly.
+   */
+  async featured(storeId: string) {
+    const docs = await ProductReview.find({ storeId, status: "published", rating: { $gte: 4 }, comment: { $nin: [null, ""] } })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(6);
+    const titles = new Map(
+      (await Product.find({ storeId, _id: { $in: [...new Set(docs.map((d) => d.productId.toString()))] } }).select("title")).map((p) => [p._id.toString(), p.title])
+    );
+    return {
+      data: docs.filter((d) => titles.has(d.productId.toString())).map((d) => ({ ...toPublic(d), productTitle: titles.get(d.productId.toString())! })),
+    };
+  },
+
   // ---- Merchant side ----
 
   /** Every review in the store, hidden ones included, for the moderation page. */

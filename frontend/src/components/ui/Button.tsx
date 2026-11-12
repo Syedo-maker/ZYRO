@@ -8,7 +8,7 @@ import type { ButtonHTMLAttributes } from 'react'
  * the same classes instead of a look-alike copy. Every colour is a semantic token, so on a storefront
  * `primary` wears the merchant's colour and on the platform it wears Zyro's lime.
  *
- * The look, the same everywhere: a pill, a bold label, a slight lift and a soft glow on hover, a
+ * The look, the same everywhere: a pill (a store theme may round or square it, via --radius-button), a bold label, a slight lift and a soft glow on hover, a
  * darker fill while pressed, and the lime focus ring.
  */
 
@@ -25,7 +25,7 @@ export type ButtonVariant =
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-full select-none ' +
+  'inline-flex items-center justify-center gap-2 rounded-button select-none ' +
   'transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-standard ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-45 ' +
   'aria-disabled:pointer-events-none aria-disabled:opacity-45'
@@ -60,7 +60,7 @@ const OVERRIDES: [RegExp, RegExp][] = [
   [/^px-/, /(^|\s)px-\S+/],
   [/^text-(xs|sm|base|lg|xl|\[)/, /(^|\s)text-(xs|sm|base|lg|xl|\[)\S*/],
   [/^font-bold$/, /(^|\s)font-(normal|medium|semibold|extrabold)(\s|$)/],
-  [/^rounded-full$/, /(^|\s)rounded(-\S+)?(\s|$)/],
+  [/^rounded-button$/, /(^|\s)rounded(-\S+)?(\s|$)/],
   [/^focus-visible:outline-(ring|on-inverse)$/, /(^|\s)focus-visible:outline-(ring|on-inverse)(\s|$)/],
 ]
 

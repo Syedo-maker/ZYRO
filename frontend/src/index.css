@@ -208,6 +208,8 @@
   --radius-2xl: 1.25rem;
   --radius-3xl: 1.75rem;
   --radius-control: 0.75rem;
+  /* Buttons: a pill on the platform. A store theme may make them rounded or square (Store Themes). */
+  --radius-button: 9999px;
 
   /* Shadows read as depth on black only with a faint light edge; the glow is lime. */
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
