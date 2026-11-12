@@ -254,3 +254,26 @@ describe("the storefront's reviews section", () => {
     }
   });
 });
+
+describe("logo and banner uploads", () => {
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64)]);
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(document.cookie)</script></svg>');
+  const upload = (s: { storeId: string; token: string }, bytes: Buffer, name: string, type: string) =>
+    (request(app) as any).post(`/api/v1/stores/${s.storeId}/uploads/images`).set("Authorization", `Bearer ${s.token}`).attach("file", bytes, { filename: name, contentType: type });
+
+  it("refuses an SVG, even one that claims to be a PNG, and anything over 5 MB", async () => {
+    expect((await upload(A, svg, "logo.svg", "image/svg+xml")).status).toBe(400);
+    expect((await upload(A, svg, "logo.png", "image/png")).status).toBe(400);
+    expect((await upload(A, Buffer.concat([png, Buffer.alloc(5 * 1024 * 1024)]), "big.png", "image/png")).status).toBe(400);
+  });
+
+  it("a real image uploaded to the store becomes its logo; the same file cannot be used by another store", async () => {
+    const res = await upload(A, png, "logo.png", "image/png");
+    expect(res.status).toBe(201);
+    expect(res.body.url).toMatch(new RegExp(`/products/${A.storeId}/[0-9a-f-]{36}\\.png$`));
+    const draft = await getDraft();
+    expect((await saveDraft({ ...draft, logoUrl: res.body.url })).status).toBe(200);
+    const bDraft = await getDraft(B);
+    expect((await saveDraft({ ...bDraft, logoUrl: res.body.url }, B)).status).toBe(400);
+  });
+});
