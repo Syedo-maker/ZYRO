@@ -15,5 +15,3 @@ Dockerfile text eol=lf
 
 # Read by nginx inside the Linux web image.
 frontend/nginx/* text eol=lf
-# Shell scripts always keep Unix line endings, on every checkout (bash refuses CRLF).
-*.sh text eol=lf
