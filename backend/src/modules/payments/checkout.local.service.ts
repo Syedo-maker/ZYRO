@@ -66,7 +66,7 @@ async function priceCart(storeId: string, owner: CartOwner, discountCode?: strin
 }
 
 async function priceWithShipping(storeId: string, owner: CartOwner, input: { discountCode?: string; shippingZoneId?: string }) {
-  const { key, tenant, lines, subtotalCents, discount } = await priceCart(storeId, owner, input.discountCode);
+  const { key, tenant, lines, discount } = await priceCart(storeId, owner, input.discountCode);
 
   let shipping: { name: string; amount: number } | undefined;
   if (input.shippingZoneId) {
