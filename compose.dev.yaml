@@ -72,8 +72,10 @@ services:
   api:
     image: zyro-backend-dev:local
     working_dir: /app
-    # The source is mounted in; node_modules stays the image's own (Linux) copy.
-    command: ["sh", "-c", "npx prisma generate && npx tsx watch src/index.ts"]
+    # The source is mounted in; node_modules stays the image's own (Linux) copy, in a volume. When
+    # package-lock.json changes the volume would keep the old packages, so each start compares the
+    # lockfile with the one last installed and runs npm ci when they differ.
+    command: ["sh", "-c", "[ \"$$(cat node_modules/.zyro-lock 2>/dev/null)\" = \"$$(sha256sum package-lock.json | cut -c1-64)\" ] || { echo 'package-lock.json changed: installing packages'; npm ci --no-audit --no-fund && sha256sum package-lock.json | cut -c1-64 > node_modules/.zyro-lock; }; npx prisma generate && npx tsx watch src/index.ts"]
     environment:
       <<: *backend-env
       PORT: "5000"
@@ -91,6 +93,7 @@ services:
   worker:
     image: zyro-backend-dev:local
     working_dir: /app
+    # Starts after the API, which has already brought the shared node_modules up to date.
     command: ["sh", "-c", "npx prisma generate && npx tsx watch src/worker.ts"]
     environment:
       <<: *backend-env
@@ -103,7 +106,7 @@ services:
     build: { context: ./frontend, target: deps }
     image: zyro-web-dev:local
     working_dir: /app
-    command: ["npx", "vite", "--host", "0.0.0.0", "--port", "5173"]
+    command: ["sh", "-c", "[ \"$$(cat node_modules/.zyro-lock 2>/dev/null)\" = \"$$(sha256sum package-lock.json | cut -c1-64)\" ] || { echo 'package-lock.json changed: installing packages'; npm ci --no-audit --no-fund && sha256sum package-lock.json | cut -c1-64 > node_modules/.zyro-lock; }; npx vite --host 0.0.0.0 --port 5173"]
     environment:
       VITE_DEV_API_TARGET: http://api:5000
       VITE_DEV_POLLING: "true"
