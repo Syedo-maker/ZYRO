@@ -335,6 +335,12 @@ await step('mobile 320px: no horizontal scroll', async () => {
   await m.goto(`${WEB}/store/${storeId}`)
   await m.getByRole('heading', { name: 'New arrivals' }).waitFor()
   const wide = async () => m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
+  // On a failure, names the elements that stick out past the right edge, so the cause is in the log.
+  const sticking = async () => m.evaluate(() => [...document.querySelectorAll('body *')]
+    .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
+    .slice(-4)
+    .map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ').slice(0, 3).join('.')} "${(el.textContent ?? '').trim().slice(0, 40)}" right=${Math.round(el.getBoundingClientRect().right)}`)
+    .join(' | '))
   check('mobile: shop page fits 320px', !(await wide()))
   await m.getByRole('button', { name: /Add to cart/ }).first().click()
   await m.getByRole('link', { name: /^Cart, 1 item/ }).waitFor()
@@ -344,7 +350,8 @@ await step('mobile 320px: no horizontal scroll', async () => {
   await m.screenshot({ path: path.join(SHOTS, '8-mobile-cart.png') })
   await m.getByRole('link', { name: 'Proceed to checkout' }).click()
   await m.getByRole('heading', { name: 'Checkout' }).waitFor()
-  check('mobile: checkout page fits 320px', !(await wide()))
+  const checkoutWide = await wide()
+  check('mobile: checkout page fits 320px', !checkoutWide, checkoutWide ? await sticking() : '')
   await m.screenshot({ path: path.join(SHOTS, '9-mobile-checkout.png') })
   await mob.close()
 })
