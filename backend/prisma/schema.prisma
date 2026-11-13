@@ -149,6 +149,7 @@ model User {
   staffMemberOf    StaffMember[]
   refreshTokens    RefreshToken[]
   passwordResets   PasswordResetToken[]
+  emailOptOuts     EmailOptOut[]
   customerProfiles Customer[]
   cashierOrders    Order[]        @relation("OrderCashier")
 
@@ -267,6 +268,7 @@ model Tenant {
   storeTheme        StoreTheme?
   storeThemeVersions StoreThemeVersion[]
   policies          StorePolicy[]
+  emailOptOuts      EmailOptOut[]
 
   @@index([ownerId])
 }
@@ -1173,4 +1175,19 @@ model StorePolicy {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@id([tenantId, kind])
+}
+
+/// A shopper who asked a shop to stop sending them cart reminders, from the link in the email or the
+/// email app's own unsubscribe button. The cart-recovery job skips them for that shop. Deleted with
+/// the shop or the account; nothing else is kept about the request.
+model EmailOptOut {
+  tenantId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, userId])
+  @@index([userId])
 }

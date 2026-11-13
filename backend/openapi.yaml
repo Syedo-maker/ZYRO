@@ -3328,6 +3328,76 @@ paths:
         "429": { $ref: "#/components/responses/TooManyRequests" }
 
   # ── CART RECOVERY ─────────────────────────────────────────────────────
+  /unsubscribe:
+    parameters:
+      - name: t
+        in: query
+        required: true
+        description: The signed token from the reminder email (shop id, account id and a signature; never the email address).
+        schema: { type: string }
+    get:
+      tags: [cart-recovery]
+      operationId: unsubscribe_status
+      summary: Which shop a reminder came from, and whether this person is unsubscribed from it
+      description: Public. Opening the link only shows this; unsubscribing needs the POST, so a mail scanner that opens links unsubscribes nobody.
+      security: []
+      responses:
+        "200":
+          description: The shop and the current state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnsubscribeState" }
+        "400":
+          description: The link is not valid (altered, incomplete or signed for someone else)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [cart-recovery]
+      operationId: unsubscribe_confirm
+      summary: Stop this shop's cart reminders
+      description: |
+        Public. The page's button, or the email app's own one-click button (RFC 8058), which posts the form
+        body `List-Unsubscribe=One-Click`. Doing it twice is the same as once.
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema: { type: object, additionalProperties: true }
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Unsubscribed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnsubscribeState" }
+        "400":
+          description: The link is not valid (altered, incomplete or signed for someone else)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [cart-recovery]
+      operationId: unsubscribe_undo
+      summary: Turn this shop's cart reminders back on
+      security: []
+      responses:
+        "200":
+          description: Subscribed again
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnsubscribeState" }
+        "400":
+          description: The link is not valid (altered, incomplete or signed for someone else)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /stores/{storeId}/cart-recovery/performance:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -4923,6 +4993,13 @@ components:
         source: { type: string, example: "ZYRO sales across stores (anonymised)" }
         date: { type: string, format: date, description: "The last date the fact covers." }
         url: { type: string, format: uri, description: "Where to look the figure up, when there is such a page." }
+
+    UnsubscribeState:
+      type: object
+      required: [storeName, unsubscribed]
+      properties:
+        storeName: { type: string }
+        unsubscribed: { type: boolean }
 
     StorePolicy:
       type: object

@@ -7,7 +7,7 @@ import type { EmailGateway } from "./email";
  */
 export function brevoGateway(apiKey: string, fromEmail: string, fromName: string): EmailGateway {
   return {
-    async send({ to, subject, text }) {
+    async send({ to, subject, text, headers }) {
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         // A recovery email is not worth holding a worker for: give up after 10 s and let the next
@@ -19,6 +19,7 @@ export function brevoGateway(apiKey: string, fromEmail: string, fromName: string
           to: [{ email: to }],
           subject,
           textContent: text,
+          ...(headers ? { headers } : {}),
         }),
       });
       if (!res.ok) {

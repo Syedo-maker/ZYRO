@@ -43,6 +43,7 @@ const CartPage = lazy(() => import('./pages/storefront/CartPage').then((m) => ({
 const CheckoutPage = lazy(() => import('./pages/storefront/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const OrderConfirmationPage = lazy(() => import('./pages/storefront/OrderConfirmationPage').then((m) => ({ default: m.OrderConfirmationPage })))
 const OrderPlacedPage = lazy(() => import('./pages/storefront/OrderPlacedPage').then((m) => ({ default: m.OrderPlacedPage })))
+const UnsubscribePage = lazy(() => import('./pages/Unsubscribe').then((m) => ({ default: m.UnsubscribePage })))
 const PoliciesPage = lazy(() => import('./pages/storefront/PoliciesPage').then((m) => ({ default: m.PoliciesPage })))
 const CatalogPage = lazy(() => import('./pages/storefront/CatalogPage').then((m) => ({ default: m.CatalogPage })))
 const ProductPage = lazy(() => import('./pages/storefront/ProductPage').then((m) => ({ default: m.ProductPage })))
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/unsubscribe" element={<UnsubscribePage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
 

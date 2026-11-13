@@ -61,6 +61,7 @@ These were added in later phases; the screen itself was designed in code.
 | Landing page (marketing homepage at /) | Landing page | demo_product_ideas, demo_product_ideas_examples, plans_list, stores_directory_list |
 | Theme Studio (store theme: draft, publish, versions, undo), and the storefront wearing it | Store Themes | store_theme_get, store_theme_options, store_theme_draft_save, store_theme_undo, store_theme_redo, store_theme_publish, store_theme_versions, store_theme_restore, store_theme_assistant, store_theme_polish, ai_usage_get, stores_get, uploads_image_create, reviews_featured |
 | Shop policies: written in Settings, read on the storefront | Production readiness | store_policies_list, store_policy_set |
+| Unsubscribe from a shop's cart reminders (the link in the email, and the email app's one-click button) | Production readiness | unsubscribe_status, unsubscribe_confirm, unsubscribe_undo |
 
 ## Not called by any screen
 
