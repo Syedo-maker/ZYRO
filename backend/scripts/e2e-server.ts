@@ -21,8 +21,9 @@ if (process.env.NODE_ENV === "production") {
 // Off by default because the browser tests register many users quickly; start with
 // RATE_LIMIT_ENABLED=true (and a private RATE_LIMIT_PREFIX) to test the limits in the UI.
 process.env.RATE_LIMIT_ENABLED ??= "false";
-process.env.STRIPE_SECRET_KEY = "sk_test_e2e";
-process.env.STRIPE_WEBHOOK_SECRET = "whsec_e2e_secret";
+// E2E_NO_STRIPE=1 runs the platform as a store without Stripe would (frontend/e2e/payments-no-stripe.e2e.mjs).
+process.env.STRIPE_SECRET_KEY = process.env.E2E_NO_STRIPE === "1" ? "" : "sk_test_e2e";
+process.env.STRIPE_WEBHOOK_SECRET = process.env.E2E_NO_STRIPE === "1" ? "" : "whsec_e2e_secret";
 
 import { createServer } from "node:http";
 import express from "express";
@@ -39,11 +40,11 @@ async function main() {
   const port = Number(process.env.PORT ?? 5000);
   const { handleStripeEvent } = await import("../src/modules/webhooks/stripe.webhook");
   const { PLANS, findTopUpPack, BILLING_CURRENCY } = await import("../src/lib/plans");
-  const real = getStripeGateway();
   let counter = 0;
   const fakeSubscriptions = new Map<string, import("../src/lib/stripe").BillingSubscription>();
-  setStripeGateway({
-    ...real,
+  // Without Stripe (E2E_NO_STRIPE=1) there is no gateway to fake: card payment is simply not offered.
+  if (process.env.E2E_NO_STRIPE !== "1") setStripeGateway({
+    ...getStripeGateway(),
     async createCheckoutSession() {
       const id = `cs_test_e2e_${Date.now()}_${++counter}`;
       return { id, url: `http://localhost:${port}/__fake-stripe/${id}` };
