@@ -188,6 +188,8 @@ export const env = {
     monthlyChatMessagesLimit: num("AI_MONTHLY_CHAT_MESSAGES_LIMIT", 40),
     /** How long a caller of generate() waits for the BullMQ job before giving up. */
     jobTimeoutMs: num("AI_JOB_TIMEOUT_MS", 60_000),
+    /** AI answers one worker process waits on at once (lib/aiQueue.ts). */
+    workerConcurrency: num("AI_WORKER_CONCURRENCY", 4),
   },
   // Plans and billing (Part A, revenue model). Stripe Billing uses the same Stripe keys as
   // checkout above; the plan catalog itself is in lib/plans.ts.

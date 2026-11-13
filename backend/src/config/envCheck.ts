@@ -107,6 +107,7 @@ const POSITIVE_NUMBERS: Record<string, string> = {
   AI_MONTHLY_GENERATIONS_LIMIT: "the Free plan's AI allowance",
   AI_MONTHLY_CHAT_MESSAGES_LIMIT: "the Free plan's AI allowance",
   AI_JOB_TIMEOUT_MS: "AI requests",
+  AI_WORKER_CONCURRENCY: "AI throughput",
   PLAN_GRACE_HOURS: "plans and billing",
   CART_RECOVERY_ABANDONED_AFTER_HOURS: "cart recovery emails",
   CART_RECOVERY_SCAN_INTERVAL_HOURS: "cart recovery emails",
