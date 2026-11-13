@@ -152,7 +152,7 @@ async function main() {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: "List-Unsubscribe=One-Click",
     });
-    check("unsubscribe: the one-click POST is accepted", oneClick.status === 200 && (await oneClick.json()).unsubscribed === true);
+    check("unsubscribe: the one-click POST is accepted", oneClick.status === 200 && ((await oneClick.json()) as { unsubscribed?: boolean }).unsubscribed === true);
     await age(userCartKey(A.storeId, cu.userId), env.cartRecovery.abandonedAfterHours + 1);
     const beforeOptOut = emails.length;
     await cartRecoveryService.scan();
