@@ -13,6 +13,7 @@ import type { Product } from '../../types/api'
 import type { SearchInterpretation } from '../../types/shop'
 import { SearchNote } from './SearchNote'
 import type { CategoryCount, ProductSort } from '../../types/shop'
+import { usePageMeta } from '../../lib/pageMeta'
 
 const PAGE_SIZE = 12
 
@@ -31,6 +32,7 @@ const SORT_LABELS: Record<ProductSort, string> = {
  */
 export function CatalogPage() {
   const store = useStore()
+  usePageMeta({ title: `All products | ${store.name}`, description: `Browse every product at ${store.name}.` })
   const { categories } = useOutletContext<{ categories: CategoryCount[] }>()
   const [params, setParams] = useSearchParams()
   const { addingId, message, addToCart } = useAddToCart()

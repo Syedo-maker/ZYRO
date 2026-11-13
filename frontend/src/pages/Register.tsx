@@ -7,6 +7,7 @@ import { FIELD, Input } from '../components/ui/Input'
 import { AuthShell, AUTH_LINK, AUTH_TITLE } from '../components/ui/AuthShell'
 import { authErrorMessage } from '../lib/apiClient'
 import { DEFAULT_STORE_CURRENCY, STORE_CURRENCIES } from '../lib/currencies'
+import { usePageMeta } from '../lib/pageMeta'
 
 function slugify(name: string): string {
   return name
@@ -18,6 +19,7 @@ function slugify(name: string): string {
 }
 
 export function RegisterPage() {
+  usePageMeta({ title: 'Start your free shop | ZYRO', description: 'Open a free online shop on ZYRO, with AI built in.' })
   const { register } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')

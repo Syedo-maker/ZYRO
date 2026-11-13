@@ -8,6 +8,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { formatMoney } from '../../lib/format'
 import { checkoutApi } from '../../lib/storefrontApi'
 import type { CheckoutSessionStatus } from '../../types/commerce'
+import { usePageMeta } from '../../lib/pageMeta'
 
 const POLL_MS = 2000
 const MAX_POLLS = 30
@@ -32,6 +33,7 @@ function Card({ children }: { children: React.ReactNode }) {
  */
 export function OrderConfirmationPage() {
   const store = useStore()
+  usePageMeta({ title: `Order confirmed | ${store.name}`, description: `Your order at ${store.name}.`, robots: 'noindex' })
   const { reload: reloadCart } = useCart()
   const [params] = useSearchParams()
   const sessionId = params.get('session_id')

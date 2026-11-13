@@ -5,6 +5,7 @@ import { useStore } from '../../../context/StoreContext'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { authErrorMessage } from '../../../lib/apiClient'
+import { usePageMeta } from '../../../lib/pageMeta'
 
 /** Only ever send the shopper back to a page of this store, never to an address taken from the link. */
 function safeNext(next: string | null, storeId: string): string | null {
@@ -14,6 +15,7 @@ function safeNext(next: string | null, storeId: string): string | null {
 /** Sign in or create an account at a store. The same page serves both, chosen by `mode`. */
 export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
   const store = useStore()
+  usePageMeta({ title: `${mode === 'login' ? 'Sign in' : 'Create an account'} | ${store.name}`, description: `Your account at ${store.name}.`, robots: 'noindex' })
   const { login, registerCustomer, isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
   const [params] = useSearchParams()

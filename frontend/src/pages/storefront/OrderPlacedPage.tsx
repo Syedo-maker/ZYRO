@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input'
 import { errorMessage } from '../../lib/ordersApi'
 import { paymentsApi } from '../../lib/paymentsApi'
 import { formatMoney } from '../../lib/format'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /**
  * After a cash-on-delivery or bank-transfer order is placed (Part E). Cash on delivery just needs
@@ -16,6 +17,7 @@ import { formatMoney } from '../../lib/format'
  */
 export function OrderPlacedPage() {
   const store = useStore()
+  usePageMeta({ title: `Order placed | ${store.name}`, description: `Your order at ${store.name}.`, robots: 'noindex' })
   const { reload } = useCart()
   const [params] = useSearchParams()
   const orderId = params.get('order') ?? ''

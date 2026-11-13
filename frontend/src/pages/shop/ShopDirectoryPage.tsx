@@ -10,6 +10,7 @@ import { useTheme } from '../../context/themeContext'
 import { directoryApi } from '../../lib/directoryApi'
 import { errorMessage } from '../../lib/ordersApi'
 import type { DirectoryStore } from '../../types/directory'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /**
  * The shopper's front page (Issue 2): every shop that has opted in and has a real catalogue.
@@ -21,6 +22,7 @@ import type { DirectoryStore } from '../../types/directory'
  * reason a trolley does not move between two different shops on a high street.
  */
 export function ShopDirectoryPage() {
+  usePageMeta({ title: 'Browse shops | ZYRO', description: 'Find small businesses selling online on ZYRO, and buy from them directly.' })
   const { theme } = useTheme()
   const [stores, setStores] = useState<DirectoryStore[] | null>(null)
   const [categories, setCategories] = useState<string[]>([])

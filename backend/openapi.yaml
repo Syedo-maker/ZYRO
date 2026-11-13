@@ -3328,6 +3328,58 @@ paths:
         "429": { $ref: "#/components/responses/TooManyRequests" }
 
   # ── CART RECOVERY ─────────────────────────────────────────────────────
+  /seo/robots.txt:
+    get:
+      tags: [platform]
+      operationId: seo_robots
+      summary: robots.txt for the whole site
+      description: Public; served at /robots.txt by the web server. Outside production it keeps the whole site out of search results.
+      security: []
+      responses:
+        "200":
+          description: The robots.txt text
+          content:
+            text/plain:
+              schema: { type: string }
+
+  /seo/sitemap.xml:
+    get:
+      tags: [platform]
+      operationId: seo_sitemap
+      summary: The sitemap
+      description: |
+        Public; served at /sitemap.xml by the web server. The platform's public pages, every shop listed in the
+        public directory, its policies page if it has one, and its products. Rebuilt at most once an hour.
+      security: []
+      responses:
+        "200":
+          description: A sitemaps.org urlset
+          content:
+            application/xml:
+              schema: { type: string }
+
+  /seo/preview:
+    get:
+      tags: [platform]
+      operationId: seo_preview
+      summary: The link-preview page for a shared shop or product address
+      description: |
+        Public. A small HTML page with the Open Graph tags (title, description, price, photo) of the shop or
+        product at `path`, for apps that do not run JavaScript. The web server sends only those apps here.
+        An unknown or malformed path gets the platform's own card.
+      security: []
+      parameters:
+        - name: path
+          in: query
+          required: false
+          schema: { type: string, example: /store/cmabc123def456/products/65f0c0ffee0000000000abcd }
+      responses:
+        "200":
+          description: The preview page
+          content:
+            text/html:
+              schema: { type: string }
+
   /unsubscribe:
     parameters:
       - name: t

@@ -10,12 +10,14 @@ import { formatDate, formatMoney } from '../../../lib/format'
 import { errorMessage } from '../../../lib/ordersApi'
 import { accountApi } from '../../../lib/shopApi'
 import type { Order } from '../../../types/commerce'
+import { usePageMeta } from '../../../lib/pageMeta'
 
 const PAGE = 10
 
 /** The signed-in shopper's page: who they are, and every order they have placed at this store. */
 export function AccountPage() {
   const store = useStore()
+  usePageMeta({ title: `Your account | ${store.name}`, description: `Your account at ${store.name}.`, robots: 'noindex' })
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[] | null>(null)

@@ -11,6 +11,7 @@ import { errorMessage } from '../../lib/ordersApi'
 import { checkoutApi, storefrontApi } from '../../lib/storefrontApi'
 import type { Quote, ShippingZone } from '../../types/commerce'
 import { LocalPaymentSection, emptyDelivery, type DeliveryDetails, type PayMethod } from './LocalPaymentSection'
+import { usePageMeta } from '../../lib/pageMeta'
 
 function TotalsRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
@@ -23,6 +24,7 @@ function TotalsRow({ label, value, strong }: { label: string; value: string; str
 
 export function CheckoutPage() {
   const store = useStore()
+  usePageMeta({ title: `Checkout | ${store.name}`, description: `Checkout at ${store.name}.`, robots: 'noindex' })
   const { cart, isLoading: cartLoading } = useCart()
   const [zones, setZones] = useState<ShippingZone[] | null>(null)
   const [zoneId, setZoneId] = useState<string | undefined>()

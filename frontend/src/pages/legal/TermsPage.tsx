@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { LegalLayout } from './LegalLayout'
 import { LEGAL } from '../../lib/legal'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /** The Terms of Service: what ZYRO provides, what a merchant is responsible for, and the limits on both. */
 export function TermsPage() {
+  usePageMeta({ title: 'Terms of Service | ZYRO', description: 'The rules for using ZYRO, for merchants and shoppers.' })
   return (
     <LegalLayout
       title="Terms of Service"

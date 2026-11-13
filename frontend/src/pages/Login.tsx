@@ -6,8 +6,10 @@ import { Input } from '../components/ui/Input'
 import { AuthShell, AUTH_LINK, AUTH_TITLE } from '../components/ui/AuthShell'
 import { authErrorMessage } from '../lib/apiClient'
 import { landingPathFor, rememberedExperience } from '../lib/experience'
+import { usePageMeta } from '../lib/pageMeta'
 
 export function LoginPage() {
+  usePageMeta({ title: 'Log in | ZYRO', description: 'Log in to your ZYRO shop.' })
   const { login } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')

@@ -66,3 +66,5 @@ These were added in later phases; the screen itself was designed in code.
 ## Not called by any screen
 
 `webhooks_stripe_handle` is called by Stripe, never by the app.
+
+`seo_robots`, `seo_sitemap` and `seo_preview` are read by search engines and link-preview apps (WhatsApp, Facebook); the web server serves them at `/robots.txt`, `/sitemap.xml` and, for those apps only, on `/store/...` addresses.

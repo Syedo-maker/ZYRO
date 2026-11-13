@@ -22,6 +22,7 @@ import { Wordmark } from '../../components/ui/Wordmark'
 import { ThemeToggle } from '../../components/ui/ThemeToggle'
 import { useAuth } from '../../context/AuthContext'
 import { can, type StorePermission } from '../../lib/permissions'
+import { usePageMeta } from '../../lib/pageMeta'
 
 interface NavItem {
   label: string
@@ -60,6 +61,7 @@ const ICON = 'h-[18px] w-[18px] shrink-0'
 const HEADER_LINK = 'text-sm font-semibold text-text-secondary transition-colors duration-150 hover:text-text'
 
 export function AdminLayout() {
+  usePageMeta({ title: 'Dashboard | ZYRO', description: 'Your ZYRO dashboard.', robots: 'noindex' })
   const { isLoading, isAuthenticated, stores, activeStore, user, logout } = useAuth()
   // On a phone or tablet the sidebar is a drawer; it closes on every navigation and on Escape.
   const [menuOpen, setMenuOpen] = useState(false)

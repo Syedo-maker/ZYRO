@@ -22,6 +22,9 @@ export default defineConfig({
       // until this was added, even with credentials:'include' and matching CORS config.
       '/api': apiTarget,
       '/uploads': apiTarget,
+      // Served by the API (modules/seo), at the site's root as search engines expect; nginx does the same.
+      '/robots.txt': { target: apiTarget, rewrite: () => '/api/v1/seo/robots.txt' },
+      '/sitemap.xml': { target: apiTarget, rewrite: () => '/api/v1/seo/sitemap.xml' },
     },
   },
 })

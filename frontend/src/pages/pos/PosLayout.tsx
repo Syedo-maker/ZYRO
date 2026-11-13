@@ -12,6 +12,7 @@ import { posApi } from '../../lib/posApi'
 import { formatDateTime } from '../../lib/format'
 import type { PosSession, PosShift } from '../../types/pos'
 import { CloseShiftDialog } from './ShiftPanels'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /** /pos: signed out goes to the till login; otherwise straight to the store's register. */
 export function PosEntry() {
@@ -46,6 +47,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 
 /** Signs the till in to one store: loads who is at the register and the open shift, then shows the pages. */
 export function PosLayout() {
+  usePageMeta({ title: 'Register | ZYRO', description: 'The ZYRO point of sale.', robots: 'noindex' })
   const { storeId = '' } = useParams()
   const { isLoading, isAuthenticated, logout } = useAuth()
   const [data, setData] = useState<{ session: PosSession; shift: PosShift | null } | null>(null)

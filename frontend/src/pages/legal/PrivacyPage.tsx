@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
 import { LegalLayout } from './LegalLayout'
 import { LEGAL } from '../../lib/legal'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /**
  * The Privacy Policy. Every statement here describes what the code does; documentation/Privacy_Notes.md
  * holds the detail behind each, and must be kept in step with this page when the code changes.
  */
 export function PrivacyPage() {
+  usePageMeta({ title: 'Privacy Policy | ZYRO', description: 'What ZYRO collects, why, who else handles it, and what you can ask us to do with it.' })
   return (
     <LegalLayout
       title="Privacy Policy"
