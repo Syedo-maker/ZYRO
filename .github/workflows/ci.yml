@@ -1,6 +1,7 @@
-# Every push and pull request: the whole test suite against real databases, the frontend checks,
-# the Python service's tests, and a build of every production image. A pull request cannot be
-# trusted to merge until this passes.
+# Every push and pull request: the whole test suite against real databases, the migration checks,
+# the frontend checks, the Python service's tests, a secret scan, a browser smoke test, and a build
+# of every production image. A pull request cannot be trusted to merge until this passes.
+# Merges to main then run release.yml (images tagged, a production-like smoke test, no deployment).
 name: CI
 
 on:
@@ -18,7 +19,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (1,700+ tests, contract conformance, coverage floors)
+    name: Backend (2,100+ tests, contract conformance, coverage floors, migration checks)
     # Not 24.04: MongoDB 8.0 refuses to start on Linux 6.19 or newer (MongoDB SERVER-121912), the
     # kernel GitHub's 24.04 runners moved to in October 2026; the first CI run failed on exactly
     # that. 22.04 runs an older kernel. Move back once MongoDB ships the fix. Production uses Atlas
@@ -79,6 +80,14 @@ jobs:
       - run: npx prisma generate
       - name: Migrations apply cleanly to an empty database
         run: npx prisma migrate deploy
+      - name: Migrations are safe (data-destroying steps carry a note, recent ones have a rollback)
+        run: node scripts/check-migrations.mjs
+      - name: No schema drift (schema.prisma matches the migrations exactly)
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+      - name: Rollbacks undo their migrations cleanly (this throwaway database only)
+        run: node scripts/check-rollbacks.mjs
+        env:
+          ZYRO_DISPOSABLE_DB: "1"
       - name: Type check (source and tests)
         run: npx tsc -p tsconfig.json --noEmit && npm run typecheck:tests
       - name: Tests, with every response checked against openapi.yaml
@@ -127,6 +136,80 @@ jobs:
           cache-dependency-path: recommendation-service/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q
+
+  secrets:
+    name: Secret scan (full git history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # gitleaks' own rules plus the narrow allowlist in .gitleaks.toml. Output is redacted.
+      - name: gitleaks
+        run: docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" zricethezav/gitleaks:v8.28.0 git /repo --config /repo/.gitleaks.toml --redact --no-banner
+
+  browser:
+    name: Browser smoke tests (Playwright)
+    # 22.04 for the same MongoDB reason as the backend job.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env: { POSTGRES_USER: zyro, POSTGRES_PASSWORD: ci-only, POSTGRES_DB: zyro }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U zyro" --health-interval 5s --health-retries 20
+      mongo:
+        image: mongo:8.0.34
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'" --health-interval 5s --health-retries 20
+      redis:
+        image: redis:7.4.11-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://zyro:ci-only@localhost:5432/zyro?schema=public
+      MONGODB_URI: mongodb://localhost:27017/zyro
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: ci-only-not-a-real-secret-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: "Backend (the e2e server: real databases, stand-in AI and payments)"
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+      - name: Frontend and the browser
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+      - name: Start the e2e server and the web app
+        run: |
+          (cd backend && npx tsx scripts/e2e-server.ts > ../e2e-server.log 2>&1 &)
+          (cd frontend && npx vite --port 5173 --strictPort > ../vite.log 2>&1 &)
+          for _ in $(seq 1 90); do curl -sf http://localhost:5000/health > /dev/null && curl -sf http://localhost:5173 > /dev/null && exit 0; sleep 2; done
+          echo "servers did not start"; tail -50 e2e-server.log vite.log; exit 1
+      - name: Owner, shopper and payment journeys
+        working-directory: frontend
+        run: |
+          node e2e/golden-path.e2e.mjs
+          node e2e/phase2-checkout.e2e.mjs
+          node e2e/partE-payments.e2e.mjs
+      - name: Server logs on failure
+        if: failure()
+        run: tail -100 e2e-server.log vite.log
 
   images:
     name: Production images build
