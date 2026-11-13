@@ -13,6 +13,8 @@
         "store-data": "tsx scripts/store-data.ts",
         "customer-data": "tsx scripts/customer-data.ts",
         "retention": "tsx scripts/retention.ts",
+        "new-secret": "tsx scripts/new-secret.ts",
+        "super-admin": "tsx scripts/make-super-admin.ts",
         "demo:scout:add": "tsx scripts/demo-product-scout.ts add",
         "demo:scout:remove": "tsx scripts/demo-product-scout.ts remove",
         "demo:scout:refresh": "tsx scripts/demo-product-scout.ts refresh",
