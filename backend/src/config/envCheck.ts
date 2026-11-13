@@ -152,6 +152,7 @@ const URLS: Record<string, { schemes: string[]; neededFor: string }> = {
   RECOMMENDATION_SERVICE_URL: { schemes: ["http:", "https:"], neededFor: "recommendations and semantic search" },
   AZURE_STORAGE_ACCOUNT_URL: { schemes: ["https:"], neededFor: "file uploads" },
   AZURE_STORAGE_PUBLIC_URL: { schemes: ["http:", "https:"], neededFor: "file uploads" },
+  SENTRY_DSN: { schemes: ["https:", "http:"], neededFor: "error tracking" },
 };
 
 const OPTIONAL_FEATURES: { feature: string; needs: (s: Source) => string[] }[] = [
@@ -163,6 +164,7 @@ const OPTIONAL_FEATURES: { feature: string; needs: (s: Source) => string[] }[] =
   },
   { feature: "recommendations and semantic search", needs: (s) => ["RECOMMENDATION_SERVICE_URL", "RECOMMENDATION_SERVICE_TOKEN"].filter((n) => !set(s[n])) },
   { feature: "telemetry (Application Insights)", needs: (s) => (set(s.APPLICATIONINSIGHTS_CONNECTION_STRING) ? [] : ["APPLICATIONINSIGHTS_CONNECTION_STRING"]) },
+  { feature: "error tracking (Sentry-compatible)", needs: (s) => (set(s.SENTRY_DSN) ? [] : ["SENTRY_DSN"]) },
 ];
 
 export function resolveAppEnv(source: Source): AppEnv {

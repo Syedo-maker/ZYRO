@@ -40,6 +40,7 @@ import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 import { filesRouter } from "./modules/files/files.routes";
 import { categoryRouter } from "./modules/categories/category.routes";
 import { logger, tenantIdFromPath } from "./lib/logger";
+import { reportError } from "./lib/errorTracking";
 import { isDraining, readiness } from "./lib/lifecycle";
 import { requestTimeout } from "./middleware/timeout.middleware";
 import { httpsOnly } from "./middleware/httpsOnly.middleware";
@@ -190,6 +191,7 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   }
 
   req.log.error({ err }, "unhandled error");
+  reportError(err, { where: "request", requestId: String(req.id), tenantId: tenantIdFromPath(req.originalUrl), method: req.method, path: req.originalUrl });
   res.status(500).type("application/problem+json").json({
     type: "https://zyro.dev/errors/internal",
     title: "Internal server error",

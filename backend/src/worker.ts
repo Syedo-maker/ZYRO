@@ -7,6 +7,7 @@ import { prepareStorage } from "./lib/storage";
 import { installCrashHandlers, installShutdown, isDraining, readiness, registerConnectionClosers } from "./lib/lifecycle";
 import { errorMessage, logger } from "./lib/logger";
 import { logEnvReport } from "./config/envLog";
+import { initErrorTracking } from "./lib/errorTracking";
 import { closeQueuesOnShutdown, startWorkers } from "./workers";
 
 /**
@@ -19,6 +20,7 @@ import { closeQueuesOnShutdown, startWorkers } from "./workers";
  */
 async function main() {
   logEnvReport("worker");
+  initErrorTracking("worker");
   installCrashHandlers();
   await connectMongo();
   await prepareStorage();
