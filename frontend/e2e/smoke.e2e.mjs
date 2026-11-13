@@ -75,8 +75,11 @@ res = await fetch(`${BASE}/`)
 const html = await res.text()
 check('the site is served', res.status === 200 && html.includes('id="root"'))
 const csp = res.headers.get('content-security-policy') ?? ''
-check('security headers: a Content-Security-Policy that allows scripts only from the site itself', /script-src 'self'/.test(csp) && /frame-ancestors 'none'/.test(csp))
-check('security headers: no framing, no sniffing, HSTS', res.headers.get('x-frame-options') === 'DENY' && res.headers.get('x-content-type-options') === 'nosniff' && /max-age=/.test(res.headers.get('strict-transport-security') ?? ''))
+// Framing is same-origin only since Store Themes (the Theme Studio previews the real storefront in a
+// frame on the same site); no other site may frame any page.
+check('security headers: a Content-Security-Policy that allows scripts only from the site itself', /script-src 'self'/.test(csp) && /frame-ancestors 'self'/.test(csp))
+check('security headers: same-origin framing only, no sniffing, HSTS', res.headers.get('x-frame-options') === 'SAMEORIGIN' && res.headers.get('x-content-type-options') === 'nosniff' && /max-age=/.test(res.headers.get('strict-transport-security') ?? ''))
+check('text is compressed (gzip)', /gzip/.test((await fetch(BASE + '/', { headers: { 'Accept-Encoding': 'gzip' } })).headers.get('content-encoding') ?? ''))
 check('index.html is always revalidated, so a release shows at once', /no-cache/.test(res.headers.get('cache-control') ?? ''))
 const plans = await api('GET', '/plans')
 check('the API answers through the proxy', plans.status === 200 && Array.isArray(plans.json?.plans))
