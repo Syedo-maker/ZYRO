@@ -4,8 +4,11 @@ import { Button } from '../components/ui/Button'
 import { Alert } from '../components/ui/Alert'
 import { Spinner } from '../components/ui/Spinner'
 import { AuthShell, AUTH_TITLE } from '../components/ui/AuthShell'
-import { apiFetch, authErrorMessage } from '../lib/apiClient'
+import { ApiError, apiFetch } from '../lib/apiClient'
 import { usePageMeta } from '../lib/pageMeta'
+
+/** The API's own explanation ("This unsubscribe link is not valid..."), which says what to do instead. */
+const explain = (e: unknown) => (e instanceof ApiError ? (e.detail ?? e.message) : 'Something went wrong. Please try again.')
 
 interface State {
   storeName: string
@@ -30,7 +33,7 @@ export function UnsubscribePage() {
   useEffect(() => {
     apiFetch<State>(`/unsubscribe?t=${encodeURIComponent(token)}`)
       .then(setState)
-      .catch((e) => setError(authErrorMessage(e)))
+      .catch((e) => setError(explain(e)))
   }, [token])
 
   async function change(method: 'POST' | 'DELETE') {
@@ -39,7 +42,7 @@ export function UnsubscribePage() {
     try {
       setState(await apiFetch<State>(`/unsubscribe?t=${encodeURIComponent(token)}`, { method, body: {} }))
     } catch (e) {
-      setError(authErrorMessage(e))
+      setError(explain(e))
     } finally {
       setBusy(false)
     }
