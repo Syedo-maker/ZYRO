@@ -114,6 +114,7 @@ function StoreFooter({ store, footer, themed }: { store: { id: string; name: str
   const legal = (
     <span className="flex flex-wrap gap-x-4">
       <span>Secure checkout by Stripe</span>
+      <Link to={`/store/${store.id}/policies`} className="underline underline-offset-2 hover:text-text">Shop policies</Link>
       <Link to="/privacy" className="underline underline-offset-2 hover:text-text">Privacy</Link>
       <Link to="/terms" className="underline underline-offset-2 hover:text-text">Terms</Link>
     </span>

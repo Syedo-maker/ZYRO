@@ -266,6 +266,7 @@ model Tenant {
   aiBusinessInsight AiBusinessInsight?
   storeTheme        StoreTheme?
   storeThemeVersions StoreThemeVersion[]
+  policies          StorePolicy[]
 
   @@index([ownerId])
 }
@@ -1151,4 +1152,25 @@ model StoreThemeVersion {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
+}
+
+enum StorePolicyKind {
+  REFUND
+  SHIPPING
+  PRIVACY
+  TERMS
+}
+
+/// A shop's own policy pages (returns and refunds, shipping, privacy, terms), written by the owner and
+/// shown on the storefront at /store/:id/policies. Plain text only; the storefront renders it as text,
+/// never as HTML. A shop that has not written one simply has no such page.
+model StorePolicy {
+  tenantId  String
+  kind      StorePolicyKind
+  body      String
+  updatedAt DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, kind])
 }
