@@ -39,12 +39,13 @@ import { storeScoutRouter } from "./modules/scout/scout.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 import { filesRouter } from "./modules/files/files.routes";
 import { categoryRouter } from "./modules/categories/category.routes";
-import { logger } from "./lib/logger";
+import { logger, tenantIdFromPath } from "./lib/logger";
 import { isDraining, readiness } from "./lib/lifecycle";
 import { requestTimeout } from "./middleware/timeout.middleware";
 import { httpsOnly } from "./middleware/httpsOnly.middleware";
 
 export const app = express();
+
 
 // Behind a reverse proxy, req.ip would be the proxy's; this makes rate limits see each visitor.
 if (env.trustProxy > 0) app.set("trust proxy", env.trustProxy);
@@ -76,6 +77,9 @@ app.use(
       res: (res) => ({ status: res.statusCode }),
     },
     customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? "error" : "info"),
+    // Which store a request was about, so one store's traffic and errors can be found in the logs.
+    // Read from the address (/api/v1/stores/<id>/...), only when it has the shape of a store id.
+    customProps: (req) => ({ tenantId: tenantIdFromPath(String(req.url)) }),
     autoLogging: { ignore: (req) => req.url === "/health" || req.url === "/ready" },
   })
 );
