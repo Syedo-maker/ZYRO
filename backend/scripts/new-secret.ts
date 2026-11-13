@@ -11,7 +11,7 @@ import { randomBytes } from "node:crypto";
 
 const SECRETS: Record<string, string> = {
   JWT_ACCESS_SECRET:
-    "Signs sign-in tokens. After the change, current access tokens stop working at once; browsers get a new one silently from their refresh token (stored in the database, not signed with this), so nobody has to sign in again.",
+    "Signs sign-in tokens. After the change, current access tokens stop working at once; browsers get a new one silently from their refresh token (stored in the database, not signed with this), so nobody has to sign in again. Unsubscribe links in cart reminders already sent stop working too (the page then says to reply to the email instead).",
   FILE_SIGNING_SECRET:
     "Signs short-lived links to private files on the local storage driver. Links already handed out stop working; new ones work. (Not used with Azure storage.)",
   COD_PHONE_PEPPER:
