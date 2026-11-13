@@ -341,21 +341,27 @@ export function resilientStorage(inner: StorageDriver): StorageDriver {
 const storageUnavailable = () => Errors.serviceUnavailable("File storage is temporarily unavailable. Please try again in a moment.");
 
 let driver: StorageDriver | null = null;
+/** The driver inside the resilient wrapper, for the start-up steps only it knows (creating containers). */
+let rawDriver: StorageDriver | null = null;
 
 export function getStorage(): StorageDriver {
-  driver ??= resilientStorage(env.storage.driver === "azure" ? new AzureBlobDriver() : new LocalDriver());
+  if (!driver) {
+    rawDriver = env.storage.driver === "azure" ? new AzureBlobDriver() : new LocalDriver();
+    driver = resilientStorage(rawDriver);
+  }
   return driver;
 }
 
 /** Tests only: replaces the driver. */
 export function setStorage(next: StorageDriver | null) {
   driver = next;
+  rawDriver = next;
 }
 
 /** At startup: makes sure the places files go exist (local folders, or the emulator's containers). */
 export async function prepareStorage() {
   const storage = getStorage();
-  if (storage instanceof AzureBlobDriver && env.storage.azure.connectionString) await storage.ensureContainers();
+  if (rawDriver instanceof AzureBlobDriver && env.storage.azure.connectionString) await rawDriver.ensureContainers();
   await storage.ping();
 }
 
