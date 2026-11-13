@@ -109,6 +109,8 @@ const POSITIVE_NUMBERS: Record<string, string> = {
   AI_MONTHLY_CHAT_MESSAGES_LIMIT: "the Free plan's AI allowance",
   AI_JOB_TIMEOUT_MS: "AI requests",
   AI_WORKER_CONCURRENCY: "AI throughput",
+  AI_DAILY_STORE_LIMIT: "AI daily limits",
+  AI_DAILY_GLOBAL_LIMIT: "AI daily limits",
   PLAN_GRACE_HOURS: "plans and billing",
   CART_RECOVERY_ABANDONED_AFTER_HOURS: "cart recovery emails",
   CART_RECOVERY_SCAN_INTERVAL_HOURS: "cart recovery emails",
@@ -141,6 +143,7 @@ const CHOICES: Record<string, { values: string[]; neededFor: string }> = {
   RUN_WORKERS_IN_API: { values: ["true", "false"], neededFor: "background jobs" },
   ALLOW_LOCAL_STORAGE_IN_PRODUCTION: { values: ["true", "false"], neededFor: "file uploads" },
   FORCE_HTTPS: { values: ["true", "false"], neededFor: "the HTTPS-only redirect" },
+  AI_DISABLED: { values: ["true", "false"], neededFor: "the AI kill switch" },
 };
 
 const URLS: Record<string, { schemes: string[]; neededFor: string }> = {
@@ -258,6 +261,9 @@ export function checkEnv(source: Source): EnvReport {
   }
   if (isProduction && source.GATEWAY_MOCK_ENABLED === "true") {
     warnings.push({ name: "GATEWAY_MOCK_ENABLED", message: "the test payment gateway is switched on in production" });
+  }
+  if (source.AI_DISABLED === "true") {
+    warnings.push({ name: "AI_DISABLED", message: "the AI kill switch is on: every AI feature answers \"switched off\"" });
   }
   if (isProduction && source.RATE_LIMIT_ENABLED === "false") {
     warnings.push({ name: "RATE_LIMIT_ENABLED", message: "rate limits are switched off in production" });
