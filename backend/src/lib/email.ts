@@ -2,6 +2,7 @@ import { env } from "../config/env";
 import { Errors } from "../errors/AppError";
 import { sendgridGateway } from "./email.sendgrid";
 import { brevoGateway } from "./email.brevo";
+import { createBreaker, guard } from "./circuitBreaker";
 
 export interface EmailMessage {
   to: string;
@@ -72,8 +73,13 @@ export function setEmailGateway(gateway: EmailGateway | undefined) {
   override = gateway;
 }
 
+/** An email provider that keeps failing is skipped for a while (lib/circuitBreaker.ts): sends fail at once. */
+const emailBreaker = createBreaker("email", {
+  openError: (_name, retryInMs) => new Error(`The email provider is unavailable (circuit open, next try in ${Math.ceil(retryInMs / 1000)} s)`),
+});
+
 export function getEmailGateway(): EmailGateway {
   if (override) return override;
-  real ??= createRealGateway();
+  real ??= guard(emailBreaker, createRealGateway());
   return real;
 }
