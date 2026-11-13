@@ -121,6 +121,7 @@ const POSITIVE_NUMBERS: Record<string, string> = {
   WORKER_HEALTH_PORT: "the worker's health check",
   JWT_REFRESH_EXPIRES_IN_DAYS: "sign-in sessions",
   CART_TTL_SECONDS: "shopping carts",
+  MONGO_MAX_POOL_SIZE: "MongoDB connections",
 };
 
 const NON_NEGATIVE_NUMBERS: Record<string, string> = {
@@ -137,6 +138,7 @@ const CHOICES: Record<string, { values: string[]; neededFor: string }> = {
   RATE_LIMIT_ENABLED: { values: ["true", "false"], neededFor: "rate limits" },
   RUN_WORKERS_IN_API: { values: ["true", "false"], neededFor: "background jobs" },
   ALLOW_LOCAL_STORAGE_IN_PRODUCTION: { values: ["true", "false"], neededFor: "file uploads" },
+  FORCE_HTTPS: { values: ["true", "false"], neededFor: "the HTTPS-only redirect" },
 };
 
 const URLS: Record<string, { schemes: string[]; neededFor: string }> = {
@@ -232,6 +234,12 @@ export function checkEnv(source: Source): EnvReport {
   if (set(source.AI_PROVIDER_ORDER)) {
     const unknown = source.AI_PROVIDER_ORDER!.split(",").map((p) => p.trim().toLowerCase()).filter((p) => p && !["anthropic", "openai"].includes(p));
     if (unknown.length) add("AI_PROVIDER_ORDER", "may only list anthropic and openai", "AI features");
+  }
+  if (set(source.REQUEST_BODY_LIMIT) && !/^\d+(b|kb|mb)$/i.test(source.REQUEST_BODY_LIMIT!.trim())) {
+    add("REQUEST_BODY_LIMIT", "must be a size such as 100kb or 1mb", "request size limits");
+  }
+  if (source.FORCE_HTTPS === "true" && !set(source.PUBLIC_URL)) {
+    add("PUBLIC_URL", "missing (FORCE_HTTPS redirects to its host)", "the HTTPS-only redirect");
   }
   if (set(source.APPLICATIONINSIGHTS_SAMPLING_RATIO)) {
     const r = Number(source.APPLICATIONINSIGHTS_SAMPLING_RATIO);

@@ -42,11 +42,15 @@ import { categoryRouter } from "./modules/categories/category.routes";
 import { logger } from "./lib/logger";
 import { isDraining, readiness } from "./lib/lifecycle";
 import { requestTimeout } from "./middleware/timeout.middleware";
+import { httpsOnly } from "./middleware/httpsOnly.middleware";
 
 export const app = express();
 
 // Behind a reverse proxy, req.ip would be the proxy's; this makes rate limits see each visitor.
 if (env.trustProxy > 0) app.set("trust proxy", env.trustProxy);
+
+// HTTPS only, when FORCE_HTTPS=true (off by default: the proxy in front usually redirects already).
+app.use(httpsOnly);
 
 // Standard security headers (also removes X-Powered-By). Uploaded images are loaded by the
 // storefront from another origin in production, so allow cross-origin embedding.
@@ -79,9 +83,11 @@ app.use(requestTimeout);
 
 // Registered before express.json(): Stripe signs the exact bytes it sends, so this route
 // needs the raw body. Server-to-server, so CORS does not apply to it.
-app.post("/api/v1/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookController);
+app.post("/api/v1/webhooks/stripe", express.raw({ type: "application/json", limit: env.requestBodyLimit }), stripeWebhookController);
 
-app.use(express.json());
+// Request bodies are capped (REQUEST_BODY_LIMIT, 100 KB by default): a larger one gets a 413.
+// File uploads have their own limit (5 MB, middleware/upload.middleware.ts).
+app.use(express.json({ limit: env.requestBodyLimit }));
 app.use(cookieParser());
 
 // Public files (product images) on the local driver. Only the public area is ever served here:
