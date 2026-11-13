@@ -36,6 +36,7 @@ const COLUMNS: { heading: string; links: { label: string; to: string; external?:
     links: [
       { label: 'Terms of Service', to: '/terms' },
       { label: 'Privacy Policy', to: '/privacy' },
+      { label: 'Contact', to: '/contact' },
     ],
   },
 ]

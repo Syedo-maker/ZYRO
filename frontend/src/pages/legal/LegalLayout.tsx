@@ -7,7 +7,7 @@ import { LEGAL } from '../../lib/legal'
  * The frame for the Terms of Service and the Privacy Policy: plain text, set to be read, with every
  * section reachable from a list at the top. Written for the people they bind, so in plain words.
  */
-export function LegalLayout({ title, intro, sections }: { title: string; intro: ReactNode; sections: { id: string; heading: string; body: ReactNode }[] }) {
+export function LegalLayout({ title, intro, sections, template = true }: { title: string; intro: ReactNode; sections: { id: string; heading: string; body: ReactNode }[]; template?: boolean }) {
   return (
     <div className="min-h-screen bg-bg">
       <header className="border-b border-border bg-surface">
@@ -18,12 +18,19 @@ export function LegalLayout({ title, intro, sections }: { title: string; intro: 
           <nav aria-label="Legal" className="flex gap-4 text-sm font-semibold">
             <Link to="/terms" className="text-text-secondary hover:text-text">Terms</Link>
             <Link to="/privacy" className="text-text-secondary hover:text-text">Privacy</Link>
+            <Link to="/contact" className="text-text-secondary hover:text-text">Contact</Link>
           </nav>
         </div>
       </header>
       <main id="main" className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <h1 className="font-display text-3xl font-extrabold tracking-tight text-text">{title}</h1>
         <p className="mt-2 text-sm text-text-muted">Last updated {LEGAL.updated}</p>
+        {template && !LEGAL.reviewedByLawyer && (
+          <p role="note" className="mt-4 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-sm text-text">
+            <strong>Template.</strong> This page is a starting point written in plain words and has not yet been reviewed by a lawyer. It will be
+            reviewed before ZYRO opens to the public.
+          </p>
+        )}
         <div className="mt-6 space-y-4 text-base leading-relaxed text-text-secondary">{intro}</div>
 
         <nav aria-label="On this page" className="mt-8 rounded-2xl border border-border bg-surface p-5">

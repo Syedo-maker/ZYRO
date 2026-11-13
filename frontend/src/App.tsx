@@ -1,3 +1,4 @@
+import { CookieNotice } from './components/CookieNotice'
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
@@ -37,6 +38,7 @@ const ReviewsAdminPage = lazy(() => import('./pages/admin/ReviewsAdminPage').the
 const ThemeStudioPage = lazy(() => import('./pages/admin/theme/ThemeStudioPage').then((m) => ({ default: m.ThemeStudioPage })))
 const TermsPage = lazy(() => import('./pages/legal/TermsPage').then((m) => ({ default: m.TermsPage })))
 const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
+const ContactPage = lazy(() => import('./pages/legal/ContactPage').then((m) => ({ default: m.ContactPage })))
 const StorefrontLayout = lazy(() => import('./pages/storefront/StorefrontLayout').then((m) => ({ default: m.StorefrontLayout })))
 const StorefrontHome = lazy(() => import('./pages/storefront/StorefrontHome').then((m) => ({ default: m.StorefrontHome })))
 const CartPage = lazy(() => import('./pages/storefront/CartPage').then((m) => ({ default: m.CartPage })))
@@ -80,6 +82,7 @@ export default function App() {
             <Route path="/unsubscribe" element={<UnsubscribePage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/contact" element={<ContactPage />} />
 
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="products" replace />} />
@@ -133,6 +136,7 @@ export default function App() {
             {/* B2: an unknown address is a real 404 page (it used to send everyone to the home page). */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          <CookieNotice />
         </Suspense>
         </RouteErrorBoundary>
         </ToastProvider>
