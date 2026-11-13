@@ -43,6 +43,7 @@ export const SECRET_NAMES = [
   "GATEWAY_MOCK_SECRET",
   "APPLICATIONINSIGHTS_CONNECTION_STRING",
   "SENTRY_DSN",
+  "METRICS_TOKEN",
 ] as const;
 
 export interface EnvProblem {

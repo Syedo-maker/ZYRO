@@ -8,6 +8,8 @@ import { installCrashHandlers, installShutdown, isDraining, readiness, registerC
 import { errorMessage, logger } from "./lib/logger";
 import { logEnvReport } from "./config/envLog";
 import { initErrorTracking } from "./lib/errorTracking";
+import { metricsAllowed, metricsText } from "./lib/metrics";
+import { registerQueueMetrics } from "./lib/queueMetrics";
 import { closeQueuesOnShutdown, startWorkers } from "./workers";
 
 /**
@@ -21,6 +23,7 @@ import { closeQueuesOnShutdown, startWorkers } from "./workers";
 async function main() {
   logEnvReport("worker");
   initErrorTracking("worker");
+  registerQueueMetrics();
   installCrashHandlers();
   await connectMongo();
   await prepareStorage();
@@ -31,6 +34,15 @@ async function main() {
   const health = createServer(async (req, res) => {
     if (req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ status: isDraining() ? "draining" : "ok" }));
+      return;
+    }
+    if (req.url === "/metrics") {
+      if (!metricsAllowed(req.headers.authorization, env.isProduction)) {
+        res.writeHead(404, { "Content-Type": "text/plain" }).end("Not found");
+        return;
+      }
+      const { contentType, body } = await metricsText();
+      res.writeHead(200, { "Content-Type": contentType }).end(body);
       return;
     }
     if (req.url === "/ready") {

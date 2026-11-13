@@ -9,6 +9,7 @@ import { FRIENDLY_AI_UNAVAILABLE } from "../../lib/aiErrors";
 import { getRedis } from "../../lib/redis";
 import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, chargeLateAnswer, currentMonth, type AiUsageKind } from "./ai.quota.service";
 import { logger } from "../../lib/logger";
+import { aiRequests } from "../../lib/metrics";
 
 export interface GenerateInput {
   tenantId: string;
@@ -106,11 +107,17 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
   // No AI provider set up at all: say so at once. Queueing the job would only retry it three times
   // with backoff (about 6 s) before giving the same answer, which kept a shopper submitting a receipt
   // waiting for nothing. No quota is touched.
-  if (!aiConfigured()) throw Errors.serviceUnavailable(FRIENDLY_AI_UNAVAILABLE);
+  if (!aiConfigured()) {
+    aiRequests.inc({ outcome: "unavailable", prompt_type: input.promptType });
+    throw Errors.serviceUnavailable(FRIENDLY_AI_UNAVAILABLE);
+  }
 
   const month = currentMonth();
   const source = platformPays ? null : await reserveQuota(input.tenantId, kind, month);
-  if (!platformPays && !source) throw await quotaExhaustedError(input.tenantId, kind);
+  if (!platformPays && !source) {
+    aiRequests.inc({ outcome: "quota_exhausted", prompt_type: input.promptType });
+    throw await quotaExhaustedError(input.tenantId, kind);
+  }
 
   // Listening first: a job that finished before the listener was reading would look like a timeout.
   const events = await readyAiQueueEvents();
@@ -154,9 +161,11 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
       { err: err instanceof Error ? err.message : String(err), tenantId: input.tenantId, promptType: input.promptType, model },
       "AI generation failed"
     );
+    aiRequests.inc({ outcome: "unavailable", prompt_type: input.promptType });
     throw Errors.serviceUnavailable(FRIENDLY_AI_UNAVAILABLE);
   }
 
+  aiRequests.inc({ outcome: "answered", prompt_type: input.promptType });
   // Only a successful call reaches this point: its tokens are what the store's AI actually cost (Part B).
   if (!platformPays) await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => logger.error({ err: err.message, tenantId: input.tenantId }, "AI usage count failed"));
 
