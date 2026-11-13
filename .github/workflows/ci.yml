@@ -209,7 +209,7 @@ jobs:
           node e2e/partE-payments.e2e.mjs
       - name: Server logs on failure
         if: failure()
-        run: tail -100 e2e-server.log vite.log
+        run: tail -n 100 e2e-server.log vite.log
 
   images:
     name: Production images build
