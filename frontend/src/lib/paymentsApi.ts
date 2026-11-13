@@ -31,6 +31,8 @@ export interface LocalOrderInput {
 export interface PaymentOptions {
   currency: string
   total: number
+  /** Whether card payment (Stripe) is set up on this platform. Older servers leave it out: treated as yes. */
+  card?: { available: boolean }
   cod: { available: boolean; advanceAmount?: number; note?: string | null }
   bankTransfer: { available: boolean; accountName?: string | null; accountNumber?: string | null; bankName?: string | null; instructions?: string | null }
 }
