@@ -24,6 +24,8 @@ const clamp = (text: string, max = 200) => {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length <= max ? flat : `${flat.slice(0, max - 1).replace(/\s+\S*$/, "")}…`;
 };
+/** As the storefront shows a price (frontend/src/lib/format.ts): Rs 450, but Rs 99.50. */
+const shownPrice = (amount: number, currency: string) => (Number.isInteger(amount) ? formatPrice(amount, currency).replace(/\.00$/, "") : formatPrice(amount, currency));
 const absolute = (url: string | null | undefined) => (!url ? null : /^https?:\/\//.test(url) ? url : `${base()}${url.startsWith("/") ? "" : "/"}${url}`);
 
 export function robotsTxt(): string {
@@ -119,7 +121,7 @@ export async function previewHtml(path: unknown): Promise<string> {
       if (productId) {
         const product = await Product.findOne({ storeId, _id: productId }).select({ title: 1, description: 1, images: 1, salePrice: 1 }).lean();
         if (product) {
-          const price = product.salePrice ? formatPrice(Number(product.salePrice.toString()), store.currency) : null;
+          const price = product.salePrice ? shownPrice(Number(product.salePrice.toString()), store.currency) : null;
           card = {
             title: `${product.title} | ${store.name}`,
             description: clamp(`${price ? `${price}. ` : ""}${product.description ?? ""}`) || `${product.title} at ${store.name}.`,

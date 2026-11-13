@@ -104,7 +104,7 @@ describe("link previews", () => {
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/text\/html/);
     expect(res.text).toContain('<meta property="og:type" content="product">');
-    expect(res.text).toMatch(/<meta property="og:description" content="Rs\s?450\.00\. Hand-thrown clay cup/);
+    expect(res.text).toMatch(/<meta property="og:description" content="Rs\s?450\. Hand-thrown clay cup/);
     expect(res.text).toContain("Clay cup &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; | SEO listed &quot;Chai&quot; &amp; &lt;Co&gt;");
     expect(res.text).not.toContain("<script>");
     expect(res.text).toContain(`<link rel="canonical" href="${env.storefrontUrl.replace(/\/+$/, "")}/store/${listed.storeId}/products/${listed.productIds[0]}">`);
