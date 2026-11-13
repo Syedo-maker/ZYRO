@@ -114,6 +114,16 @@ const t0 = Date.now()
 const recs = await api('GET', `/stores/${storeId}/products/${product?.id}/recommendations`)
 check('recommendations answer through the API', recs.status === 200 && Array.isArray(recs.json?.data), `${recs.status} in ${Date.now() - t0} ms`)
 
+// ---- 5b. Search engines and link previews, through nginx ----
+const robots = await fetch(`${BASE}/robots.txt`)
+check('robots.txt is served at the root (from the API, through nginx)', robots.status === 200 && /^User-agent: \*/m.test(await robots.text()))
+const sitemap = await fetch(`${BASE}/sitemap.xml`)
+check('sitemap.xml is served at the root', sitemap.status === 200 && (await sitemap.text()).includes('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'))
+const preview = await (await fetch(`${BASE}/store/${storeId}/products/${product?.id}`, { headers: { 'User-Agent': 'WhatsApp/2.24.8.78 A' } })).text()
+check("a link shared on WhatsApp gets the product's own preview (title, price, photo)", preview.includes('<meta property="og:title" content="Smoke Test Cup | Smoke ') && /og:description" content="Rs\s?450\./.test(preview) && /og:image" content="http[^"]+\/public\/products\//.test(preview), preview.slice(0, 120))
+const human = await (await fetch(`${BASE}/store/${storeId}/products/${product?.id}`, { headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) Chrome/130.0 Mobile' } })).text()
+check('a person opening the same link gets the app', human.includes('id="root"') && !human.includes('og:url'))
+
 // ---- 6. In a real browser ----
 const browser = await chromium.launch()
 const page = await browser.newPage()
@@ -146,6 +156,23 @@ try {
   await page.getByText('Smoke Test Cup').first().waitFor({ timeout: 30000 })
   const loaded = await page.evaluate(() => [...document.images].some((i) => i.src.includes('/public/products/') && i.complete && i.naturalWidth > 0))
   check('the storefront shows the product image, served by Blob Storage', loaded)
+
+  // A phone (390px): the shop, the product, the cart and checkout fit the screen, cookie notice included.
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  phone.on('pageerror', (e) => problems.push(e.message))
+  const wide = () => phone.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
+  await phone.goto(`${BASE}/store/${storeId}`)
+  await phone.getByText('Smoke Test Cup').first().waitFor({ timeout: 30000 })
+  check('390px: the cookie notice shows on a first visit', await phone.getByRole('complementary', { name: 'Cookies' }).isVisible())
+  check('390px: the shop fits the screen', !(await wide()))
+  await phone.goto(`${BASE}/store/${storeId}/products/${product?.id}`)
+  await phone.getByRole('heading', { name: 'Smoke Test Cup' }).waitFor({ timeout: 30000 })
+  check('390px: the product page fits', !(await wide()))
+  await phone.getByRole('button', { name: /Add to cart/i }).first().click()
+  await phone.goto(`${BASE}/store/${storeId}/checkout`)
+  await phone.getByRole('heading', { name: 'Checkout' }).waitFor({ timeout: 30000 })
+  check('390px: checkout fits', !(await wide()))
+  await phone.close()
 } catch (err) {
   check('browser journey', false, err.message.split('\n')[0])
 } finally {
