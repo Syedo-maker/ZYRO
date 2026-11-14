@@ -5,7 +5,7 @@
 #             new API revision takes traffic (an Azure Container Apps job in production).
 
 # Pinned to an exact version: a rebuild never moves to a new Node release by itself (Dependabot proposes updates).
-FROM node:24.19.0-bookworm-slim AS base
+FROM node:24.22.2-bookworm-slim AS base
 # Prisma's query engine links against OpenSSL.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssl ca-certificates \

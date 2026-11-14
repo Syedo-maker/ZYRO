@@ -1,7 +1,7 @@
 # ZYRO web: the built React app, served by nginx, which also forwards /api to the API (see
 # nginx/default.conf.template for why the two must share one origin).
 
-FROM node:24.19.0-bookworm-slim AS deps
+FROM node:24.22.2-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
@@ -14,7 +14,7 @@ COPY . .
 RUN npm run build
 
 # The unprivileged variant runs as a non-root user and listens on 8080.
-FROM nginxinc/nginx-unprivileged:1.27.5-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine AS runtime
 COPY nginx/security-headers.inc.template /etc/nginx/templates/security-headers.inc.template
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
