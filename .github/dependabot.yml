@@ -1,16 +1,19 @@
-# Weekly dependency update pull requests, on hold for major versions.
+# Dependency version updates: PAUSED until the owners say so (after the viva).
 #
-# The owners' decision (14 November 2026): no major version updates are proposed until they say so
-# (after the viva), and no Dependabot pull request is merged before the viva, minor and patch included.
-# Each package type below proposes at most one pull request a week, grouping all of its minor and patch
-# updates (Dependabot cannot group across package types, so that is at most five a week). CI runs on
-# every one. To allow major versions again, delete the `ignore` blocks.
+# The owners' decision (14 November 2026): no version-update pull requests at all before the viva, and
+# none merged. Every entry below has `open-pull-requests-limit: 0`, so Dependabot opens none.
+# This does NOT switch off security alerts or Dependabot security updates: those are repository
+# settings (Settings > Code security) and have their own separate limit, unaffected by this file.
+#
+# To turn version updates back on: set `open-pull-requests-limit` to 1 on the entries you want. Each
+# then opens at most one pull request a week grouping its minor and patch updates (Dependabot cannot
+# group across package types). Major versions stay off until the `ignore` blocks are deleted.
 version: 2
 updates:
   - package-ecosystem: npm
     directories: [/backend, /frontend]
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
@@ -20,7 +23,7 @@ updates:
   - package-ecosystem: pip
     directory: /recommendation-service
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
@@ -31,7 +34,7 @@ updates:
   - package-ecosystem: docker
     directories: [/backend, /frontend, /recommendation-service]
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
@@ -41,7 +44,7 @@ updates:
   - package-ecosystem: docker-compose
     directory: /
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
@@ -51,7 +54,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "*"
         update-types: [version-update:semver-major]
