@@ -206,7 +206,8 @@ model Tenant {
   posMaxDiscountPercent Decimal  @default(20) @db.Decimal(5, 2)
 
   /// Plan the store last paid for. It only ever changes from a verified Stripe webhook
-  /// (modules/billing/billing.webhook.ts), never from a client request or AI output. What the
+  /// (modules/billing/billing.webhook.ts) or a platform admin's script (scripts/set-plan.ts, while
+  /// there is no Stripe Billing), never from a client request or AI output. What the
   /// store may actually use right now is the *effective* plan (lib/plans.ts effectiveTier):
   /// a paid plan whose paid period, plus a short grace, has passed counts as FREE.
   plan                  PlanTier  @default(FREE)
