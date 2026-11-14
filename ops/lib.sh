@@ -9,7 +9,7 @@
 set -euo pipefail
 
 PG_IMAGE="${PG_IMAGE:-postgres:17.11-alpine}"
-MONGO_IMAGE="${MONGO_IMAGE:-mongo:8.0.34}"
+MONGO_IMAGE="${MONGO_IMAGE:-mongo:8.0.38}"
 
 die() { echo "error: $*" >&2; exit 1; }
 

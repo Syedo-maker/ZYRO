@@ -42,9 +42,15 @@ jobs:
             docker tag "$image:local" "$image:${{ steps.tag.outputs.tag }}"
           done
           docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep -E "^zyro-.*:${{ steps.tag.outputs.tag }}"
+      - name: The host (kernel and Docker), for diagnosing a database that will not start
+        run: |
+          uname -r
+          docker version --format 'Docker {{.Server.Version}}'
       - name: Start the production-like stack from scratch
         run: |
-          docker compose up -d
+          # On a failed start, print every container's state and logs before failing, so the cause is
+          # in this log (a database that refuses to start says why in its own log).
+          docker compose up -d || { docker compose ps -a; docker compose logs --tail 80; exit 1; }
           for _ in $(seq 1 90); do curl -sf http://localhost:8080/healthz > /dev/null && curl -sf http://localhost:8080/api/v1/plans > /dev/null && exit 0; sleep 3; done
           docker compose ps; docker compose logs --tail 80; exit 1
       - uses: actions/setup-node@v4
