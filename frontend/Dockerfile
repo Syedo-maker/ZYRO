@@ -1,7 +1,7 @@
 # ZYRO web: the built React app, served by nginx, which also forwards /api to the API (see
 # nginx/default.conf.template for why the two must share one origin).
 
-FROM node:24.19.0-bookworm-slim AS deps
+FROM node:26.13.0-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
