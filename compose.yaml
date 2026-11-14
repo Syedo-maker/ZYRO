@@ -60,7 +60,7 @@ services:
 
   mongo:
     restart: unless-stopped
-    image: mongo:8.0.38
+    image: mongo:8.3.13
     volumes: [mongo-data:/data/db]
     healthcheck: { test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"], interval: 5s, retries: 30 }
     networks: [zyro]
@@ -76,7 +76,7 @@ services:
 
   azurite:
     restart: unless-stopped
-    image: mcr.microsoft.com/azure-storage/azurite:3.35.0
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
     command: ["azurite-blob", "--blobHost", "0.0.0.0", "--loose", "--skipApiVersionCheck", "--location", "/data"]
     volumes: [azurite-data:/data]
     ports: ["127.0.0.1:10000:10000"]
