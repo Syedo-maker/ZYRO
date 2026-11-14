@@ -5,6 +5,9 @@ import { LandingPage } from './pages/landing/LandingPage'
 import { ShopDirectoryPage } from './pages/shop/ShopDirectoryPage'
 import { LoginPage } from './pages/Login'
 import { RegisterPage } from './pages/Register'
+import { ForgotPasswordPage } from './pages/ForgotPassword'
+import { ResetPasswordPage } from './pages/ResetPassword'
+import { NotFoundPage, RouteErrorBoundary } from './pages/ErrorPages'
 
 /*
  * The landing page, the shop directory and the two sign-in screens load straight away: they are
@@ -60,10 +63,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <RouteErrorBoundary>
         <Suspense fallback={Loading}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
 
@@ -81,6 +87,7 @@ export default function App() {
               <Route path="voice-notes" element={<VoiceNotesPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="platform" element={<PlatformPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
 
             <Route path="/pos" element={<PosEntry />} />
@@ -89,6 +96,7 @@ export default function App() {
               <Route index element={<PosRegisterPage />} />
               <Route path="history" element={<HistoryPage />} />
               <Route path="summary" element={<DailySummaryPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
 
             <Route path="/store/:storeId" element={<StorefrontLayout />}>
@@ -103,6 +111,7 @@ export default function App() {
               <Route path="checkout" element={<CheckoutPage />} />
               <Route path="checkout/success" element={<OrderConfirmationPage />} />
               <Route path="checkout/placed" element={<OrderPlacedPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
 
           {/* "/" used to send everybody to the merchant dashboard, which is wrong for a shopper,
@@ -111,9 +120,11 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/shop" element={<ShopDirectoryPage />} />
             {StyleGuidePage && <Route path="/dev/styleguide" element={<StyleGuidePage />} />}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* B2: an unknown address is a real 404 page (it used to send everyone to the home page). */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
+        </RouteErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
   )

@@ -265,6 +265,86 @@ paths:
         "204":
           description: Logged out
 
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      operationId: auth_forgot_password
+      security: []
+      summary: Ask for a password reset link
+      description: |
+        Emails a reset link that works for 30 minutes, once, for any kind of account. Always answers
+        202 with the same message whether or not the email is registered, so the form cannot be used
+        to find out who has an account. Asking again retires any older unused link. Rate limited per
+        IP and per email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              additionalProperties: false
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                storeId:
+                  type: string
+                  maxLength: 40
+                  description: The store whose sign-in page the shopper came from, so the link can bring them back there.
+      responses:
+        "202":
+          description: Accepted (the same answer whether or not the email is registered)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string }
+        "400":
+          description: The request is malformed, the password breaks the rules, or the link is invalid, used or expired
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      operationId: auth_reset_password
+      security: []
+      summary: Choose a new password with a reset link
+      description: |
+        Sets the new password (the same rules as signing up) if the link's token is valid, unused and
+        less than 30 minutes old, then ends every session of that account. A wrong, used or expired
+        link gets one and the same 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              additionalProperties: false
+              properties:
+                token: { type: string, minLength: 20, maxLength: 200 }
+                password: { type: string, minLength: 8 }
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string }
+        "400":
+          description: The request is malformed, the password breaks the rules, or the link is invalid, used or expired
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
   # ── USERS ─────────────────────────────────────────────────────────────
   /users/me:
     get:
