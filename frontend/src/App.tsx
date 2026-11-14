@@ -1,4 +1,5 @@
 import { CookieNotice } from './components/CookieNotice'
+import { StoreLoadingScreen } from './pages/storefront/StoreLoadingScreen'
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
@@ -111,7 +112,8 @@ export default function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Route>
 
-            <Route path="/store/:storeId" element={<StorefrontLayout />}>
+            {/* The shop has its own loading boundary, in its own colours, so the app-wide one never replaces it. */}
+            <Route path="/store/:storeId" element={<Suspense fallback={<StoreLoadingScreen />}><StorefrontLayout /></Suspense>}>
               <Route index element={<StorefrontHome />} />
               <Route path="products" element={<CatalogPage />} />
               <Route path="products/:productId" element={<ProductPage />} />

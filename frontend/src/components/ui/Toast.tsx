@@ -90,6 +90,9 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
     <li
       data-toast={toast.tone}
       onMouseEnter={() => setPaused(true)}
+      // Also on movement: a toast that appears under a resting pointer (the button there just
+      // disappeared) gets no mouseenter from React, so moving the pointer over it must still hold it.
+      onMouseMove={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}

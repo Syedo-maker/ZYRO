@@ -102,6 +102,44 @@ try {
   await page.mouse.move(5, 5)
   await held.waitFor({ state: 'detached', timeout: 8000 })
   check('and leaves once the pointer moves away', true)
+
+  // ---- A toast that appears under a resting pointer still waits once the pointer moves on it.
+  // The button the pointer rested on disappears and the new toast takes its place: the browser's
+  // "mouse left that button" never reaches React (the button is gone), so React also misses the mouse
+  // entering the toast. Moving the pointer over the toast must still hold it.
+  // The form's Save button is scrolled to where the toast appears (bottom right), then clicked with the
+  // mouse: the form closes, the button is gone, and the "Saved" toast appears under the resting pointer.
+  await page.getByRole('button', { name: 'Edit Toast Bowl Large', exact: true }).click()
+  await page.getByLabel('Title', { exact: true }).fill('Toast Bowl XL')
+  // The form has finished loading: its AI tools section fetches the month's usage and grows when it
+  // arrives, which moved the Save button after it had been placed.
+  await page.getByText(/AI generations used this month/).waitFor()
+  const save = page.getByRole('button', { name: 'Save', exact: true })
+  const spot = await page.evaluate(() => ({ x: window.innerWidth - 16 - 384 / 2, y: window.innerHeight - 16 - 23 }))
+  // The dashboard scrolls inside its own panel, not the window: bring the button into view first (any
+  // scrolling box), then move whichever box holds it so the button sits where the toast will be.
+  await save.scrollIntoViewIfNeeded()
+  await save.evaluate((el, y) => {
+    let box = el.parentElement
+    while (box && !(/(auto|scroll)/.test(getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight)) box = box.parentElement
+    const by = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2 - y
+    if (box) box.scrollTop += by
+    else window.scrollBy(0, by)
+  }, spot.y)
+  const s = await save.boundingBox()
+  const at = { x: Math.min(Math.max(spot.x, s.x + 4), s.x + s.width - 4), y: s.y + s.height / 2 }
+  await page.mouse.click(at.x, at.y)
+  const underPointer = toasts(page).filter({ hasText: 'Saved "Toast Bowl XL".' })
+  await underPointer.waitFor({ timeout: 15000 })
+  const t = await underPointer.boundingBox()
+  const pointerOnToast = !!t && at.x >= t.x && at.x <= t.x + t.width && at.y >= t.y && at.y <= t.y + t.height
+  await page.mouse.move(at.x - 2, at.y)
+  await page.waitForTimeout(6000)
+  check('the setup: the toast appeared under the resting pointer', pointerOnToast, JSON.stringify({ at, toast: t }))
+  check('a toast that appears under a resting pointer waits once the pointer moves on it', (await underPointer.count()) === 1)
+  await page.mouse.move(5, 5)
+  await underPointer.waitFor({ state: 'detached', timeout: 8000 })
+
   check('no script errors', problems.length === 0, problems[0])
 
   // ---- Reduced motion, at phone width
@@ -115,7 +153,7 @@ try {
   check('on a 390-pixel phone it fits the screen with a margin', !!box && box.x >= 8 && box.x + box.width <= 382, box ? `${Math.round(box.x)} to ${Math.round(box.x + box.width)}` : 'no box')
   check('and the page does not scroll sideways', await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
 } catch (err) {
-  check('browser journey', false, err.message.split('\n')[0])
+  check('browser journey', false, err.message.split('\n')[0] + ' @ ' + (err.stack.split('\n').find((l) => l.includes('toasts.e2e')) ?? '').trim())
 } finally {
   await browser.close()
 }
