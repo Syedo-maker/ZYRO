@@ -105,7 +105,12 @@ function useDocumentTheme(style: CSSProperties | undefined) {
     const values = style as Record<string, string>
     for (const n of Object.keys(values).filter((k) => k.startsWith('--'))) root.style.setProperty(n, values[n])
     if (style.colorScheme) root.style.colorScheme = String(style.colorScheme)
-    return () => clearDocumentTheme(root)
+    // Taken off only when the shopper has left the shop. React also runs this cleanup when it only
+    // hides the shop for a moment (a page of the shop still downloading); stripping the colours then
+    // flashed Zyro's. A change of theme needs no cleanup: the effect clears the old one first, above.
+    return () => {
+      if (!/^\/store\//.test(window.location.pathname)) clearDocumentTheme(root)
+    }
   }, [style])
 }
 

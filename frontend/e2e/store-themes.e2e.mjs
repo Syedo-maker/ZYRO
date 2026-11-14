@@ -214,6 +214,38 @@ try {
   const cleared = await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--color-bg') === '', null, { timeout: 8000 }).then(() => true, () => false)
   const after = await page.evaluate(() => document.documentElement.style.getPropertyValue('--color-bg'))
   check('following a link out of the shop leaves no shop colour on the platform', cleared, after || '(none)')
+
+  // While a page of the shop is still downloading, the shop keeps its colours: the app-wide loading
+  // screen (Zyro's colours) must never replace a shop, and hiding the shop must not strip its colours.
+  // A fresh browser, so the page's code really is downloaded; the shop's colours are cached first.
+  {
+    const fresh = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    const p2 = await fresh.newPage()
+    await p2.goto(`${WEB}/store/${storeId}`)
+    await p2.getByText('Ceramic Chai Cup').first().waitFor()
+    await p2.close()
+    const p3 = await fresh.newPage()
+    let requested
+    const homeRequested = new Promise((r) => (requested = r))
+    let release
+    const homeReleased = new Promise((r) => (release = r))
+    await p3.route('**/src/pages/storefront/StorefrontHome.tsx*', async (route) => {
+      requested()
+      await homeReleased
+      await route.continue()
+    })
+    // The development server revalidates its source files on every request, so the home page's code
+    // is requested again on this new page (and held back above).
+    await p3.goto(`${WEB}/store/${storeId}`, { waitUntil: 'commit' })
+    await homeRequested
+    // Two frames, so whatever React shows while the page's code downloads is on screen.
+    await p3.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+    const during = await p3.evaluate(() => ({ bg: getComputedStyle(document.body).backgroundColor, rootBg: document.documentElement.style.getPropertyValue('--color-bg') }))
+    release()
+    check('while a page of the shop downloads, the shop keeps its colours (never Zyro\'s loading screen)', during.bg === 'rgb(255, 255, 255)' && during.rootBg === '#ffffff', JSON.stringify(during))
+    await p3.getByText('Ceramic Chai Cup').first().waitFor()
+    await fresh.close()
+  }
 } catch (err) {
   failures += 1
   console.log('FAIL  the journey stopped:', err.message)
