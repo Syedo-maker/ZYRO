@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma, prismaUnscoped, type PrismaTx } from "../../lib/prisma";
 import { Errors } from "../../errors/AppError";
-import { assessCodRisk, bandFor, looksLikePhone, outcomeFor, type CodRiskInputs, type CodRiskResult } from "./cod.risk";
+import { assessCodRisk, looksLikePhone, outcomeFor, type CodRiskInputs, type CodRiskResult } from "./cod.risk";
 
 /**
  * The store's payment settings and the COD Trust Agent (Part E). The scoring rules live in

@@ -29,13 +29,19 @@ export function requirePermission(permission: StaffPermission): RequestHandler {
   return async (req, _res, next) => {
     const storeId = req.params.storeId;
 
-    const tenant = await prisma.tenant.findUnique({ where: { id: storeId } });
-    if (!tenant) return next(Errors.notFound("Store"));
-    if (tenant.ownerId === req.userId) return next();
+    // A failed lookup goes to the error handler at once rather than hanging the request.
+    let tenant, staffMember;
+    try {
+      tenant = await prisma.tenant.findUnique({ where: { id: storeId } });
+      if (!tenant) return next(Errors.notFound("Store"));
+      if (tenant.ownerId === req.userId) return next();
 
-    const staffMember = await prisma.staffMember.findFirst({
-      where: { tenantId: tenantContext.getTenantId(), userId: req.userId },
-    });
+      staffMember = await prisma.staffMember.findFirst({
+        where: { tenantId: tenantContext.getTenantId(), userId: req.userId },
+      });
+    } catch (err) {
+      return next(err);
+    }
 
     if (!staffMember || !staffMember.permissions.includes(permission)) {
       return next(

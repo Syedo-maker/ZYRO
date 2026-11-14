@@ -180,8 +180,22 @@ async function main() {
   const short = run({ NODE_ENV: "production", JWT_ACCESS_SECRET: "tooshort" });
   check("startup: production refuses a short JWT secret", !short.stdout.includes("STARTED"));
   // Production also needs real file storage (lib/storage.ts), as it would have in Azure.
-  const strong = run({ NODE_ENV: "production", JWT_ACCESS_SECRET: "k9Tq2vL8xR4mZ7nB1cW6yH3sD5fG0jPa8uE2iO4tY6r", STORAGE_DRIVER: "azure" });
+  // A complete production setup (production readiness, STEP 2: the public addresses, Redis and the
+  // storage account are required there too).
+  const prod = {
+    NODE_ENV: "production",
+    JWT_ACCESS_SECRET: "k9Tq2vL8xR4mZ7nB1cW6yH3sD5fG0jPa8uE2iO4tY6r",
+    STORAGE_DRIVER: "azure",
+    AZURE_STORAGE_ACCOUNT_URL: "https://zyrotest.blob.core.windows.net",
+    PUBLIC_URL: "https://shop.example.com",
+    CORS_ORIGIN: "https://shop.example.com",
+    REDIS_URL: "redis://127.0.0.1:6379",
+  };
+  const strong = run(prod);
   check("startup: production starts with a strong secret", strong.stdout.includes("STARTED"), (strong.stderr || "").split("\n")[0]);
+  // Azure storage with no account: refused at startup, by name, instead of failing on the first upload.
+  const noAccount = run({ ...prod, AZURE_STORAGE_ACCOUNT_URL: "", AZURE_STORAGE_CONNECTION_STRING: "" });
+  check("startup: production refuses azure storage with no account, naming the setting", !noAccount.stdout.includes("STARTED") && /AZURE_STORAGE_ACCOUNT_URL/.test(noAccount.stderr));
   // A container's disk is lost on restart: production must not quietly keep uploads there.
   const localDisk = run({ NODE_ENV: "production", JWT_ACCESS_SECRET: "k9Tq2vL8xR4mZ7nB1cW6yH3sD5fG0jPa8uE2iO4tY6r", STORAGE_DRIVER: "local" });
   check("startup: production refuses to keep uploads on the container's own disk", !localDisk.stdout.includes("STARTED") && /STORAGE_DRIVER/.test(localDisk.stderr));
@@ -232,5 +246,6 @@ declare([
   "startup: production refuses to start with the placeholder JWT secret",
   "startup: production refuses a short JWT secret",
   "startup: production starts with a strong secret",
+  "startup: production refuses azure storage with no account, naming the setting",
   "startup: development still allows the simple dev secret",
 ]);

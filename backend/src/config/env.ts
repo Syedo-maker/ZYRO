@@ -1,5 +1,6 @@
 import path from "node:path";
 import { config as loadDotenv } from "dotenv";
+import { checkEnv, EnvError, loadSecretFiles } from "./envCheck";
 
 // Settings come from backend/.env, by path, whichever folder the process was started from (the repo
 // root, backend/, or a script's own folder). Variables already set in the environment win, which is
@@ -7,37 +8,35 @@ import { config as loadDotenv } from "dotenv";
 // and email keys) are read here only, and never logged.
 loadDotenv({ path: path.resolve(__dirname, "../../.env") });
 
+// Every setting is checked before anything starts (config/envCheck.ts): all problems are reported
+// together, by variable name and purpose, never by value. Secrets may also come from `<NAME>_FILE`.
+// In production this also refuses a weak JWT secret (anyone could forge a login token) and local
+// file storage (a container's disk is thrown away on restart, so uploads would vanish).
+const secretFileProblems = loadSecretFiles(process.env);
+export const envReport = checkEnv(process.env);
+if (secretFileProblems.length > 0 || envReport.errors.length > 0) {
+  const error = new EnvError([...secretFileProblems, ...envReport.errors]);
+  // A real start prints the list and stops, without a stack trace in the way; under a test runner
+  // the error is thrown so the test can see it.
+  if (process.env.JEST_WORKER_ID) throw error;
+  console.error(error.message);
+  process.exit(1);
+}
+
 function required(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment variable: ${name}`);
-  return value;
+  return process.env[name]!; // presence checked above
 }
 
-const num = (name: string, fallback: number) => {
-  const value = Number(process.env[name] ?? fallback);
-  if (!Number.isFinite(value) || value < 1) throw new Error(`${name} must be a positive number`);
-  return value;
-};
+const num = (name: string, fallback: number) => Number(process.env[name] ?? fallback);
 
-const isProduction = process.env.NODE_ENV === "production";
-
+const isProduction = envReport.isProduction;
 const jwtAccessSecret = required("JWT_ACCESS_SECRET");
-// A weak or copied-from-the-example secret lets anyone forge a login token, so refuse to
-// start in production rather than run insecurely.
-if (isProduction && (jwtAccessSecret.length < 32 || /replace-with|dev-only|changeme/i.test(jwtAccessSecret))) {
-  throw new Error("JWT_ACCESS_SECRET must be a random string of at least 32 characters in production");
-}
-
 const storageDriver = process.env.STORAGE_DRIVER === "azure" ? "azure" : "local";
-// A container's disk is thrown away whenever it restarts or moves, so in production every upload
-// would vanish within days. Refuse to start rather than lose merchants' files quietly; a deployment
-// that really does have a persistent disk (a single VM) can say so explicitly.
-if (isProduction && storageDriver === "local" && process.env.ALLOW_LOCAL_STORAGE_IN_PRODUCTION !== "true") {
-  throw new Error("STORAGE_DRIVER must be 'azure' in production (or set ALLOW_LOCAL_STORAGE_IN_PRODUCTION=true on a host with a persistent disk)");
-}
 
 export const env = {
   isProduction,
+  /** development, test, staging or production: a label for logs and error tracking (config/envCheck.ts). */
+  appEnv: envReport.appEnv,
   port: Number(process.env.PORT ?? 5000),
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
   databaseUrl: required("DATABASE_URL"),
