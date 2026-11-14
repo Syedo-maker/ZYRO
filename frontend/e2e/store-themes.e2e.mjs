@@ -191,8 +191,15 @@ try {
   })
   await page.goto(`${WEB}/store/${storeId}`)
   await page.getByText('Loading store').waitFor()
-  const loadingBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-  check('the loading screen of a returning visit wears the shop background, not Zyro\'s', loadingBg === 'rgb(255, 255, 255)', loadingBg)
+  // On a failure, say which part broke: the cached colours, the colours on <html>, or the whole page
+  // hidden behind the app's loading screen (a suspended React boundary).
+  const loading = await page.evaluate((id) => ({
+    bg: getComputedStyle(document.body).backgroundColor,
+    cached: (localStorage.getItem(`zyro-store-theme:${id}`) ?? '').slice(0, 40),
+    rootBg: document.documentElement.style.getPropertyValue('--color-bg'),
+    hidden: [...document.querySelectorAll('#root > *')].filter((el) => el.style.display === 'none').length,
+  }), storeId)
+  check('the loading screen of a returning visit wears the shop background, not Zyro\'s', loading.bg === 'rgb(255, 255, 255)', JSON.stringify(loading))
   // Before any app code runs: the before-paint script has already put the shop's colour on <html>.
   await page.goto(`${WEB}/store/${storeId}`, { waitUntil: 'domcontentloaded' })
   const early = await page.evaluate(() => document.documentElement.style.getPropertyValue('--color-bg'))
