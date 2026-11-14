@@ -124,8 +124,14 @@ await step('create a product with an image', async () => {
   check('form: the add-image button has an accessible name', (await page.getByRole('button', { name: 'Add image' }).count()) === 1)
   await page.screenshot({ path: path.join(SHOTS, 'p1-form.png') })
   await page.getByRole('button', { name: 'Save' }).click()
-  await page.getByText('Trail Mug').first().waitFor()
-  check('products: the new product appears with its price and stock', (await page.getByText('$24.50').isVisible()) && (await page.getByRole('row').count() >= 0))
+  // The row in the list, not just the name: the "Added "Trail Mug"..." toast shows the name at once,
+  // before the list has reloaded, and checking the price then raced the reload.
+  const mugRow = page.getByRole('row').filter({ hasText: 'Trail Mug' })
+  await mugRow.waitFor()
+  const mugText = await mugRow.innerText()
+  // The stock is an editable number in the row (its value is not part of the row's text).
+  const mugStock = await mugRow.getByRole('spinbutton', { name: 'Stock for Trail Mug' }).inputValue()
+  check('products: the new product appears with its price and stock', mugText.includes('$24.50') && mugStock === '6', `${mugText.replace(/\s+/g, ' ').slice(0, 80)} | stock ${mugStock}`)
   const img = page.locator('img').first()
   await img.waitFor()
   const loaded = await img.evaluate((el) => new Promise((res) => (el.complete ? res(el.naturalWidth > 0) : (el.onload = () => res(true), el.onerror = () => res(false)))))
