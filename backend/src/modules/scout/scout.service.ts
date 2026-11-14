@@ -5,6 +5,7 @@ import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
 import { logger } from "../../lib/logger";
 import { isDemoSlug, sqlIsDemo, sqlNotDemo } from "../../lib/demo";
+import { refreshDemoSalesDates } from "../../lib/demoDates";
 import { Product } from "../../models/Product.model";
 import { Category } from "../../models/Category.model";
 import { generate as aiGenerate } from "../ai/ai.orchestrator";
@@ -228,7 +229,11 @@ export const scoutService = {
     const now = opts.now ?? new Date();
     const windowEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())); // up to the end of yesterday
     const done: string[] = [];
-    for (const scope of opts.scopes ?? (["live", "demo"] as Scope[])) {
+    const scopes = opts.scopes ?? (["live", "demo"] as Scope[]);
+    // The demo stores' sales are moved up to yesterday first, so the demo never drifts out of the
+    // window (lib/demoDates.ts). Not when a caller limits the run to its own stores (the tests).
+    if (scopes.includes("demo") && !opts.onlyTenantIds) await refreshDemoSalesDates(now);
+    for (const scope of scopes) {
       for (const days of PERIODS) {
         const rows = await salesRows(scope, windowEnd, days, opts.onlyTenantIds);
         const markets = computeTrends(rows, scoutOptions());

@@ -140,6 +140,17 @@ export const env = {
   // rest of the API runs without a key, and AI endpoints answer 503 until it is set.
   ai: {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    // The fallback provider (optional): tried only when the primary one fails. Its models per tier.
+    openAiApiKey: process.env.OPENAI_API_KEY,
+    openAiModels: {
+      fast: process.env.OPENAI_MODEL_FAST ?? "gpt-4.1-mini",
+      standard: process.env.OPENAI_MODEL_STANDARD ?? "gpt-4.1",
+    },
+    /** Which providers to try, in order, among those with a key. */
+    providerOrder: (process.env.AI_PROVIDER_ORDER ?? "anthropic,openai")
+      .split(",")
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean),
     // Cost control (Part A): each kind of request uses the cheapest model that does it well
     // (lib/aiModels.ts decides which). "fast" is for short structured outputs and chat replies,
     // "standard" for writing a merchant will publish. Neither needs the largest model; setting

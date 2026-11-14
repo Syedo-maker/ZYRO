@@ -150,6 +150,14 @@ async function main() {
   });
   startAiWorker();
 
+  // Product Scout's demo snapshot, rebuilt now with the fake AI above: the demo stores' sales are moved
+  // up to yesterday first (lib/demoDates.ts), so the browser test sees the demo whenever it was seeded.
+  if ((await prismaUnscoped.tenant.count({ where: { slug: { startsWith: "demo-scout-" } } })) > 0) {
+    const { scoutService } = await import("../src/modules/scout/scout.service");
+    const scout = await scoutService.refresh({ scopes: ["demo"] });
+    console.log(`Product Scout demo snapshot up to ${scout.windowEnd}: ${scout.snapshots.join(", ") || "none"}`);
+  }
+
   // Stands in for the Python recommendation service (Phase 6): no second process to start for a
   // browser test. "Similar" here just means same category first, then the rest, which is enough
   // to test what the UI does with the answer; the real similarity is verify-recommendations.ts's job.

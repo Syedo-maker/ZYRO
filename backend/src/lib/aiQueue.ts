@@ -1,8 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { Queue, QueueEvents, UnrecoverableError, Worker, type Job } from "bullmq";
 import { getBullRedis } from "./redis";
 import { getAiProvider, type AiGenerateResult } from "./aiProvider";
 import { logger } from "./logger";
+import { isPermanentAiError } from "./aiErrors";
+import type { ModelTier } from "./aiModels";
 
 /**
  * BullMQ queues are a Redis-global resource, not a per-process one: any worker in any process
@@ -24,6 +25,8 @@ export interface AiJobData {
   tenantId: string;
   promptType: string;
   model: string;
+  /** The tier the prompt type asked for, so a fallback provider can choose its own model of that class. */
+  tier?: ModelTier;
   system: string;
   prompt: string;
   maxTokens: number;
@@ -83,6 +86,7 @@ export function startAiWorker(): Worker<AiJobData, AiGenerateResult> {
       try {
         return await getAiProvider().generate({
           model: job.data.model,
+          tier: job.data.tier,
           system: job.data.system,
           prompt: job.data.prompt,
           maxTokens: job.data.maxTokens,
@@ -91,9 +95,7 @@ export function startAiWorker(): Worker<AiJobData, AiGenerateResult> {
       } catch (err) {
         // A bad request, an invalid key, or a model ZYRO isn't allowed to use will never
         // succeed on retry, so stop after the first attempt instead of burning the other two.
-        if (err instanceof Anthropic.APIError && err.status !== undefined && err.status < 500 && err.status !== 429) {
-          throw new UnrecoverableError(err.message);
-        }
+        if (isPermanentAiError(err)) throw new UnrecoverableError((err as Error).message);
         throw err;
       }
     },
