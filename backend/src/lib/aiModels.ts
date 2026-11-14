@@ -40,6 +40,9 @@ const TIER_BY_PROMPT: Record<string, ModelTier> = {
   scout_starter: "fast",
   // Part G. Turning a voice note into a draft is a strict JSON shape, so the better model.
   voice_note: "standard",
+  // Store Themes: two or three complete looks as strict JSON, from a request in English, Roman Urdu or
+  // Urdu. The JSON must hold and the taste matters, so the better model.
+  theme_design: "standard",
 };
 
 /**

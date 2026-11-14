@@ -1,5 +1,5 @@
 import { ShoppingBag } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { CartProvider, useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
@@ -11,6 +11,10 @@ import { ThemeToggle } from '../../components/ui/ThemeToggle'
 import { useTheme } from '../../context/themeContext'
 import { catalogApi } from '../../lib/shopApi'
 import { brandStyle } from '../../lib/brandTheme'
+import { readCachedTokens, themeStyle, writeCachedTokens, type StoreTheme } from '../../lib/storeTheme'
+import { loadThemeFont } from '../../lib/themeFonts'
+import { isStudioPreview, PREVIEW_READY, readPreviewMessage } from '../../lib/themePreview'
+import type { PublishedTheme } from '../../lib/storeTheme'
 import { storefrontApi } from '../../lib/storefrontApi'
 import type { StoreProfile } from '../../types/commerce'
 import type { CategoryCount } from '../../types/shop'
@@ -78,6 +82,89 @@ function CategoryNav({ storeId, categories }: { storeId: string; categories: Cat
   )
 }
 
+/** Takes every design token off <html>: only a shop's theme puts them there (here, or public/theme-init.js). */
+function clearDocumentTheme(root: HTMLElement) {
+  const names: string[] = []
+  for (let i = 0; i < root.style.length; i++) if (root.style[i].startsWith('--')) names.push(root.style[i])
+  for (const n of names) root.style.removeProperty(n)
+  // Back to the visitor's own Dark or Light, as public/theme-init.js set it.
+  root.style.colorScheme = root.getAttribute('data-theme') ?? ''
+}
+
+/**
+ * The shop's theme on <html> as well as on the shop's root, while the shop is on screen: toasts and
+ * dialogs render outside the root, and the page behind an overscroll is <html>'s. Set before paint;
+ * replaces whatever the before-paint script took from this browser's cache, and clears it when the
+ * shop turns out to have no theme; taken off again when the shopper leaves for the platform.
+ */
+function useDocumentTheme(style: CSSProperties | undefined) {
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    clearDocumentTheme(root)
+    if (!style) return
+    const values = style as Record<string, string>
+    for (const n of Object.keys(values).filter((k) => k.startsWith('--'))) root.style.setProperty(n, values[n])
+    if (style.colorScheme) root.style.colorScheme = String(style.colorScheme)
+    return () => clearDocumentTheme(root)
+  }, [style])
+}
+
+/** The footer the owner chose: simple (the default), detailed (with links and their about text) or minimal. */
+function StoreFooter({ store, footer, themed }: { store: { id: string; name: string; description?: string | null }; footer: StoreTheme['footerStyle']; themed: boolean }) {
+  const legal = (
+    <span className="flex flex-wrap gap-x-4">
+      <span>Secure checkout by Stripe</span>
+      <Link to="/privacy" className="underline underline-offset-2 hover:text-text">Privacy</Link>
+      <Link to="/terms" className="underline underline-offset-2 hover:text-text">Terms</Link>
+    </span>
+  )
+  if (footer === 'minimal') {
+    return (
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-4 py-4 text-xs text-text-muted sm:px-10">
+          <span>{store.name}, powered by ZYRO</span>
+          {legal}
+        </div>
+      </footer>
+    )
+  }
+  if (footer === 'detailed') {
+    return (
+      <footer className="border-t border-border bg-surface">
+        <div className="mx-auto grid max-w-[1120px] gap-8 px-4 py-10 text-sm sm:grid-cols-3 sm:px-10">
+          <div className="flex flex-col gap-2">
+            <span className="font-display text-base font-bold text-text">{store.name}</span>
+            {store.description && <p className="text-text-secondary">{store.description}</p>}
+          </div>
+          <nav aria-label="Shop" className="flex flex-col gap-2 text-text-secondary">
+            <Link to={`/store/${store.id}/products`} className="hover:text-text">All products</Link>
+            <Link to={`/store/${store.id}/cart`} className="hover:text-text">Cart</Link>
+            <Link to={`/store/${store.id}/account`} className="hover:text-text">My account</Link>
+            <Link to="/shop" className="hover:text-text">All shops</Link>
+          </nav>
+          <div className="flex flex-col gap-2 text-xs text-text-secondary">
+            {!themed && <ThemeToggle />}
+            <span>Powered by ZYRO</span>
+            {legal}
+          </div>
+        </div>
+      </footer>
+    )
+  }
+  return (
+    <footer className="border-t border-border bg-surface">
+      <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-text-secondary sm:px-10">
+        <span className="flex items-center gap-3">
+          {/* A themed shop has one look, chosen by its owner, so the visitor's Dark/Light switch is not offered. */}
+          {!themed && <ThemeToggle />}
+          {store.name}, powered by ZYRO
+        </span>
+        {legal}
+      </div>
+    </footer>
+  )
+}
+
 /** Header, category navigation, search and footer shared by every storefront page under /store/:storeId. */
 export function StorefrontLayout() {
   const { theme } = useTheme()
@@ -85,6 +172,29 @@ export function StorefrontLayout() {
   const [store, setStore] = useState<StoreProfile | null>(null)
   const [categories, setCategories] = useState<CategoryCount[]>([])
   const [notFound, setNotFound] = useState(false)
+  // The colours this browser last saw this shop in, so the loading screen does not flash Zyro's.
+  const [cachedStyle] = useState(() => {
+    const tokens = readCachedTokens(storeId)
+    return tokens ? themeStyle(tokens) : undefined
+  })
+  // Inside the owner's Theme Studio, the draft arrives by message from the Studio window
+  // (lib/themePreview.ts); everywhere else this stays null and the published theme is used.
+  const [inPreview] = useState(() => isStudioPreview())
+  const [previewTheme, setPreviewTheme] = useState<PublishedTheme | null>(null)
+
+  useEffect(() => {
+    if (!inPreview) return
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window.parent || event.origin !== window.location.origin) return
+      const next = readPreviewMessage(event.data)
+      if (!next) return
+      loadThemeFont(next.theme.font)
+      setPreviewTheme(next)
+    }
+    window.addEventListener('message', onMessage)
+    window.parent.postMessage({ type: PREVIEW_READY, path: window.location.pathname }, window.location.origin)
+    return () => window.removeEventListener('message', onMessage)
+  }, [inPreview])
 
   useEffect(() => {
     let cancelled = false
@@ -92,7 +202,12 @@ export function StorefrontLayout() {
     setNotFound(false)
     storefrontApi
       .getStore(storeId)
-      .then((s) => !cancelled && setStore(s))
+      .then((s) => {
+        if (cancelled) return
+        if (!inPreview) writeCachedTokens(storeId, s.theme?.tokens ?? null)
+        loadThemeFont(s.theme?.theme.font)
+        setStore(s)
+      })
       .catch(() => !cancelled && setNotFound(true))
     catalogApi
       .categories(storeId)
@@ -101,7 +216,13 @@ export function StorefrontLayout() {
     return () => {
       cancelled = true
     }
-  }, [storeId])
+  }, [storeId, inPreview])
+
+  const published = previewTheme ?? store?.theme ?? null
+  const shownStore = useMemo(() => (store && previewTheme ? { ...store, theme: previewTheme } : store), [store, previewTheme])
+  const themedStyle = useMemo(() => (published ? themeStyle(published.tokens) : undefined), [published])
+  const rootStyle = store ? (themedStyle ?? brandStyle(store.themeColor, theme)) : cachedStyle
+  useDocumentTheme(store ? themedStyle : cachedStyle)
 
   if (notFound) {
     return (
@@ -114,20 +235,25 @@ export function StorefrontLayout() {
 
   if (!store) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-bg text-text" style={rootStyle}>
         <Spinner label="Loading store" />
       </div>
     )
   }
 
   return (
-    <StoreContext.Provider value={store}>
+    <StoreContext.Provider value={shownStore ?? store}>
       <CartProvider storeId={store.id}>
         {/* The shop wears its merchant's colour from here down (lib/brandTheme.ts); the platform keeps ZYRO's. */}
-        <div className="flex min-h-screen flex-col bg-bg" style={brandStyle(store.themeColor, theme)}>
+        {/* A published store theme (lib/storeTheme.ts) when there is one: the shop's own colours, fonts
+            and shapes, through the same tokens. */}
+        <div className="flex min-h-screen flex-col bg-bg text-text" style={rootStyle}>
           <header className="border-b border-border bg-surface">
             <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-10">
-              <Link to={`/store/${store.id}`} className="font-display text-xl font-bold text-text">
+              <Link to={`/store/${store.id}`} className="flex items-center gap-3 font-display text-xl font-bold text-text">
+                {(published?.theme.logoUrl ?? store.logoUrl) && (
+                  <img src={published?.theme.logoUrl ?? store.logoUrl ?? undefined} alt="" className="h-9 w-9 rounded-md object-cover" />
+                )}
                 {store.name}
               </Link>
               <div className="order-last w-full sm:order-none sm:max-w-md sm:flex-1">
@@ -148,19 +274,7 @@ export function StorefrontLayout() {
           <main className="mx-auto w-full max-w-[1120px] flex-1 px-4 py-8 sm:px-10">
             <Outlet context={{ categories }} />
           </main>
-          <footer className="border-t border-border bg-surface">
-            <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-text-secondary sm:px-10">
-              <span className="flex items-center gap-3">
-                <ThemeToggle />
-                {store.name}, powered by ZYRO
-              </span>
-              <span className="flex flex-wrap gap-x-4">
-                <span>Secure checkout by Stripe</span>
-                <Link to="/privacy" className="underline underline-offset-2 hover:text-text">Privacy</Link>
-                <Link to="/terms" className="underline underline-offset-2 hover:text-text">Terms</Link>
-              </span>
-            </div>
-          </footer>
+          <StoreFooter store={store} footer={published?.theme.footerStyle ?? 'simple'} themed={!!published} />
           <AssistantWidget storeId={store.id} currency={store.currency} />
         </div>
       </CartProvider>

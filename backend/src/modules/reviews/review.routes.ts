@@ -110,6 +110,13 @@ productReviewsRouter.post(
 export const merchantReviewsRouter = Router({ mergeParams: true });
 const moderate = [requireAuth, withTenantContext, requirePermission("PRODUCTS_WRITE")];
 
+// Public, for the storefront's reviews section (Store Themes): published reviews only.
+merchantReviewsRouter.get(
+  "/featured",
+  route(async (req, res) => {
+    res.status(200).json(await reviewService.featured(storeId(req)));
+  })
+);
 merchantReviewsRouter.get(
   "/",
   ...moderate,

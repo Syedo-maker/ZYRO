@@ -123,6 +123,10 @@ export const env = {
     chatIpMax: num("RATE_LIMIT_CHAT_IP_MAX", 60),
     /** Payment-failure help requests per IP per hour (an unknown failure is explained by the platform-paid AI). */
     helpMax: num("RATE_LIMIT_HELP_MAX", 20),
+    /** Theme Studio design-assistant requests per person per minute (Store Themes). */
+    themeAiMax: num("RATE_LIMIT_THEME_AI_MAX", 6),
+    /** Theme Studio design-assistant requests per store per hour, whoever sends them. */
+    themeAiStoreMax: num("RATE_LIMIT_THEME_AI_STORE_MAX", 40),
     /** All API requests per IP per minute. */
     apiMax: num("RATE_LIMIT_API_MAX", 600),
   },

@@ -10,6 +10,7 @@ import { AppError } from "./errors/AppError";
 import { authRouter } from "./modules/auth/auth.routes";
 import { staffRouter } from "./modules/stores/staff.routes";
 import { storeRouter } from "./modules/stores/store.routes";
+import { themeRouter } from "./modules/themes/theme.routes";
 import { productRouter } from "./modules/products/product.routes";
 import { uploadsRouter } from "./modules/uploads/uploads.routes";
 import { meRouter } from "./modules/users/me.routes";
@@ -130,6 +131,7 @@ v1.use("/stores/:storeId/product-scout", storeScoutRouter);
 v1.use("/stores/:storeId/payments", paymentsRouter);
 v1.use("/stores/:storeId/voice-notes", voiceRouter);
 v1.use("/stores/:storeId/product-ideas", ideasRouter);
+v1.use("/stores/:storeId/theme", themeRouter);
 // Public shop directory (Issue 2). Before the /stores/:storeId router, so "/" and "/categories"
 // are not read as a store id.
 v1.use("/stores", directoryRouter);

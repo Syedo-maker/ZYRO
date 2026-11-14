@@ -44,6 +44,16 @@
 :root {
   color-scheme: dark;
 
+  /* Depth (read by the shadow-* utilities, see @theme). On black, depth reads only with a faint light
+     edge. The glow is the brand colour: Zyro's lime on the platform, the shop's own on a storefront. */
+  --shadow-depth-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-depth-md: 0 8px 24px -8px rgb(0 0 0 / 0.7), 0 0 0 1px color-mix(in srgb, var(--zyro-white) 6%, transparent);
+  --shadow-depth-lg: 0 24px 60px -20px rgb(0 0 0 / 0.85), 0 0 0 1px color-mix(in srgb, var(--zyro-white) 8%, transparent);
+  --shadow-depth-glow: 0 0 0 1px color-mix(in srgb, var(--color-brand) 35%, transparent),
+    0 10px 32px -10px color-mix(in srgb, var(--color-brand) 55%, transparent);
+  --shadow-depth-glow-lg: 0 0 0 1px color-mix(in srgb, var(--color-brand) 40%, transparent),
+    0 18px 56px -14px color-mix(in srgb, var(--color-brand) 60%, transparent);
+
   /* Midnight Black and the dark neutrals made from it, from the page up to a raised surface. */
   --zyro-black: #030407;
   --zyro-night-900: #08090c;
@@ -208,15 +218,17 @@
   --radius-2xl: 1.25rem;
   --radius-3xl: 1.75rem;
   --radius-control: 0.75rem;
+  /* Buttons: a pill on the platform. A store theme may make them rounded or square (Store Themes). */
+  --radius-button: 9999px;
 
-  /* Shadows read as depth on black only with a faint light edge; the glow is lime. */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.7), 0 0 0 1px color-mix(in srgb, var(--zyro-white) 6%, transparent);
-  --shadow-lg: 0 24px 60px -20px rgb(0 0 0 / 0.85), 0 0 0 1px color-mix(in srgb, var(--zyro-white) 8%, transparent);
-  --shadow-glow: 0 0 0 1px color-mix(in srgb, var(--zyro-lime-400) 35%, transparent),
-    0 10px 32px -10px color-mix(in srgb, var(--zyro-lime-400) 55%, transparent);
-  --shadow-glow-lg: 0 0 0 1px color-mix(in srgb, var(--zyro-lime-400) 40%, transparent),
-    0 18px 56px -14px color-mix(in srgb, var(--zyro-lime-400) 60%, transparent);
+  /* Shadows. Tailwind copies a shadow's value into each shadow-* utility when it builds, so the
+     values themselves live in --shadow-depth-* (below :root, and the light theme's block), read at
+     run time: that is what lets the light theme and a store theme change them. */
+  --shadow-sm: var(--shadow-depth-sm);
+  --shadow-md: var(--shadow-depth-md);
+  --shadow-lg: var(--shadow-depth-lg);
+  --shadow-glow: var(--shadow-depth-glow);
+  --shadow-glow-lg: var(--shadow-depth-glow-lg);
 
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
@@ -349,10 +361,10 @@
   --color-series-online: var(--zyro-black);
   --color-series-pos: var(--zyro-slate-450);
 
-  /* Depth on a light page is a soft shadow, not a light edge; the glow stays lime. */
-  --shadow-sm: 0 1px 2px rgb(3 4 7 / 0.08);
-  --shadow-md: 0 8px 24px -10px rgb(3 4 7 / 0.18), 0 0 0 1px rgb(3 4 7 / 0.05);
-  --shadow-lg: 0 24px 60px -24px rgb(3 4 7 / 0.28), 0 0 0 1px rgb(3 4 7 / 0.06);
+  /* Depth on a light page is a soft shadow, not a light edge; the glow stays the brand colour. */
+  --shadow-depth-sm: 0 1px 2px rgb(3 4 7 / 0.08);
+  --shadow-depth-md: 0 8px 24px -10px rgb(3 4 7 / 0.18), 0 0 0 1px rgb(3 4 7 / 0.05);
+  --shadow-depth-lg: 0 24px 60px -24px rgb(3 4 7 / 0.28), 0 0 0 1px rgb(3 4 7 / 0.06);
 }
 
 /* A visitor who asked for less motion gets none: no fades, slides or glides, anywhere. */

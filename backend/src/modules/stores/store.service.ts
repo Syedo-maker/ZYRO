@@ -3,6 +3,7 @@ import { Errors } from "../../errors/AppError";
 import { planService } from "../billing/plan.service";
 import { Product } from "../../models/Product.model";
 import { MIN_PRODUCTS } from "./directory.service";
+import { themeService } from "../themes/theme.service";
 import type { UpdateBrandingInput, UpdateCurrencyInput, UpdateDomainInput, UpdateTrendSharingInput } from "./store.validation";
 
 const toPublicProfile = (t: {
@@ -29,7 +30,8 @@ export const storeService = {
   async getPublicProfile(storeId: string) {
     const tenant = await prisma.tenant.findUnique({ where: { id: storeId } });
     if (!tenant) throw Errors.notFound("Store");
-    return toPublicProfile(tenant);
+    // Store Themes: the published theme only (never the owner's draft), or null for the default look.
+    return { ...toPublicProfile(tenant), theme: await themeService.publishedFor(storeId) };
   },
 
   /**

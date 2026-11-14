@@ -11,7 +11,8 @@ set of orders, with AI built in: product descriptions, tags and SEO text, market
 summaries, a shopping assistant, "products like this one", abandoned-cart emails, business insights,
 a weekly growth tip, and title suggestions built on what shoppers really search for. Shoppers pay by
 card, cash on delivery or bank transfer, and a receipt for a transfer is read by AI and accepted by a
-person. Each store is isolated from every other store. Stores start free and can move to Pro or
+person. Each store can have its own look, designed in the Theme Studio by hand or with an AI design
+assistant, and published only when the owner is ready. Each store is isolated from every other store. Stores start free and can move to Pro or
 Business (billed through Stripe); AI is capped per plan so its cost is known in advance.
 
 Everything the AI writes is shown to the merchant first, AI never handles money, and every price and
@@ -25,6 +26,9 @@ plan comes from the server.
 - `frontend/`: `npm run dev` (port 5173).
 - `recommendation-service/` (optional): see its README. Without it the store works and
   recommendations are simply empty.
+- AI features (including the Theme Studio's design assistant) need `ANTHROPIC_API_KEY` in
+  `backend/.env`; `npm run ai:check` in `backend/` says whether the key is accepted, without printing
+  it. Without a key, everything else works and the AI features say they are unavailable.
 - No Stripe or AI keys? `npx tsx scripts/e2e-server.ts` in `backend/` runs the API with fake
   payments and fake AI, so every screen can be tried.
 
@@ -59,7 +63,7 @@ design/                 Wireframes
 
 | What | How |
 |---|---|
-| Backend: 1,700+ tests on real PostgreSQL, MongoDB and Redis, with every response checked against `openapi.yaml` | `npm test` in `backend/` (add `AZURITE=1` with Azurite running for the Blob Storage suite) |
+| Backend: 2,100+ tests on real PostgreSQL, MongoDB and Redis, with every response checked against `openapi.yaml` | `npm test` in `backend/` (add `AZURITE=1` with Azurite running for the Blob Storage suite) |
 | Browser: each feature, accessibility | `node e2e/<suite>.e2e.mjs` in `frontend/`, with the e2e server and the frontend running |
 | Smoke: the production images, assembled | `node frontend/e2e/smoke.e2e.mjs` with `docker compose up` |
 | Python | `python -m pytest` in `recommendation-service/` |
@@ -78,6 +82,7 @@ every push and pull request.
 | `documentation/Operations_Runbook.md` | Running it: monitoring, alerts, incidents, rollback, secrets |
 | `documentation/Privacy_Notes.md` | The detail behind the Privacy Policy |
 | `documentation/Product_Scout.md` | Product Scout: trending products for owners, its privacy rules, and the demo stores |
+| `documentation/Store_Themes.md` | Store Themes and the Theme Studio: the AI design assistant, the theme schema, contrast rules, endpoints, permissions, drafts and versions, tests |
 | `scripts/demo-videos/README.md` | The walkthrough videos (Owner, Manager, Cashier, Customer): how to film them again from the running app |
 | `documentation/Implementation_Plan.md` | The original plan, and the record of what was built |
 
