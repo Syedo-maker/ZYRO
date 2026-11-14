@@ -72,6 +72,12 @@ it("the shopper is offered cash on delivery and bank transfer, and not card paym
   expect(res.json.bankTransfer.available).toBe(true);
 });
 
+it("the shop's public profile says card payment is not available, so the footer does not claim Stripe", async () => {
+  const res = await api("GET", `/stores/${owner.storeId}`);
+  expect(res.status).toBe(200);
+  expect(res.json.cardPayments).toBe(false);
+});
+
 it("a cash-on-delivery order is placed and the merchant sees it", async () => {
   const guest = `guest-nostripe-cod-${suffix}`;
   await api("POST", `/stores/${owner.storeId}/cart/items`, { guest, body: { productId: cup, quantity: 2 } });

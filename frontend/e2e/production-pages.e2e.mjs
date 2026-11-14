@@ -123,6 +123,7 @@ try {
   check('storefront: its title is the shop’s name', (await s.title()) === `Pages owner ${suffix}`)
   check('storefront: canonical link is the page without its query', (await meta(s, 'link[rel="canonical"]')) === `${WEB}/store/${owner.storeId}`)
   check('storefront: indexable (no noindex)', (await meta(s, 'meta[name="robots"]')) === null)
+  check('storefront: with card payment set up, the footer says "Secure checkout by Stripe"', await s.getByText('Secure checkout by Stripe').isVisible())
   await s.getByRole('link', { name: 'Shop policies' }).click()
   await s.getByRole('heading', { name: 'Shop policies', level: 1 }).waitFor()
   const section = s.getByRole('region', { name: 'Shipping and delivery' })

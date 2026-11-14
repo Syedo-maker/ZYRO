@@ -5575,6 +5575,7 @@ components:
         logoUrl: { type: [string, "null"], format: uri }
         themeColor: { type: [string, "null"], description: "The merchant's colour, #RRGGBB. Storefronts adjust it for contrast; see the frontend's lib/brandTheme.ts." }
         currency: { type: string, description: "The store's currency (ISO code), used to format prices." }
+        cardPayments: { type: boolean, description: "Whether shoppers can pay by card (the platform's Stripe is set up). Only on the public profile (GET /stores/{storeId})." }
         description:
           type: [string, "null"]
           description: "One public line about the shop, written by its owner. Shown on the storefront and in the directory."

@@ -49,6 +49,7 @@ try {
   check('nothing mentions Stripe or a card page', !(await page.content()).includes("Stripe&apos;s secure payment page") && !(await page.content()).includes("Stripe's secure payment page"))
   check('cash on delivery is chosen for the shopper', await page.getByRole('radio', { name: /cash on delivery/i }).isChecked())
   check('bank transfer is offered too', (await page.getByRole('radio', { name: /bank or wallet transfer/i }).count()) === 1)
+  check('the footer does not claim "Secure checkout by Stripe"', (await page.getByText('Secure checkout by Stripe').count()) === 0)
   await page.getByLabel(/full name/i).fill('Ayesha Khan')
   await page.getByLabel(/phone/i).fill('03001234567')
   await page.getByLabel(/address/i).first().fill('12 Mall Road')
