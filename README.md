@@ -99,7 +99,7 @@ in the repository; a variable `NAME_FILE` reads the value from a mounted secret 
 
 | Service | Required in production | Optional (the feature is off without it) |
 |---|---|---|
-| api, worker | `DATABASE_URL`, `MONGODB_URI`, `REDIS_URL`, `JWT_ACCESS_SECRET` (32+ characters), `CORS_ORIGIN`, `PUBLIC_URL`, `STORAGE_DRIVER=azure` with `AZURE_STORAGE_ACCOUNT_URL` or `AZURE_STORAGE_CONNECTION_STRING`. Strongly advised (a warning at start without it): `COD_PHONE_PEPPER` | `STOREFRONT_URL` (default `CORS_ORIGIN`). Card payments and plans: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. AI: `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`), `AI_DISABLED`, `AI_DAILY_STORE_LIMIT`, `AI_DAILY_GLOBAL_LIMIT`. Email: `EMAIL_PROVIDER` with SendGrid or Brevo settings. Recommendations: `RECOMMENDATION_SERVICE_URL`, `RECOMMENDATION_SERVICE_TOKEN`. Monitoring: `SENTRY_DSN`, `APP_RELEASE`, `METRICS_TOKEN`, `APPLICATIONINSIGHTS_CONNECTION_STRING`, `LOG_LEVEL` |
+| api, worker | `DATABASE_URL`, `MONGODB_URI`, `REDIS_URL`, `JWT_ACCESS_SECRET` (32+ characters), `CORS_ORIGIN`, `PUBLIC_URL`, `STORAGE_DRIVER=azure` with `AZURE_STORAGE_ACCOUNT_URL` or `AZURE_STORAGE_CONNECTION_STRING`, `COD_PHONE_PEPPER` (set once, never change) | `STOREFRONT_URL` (default `CORS_ORIGIN`). Card payments and plans: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. AI: `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`), `AI_DISABLED`, `AI_DAILY_STORE_LIMIT` and `AI_DAILY_GLOBAL_LIMIT` (200 and 5,000 a day by default in production; 0 turns one off). Email: `EMAIL_PROVIDER` with SendGrid or Brevo settings. Recommendations: `RECOMMENDATION_SERVICE_URL`, `RECOMMENDATION_SERVICE_TOKEN`. Monitoring: `SENTRY_DSN`, `APP_RELEASE`, `METRICS_TOKEN`, `APPLICATIONINSIGHTS_CONNECTION_STRING`, `LOG_LEVEL` |
 | web | `API_UPSTREAM` (for example `http://api:5000`) | `FILES_ORIGIN` (only when files are not served over HTTPS) |
 | recommendations | `MONGODB_URI`, `RECOMMENDATION_SERVICE_TOKEN` | `RECO_MODEL`, `WHISPER_ENABLED` |
 
@@ -151,7 +151,8 @@ Sentry-compatible service when `SENTRY_DSN` is set, without request bodies or pe
 **Day-to-day scripts** in `backend/` (each asks for confirmation before changing anything that cannot be undone):
 `npm run super-admin`, `npm run queues` (list, retry or clean failed jobs), `npm run store-data`
 (export, clear-cache or delete a store), `npm run customer-data` (export or erase one person's data),
-`npm run retention` (removes expired sessions and reset links; run daily), `npm run new-secret`.
+`npm run retention` (removes expired sessions and reset links; run daily), `npm run new-secret`,
+`npm run set-plan` (move a store to Pro or Business by hand, with an end date, while there is no Stripe Billing).
 
 ## Documentation
 

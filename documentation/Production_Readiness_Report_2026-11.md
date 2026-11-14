@@ -55,12 +55,14 @@ routed yet: that needs per-domain TLS and a host lookup in the web server, and i
    reply time promised on the contact page.
 2. Choose a host, a domain and HTTPS; set `PUBLIC_URL`, `CORS_ORIGIN` and `STOREFRONT_URL` to it.
 3. Create the production secrets in the host's secret store, never in a file: `JWT_ACCESS_SECRET`,
-   `COD_PHONE_PEPPER` (set once, before the first order), `METRICS_TOKEN`, database passwords.
+   `COD_PHONE_PEPPER` (required; set once, before the first order, and never change it), `METRICS_TOKEN`,
+   database passwords.
 4. Email: verify the sending domain with SendGrid or Brevo (SPF, DKIM and DMARC), or cart reminders and
    reset links will land in spam.
 5. Stripe: live keys and the webhook endpoint, or launch without card payments (it works).
-6. AI: a provider key with a monthly spending limit set at the provider, and the daily limits
-   (`AI_DAILY_STORE_LIMIT`, `AI_DAILY_GLOBAL_LIMIT`).
+6. AI: a provider key with a monthly spending limit set at the provider. The daily limits are on by
+   default in production (200 per store, 5,000 in all); change them with `AI_DAILY_STORE_LIMIT` and
+   `AI_DAILY_GLOBAL_LIMIT` if the budget calls for it.
 7. Backups: schedule `ops/backup.sh` daily to storage off the database host; do the first restore drill
    on the real host; turn on soft delete for Blob Storage.
 8. Monitoring: an error-tracking project (`SENTRY_DSN`), a metrics collector, and the alerts in the README.
@@ -71,25 +73,24 @@ routed yet: that needs per-domain TLS and a host lookup in the web server, and i
 10. After launch, submit `/sitemap.xml` in Google Search Console.
 11. Run `npm run ai:check` and the AI features end to end once a real key is in place (not yet done).
 
-## Needs your decision
+## Decisions (made by the owners on 14 November 2026)
 
-| Decision | Recommendation |
-|---|---|
-| `COD_PHONE_PEPPER` required in production (today a warning) | Make it required |
-| Daily AI limits (off by default) | 200 requests per store, 5,000 for the platform, then adjust to the budget |
-| `AI_WORKER_CONCURRENCY` (default 4) | 8 for the beta: the provider is the limit, not the machine |
-| Password hashing with bcryptjs at cost 12 (about 3 sign-ins per second per API copy) | Keep for the beta; switch to native bcrypt if sign-in traffic grows |
-| A Pakistani gateway (JazzCash, Easypaisa, Safepay): interface and contract test exist, not wired | Wire it with the first provider whose merchant account you have |
-| Plans without Stripe | Plan changes by a platform admin during the beta |
-| "Secure checkout by Stripe" in every shop's footer, even when card payment is off | Show it only when card payment is available |
-| Store deletion and data export by the owner (today operator scripts) | Keep scripts for the beta; add a settings page later |
-| Soft delete (today deletion is final, after an export) | Not for the beta |
-| Shops on their own domain | After the beta; needs per-domain TLS |
-| Unsubscribe links are signed with a key derived from `JWT_ACCESS_SECRET` | Keep; rotate that secret only when needed |
-| Prisma 7 and zod 4 upgrades | After the beta |
-| Keyword suggestions ignore the shop's market | Accept for the beta (PKR shops are the target) |
-| Server-side page caching and a per-store product text index | Not needed at beta traffic; revisit with the metrics |
-| The existing Azure deploy workflow | Keep; it does nothing unless `DEPLOY_ENABLED` is set |
+| Question | Decision | Done |
+|---|---|---|
+| `COD_PHONE_PEPPER` in production | Required | Production refuses to start without it; compose, the Azure templates and the runbook pass it |
+| Daily AI limits | 200 requests per store, 5,000 for the platform | The production default when unset; a setting overrides it, 0 turns a limit off |
+| AI jobs per worker (`AI_WORKER_CONCURRENCY`) | Keep 4 for now (small hosting, an AI account with low rate limits); raise later | Unchanged |
+| "Secure checkout by Stripe" in the shop footer | Only when card payment is available | Done (`cardPayments` on the public store profile) |
+| JazzCash, Easypaisa, Safepay | Not connected now; stay built and tested; connect the first one with its merchant account | Unchanged |
+| Plans without Stripe | A platform admin changes them by hand | `npm run set-plan -- <storeId> <free|pro|business> [months]` |
+| Store deletion and data export by the owner | Operator scripts for now | Unchanged |
+| Undo within 30 days; shops on their own domain | After the beta | Not built |
+| Password hashing (bcryptjs) | Keep | Unchanged |
+| Prisma 7 and zod 4 upgrades | After the beta, and not before the viva | Not done |
+
+Kept as recommended, with no decision needed: unsubscribe links signed with a key derived from
+`JWT_ACCESS_SECRET`; keyword suggestions ignore the market; no server-side page caching or per-store
+text index at beta traffic; the Azure deploy workflow stays inert unless `DEPLOY_ENABLED` is set.
 
 ## Not checked
 
