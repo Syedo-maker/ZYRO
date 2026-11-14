@@ -37,7 +37,7 @@ export function ProductCard({
             <span className="absolute left-2 top-2 rounded-full bg-bg/85 px-2.5 py-1 text-[11px] font-bold text-text backdrop-blur">Sold out</span>
           )}
         </div>
-        <h3 className="text-sm font-semibold leading-snug group-hover:text-brand">{product.title}</h3>
+        <h3 className="text-sm font-semibold leading-snug group-hover:text-brand-ink">{product.title}</h3>
         <StarRating value={product.averageRating} count={product.reviewCount} size="sm" />
         <PriceTag product={product} currency={currency} />
       </Link>

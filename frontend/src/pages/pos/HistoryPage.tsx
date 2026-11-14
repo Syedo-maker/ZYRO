@@ -77,7 +77,7 @@ export function HistoryPage() {
               setQ(e.target.value)
               setOffset(0)
             }}
-            className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
           />
         </div>
       </div>
@@ -114,7 +114,7 @@ export function HistoryPage() {
                       {partlyReturned(s) ? <Badge tone="warning">Part returned</Badge> : <OrderStatusBadge status={s.status} />}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => void open(s.id)} disabled={opening === s.id} className="font-semibold text-brand hover:text-brand-hover" aria-label={`Open sale ${s.orderNumber}`}>
+                      <button onClick={() => void open(s.id)} disabled={opening === s.id} className="font-semibold text-brand-ink hover:text-brand-ink-hover" aria-label={`Open sale ${s.orderNumber}`}>
                         View
                       </button>
                     </td>

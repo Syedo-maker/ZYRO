@@ -135,7 +135,7 @@ export function CatalogPage() {
             id="sort"
             value={sorts.includes(sort) ? sort : sorts[0]}
             onChange={(e) => update({ sort: e.target.value })}
-            className="h-11 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
           >
             {sorts.map((s) => (
               <option key={s} value={s}>
@@ -160,7 +160,7 @@ export function CatalogPage() {
                     <button
                       onClick={() => update({ category: null })}
                       aria-pressed={!category}
-                      className={`w-full rounded-lg px-2.5 py-1.5 text-left text-sm ${!category ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-bg'}`}
+                      className={`w-full rounded-lg px-2.5 py-1.5 text-left text-sm ${!category ? 'bg-brand-soft font-semibold text-brand-ink' : 'hover:bg-bg'}`}
                     >
                       All
                     </button>
@@ -170,7 +170,7 @@ export function CatalogPage() {
                       <button
                         onClick={() => update({ category: c.name })}
                         aria-pressed={category === c.name}
-                        className={`flex w-full justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm ${category === c.name ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-bg'}`}
+                        className={`flex w-full justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm ${category === c.name ? 'bg-brand-soft font-semibold text-brand-ink' : 'hover:bg-bg'}`}
                       >
                         <span>{c.name}</span>
                         <span className="text-text-secondary">{c.count}</span>
@@ -188,16 +188,16 @@ export function CatalogPage() {
                   <label className="sr-only" htmlFor="minPrice">
                     Minimum price
                   </label>
-                  <input id="minPrice" name="minPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Min" defaultValue={minPrice} className="h-10 w-full rounded-control border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+                  <input id="minPrice" name="minPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Min" defaultValue={minPrice} className="h-10 w-full rounded-control border border-border-input px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30" />
                   <span aria-hidden="true">-</span>
                   <label className="sr-only" htmlFor="maxPrice">
                     Maximum price
                   </label>
-                  <input id="maxPrice" name="maxPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Max" defaultValue={maxPrice} className="h-10 w-full rounded-control border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+                  <input id="maxPrice" name="maxPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Max" defaultValue={maxPrice} className="h-10 w-full rounded-control border border-border-input px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30" />
                 </div>
               </fieldset>
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="inStock" defaultChecked={inStock} className="h-4 w-4 accent-brand" />
+                <input type="checkbox" name="inStock" defaultChecked={inStock} className="h-4 w-4 accent-brand-ink" />
                 In stock only
               </label>
               <Button type="submit" variant="secondary" className="h-10">
@@ -206,7 +206,7 @@ export function CatalogPage() {
             </form>
 
             {(filtered || q) && (
-              <Link to={`/store/${store.id}/products`} className="text-sm font-semibold text-brand hover:text-brand-hover">
+              <Link to={`/store/${store.id}/products`} className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
                 Clear search and filters
               </Link>
             )}
@@ -222,7 +222,7 @@ export function CatalogPage() {
             <div className="rounded-2xl border border-border bg-surface px-6 py-12 text-center">
               <h2 className="font-display text-base font-bold">Nothing found</h2>
               <p className="mt-1 text-sm text-text-secondary">{q ? `No products match "${q}"` : 'No products match these filters'}. Try a shorter word or fewer filters.</p>
-              <Link to={`/store/${store.id}/products`} className="mt-4 inline-block text-sm font-semibold text-brand">
+              <Link to={`/store/${store.id}/products`} className="mt-4 inline-block text-sm font-semibold text-brand-ink">
                 Show all products
               </Link>
             </div>

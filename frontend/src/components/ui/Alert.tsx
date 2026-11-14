@@ -10,7 +10,7 @@ const TONE_CLASSES: Record<Tone, string> = {
 }
 
 const ICONS = { error: CircleAlert, info: Info, success: CircleCheck }
-const ICON_COLOUR: Record<Tone, string> = { error: 'text-danger', info: 'text-brand', success: 'text-success' }
+const ICON_COLOUR: Record<Tone, string> = { error: 'text-danger', info: 'text-brand-ink', success: 'text-success' }
 
 /** Errors are announced to screen readers immediately; info and success politely. */
 export function Alert({ tone = 'error', children }: { tone?: Tone; children: React.ReactNode }) {

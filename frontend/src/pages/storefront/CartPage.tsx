@@ -85,7 +85,7 @@ export function CartPage() {
               Proceed to checkout
             </Link>
           )}
-          <Link to={`/store/${store.id}`} className="text-center text-[13px] font-semibold text-brand hover:text-brand-hover">
+          <Link to={`/store/${store.id}`} className="text-center text-[13px] font-semibold text-brand-ink hover:text-brand-ink-hover">
             Continue shopping
           </Link>
         </aside>

@@ -115,7 +115,7 @@ function OrdersContent() {
                 aria-selected={tab === t.key}
                 onClick={() => pickTab(t.key)}
                 className={`whitespace-nowrap border-b-2 px-3.5 py-2 text-[13px] ${
-                  tab === t.key ? 'border-brand font-semibold text-brand' : 'border-transparent font-medium text-text-muted hover:text-text'
+                  tab === t.key ? 'border-brand-ink font-semibold text-brand-ink' : 'border-transparent font-medium text-text-muted hover:text-text'
                 }`}
               >
                 {t.label}
@@ -131,7 +131,7 @@ function OrdersContent() {
               placeholder="Search by order number or email"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="h-10 min-w-[220px] flex-1 rounded-control border border-border-input px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-10 min-w-[220px] flex-1 rounded-control border border-border-input px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
             />
             <select
               aria-label="Sales channel"
@@ -140,7 +140,7 @@ function OrdersContent() {
                 setChannel(e.target.value as SalesChannel | '')
                 setOffset(0)
               }}
-              className="h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-10 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
             >
               <option value="">All channels</option>
               <option value="online">Online</option>
@@ -163,7 +163,7 @@ function OrdersContent() {
                 {orders?.map((o) => (
                   <tr key={o.id} className={`border-t border-border ${selected?.id === o.id ? 'bg-brand-soft' : 'hover:bg-bg'}`}>
                     <td className="px-4 py-3.5">
-                      <button type="button" onClick={() => setSelected(o)} aria-pressed={selected?.id === o.id} className="font-semibold text-brand hover:underline">
+                      <button type="button" onClick={() => setSelected(o)} aria-pressed={selected?.id === o.id} className="font-semibold text-brand-ink hover:underline">
                         #{o.orderNumber}
                       </button>
                     </td>

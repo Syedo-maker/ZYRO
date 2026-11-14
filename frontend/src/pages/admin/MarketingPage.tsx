@@ -63,7 +63,7 @@ function CreateDialog({ storeId, currency, onClose, onCreated }: { storeId: stri
         <fieldset className="flex gap-2">
           <legend className="sr-only">Type</legend>
           {(['percentage', 'fixed'] as const).map((t) => (
-            <label key={t} className={`flex-1 cursor-pointer rounded-control border px-3 py-3 text-center text-sm font-semibold ${type === t ? 'border-brand bg-brand-soft text-brand' : 'border-border'}`}>
+            <label key={t} className={`flex-1 cursor-pointer rounded-control border px-3 py-3 text-center text-sm font-semibold ${type === t ? 'border-brand-ink bg-brand-soft text-brand-ink' : 'border-border'}`}>
               <input type="radio" name="dc-type" className="sr-only" checked={type === t} onChange={() => setType(t)} />
               {t === 'percentage' ? 'Percent off' : `Amount off (${currency})`}
             </label>
@@ -214,8 +214,8 @@ function MarketingContent() {
                   <td className="px-4 py-3"><Badge tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Badge></td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-3 whitespace-nowrap">
-                      <button onClick={() => setEditing(c)} className="font-semibold text-brand hover:text-brand-hover" aria-label={`Edit ${c.code}`}>Edit</button>
-                      <button onClick={() => void toggle(c)} className="font-semibold text-brand hover:text-brand-hover" aria-label={`${c.active ? 'Switch off' : 'Switch on'} ${c.code}`}>
+                      <button onClick={() => setEditing(c)} className="font-semibold text-brand-ink hover:text-brand-ink-hover" aria-label={`Edit ${c.code}`}>Edit</button>
+                      <button onClick={() => void toggle(c)} className="font-semibold text-brand-ink hover:text-brand-ink-hover" aria-label={`${c.active ? 'Switch off' : 'Switch on'} ${c.code}`}>
                         {c.active ? 'Switch off' : 'Switch on'}
                       </button>
                     </div>

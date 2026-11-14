@@ -120,7 +120,7 @@ export function CheckoutPage() {
       <div className="flex flex-col items-start gap-8 lg:flex-row lg:gap-12">
         <div className="flex w-full flex-1 flex-col gap-8">
           <section aria-labelledby="shipping-heading">
-            <h2 id="shipping-heading" className="mb-3 text-xs font-bold text-brand">
+            <h2 id="shipping-heading" className="mb-3 text-xs font-bold text-brand-ink">
               1. SHIPPING METHOD
             </h2>
             {zones.length === 0 ? (
@@ -134,7 +134,7 @@ export function CheckoutPage() {
                   <label
                     key={z.id}
                     className={`flex cursor-pointer items-center justify-between rounded-control bg-surface px-4 py-3.5 ${
-                      zoneId === z.id ? 'border-2 border-brand' : 'border border-border'
+                      zoneId === z.id ? 'border-2 border-brand-ink' : 'border border-border'
                     }`}
                   >
                     <span className="flex items-center gap-3">
@@ -144,7 +144,7 @@ export function CheckoutPage() {
                         value={z.id}
                         checked={zoneId === z.id}
                         onChange={() => setZoneId(z.id)}
-                        className="h-4 w-4 accent-brand"
+                        className="h-4 w-4 accent-brand-ink"
                       />
                       <span>
                         <span className="block text-[13px] font-semibold">{z.name}</span>
@@ -159,7 +159,7 @@ export function CheckoutPage() {
           </section>
 
           <section aria-labelledby="payment-heading">
-            <h2 id="payment-heading" className="mb-3 text-xs font-bold text-brand">
+            <h2 id="payment-heading" className="mb-3 text-xs font-bold text-brand-ink">
               2. PAYMENT
             </h2>
             {method === 'card' && (

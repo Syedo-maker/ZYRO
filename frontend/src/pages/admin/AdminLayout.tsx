@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Wordmark } from '../../components/ui/Wordmark'
+import { ThemeToggle } from '../../components/ui/ThemeToggle'
 import { useAuth } from '../../context/AuthContext'
 import { can, type StorePermission } from '../../lib/permissions'
 
@@ -116,7 +117,7 @@ export function AdminLayout() {
             >
               {({ isActive }) => (
                 <>
-                  <item.icon aria-hidden="true" className={`${ICON} ${isActive ? 'text-brand' : 'text-on-inverse-muted group-hover:text-on-inverse'}`} strokeWidth={1.75} />
+                  <item.icon aria-hidden="true" className={`${ICON} ${isActive ? 'text-brand-ink' : 'text-on-inverse-muted group-hover:text-on-inverse'}`} strokeWidth={1.75} />
                   {item.label}
                 </>
               )}
@@ -164,6 +165,7 @@ export function AdminLayout() {
             <Link to="/shop" className={HEADER_LINK}>
               Browse shops
             </Link>
+            <ThemeToggle />
             <span className="text-sm text-text-muted">{user?.email}</span>
             <button onClick={() => void logout()} className={HEADER_LINK}>
               Log out

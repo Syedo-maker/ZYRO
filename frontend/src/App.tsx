@@ -8,6 +8,8 @@ import { RegisterPage } from './pages/Register'
 import { ForgotPasswordPage } from './pages/ForgotPassword'
 import { ResetPasswordPage } from './pages/ResetPassword'
 import { NotFoundPage, RouteErrorBoundary } from './pages/ErrorPages'
+import { ToastProvider } from './components/ui/Toast'
+import { ThemeProvider } from './context/ThemeProvider'
 
 /*
  * The landing page, the shop directory and the two sign-in screens load straight away: they are
@@ -61,8 +63,10 @@ const Loading = <div className="min-h-screen bg-bg" />
 
 export default function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <AuthProvider>
+        <ToastProvider>
         <RouteErrorBoundary>
         <Suspense fallback={Loading}>
           <Routes>
@@ -125,7 +129,9 @@ export default function App() {
           </Routes>
         </Suspense>
         </RouteErrorBoundary>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

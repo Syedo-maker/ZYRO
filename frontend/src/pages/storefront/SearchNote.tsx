@@ -17,7 +17,7 @@ export function SearchNote({ interpretation, query, storeId }: { interpretation?
     return (
       <p role="status" className="text-sm text-text-secondary">
         Showing results for <span className="font-semibold text-text">{interpretation.correctedTo}</span>.{' '}
-        <Link to={exactHref} className="font-semibold text-brand hover:text-brand-hover">
+        <Link to={exactHref} className="font-semibold text-brand-ink hover:text-brand-ink-hover">
           Search for "{query}" instead
         </Link>
       </p>

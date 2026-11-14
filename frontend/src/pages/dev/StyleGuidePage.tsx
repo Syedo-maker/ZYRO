@@ -27,7 +27,7 @@ const TEXT = [
   ['text', 'text-text'],
   ['text-secondary', 'text-text-secondary'],
   ['text-muted', 'text-text-muted'],
-  ['accent (lime)', 'text-accent'],
+  ['accent (lime)', 'text-accent-ink'],
 ] as const
 const ACCENTS = [
   ['accent', 'bg-accent'],
@@ -83,7 +83,7 @@ export function StyleGuidePage() {
       <header className="flex flex-col gap-3">
         <Wordmark className="text-2xl" />
         <h1 className="font-serif text-h1">
-          Style <em className="italic text-accent">guide</em>
+          Style <em className="italic text-accent-ink">guide</em>
         </h1>
         <p className="max-w-2xl text-text-secondary">
           Every token in src/index.css and every shared component, in each state. Black and lime everywhere; cobalt on the landing page only.
@@ -176,7 +176,7 @@ export function StyleGuidePage() {
             Start your store free
             <ArrowRight aria-hidden="true" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
           </a>
-          <button type="button" aria-label="Ask the AI" className="grid h-11 w-11 place-items-center rounded-full border border-border text-accent hover:border-accent/50">
+          <button type="button" aria-label="Ask the AI" className="grid h-11 w-11 place-items-center rounded-full border border-border text-accent-ink hover:border-accent-ink/50">
             <Sparkles aria-hidden="true" className="h-5 w-5" strokeWidth={1.75} />
           </button>
         </div>
@@ -267,7 +267,7 @@ export function StyleGuidePage() {
           </div>
         </div>
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-12 text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-accent/10 text-accent">
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-accent/10 text-accent-ink">
             <Sparkles aria-hidden="true" className="h-6 w-6" strokeWidth={1.75} />
           </span>
           <p className="font-semibold">No orders yet</p>
@@ -280,7 +280,7 @@ export function StyleGuidePage() {
           {['Net sales', 'Orders', 'Average order'].map((l, i) => (
             <div key={l} className="flex flex-col gap-1 rounded-2xl border border-border bg-surface p-5">
               <p className="text-xs font-semibold text-text-secondary">{l}</p>
-              <p className="font-display text-3xl font-bold tabular-nums text-brand">{['Rs 524,692', '82', 'Rs 6,398'][i]}</p>
+              <p className="font-display text-3xl font-bold tabular-nums text-brand-ink">{['Rs 524,692', '82', 'Rs 6,398'][i]}</p>
               <p className="text-xs font-medium text-success">↑ 12.4% vs previous period</p>
             </div>
           ))}

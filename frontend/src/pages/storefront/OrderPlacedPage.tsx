@@ -59,7 +59,7 @@ export function OrderPlacedPage() {
   }
 
   const keepShopping = (
-    <Link to={`/store/${store.id}/products`} className="text-sm font-semibold text-brand hover:text-brand-hover">
+    <Link to={`/store/${store.id}/products`} className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
       Keep shopping
     </Link>
   )

@@ -7,6 +7,8 @@ import { StoreContext } from '../../context/StoreContext'
 import { Spinner } from '../../components/ui/Spinner'
 import { SearchBox } from '../../components/storefront/SearchBox'
 import { AssistantWidget } from '../../components/storefront/AssistantWidget'
+import { ThemeToggle } from '../../components/ui/ThemeToggle'
+import { useTheme } from '../../context/themeContext'
 import { catalogApi } from '../../lib/shopApi'
 import { brandStyle } from '../../lib/brandTheme'
 import { storefrontApi } from '../../lib/storefrontApi'
@@ -51,7 +53,7 @@ function CategoryNav({ storeId, categories }: { storeId: string; categories: Cat
   const current = onCatalog ? new URLSearchParams(search).get('category') : null
   const isAll = onCatalog && !current && !new URLSearchParams(search).get('q')
   const link = (active: boolean) =>
-    `whitespace-nowrap rounded-control px-3 py-1.5 text-sm font-medium ${active ? 'bg-brand-soft text-brand' : 'text-text-secondary hover:text-text'}`
+    `whitespace-nowrap rounded-control px-3 py-1.5 text-sm font-medium ${active ? 'bg-brand-soft text-brand-ink' : 'text-text-secondary hover:text-text'}`
   return (
     <nav aria-label="Categories" className="border-t border-border">
       <ul className="mx-auto flex max-w-[1120px] gap-1 overflow-x-auto px-4 py-2 sm:px-10">
@@ -78,6 +80,7 @@ function CategoryNav({ storeId, categories }: { storeId: string; categories: Cat
 
 /** Header, category navigation, search and footer shared by every storefront page under /store/:storeId. */
 export function StorefrontLayout() {
+  const { theme } = useTheme()
   const { storeId = '' } = useParams()
   const [store, setStore] = useState<StoreProfile | null>(null)
   const [categories, setCategories] = useState<CategoryCount[]>([])
@@ -121,7 +124,7 @@ export function StorefrontLayout() {
     <StoreContext.Provider value={store}>
       <CartProvider storeId={store.id}>
         {/* The shop wears its merchant's colour from here down (lib/brandTheme.ts); the platform keeps ZYRO's. */}
-        <div className="flex min-h-screen flex-col bg-bg" style={brandStyle(store.themeColor)}>
+        <div className="flex min-h-screen flex-col bg-bg" style={brandStyle(store.themeColor, theme)}>
           <header className="border-b border-border bg-surface">
             <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-10">
               <Link to={`/store/${store.id}`} className="font-display text-xl font-bold text-text">
@@ -147,7 +150,10 @@ export function StorefrontLayout() {
           </main>
           <footer className="border-t border-border bg-surface">
             <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-text-secondary sm:px-10">
-              <span>{store.name}, powered by ZYRO</span>
+              <span className="flex items-center gap-3">
+                <ThemeToggle />
+                {store.name}, powered by ZYRO
+              </span>
               <span className="flex flex-wrap gap-x-4">
                 <span>Secure checkout by Stripe</span>
                 <Link to="/privacy" className="underline underline-offset-2 hover:text-text">Privacy</Link>

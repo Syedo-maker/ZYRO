@@ -25,7 +25,7 @@ export function FeatureGrid() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
-            And everything else a shop <em className="italic text-accent">actually needs</em>.
+            And everything else a shop <em className="italic text-accent-ink">actually needs</em>.
           </h2>
           <p className="mt-4 max-w-2xl text-base text-text-secondary">
             All of it included on every plan, the free one too. One catalogue and one set of stock, whether you sell online or across a
@@ -37,8 +37,8 @@ export function FeatureGrid() {
           {ITEMS.map((item, i) => (
             <li key={item.title}>
               <Reveal delayMs={(i % 4) * 70}>
-                <div className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-surface p-5 transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/40">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent/10 text-accent">
+                <div className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-surface p-5 transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-accent-ink/40">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent/10 text-accent-ink">
                     <item.icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.75} />
                   </span>
                   <h3 className="font-display text-base font-bold text-text">{item.title}</h3>

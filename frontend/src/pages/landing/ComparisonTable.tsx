@@ -25,7 +25,7 @@ export function ComparisonTable() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
-            Why <em className="italic text-accent">ZYRO</em>
+            Why <em className="italic text-accent-ink">ZYRO</em>
           </h2>
           <p className="mt-4 max-w-2xl text-base text-text-secondary">
             We have not named anyone, because platforms change their prices and we would rather be accurate than clever.
@@ -38,7 +38,7 @@ export function ComparisonTable() {
             {ROWS.map((row) => (
               <li key={row.feature} className="rounded-2xl border border-border bg-bg p-5">
                 <h3 className="font-display text-base font-bold text-text">{row.feature}</h3>
-                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-accent">ZYRO</p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-accent-ink">ZYRO</p>
                 <p className="mt-1 text-sm text-text-secondary">{row.ours}</p>
                 <p className="mt-3 text-xs font-bold uppercase tracking-wide text-text-muted">A typical platform</p>
                 <p className="mt-1 text-sm text-text-muted">{row.typical}</p>

@@ -49,16 +49,16 @@ export function FaqAccordion() {
     <section id="faq" className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="font-serif text-h1 font-normal tracking-tight text-text">Questions, answered <em className="italic text-accent">straight</em></h2>
+          <h2 className="font-serif text-h1 font-normal tracking-tight text-text">Questions, answered <em className="italic text-accent-ink">straight</em></h2>
         </Reveal>
 
         <div className="mt-9 flex flex-col gap-3">
           {QUESTIONS.map((item, i) => (
             <Reveal key={item.q} delayMs={Math.min(i, 4) * 60}>
-              <details className="group rounded-2xl border border-border bg-surface px-5 py-4 transition-colors duration-200 open:border-accent/40">
+              <details className="group rounded-2xl border border-border bg-surface px-5 py-4 transition-colors duration-200 open:border-accent-ink/40">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-bold text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
                   {item.q}
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-accent transition-transform duration-200 group-open:rotate-45 motion-reduce:transition-none">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-accent-ink transition-transform duration-200 group-open:rotate-45 motion-reduce:transition-none">
                     <Plus aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
                   </span>
                 </summary>

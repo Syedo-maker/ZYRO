@@ -68,7 +68,7 @@ export function DailySummaryPage() {
               value={date}
               max={localToday()}
               onChange={(e) => setDate(e.target.value)}
-              className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
             />
           </div>
           <Button variant="secondary" onClick={() => window.print()} disabled={!report}>
@@ -154,7 +154,7 @@ export function DailySummaryPage() {
 
 function Stat({ label, value, note, strong }: { label: string; value: string; note?: string; strong?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-4 ${strong ? 'border-brand bg-brand-soft' : 'border-border bg-surface'}`}>
+    <div className={`rounded-2xl border p-4 ${strong ? 'border-brand-ink bg-brand-soft' : 'border-border bg-surface'}`}>
       <div className="text-xs font-semibold text-text-secondary">{label}</div>
       <div className="font-display text-2xl font-bold tabular-nums mt-1">{value}</div>
       {note && <div className="text-xs text-text-secondary mt-0.5">{note}</div>}

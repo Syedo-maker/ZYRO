@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { ApiError } from '../../lib/apiClient'
 import { upgradeHintOf } from '../../lib/billingApi'
 
-const linkClass = 'font-semibold text-brand hover:text-brand-hover'
+const linkClass = 'font-semibold text-brand-ink hover:text-brand-ink-hover'
 
 /**
  * What to show instead of a bare error when a plan limit or the monthly AI allowance is reached
@@ -16,7 +16,7 @@ export function UpgradeNotice({ error, isOwner = true }: { error: unknown; isOwn
   const aiAllowance = hint.feature === 'ai_generations' || hint.feature === 'ai_chat_messages'
 
   return (
-    <div role="status" className="rounded-control border border-brand/30 bg-brand-soft px-4 py-3 text-sm text-text">
+    <div role="status" className="rounded-control border border-brand-ink/30 bg-brand-soft px-4 py-3 text-sm text-text">
       <p className="font-semibold">{error.detail ?? error.message}</p>
       <p className="mt-1.5 text-text-secondary">
         {!isOwner && 'Ask the store owner to upgrade the plan.'}

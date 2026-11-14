@@ -76,7 +76,7 @@ function Register() {
             Current sale {itemCount > 0 && <span className="text-text-secondary font-medium">({itemCount} items)</span>}
           </h2>
           <div className="flex gap-3 text-sm font-semibold">
-            <button onClick={() => setDialog('held')} className="text-brand hover:text-brand-hover">
+            <button onClick={() => setDialog('held')} className="text-brand-ink hover:text-brand-ink-hover">
               Held{heldCount > 0 ? ` (${heldCount})` : ''}
             </button>
             {cart.length > 0 && (
@@ -162,14 +162,14 @@ function Register() {
             </button>
           </div>
           {customer && (
-            <button onClick={() => setCustomer(null)} className="self-start text-xs font-semibold text-brand">
+            <button onClick={() => setCustomer(null)} className="self-start text-xs font-semibold text-brand-ink">
               Remove customer
             </button>
           )}
 
           {quoteError && <Alert>{quoteError}</Alert>}
           {discount && quoteError && (
-            <button onClick={() => setDiscount(null)} className="self-start text-xs font-semibold text-brand">
+            <button onClick={() => setDiscount(null)} className="self-start text-xs font-semibold text-brand-ink">
               Remove discount
             </button>
           )}
@@ -340,7 +340,7 @@ function ProductPane({
             }
           }}
           placeholder="SKU or product name"
-          className="h-14 rounded-control border border-border-input bg-surface px-4 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="h-14 rounded-control border border-border-input bg-surface px-4 text-base outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
         />
         <div className="min-h-5 text-sm" role="status" aria-live="polite">
           {notice && <span className="font-medium text-text-secondary">{notice}</span>}
@@ -364,7 +364,7 @@ function ProductPane({
                     searchRef.current?.focus()
                   }}
                   disabled={out}
-                  className="w-full h-full text-left rounded-xl border border-border bg-surface p-3 flex flex-col gap-1 hover:border-brand disabled:opacity-60 disabled:hover:border-border"
+                  className="w-full h-full text-left rounded-xl border border-border bg-surface p-3 flex flex-col gap-1 hover:border-brand-ink disabled:opacity-60 disabled:hover:border-border"
                 >
                   {p.image ? (
                     <img src={p.image} alt="" className="h-20 w-full object-cover rounded-lg mb-1" />

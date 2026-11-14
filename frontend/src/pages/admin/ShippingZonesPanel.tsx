@@ -121,7 +121,7 @@ export function ShippingZonesPanel({ storeId, currency }: { storeId: string; cur
                 <td className="py-2">{z.region}</td>
                 <td className="py-2 font-semibold">{formatMoney(z.rateAmount, currency)}</td>
                 <td className="py-2 text-right">
-                  <button type="button" onClick={() => setEditing({ mode: 'edit', zone: z })} className="mr-3 text-xs font-semibold text-brand">Edit</button>
+                  <button type="button" onClick={() => setEditing({ mode: 'edit', zone: z })} className="mr-3 text-xs font-semibold text-brand-ink">Edit</button>
                   <button type="button" onClick={() => void remove(z)} className="text-xs font-semibold text-danger">Delete</button>
                 </td>
               </tr>

@@ -18,7 +18,7 @@ function Report({ report }: { report: TrendReport }) {
           <li key={i} className="text-sm leading-relaxed">
             {l.text}{' '}
             {l.cites.map((c) => (
-              <sup key={c} className="ml-0.5 font-semibold text-brand" aria-label={`source ${number.get(c)}`}>
+              <sup key={c} className="ml-0.5 font-semibold text-brand-ink" aria-label={`source ${number.get(c)}`}>
                 [{number.get(c)}]
               </sup>
             ))}
@@ -32,7 +32,7 @@ function Report({ report }: { report: TrendReport }) {
             <li key={f.id}>
               {f.source}, to {shortDate(f.date)}.{' '}
               {f.url && (
-                <a href={f.url} target="_blank" rel="noreferrer" className="font-semibold text-brand hover:text-brand-hover">
+                <a href={f.url} target="_blank" rel="noreferrer" className="font-semibold text-brand-ink hover:text-brand-ink-hover">
                   Open
                 </a>
               )}

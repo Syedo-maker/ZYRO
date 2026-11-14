@@ -76,9 +76,27 @@
   --zyro-danger-400: #f2736d;
   --zyro-danger-950: #2e1515;
 
-  /* Paper, for the printed receipt only (see @media print). */
+  /* Paper: the printed receipt (see @media print) and the light theme's cards. */
   --zyro-paper: #ffffff;
   --zyro-ink: #111111;
+
+  /* The light theme's own neutrals (see :root[data-theme="light"] below). */
+  --zyro-paper-page: #f4f5f0;
+  --zyro-paper-subtle: #e9ebe3;
+  --zyro-paper-line: #d9dcd2;
+  --zyro-slate-600: #3d424a;
+  --zyro-slate-500: #565c66;
+  --zyro-slate-450: #6f7580;
+  --zyro-slate-400: #7a808a;
+  --zyro-lime-100: #eef8c4;
+  --zyro-lime-450: #c6ef12;
+  --zyro-lime-550: #b3d90b;
+  --zyro-success-700: #0f6d47;
+  --zyro-success-100: #dcf2e7;
+  --zyro-warning-700: #875300;
+  --zyro-warning-100: #fbeed3;
+  --zyro-danger-700: #b3261e;
+  --zyro-danger-100: #fce4e2;
 
   /* Motion: quick enough to feel direct, slow enough to see. */
   --motion-fast: 150ms;
@@ -143,11 +161,18 @@
   --color-brand-soft: var(--zyro-lime-950);
   --color-on-brand: var(--zyro-black);
 
+  /* Ink: the brand colour where it has to stand out against the page by itself (text, a border, a
+     ring, a checkbox), rather than fill a button. Lime on the dark theme; black on the light one,
+     where lime on white is 1.16:1 and may only ever be a fill with black text on it. */
+  --color-brand-ink: var(--zyro-lime-400);
+  --color-brand-ink-hover: var(--zyro-lime-300);
+
   /* Accent: the call to action. The same lime, with its pressed state. */
   --color-accent: var(--zyro-lime-400);
   --color-accent-hover: var(--zyro-lime-300);
   --color-accent-pressed: var(--zyro-lime-500);
   --color-on-accent: var(--zyro-black);
+  --color-accent-ink: var(--zyro-lime-400);
 
   /* Focus: one lime ring everywhere, so keyboard users learn it once. */
   --color-ring: var(--zyro-lime-400);
@@ -155,6 +180,7 @@
   /* AI-written content: lime, with a sparkle icon beside it (never colour alone). */
   --color-ai: var(--zyro-lime-400);
   --color-ai-soft: var(--zyro-lime-950);
+  --color-ai-ink: var(--zyro-lime-400);
 
   --color-success: var(--zyro-success-400);
   --color-success-soft: var(--zyro-success-950);
@@ -240,16 +266,93 @@
     cursor: pointer;
   }
 
-  /* Dark native controls: the date picker, number spinners and scrollbars follow the theme. */
+  /* Native controls follow the theme: the date picker, number spinners and scrollbars. A ticked box
+     wears the ink, so it stands out on either page. */
   input,
   select,
   textarea {
-    color-scheme: dark;
-    accent-color: var(--color-accent);
+    color-scheme: inherit;
+    accent-color: var(--color-accent-ink);
   }
   * {
     scrollbar-color: var(--color-border-input) transparent;
   }
+}
+
+/*
+ * The light theme (B5, 2026-11). The same two colours, black and lime, turned around: an off-white
+ * page and white cards with black text, and lime only ever as a fill with black text on it (buttons,
+ * the user's chat bubble, badges). Everything that was lime text, a lime line or the lime focus ring
+ * becomes black through the ink tokens. Status colours are deepened so their words read on white.
+ *
+ * Chosen by the visitor (Dark, Light or System; dark by default) and set on <html> as data-theme
+ * before the first paint by public/theme-init.js, so the page never flashes the wrong theme.
+ *
+ * Measured with the WCAG formula, like the dark set (tests/themeContrast.test.ts checks them all):
+ *
+ *   text        on page 17.63   on card 19.32   on subtle 16.06
+ *   secondary   on page  9.23   on card 10.11   on subtle  8.41
+ *   muted       on page  6.15   on card  6.73   on subtle  5.60
+ *   ink (black) on page 18.71   on card 20.50   on subtle 17.04   on the soft lime 18.41
+ *   black on lime 17.70, on the hover lime 15.38, on the pressed lime 12.54
+ *   input border  on page 3.63   on card 3.98   on subtle 3.30
+ *   success / warning / danger on their soft fill 5.43 / 5.59 / 5.40, on a card 6.37 / 6.43 / 6.54
+ *   chart: online in black, in-store grey 4.63 on a card
+ */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-bg: var(--zyro-paper-page);
+  --color-surface: var(--zyro-paper);
+  --color-subtle: var(--zyro-paper-subtle);
+  --color-surface-2: var(--zyro-paper);
+  --color-inverse: var(--zyro-paper);
+  --color-on-inverse: var(--zyro-night-800);
+  --color-on-inverse-secondary: var(--zyro-slate-600);
+  --color-on-inverse-muted: var(--zyro-slate-500);
+
+  --color-border: var(--zyro-paper-line);
+  --color-border-input: var(--zyro-slate-400);
+
+  --color-text: var(--zyro-night-800);
+  --color-text-secondary: var(--zyro-slate-600);
+  --color-text-muted: var(--zyro-slate-500);
+
+  --color-brand: var(--zyro-lime-400);
+  --color-brand-hover: var(--zyro-lime-450);
+  --color-brand-soft: var(--zyro-lime-100);
+  --color-on-brand: var(--zyro-black);
+  --color-brand-ink: var(--zyro-black);
+  --color-brand-ink-hover: var(--zyro-slate-600);
+
+  --color-accent: var(--zyro-lime-400);
+  --color-accent-hover: var(--zyro-lime-450);
+  --color-accent-pressed: var(--zyro-lime-550);
+  --color-on-accent: var(--zyro-black);
+  --color-accent-ink: var(--zyro-black);
+
+  --color-ring: var(--zyro-black);
+
+  --color-ai: var(--zyro-lime-400);
+  --color-ai-soft: var(--zyro-lime-100);
+  --color-ai-ink: var(--zyro-black);
+
+  --color-success: var(--zyro-success-700);
+  --color-success-soft: var(--zyro-success-100);
+  --color-warning: var(--zyro-warning-700);
+  --color-warning-soft: var(--zyro-warning-100);
+  --color-danger: var(--zyro-danger-700);
+  --color-danger-soft: var(--zyro-danger-100);
+
+  --color-star: var(--zyro-black);
+
+  --color-series-online: var(--zyro-black);
+  --color-series-pos: var(--zyro-slate-450);
+
+  /* Depth on a light page is a soft shadow, not a light edge; the glow stays lime. */
+  --shadow-sm: 0 1px 2px rgb(3 4 7 / 0.08);
+  --shadow-md: 0 8px 24px -10px rgb(3 4 7 / 0.18), 0 0 0 1px rgb(3 4 7 / 0.05);
+  --shadow-lg: 0 24px 60px -24px rgb(3 4 7 / 0.28), 0 0 0 1px rgb(3 4 7 / 0.06);
 }
 
 /* A visitor who asked for less motion gets none: no fades, slides or glides, anywhere. */

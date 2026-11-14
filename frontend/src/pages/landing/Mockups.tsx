@@ -33,7 +33,7 @@ export function TrendingMockup() {
         ].map((s) => (
           <div key={s.t} className="rounded-lg bg-bg p-2.5">
             <p className="text-[11px] font-bold text-text">{s.t}</p>
-            <p className="mt-1 text-[10px] text-accent">Uses popular searches: {s.k}</p>
+            <p className="mt-1 text-[10px] text-accent-ink">Uses popular searches: {s.k}</p>
           </div>
         ))}
       </div>

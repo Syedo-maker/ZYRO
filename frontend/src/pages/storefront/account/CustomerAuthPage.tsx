@@ -84,7 +84,7 @@ export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
       </form>
       <p className="mt-5 text-center text-sm text-text-secondary">
         {register ? 'Already have an account? ' : 'New here? '}
-        <Link to={`/store/${store.id}/account/${register ? 'login' : 'register'}${suffix}`} className="font-semibold text-brand">
+        <Link to={`/store/${store.id}/account/${register ? 'login' : 'register'}${suffix}`} className="font-semibold text-brand-ink">
           {register ? 'Sign in' : 'Create an account'}
         </Link>
       </p>

@@ -102,7 +102,7 @@ export function SearchBox({ storeId }: { storeId: string }) {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="h-11 w-full rounded-l-[10px] border border-r-0 border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="h-11 w-full rounded-l-[10px] border border-r-0 border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
         />
         <button type="submit" className="h-11 rounded-r-[10px] bg-brand px-4 text-sm font-semibold text-on-brand hover:bg-brand-hover">
           Search

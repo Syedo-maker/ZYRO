@@ -31,7 +31,7 @@ function AiFeatureSection({ id, kicker, title, body, points, mockup, lead = fals
         }`}
       >
         <Reveal className={flip ? 'lg:order-2' : ''}>
-          <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-accent">{kicker}</p>
+          <p className="font-display text-xs font-bold uppercase tracking-[0.14em] text-accent-ink">{kicker}</p>
           <h3 className={`mt-3 font-display font-extrabold leading-tight text-text ${lead ? 'text-3xl sm:text-4xl' : 'text-2xl sm:text-3xl'}`}>
             {title}
           </h3>
@@ -39,7 +39,7 @@ function AiFeatureSection({ id, kicker, title, body, points, mockup, lead = fals
           <ul role="list" className="mt-5 flex flex-col gap-2.5">
             {points.map((p) => (
               <li key={p} className="flex items-start gap-2.5 text-sm text-text-secondary">
-                <CircleCheck aria-hidden="true" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-accent" strokeWidth={2} />
+                <CircleCheck aria-hidden="true" className="mt-0.5 h-[18px] w-[18px] shrink-0 text-accent-ink" strokeWidth={2} />
                 <span>{p}</span>
               </li>
             ))}
@@ -64,7 +64,7 @@ export function AiFeatures() {
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <h2 className="max-w-3xl font-serif text-h1 font-normal tracking-tight text-text">
-              The AI is the <em className="italic text-accent">product</em>, not an add-on.
+              The AI is the <em className="italic text-accent-ink">product</em>, not an add-on.
             </h2>
             <p className="mt-4 max-w-2xl text-base text-text-secondary">
               Five things it does for you and your shoppers, included on every plan. All of it is built and running today.

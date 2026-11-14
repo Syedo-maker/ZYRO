@@ -101,7 +101,7 @@ export function ScoutOnboarding({
                     type="button"
                     aria-pressed={on}
                     onClick={() => toggle(name)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${on ? 'border-brand bg-brand-soft text-brand' : 'border-border text-text-secondary hover:bg-bg'}`}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${on ? 'border-brand-ink bg-brand-soft text-brand-ink' : 'border-border text-text-secondary hover:bg-bg'}`}
                   >
                     {on ? '✓ ' : ''}
                     {name}
@@ -183,7 +183,7 @@ export function ScoutOnboarding({
                   <button
                     type="button"
                     onClick={() => onAdd(prefillFrom(p))}
-                    className="shrink-0 rounded-md border border-brand px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
+                    className="shrink-0 rounded-md border border-brand-ink px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-soft"
                     aria-label={`Add ${p.name} to my store`}
                   >
                     Add to my store

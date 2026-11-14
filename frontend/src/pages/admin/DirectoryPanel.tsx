@@ -89,7 +89,7 @@ export function DirectoryPanel({ storeId }: { storeId: string }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Hand-made pottery from Multan, fired in small batches."
-            className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
           />
           <p className="text-xs text-text-muted">{200 - description.length} characters left. Anyone can read this.</p>
         </div>
