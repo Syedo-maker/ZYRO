@@ -1,5 +1,6 @@
 import { env } from "../config/env";
 import { logger } from "./logger";
+import { createBreaker, guard } from "./circuitBreaker";
 
 /**
  * Node's side of the Phase 6 recommendation microservice (recommendation-service/, Python).
@@ -138,7 +139,12 @@ let client: RecommendationClient | undefined;
 export function getRecommendationClient(): RecommendationClient {
   if (!client) {
     const { url, token, timeoutMs } = env.recommendation;
-    client = url && token ? new HttpRecommendationClient(url.replace(/\/+$/, ""), token, timeoutMs) : new UnconfiguredClient();
+    // A service that keeps failing is skipped for a while (lib/circuitBreaker.ts), with the same error
+    // callers already handle, so shoppers are not kept waiting for a timeout on every page.
+    const breaker = createBreaker("recommendations", {
+      openError: () => new RecommendationUnavailableError("Recommendation service unavailable (circuit open)"),
+    });
+    client = url && token ? guard(breaker, new HttpRecommendationClient(url.replace(/\/+$/, ""), token, timeoutMs)) : new UnconfiguredClient();
   }
   return client;
 }

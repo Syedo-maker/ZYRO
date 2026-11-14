@@ -5,6 +5,7 @@ import { directAnswerParams, type ModelTier } from "./aiModels";
 import { AiProviderError, isPermanentAiError } from "./aiErrors";
 import { openAiProvider } from "./aiOpenAi";
 import { logger } from "./logger";
+import { createBreaker, type Breaker } from "./circuitBreaker";
 
 export interface AiGenerateParams {
   /** Which model to use, chosen by the orchestrator from the prompt type (lib/aiModels.ts). */
@@ -116,13 +117,18 @@ export function configuredProviders(): NamedProvider[] {
  * the last provider's, and it counts as permanent only if every failure was (so the queue does not
  * retry a request no provider can ever answer, such as with every key rejected).
  */
-export function chainProviders(providers: NamedProvider[]): AiProvider {
+export function chainProviders(providers: NamedProvider[], breakerOptions: { threshold?: number; openMs?: number } = {}): AiProvider {
+  // A provider that keeps failing (an outage, a rejected key) is skipped for a while
+  // (lib/circuitBreaker.ts), so the next one is tried at once instead of after a 25 s timeout.
+  const breakers = new Map<string, Breaker>(
+    providers.map((p) => [p.name, createBreaker(`ai:${p.name}`, { ...breakerOptions, openError: (name) => new AiProviderError(p.name, undefined, `${name} circuit open`) })])
+  );
   return {
     async generate(params) {
       const failures: unknown[] = [];
       for (const provider of providers) {
         try {
-          return await provider.generate(params);
+          return await breakers.get(provider.name)!.run(() => provider.generate(params));
         } catch (err) {
           failures.push(err);
           const rest = providers.length - failures.length;

@@ -94,6 +94,12 @@ export const env = {
   // How many reverse proxies sit in front of the API (0 = none). Needed so rate limits see
   // each visitor's real IP instead of the proxy's; leave at 0 when clients connect directly.
   trustProxy: Number(process.env.TRUST_PROXY ?? 0),
+  /** Redirect plain HTTP to https on PUBLIC_URL's host (middleware/httpsOnly.middleware.ts). Off by default. */
+  forceHttps: process.env.FORCE_HTTPS === "true",
+  /** Largest JSON (and Stripe webhook) body accepted. Express's own default, made explicit. */
+  requestBodyLimit: process.env.REQUEST_BODY_LIMIT?.trim() || "100kb",
+  /** MongoDB connection pool per process; unset keeps the driver's default (100). */
+  mongoMaxPoolSize: process.env.MONGO_MAX_POOL_SIZE ? Number(process.env.MONGO_MAX_POOL_SIZE) : undefined,
   // Abuse protection, backed by Redis so limits survive restarts and are shared between servers.
   rateLimit: {
     enabled: process.env.RATE_LIMIT_ENABLED !== "false",
@@ -182,6 +188,8 @@ export const env = {
     monthlyChatMessagesLimit: num("AI_MONTHLY_CHAT_MESSAGES_LIMIT", 40),
     /** How long a caller of generate() waits for the BullMQ job before giving up. */
     jobTimeoutMs: num("AI_JOB_TIMEOUT_MS", 60_000),
+    /** AI answers one worker process waits on at once (lib/aiQueue.ts). */
+    workerConcurrency: num("AI_WORKER_CONCURRENCY", 4),
   },
   // Plans and billing (Part A, revenue model). Stripe Billing uses the same Stripe keys as
   // checkout above; the plan catalog itself is in lib/plans.ts.

@@ -4,6 +4,12 @@
 #   node frontend/e2e/smoke.e2e.mjs     the smoke test (Deployment_Runbook.md, Operations_Runbook.md)
 #   docker compose down -v              stop and delete everything, data included
 #
+# Two API instances, to check the app is stateless (sessions, rate limits, carts and files live in
+# PostgreSQL, Redis and Blob Storage, never in a process):
+#   docker compose up -d --scale api=2 && docker compose restart web   (nginx then uses both)
+# Load test (rate limits off, see compose.loadtest.yaml): npx tsx backend/scripts/load-test.ts
+# For development with code reloading, use compose.dev.yaml instead.
+#
 # The same images, settings and topology as Azure (infra/): the web container serves the site and is
 # the only door to the API; the API and worker run from one image with NODE_ENV=production; files go
 # to Blob Storage (here the Azurite emulator); Redis is 7, the major version Azure Managed Redis runs.
@@ -42,20 +48,24 @@ x-limits: &small
 
 services:
   postgres:
-    image: postgres:17-alpine
+    # A process that crashes or is killed comes back by itself (not after docker compose stop).
+    restart: unless-stopped
+    image: postgres:17.11-alpine
     environment: { POSTGRES_USER: zyro, POSTGRES_PASSWORD: local-only-postgres, POSTGRES_DB: zyro }
     volumes: [postgres-data:/var/lib/postgresql/data]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U zyro"], interval: 3s, retries: 30 }
     networks: [zyro]
 
   mongo:
-    image: mongo:8.0
+    restart: unless-stopped
+    image: mongo:8.0.34
     volumes: [mongo-data:/data/db]
     healthcheck: { test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"], interval: 5s, retries: 30 }
     networks: [zyro]
 
   redis:
-    image: redis:7-alpine
+    restart: unless-stopped
+    image: redis:7.4.11-alpine
     # As on Azure Managed Redis: never drop keys (BullMQ jobs) under memory pressure.
     command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
     volumes: [redis-data:/data]
@@ -63,6 +73,7 @@ services:
     networks: [zyro]
 
   azurite:
+    restart: unless-stopped
     image: mcr.microsoft.com/azure-storage/azurite:3.35.0
     command: ["azurite-blob", "--blobHost", "0.0.0.0", "--loose", "--skipApiVersionCheck", "--location", "/data"]
     volumes: [azurite-data:/data]
@@ -79,6 +90,7 @@ services:
     networks: [zyro]
 
   api:
+    restart: unless-stopped
     build: { context: ./backend, target: runtime }
     image: zyro-api:local
     environment:
@@ -94,6 +106,7 @@ services:
     networks: [zyro]
 
   worker:
+    restart: unless-stopped
     image: zyro-api:local
     command: ["node", "--enable-source-maps", "dist/worker.js"]
     environment:
@@ -108,6 +121,7 @@ services:
     networks: [zyro]
 
   reco:
+    restart: unless-stopped
     build: { context: ./recommendation-service }
     image: zyro-reco:local
     environment:
@@ -121,6 +135,7 @@ services:
     networks: [zyro]
 
   web:
+    restart: unless-stopped
     build: { context: ./frontend }
     image: zyro-web:local
     environment:

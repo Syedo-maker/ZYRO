@@ -1,5 +1,6 @@
 import { Queue, QueueEvents, UnrecoverableError, Worker, type Job } from "bullmq";
 import { getBullRedis } from "./redis";
+import { env } from "../config/env";
 import { getAiProvider, type AiGenerateResult } from "./aiProvider";
 import { logger } from "./logger";
 import { isPermanentAiError } from "./aiErrors";
@@ -45,7 +46,13 @@ let worker: Worker<AiJobData, AiGenerateResult> | undefined;
  * features don't open a BullMQ connection.
  */
 export function getAiQueue(): Queue<AiJobData, AiGenerateResult> {
-  queue ??= new Queue<AiJobData, AiGenerateResult>(AI_QUEUE_NAME, { connection: getBullRedis() });
+  if (!queue) {
+    queue = new Queue<AiJobData, AiGenerateResult>(AI_QUEUE_NAME, { connection: getBullRedis() });
+    // Each job being added briefly holds a listener here; more than 10 at once is normal under load
+    // and they are all released (measured: back to 0 after every burst), so Node's leak warning at
+    // 11 would only be noise in the logs.
+    queue.setMaxListeners(1000);
+  }
   return queue;
 }
 
@@ -99,7 +106,11 @@ export function startAiWorker(): Worker<AiJobData, AiGenerateResult> {
         throw err;
       }
     },
-    { connection: getBullRedis(), concurrency: 4 }
+    // How many AI answers one worker process waits on at once. AI calls spend their time waiting on
+    // the provider, so this caps throughput: answers per second is about concurrency / answer time
+    // (load test 2026-11: 4 at 300 ms each gave 12.8 a second). Raise it with AI_WORKER_CONCURRENCY,
+    // within the provider account's rate limits.
+    { connection: getBullRedis(), concurrency: env.ai.workerConcurrency }
   );
   worker.on("error", (err) => logger.error({ err: err.message }, "AI worker error"));
   return worker;
