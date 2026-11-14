@@ -50,7 +50,7 @@ function Item({ p, periodDays, onAdd }: { p: ScoutProduct; periodDays: number; o
         <button
           type="button"
           onClick={() => onAdd(prefillFrom(p))}
-          className="rounded-[8px] border border-brand px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
+          className="rounded-md border border-brand px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
           aria-label={`Add ${p.name} to my store`}
         >
           Add to my store
@@ -176,7 +176,7 @@ export function ProductScoutPanel({
               {data?.window ? `, ${shortDate(data.window.from)} to ${shortDate(data.window.to)}` : ''}.
             </p>
           </div>
-          <button type="button" onClick={toggle} aria-expanded={true} aria-controls={bodyId} className="rounded-[8px] px-2 py-1 text-sm font-semibold text-text-secondary hover:bg-bg" aria-label="Collapse trending products">
+          <button type="button" onClick={toggle} aria-expanded={true} aria-controls={bodyId} className="rounded-md px-2 py-1 text-sm font-semibold text-text-secondary hover:bg-bg" aria-label="Collapse trending products">
             ›
           </button>
         </div>
@@ -187,14 +187,14 @@ export function ProductScoutPanel({
           ) : (
             <>
               <div className="flex flex-wrap items-end gap-2">
-                <div role="group" aria-label="Trending period" className="flex rounded-[10px] border border-border-input p-0.5">
+                <div role="group" aria-label="Trending period" className="flex rounded-control border border-border-input p-0.5">
                   {([7, 30] as const).map((d) => (
                     <button
                       key={d}
                       type="button"
                       aria-pressed={period === d}
                       onClick={() => setPeriod(d)}
-                      className={`rounded-[8px] px-2.5 py-1 text-xs font-semibold ${period === d ? 'bg-brand text-on-brand' : 'text-text-secondary hover:bg-bg'}`}
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold ${period === d ? 'bg-brand text-on-brand' : 'text-text-secondary hover:bg-bg'}`}
                     >
                       {d} days
                     </button>
@@ -207,7 +207,7 @@ export function ProductScoutPanel({
                   id={`${bodyId}-category`}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="h-8 min-w-0 flex-1 rounded-[10px] border border-border-input bg-surface px-2 text-xs outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                  className="h-8 min-w-0 flex-1 rounded-control border border-border-input bg-surface px-2 text-xs outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
                 >
                   <option value="">All categories</option>
                   {categoryOptions.map((c) => (

@@ -66,12 +66,12 @@ export function TrendingDemo() {
   }
 
   return (
-    <section aria-labelledby="demo-heading" className="w-full rounded-2xl bg-bg p-5 text-text shadow-2xl shadow-black/20 sm:p-6">
+    <section aria-labelledby="demo-heading" className="w-full rounded-3xl border border-border bg-surface/90 p-5 text-text shadow-lg backdrop-blur sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="demo-heading" className="font-display text-lg font-bold">
           Try it now
         </h2>
-        <span className="rounded-full bg-inverse px-3 py-1 text-xs font-semibold text-on-inverse">Trending in Pakistan</span>
+        <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">Trending in Pakistan</span>
       </div>
       <p className="mt-2 text-sm text-text-secondary">Type something you sell. This is the same AI that helps you write a listing.</p>
 
@@ -85,12 +85,12 @@ export function TrendingDemo() {
           onChange={(e) => setPhrase(e.target.value)}
           maxLength={60}
           placeholder="lawn suit"
-          className="h-11 flex-1 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm text-text outline-none placeholder:text-text-muted focus-visible:border-text focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-11 min-h-11 shrink-0 rounded-control border border-border-input bg-bg px-3.5 text-sm text-text outline-none placeholder:text-text-muted focus-visible:border-brand focus-visible:ring-4 focus-visible:ring-brand/15 sm:flex-1"
         />
         <button
           type="submit"
           disabled={loading || phrase.trim().length < 2}
-          className="h-11 rounded-[10px] bg-accent px-5 text-sm font-semibold text-on-accent transition-colors hover:bg-inverse focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
+          className="h-11 shrink-0 rounded-full bg-accent px-6 text-sm font-bold text-on-accent transition-[background-color,box-shadow] duration-200 hover:bg-accent-hover hover:shadow-glow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
         >
           {loading ? 'Thinking…' : 'Suggest'}
         </button>
@@ -118,7 +118,7 @@ export function TrendingDemo() {
       </p>
 
       {error && (
-        <p role="alert" className="mt-4 rounded-[10px] bg-surface px-3.5 py-2.5 text-sm text-accent">
+        <p role="alert" className="mt-4 rounded-control bg-surface px-3.5 py-2.5 text-sm text-accent">
           {error}
         </p>
       )}
@@ -144,7 +144,7 @@ export function TrendingDemo() {
             {result.suggestions.map((s, i) => (
               <li
                 key={`${run}-${i}`}
-                className="rounded-[10px] bg-surface p-3.5 motion-safe:animate-[demoCardIn_480ms_ease-out_both]"
+                className="rounded-control bg-surface p-3.5 motion-safe:animate-[demoCardIn_480ms_ease-out_both]"
                 style={{ animationDelay: `${i * CARD_STAGGER_MS}ms` }}
               >
                 <p className="font-display text-sm font-bold">{s.title}</p>

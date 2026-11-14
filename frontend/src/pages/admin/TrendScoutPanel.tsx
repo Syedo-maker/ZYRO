@@ -14,7 +14,7 @@ const STATUS: Record<TrendReport['status'], { label: string; tone: 'success' | '
   no_data: { label: 'No data', tone: 'neutral' },
 }
 
-const fieldClass = 'h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
+const fieldClass = 'h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30'
 
 /**
  * The Trend Scout on the platform page (Part D): import a Google Trends file, run the week's reports
@@ -114,7 +114,7 @@ export function TrendScoutPanel() {
             <label htmlFor="trend-file" className="text-xs font-semibold text-text-secondary">
               CSV file
             </label>
-            <input id="trend-file" type="file" accept=".csv,text/csv" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            <input id="trend-file" type="file" accept=".csv,text/csv" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full min-w-0 max-w-full text-sm text-text-secondary file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border file:border-text/25 file:bg-transparent file:px-4 file:text-sm file:font-semibold file:text-text hover:file:border-text/60" />
           </div>
         </div>
         <div>

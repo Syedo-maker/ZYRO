@@ -102,7 +102,7 @@ export function OrderDetailPanel({ order, storeId, onChanged, onClose }: OrderDe
         Paid by {order.payments.map((p) => `${METHOD_LABEL[p.method]} ${money(p.amount)}${p.status === 'refunded' ? ' (refunded)' : ''}`).join(', ')}
       </div>
       {order.refunds.length > 0 && (
-        <p className="rounded-[10px] bg-bg px-3 py-2 text-xs text-text-secondary">
+        <p className="rounded-control bg-bg px-3 py-2 text-xs text-text-secondary">
           Refunded {formatDateTime(order.refunds[0].createdAt)}
           {order.refunds[0].reason ? `: ${order.refunds[0].reason}` : ''}
           {order.refunds[0].restocked ? '. Items returned to stock.' : '. Items not returned to stock.'}
@@ -128,7 +128,7 @@ export function OrderDetailPanel({ order, storeId, onChanged, onClose }: OrderDe
       )}
 
       {address && (
-        <div className="flex flex-col gap-1 rounded-[10px] bg-bg p-3.5 text-xs text-text-secondary">
+        <div className="flex flex-col gap-1 rounded-control bg-bg p-3.5 text-xs text-text-secondary">
           <span className="font-bold text-text">Shipping address</span>
           {order.shippingName && <span>{order.shippingName}</span>}
           <span>{[address.line1, address.line2].filter(Boolean).join(', ')}</span>

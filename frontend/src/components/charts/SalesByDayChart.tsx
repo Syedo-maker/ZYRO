@@ -45,7 +45,7 @@ export function SalesByDayChart({ daily, currency }: { daily: Day[]; currency: s
             View as chart
           </button>
         </div>
-        <div className="max-h-[300px] overflow-auto rounded-[10px] border border-border">
+        <div className="max-h-[300px] overflow-auto rounded-control border border-border">
           <table id={tableId} className="w-full text-sm">
             <caption className="sr-only">Gross sales per day by channel</caption>
             <thead className="sticky top-0 bg-surface">
@@ -126,7 +126,7 @@ export function SalesByDayChart({ daily, currency }: { daily: Day[]; currency: s
           <div className="pointer-events-none absolute bottom-7 left-12 right-0 top-0">
             <div
               role="tooltip"
-              className="absolute top-0 z-10 w-44 rounded-[10px] border border-border bg-surface p-3 text-xs"
+              className="absolute top-0 z-10 w-44 rounded-control border border-border bg-surface-2 p-3 text-xs shadow-lg"
               style={{ left: `${((active + 0.5) / daily.length) * 100}%`, transform: `translateX(${active > daily.length / 2 ? 'calc(-100% - 12px)' : '12px'})` }}
             >
               <p className="mb-1.5 font-semibold">{shortDate(hovered.date)}</p>

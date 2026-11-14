@@ -115,7 +115,7 @@ function DashboardContent() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div role="group" aria-label="Period" className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
+          <div role="group" aria-label="Period" className="flex overflow-hidden rounded-control border border-border bg-surface">
             {PERIODS.map((d) => (
               <button
                 key={d}

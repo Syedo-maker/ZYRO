@@ -65,7 +65,7 @@ export function CartPage() {
           ))}
         </ul>
 
-        <aside className="flex w-full flex-col gap-4 rounded-[14px] border border-border bg-surface p-6 lg:w-80" aria-label="Order summary">
+        <aside className="flex w-full flex-col gap-4 rounded-lg border border-border bg-surface p-6 lg:w-80" aria-label="Order summary">
           <h2 className="text-[15px] font-bold">Order summary</h2>
 
           <div className="h-px bg-border" />

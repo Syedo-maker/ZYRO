@@ -113,7 +113,7 @@ function Register() {
                         <button
                           aria-label={`Decrease ${line.title}`}
                           onClick={() => setQuantity(line.productId, line.quantity - 1)}
-                          className="h-10 w-10 rounded-[10px] border border-border text-lg font-semibold hover:bg-bg"
+                          className="h-10 w-10 rounded-control border border-border text-lg font-semibold hover:bg-bg"
                         >
                           -
                         </button>
@@ -123,7 +123,7 @@ function Register() {
                         <button
                           aria-label={`Increase ${line.title}`}
                           onClick={() => setQuantity(line.productId, line.quantity + 1)}
-                          className="h-10 w-10 rounded-[10px] border border-border text-lg font-semibold hover:bg-bg"
+                          className="h-10 w-10 rounded-control border border-border text-lg font-semibold hover:bg-bg"
                         >
                           +
                         </button>
@@ -145,7 +145,7 @@ function Register() {
           <div className="flex gap-2 text-sm">
             <button
               onClick={() => setDialog('customer')}
-              className="flex-1 rounded-[10px] border border-border px-3 py-2.5 text-left hover:bg-bg"
+              className="flex-1 rounded-control border border-border px-3 py-2.5 text-left hover:bg-bg"
             >
               <span className="block text-xs text-text-secondary">Customer</span>
               <span className="font-semibold">{customer ? (customer.name ?? customer.email ?? customer.phone ?? 'Customer') : 'Walk-in'}</span>
@@ -153,7 +153,7 @@ function Register() {
             <button
               onClick={() => setDialog('discount')}
               disabled={cart.length === 0}
-              className="flex-1 rounded-[10px] border border-border px-3 py-2.5 text-left hover:bg-bg disabled:opacity-50"
+              className="flex-1 rounded-control border border-border px-3 py-2.5 text-left hover:bg-bg disabled:opacity-50"
             >
               <span className="block text-xs text-text-secondary">Discount</span>
               <span className="font-semibold">
@@ -340,7 +340,7 @@ function ProductPane({
             }
           }}
           placeholder="SKU or product name"
-          className="h-14 rounded-[10px] border border-border-input bg-surface px-4 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="h-14 rounded-control border border-border-input bg-surface px-4 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
         <div className="min-h-5 text-sm" role="status" aria-live="polite">
           {notice && <span className="font-medium text-text-secondary">{notice}</span>}

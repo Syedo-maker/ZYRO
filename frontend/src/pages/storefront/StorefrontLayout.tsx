@@ -1,3 +1,4 @@
+import { ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { CartProvider, useCart } from '../../context/CartContext'
@@ -18,12 +19,9 @@ function CartLink({ storeId }: { storeId: string }) {
     <Link
       to={`/store/${storeId}/cart`}
       aria-label={`Cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
-      className="relative inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-semibold text-text hover:bg-bg"
+      className="relative inline-flex items-center gap-2 rounded-control px-3 py-2 text-sm font-semibold text-text hover:bg-bg"
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-        <path d="M6 8h12l-1 12H7L6 8z" />
-        <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-      </svg>
+      <ShoppingBag aria-hidden="true" className="h-5 w-5" strokeWidth={1.75} />
       Cart
       {itemCount > 0 && (
         <span className="min-w-5 rounded-full bg-brand px-1.5 py-0.5 text-center text-[11px] font-bold text-on-brand">{itemCount}</span>
@@ -36,11 +34,11 @@ function AccountLink({ storeId }: { storeId: string }) {
   const { isAuthenticated, isLoading, user } = useAuth()
   if (isLoading) return null
   return isAuthenticated ? (
-    <Link to={`/store/${storeId}/account`} className="rounded-[10px] px-3 py-2 text-sm font-semibold text-text hover:bg-bg">
+    <Link to={`/store/${storeId}/account`} className="rounded-control px-3 py-2 text-sm font-semibold text-text hover:bg-bg">
       {user?.name?.split(' ')[0] ?? 'Account'}
     </Link>
   ) : (
-    <Link to={`/store/${storeId}/account/login`} className="rounded-[10px] px-3 py-2 text-sm font-semibold text-text hover:bg-bg">
+    <Link to={`/store/${storeId}/account/login`} className="rounded-control px-3 py-2 text-sm font-semibold text-text hover:bg-bg">
       Sign in
     </Link>
   )
@@ -53,7 +51,7 @@ function CategoryNav({ storeId, categories }: { storeId: string; categories: Cat
   const current = onCatalog ? new URLSearchParams(search).get('category') : null
   const isAll = onCatalog && !current && !new URLSearchParams(search).get('q')
   const link = (active: boolean) =>
-    `whitespace-nowrap rounded-[10px] px-3 py-1.5 text-sm font-medium ${active ? 'bg-brand-soft text-brand' : 'text-text-secondary hover:text-text'}`
+    `whitespace-nowrap rounded-control px-3 py-1.5 text-sm font-medium ${active ? 'bg-brand-soft text-brand' : 'text-text-secondary hover:text-text'}`
   return (
     <nav aria-label="Categories" className="border-t border-border">
       <ul className="mx-auto flex max-w-[1120px] gap-1 overflow-x-auto px-4 py-2 sm:px-10">
@@ -135,7 +133,7 @@ export function StorefrontLayout() {
               <div className="ml-auto flex items-center gap-1">
                 {/* Issue 2: the way back out of this shop. Each shop is its own tenant with its own
                     basket, so this leaves the shop rather than carrying anything across. */}
-                <Link to="/shop" className="rounded-[10px] px-3 py-2 text-sm font-semibold text-text hover:bg-bg">
+                <Link to="/shop" className="rounded-control px-3 py-2 text-sm font-semibold text-text hover:bg-bg">
                   All shops
                 </Link>
                 <AccountLink storeId={store.id} />

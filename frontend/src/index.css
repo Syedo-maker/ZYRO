@@ -2,144 +2,210 @@
 @import "tailwindcss";
 
 /*
- * ZYRO's design tokens, in three layers.
+ * Zyro's design tokens: the one place a colour, a size or a timing is written down.
  *
  *   1. Primitives (:root, below)  The raw palette. Deliberately NOT in @theme, so Tailwind never
- *                                 generates utilities like `bg-green-900`: a component cannot reach
+ *                                 generates utilities like `bg-lime-400`: a component cannot reach
  *                                 past the meaning of a colour to its value, so a rebrand stays a
  *                                 change to this file.
- *   2. Semantic (@theme)          What a colour is FOR: page, card, text, brand, accent. These are
- *                                 what components use, and the names are the ones the app was built
- *                                 on, so re-theming the platform changed this file and not 72 others.
+ *   2. Semantic (@theme)          What a colour is FOR: page, card, text, brand, accent. Components
+ *                                 use only these.
  *   3. Component                  Variant maps in the components themselves (components/ui/), built
  *                                 only from semantic tokens.
  *
- * One rule matters more than the rest: utilities compile to `var(--color-*)`, never to a fixed value
- * (plain @theme, not @theme inline). That is what lets a storefront set `--color-brand` on its own
- * root element and wear its merchant's colour, while the platform around it stays ZYRO's.
+ * The palette (2026-11): Midnight Black, Acid Lime and, on the landing page only, Electric Cobalt.
+ * Everything outside the landing page is black and lime plus neutral tints made from them. Status
+ * colours are muted and only ever mean a status; success is a teal green, far from the lime, so a
+ * "paid" badge never reads as branding (badges carry a word as well).
  *
- * Every pairing below was measured with the WCAG relative-luminance formula before being written.
- * Text needs 4.5:1; large text, graphics and the boundaries that identify a control need 3:1.
+ * Utilities compile to `var(--color-*)` (plain @theme, not @theme inline). That is what lets a
+ * storefront set `--color-brand` on its own root element and wear its merchant's colour
+ * (lib/brandTheme.ts), while the platform around it stays Zyro's.
  *
- *   body text      on page 14.54   on card 16.16   on subtle 12.37   on the orange band 5.24
- *   secondary      on page  6.99   on card  7.77   on subtle  5.95
- *   muted          on page  5.46   on card  6.07   on subtle  4.65
- *   on the dark surface:  on-inverse 11.20   secondary 7.11   muted 5.41   accent 4.99
- *   brand as text  on page 11.20   on card 12.44   on-brand on brand 11.20, on its hover 8.09
- *   accent as text on page  5.78   on card  6.42   on subtle  4.92   white on accent 6.42
- *   success / warning / danger / ai, text on their soft fill: 5.57 / 5.55 / 5.53 / 6.33
- *   input border   on card  3.51   on page  3.16   (WCAG 1.4.11; the old #dfe1e5 was 1.31)
- *   focus ring     accent on card 6.42, on subtle 4.92, cream on inverse 11.20
+ * Every pairing was measured with the WCAG relative-luminance formula before being written. Text
+ * needs 4.5:1; large text, graphics and the boundary that identifies a control need 3:1.
  *
- * Two rules follow from those numbers, and both were learned the hard way:
+ *   text        on page 18.71   on card 17.63   on subtle 16.22   on raised 14.91
+ *   secondary   on page 10.29   on card  9.70   on subtle  8.92   on raised  8.20
+ *   muted       on page  6.72   on card  6.33   on subtle  5.83   on raised  5.36
+ *   lime        on page 17.70   on card 16.68   on its soft tint 14.30   black on lime 17.70
+ *   black on the hover lime 18.15, on the pressed lime 13.51
+ *   input border  on page 4.17   on card 3.93   on subtle 3.62   on raised 3.32
+ *   success / warning / danger, text on their soft fill: 7.26 / 8.44 / 6.03
+ *   chart grey on a card 6.33 (in-store sales), lime 16.68 (online)
+ *   cobalt on page 3.19: decoration only (glows, gradients, illustration), never text
  *
- * 1. Text hierarchy comes from these tokens, NEVER from an opacity modifier. Fading a colour with
- *    `/60` is how the landing page used to make secondary text, and it measured 3.6 to 4.2:1, which
- *    fails. Each tier above is a real colour, measured on each surface it is used on.
- * 2. The brand orange (`accent-display`) measures 2.77 on the page, failing even the 3:1 for large
- *    text. It is a fill or decoration only. Accent-coloured TEXT is `accent` on a light surface and
- *    `accent-on-inverse` on the dark one. On the orange band itself only full-strength body text is
- *    allowed: secondary text there measures 2.52.
+ * Two rules follow from those numbers:
+ * 1. Text hierarchy comes from these tokens, never from an opacity modifier: each tier is a real
+ *    colour, measured on each surface it is used on.
+ * 2. Lime is text only on a dark surface. On a lime fill, text is black (`on-brand`, `on-accent`).
  */
 
 :root {
-  /* Greens, from the near-black used for structure to the faint tint behind brand text. */
-  --zyro-green-900: #0b3b33;
-  --zyro-green-800: #14524a;
-  --zyro-green-400: #9dafa8;
-  --zyro-green-300: #b9c7c1;
-  --zyro-green-100: #e2ece7;
+  color-scheme: dark;
 
-  /* Neutrals. Tinted towards the green rather than grey, so text and lines belong to the palette. */
-  --zyro-cream-50: #f4f3ee;
-  --zyro-white: #ffffff;
-  --zyro-sage-200: #dde3db;
-  --zyro-ink-900: #13241f;
-  --zyro-ink-600: #46564f;
-  --zyro-ink-500: #56665f;
-  --zyro-line-200: #d5ddd8;
-  --zyro-line-500: #7e8c86;
+  /* Midnight Black and the dark neutrals made from it, from the page up to a raised surface. */
+  --zyro-black: #030407;
+  --zyro-night-900: #08090c;
+  --zyro-night-800: #0c0e12;
+  --zyro-night-700: #15181e;
+  --zyro-night-600: #1c2027;
+  --zyro-night-500: #262a32;
 
-  /* The accent family: terracotta for anything small, the brand orange for display use only. */
-  --zyro-terracotta-700: #9e4318;
-  --zyro-terracotta-800: #843611;
-  --zyro-orange-500: #e8703d;
-  --zyro-orange-400: #ee8a5c;
+  /* Greys and the off-white for text. */
+  --zyro-grey-500: #6b717b;
+  --zyro-grey-400: #8f949c;
+  --zyro-grey-300: #b4b8be;
+  --zyro-white: #f4f5f0;
 
-  /* Status. Success is a mid green, deliberately far from the near-black brand green, so a "paid"
-     badge never reads as branding; badges carry an icon and a word as well. */
-  --zyro-success-700: #1d6b42;
-  --zyro-success-50: #e3f1e7;
-  --zyro-warning-700: #8a5300;
-  --zyro-warning-50: #fbefd6;
-  --zyro-danger-700: #b42318;
-  --zyro-danger-50: #fbe7e5;
-  --zyro-violet-700: #5544a8;
-  --zyro-violet-50: #ece9f8;
-  --zyro-amber-600: #b06a12;
+  /* Acid Lime: the accent, its hover (lighter: it glows) and pressed (darker) states, a soft tint. */
+  --zyro-lime-400: #d4ff24;
+  --zyro-lime-300: #dfff5c;
+  --zyro-lime-500: #bde016;
+  --zyro-lime-950: #1b2109;
+
+  /* Electric Cobalt: the landing page's glows and gradients only. */
+  --zyro-cobalt-600: #1558c9;
+  --zyro-cobalt-400: #3f7fe8;
+
+  /* Status, muted for the dark surface. */
+  --zyro-success-400: #3cc98e;
+  --zyro-success-950: #0e2a1f;
+  --zyro-warning-400: #f2b24a;
+  --zyro-warning-950: #2c2111;
+  --zyro-danger-400: #f2736d;
+  --zyro-danger-950: #2e1515;
+
+  /* Paper, for the printed receipt only (see @media print). */
+  --zyro-paper: #ffffff;
+  --zyro-ink: #111111;
+
+  /* Motion: quick enough to feel direct, slow enough to see. */
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --motion-slow: 250ms;
+
+  /* Stacking order, so a dropdown never hides under a sticky bar and a dialog is always on top. */
+  --z-sticky: 20;
+  --z-dropdown: 30;
+  --z-drawer: 40;
+  --z-modal: 50;
+  --z-toast: 60;
 }
 
 @theme {
-  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  /* Plus Jakarta Sans for every word of interface; Instrument Serif, italic, for display headlines. */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
 
-  /* Surfaces */
-  --color-bg: var(--zyro-cream-50); /* the page */
-  --color-surface: var(--zyro-white); /* cards, panels, inputs */
-  --color-subtle: var(--zyro-sage-200); /* alternating sections, quiet fills */
-  --color-inverse: var(--zyro-green-900); /* the dark surface: navigation, register header, hero */
-  --color-on-inverse: var(--zyro-cream-50); /* text and icons on it, 11.20 */
-  --color-on-inverse-secondary: var(--zyro-green-300); /* 7.11 */
-  --color-on-inverse-muted: var(--zyro-green-400); /* 5.41 */
+  /* The type scale: display, h1 to h4, body, small and caption. */
+  --text-display: clamp(2.75rem, 1.4rem + 5.2vw, 5.75rem);
+  --text-display--line-height: 1.02;
+  --text-h1: clamp(2rem, 1.5rem + 1.8vw, 3rem);
+  --text-h1--line-height: 1.1;
+  --text-h2: clamp(1.625rem, 1.3rem + 1.1vw, 2.25rem);
+  --text-h2--line-height: 1.15;
+  --text-h3: 1.375rem;
+  --text-h3--line-height: 1.3;
+  --text-h4: 1.125rem;
+  --text-h4--line-height: 1.4;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
 
-  /* Lines. Two, because they do different jobs: a card's edge is decoration and needs no minimum,
-     but an input's border is how anyone sees the field is there, so it must reach 3:1. */
-  --color-border: var(--zyro-line-200);
-  --color-border-input: var(--zyro-line-500);
+  /* Surfaces, from the page up. */
+  --color-bg: var(--zyro-black); /* the page */
+  --color-surface: var(--zyro-night-800); /* cards, panels, inputs */
+  --color-subtle: var(--zyro-night-700); /* quiet fills, alternating rows, hover */
+  --color-surface-2: var(--zyro-night-600); /* raised: menus, popovers, a card on a card */
+  --color-inverse: var(--zyro-night-900); /* the chrome: sidebar, register header, nav bars */
+  --color-on-inverse: var(--zyro-white);
+  --color-on-inverse-secondary: var(--zyro-grey-300);
+  --color-on-inverse-muted: var(--zyro-grey-400);
+
+  /* Lines. A card's edge is decoration; an input's border is how anyone sees the field, so 3:1. */
+  --color-border: var(--zyro-night-500);
+  --color-border-input: var(--zyro-grey-500);
 
   /* Text */
-  --color-text: var(--zyro-ink-900);
-  --color-text-secondary: var(--zyro-ink-600);
-  --color-text-muted: var(--zyro-ink-500);
+  --color-text: var(--zyro-white);
+  --color-text-secondary: var(--zyro-grey-300);
+  --color-text-muted: var(--zyro-grey-400);
 
-  /* Brand: ZYRO's green on the platform. A storefront overrides these four with its merchant's own
-     colour (lib/brandTheme.ts), which is why the text on it has a token of its own rather than an
-     assumed white. */
-  --color-brand: var(--zyro-green-900);
-  --color-brand-hover: var(--zyro-green-800);
-  --color-brand-soft: var(--zyro-green-100);
-  --color-on-brand: var(--zyro-cream-50);
+  /* Brand: lime on the platform. A storefront overrides these four with its merchant's own colour
+     (lib/brandTheme.ts), which is why the text on it has a token of its own. */
+  --color-brand: var(--zyro-lime-400);
+  --color-brand-hover: var(--zyro-lime-300);
+  --color-brand-soft: var(--zyro-lime-950);
+  --color-on-brand: var(--zyro-black);
 
-  /* Accent: the call to action. Terracotta, because the brand orange fails small text everywhere. */
-  --color-accent: var(--zyro-terracotta-700);
-  --color-accent-hover: var(--zyro-terracotta-800);
-  --color-on-accent: var(--zyro-white);
-  --color-accent-display: var(--zyro-orange-500); /* a large fill, or decoration; see above */
-  --color-accent-on-inverse: var(--zyro-orange-400); /* accent-coloured text on the dark surface, 4.99 */
+  /* Accent: the call to action. The same lime, with its pressed state. */
+  --color-accent: var(--zyro-lime-400);
+  --color-accent-hover: var(--zyro-lime-300);
+  --color-accent-pressed: var(--zyro-lime-500);
+  --color-on-accent: var(--zyro-black);
 
-  /* Focus: one colour for every focus ring on a light surface, so keyboard users learn it once. */
-  --color-ring: var(--zyro-terracotta-700);
+  /* Focus: one lime ring everywhere, so keyboard users learn it once. */
+  --color-ring: var(--zyro-lime-400);
 
-  /* AI-written content is marked in its own colour, kept apart from both brand and status. */
-  --color-ai: var(--zyro-violet-700);
-  --color-ai-soft: var(--zyro-violet-50);
+  /* AI-written content: lime, with a sparkle icon beside it (never colour alone). */
+  --color-ai: var(--zyro-lime-400);
+  --color-ai-soft: var(--zyro-lime-950);
 
-  --color-success: var(--zyro-success-700);
-  --color-success-soft: var(--zyro-success-50);
-  --color-warning: var(--zyro-warning-700);
-  --color-warning-soft: var(--zyro-warning-50);
-  --color-danger: var(--zyro-danger-700);
-  --color-danger-soft: var(--zyro-danger-50);
+  --color-success: var(--zyro-success-400);
+  --color-success-soft: var(--zyro-success-950);
+  --color-warning: var(--zyro-warning-400);
+  --color-warning-soft: var(--zyro-warning-950);
+  --color-danger: var(--zyro-danger-400);
+  --color-danger-soft: var(--zyro-danger-950);
 
-  /* Review stars: 4.27:1 on a card, above the 3:1 a graphic needs. */
-  --color-star: var(--zyro-amber-600);
+  /* Review stars. */
+  --color-star: var(--zyro-lime-400);
 
-  /* Chart series. Unchanged by the rebrand on purpose: they were chosen and checked for colour-blind
-     separation (worst adjacent pair 24.7, 3:1 or better on white), they encode data rather than
-     interface, and keeping them distinct from the interface colours is the point. Online is always
-     blue, in-store always orange, on every chart. */
-  --color-series-online: #2a78d6;
-  --color-series-pos: #eb6834;
+  /* Chart series: lime and grey only. Online is always lime, in-store always grey, on every chart. */
+  --color-series-online: var(--zyro-lime-400);
+  --color-series-pos: var(--zyro-grey-400);
+
+  /* The landing page's third colour. Nothing outside src/pages/landing uses these. */
+  --color-landing-cobalt: var(--zyro-cobalt-600);
+  --color-landing-cobalt-light: var(--zyro-cobalt-400);
+
+  /* Radius: one scale for the whole platform. `control` is buttons' and fields' own. */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+  --radius-control: 0.75rem;
+
+  /* Shadows read as depth on black only with a faint light edge; the glow is lime. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.7), 0 0 0 1px color-mix(in srgb, var(--zyro-white) 6%, transparent);
+  --shadow-lg: 0 24px 60px -20px rgb(0 0 0 / 0.85), 0 0 0 1px color-mix(in srgb, var(--zyro-white) 8%, transparent);
+  --shadow-glow: 0 0 0 1px color-mix(in srgb, var(--zyro-lime-400) 35%, transparent),
+    0 10px 32px -10px color-mix(in srgb, var(--zyro-lime-400) 55%, transparent);
+  --shadow-glow-lg: 0 0 0 1px color-mix(in srgb, var(--zyro-lime-400) 40%, transparent),
+    0 18px 56px -14px color-mix(in srgb, var(--zyro-lime-400) 60%, transparent);
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --animate-fade-up: fade-up var(--motion-slow) var(--ease-standard) both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer base {
@@ -147,6 +213,19 @@
     background: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  /* A visible lime ring on anything focused from the keyboard, even where a component forgot one. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
   }
 
   /*
@@ -160,10 +239,46 @@
   select:not(:disabled) {
     cursor: pointer;
   }
+
+  /* Dark native controls: the date picker, number spinners and scrollbars follow the theme. */
+  input,
+  select,
+  textarea {
+    color-scheme: dark;
+    accent-color: var(--color-accent);
+  }
+  * {
+    scrollbar-color: var(--color-border-input) transparent;
+  }
+}
+
+/* A visitor who asked for less motion gets none: no fades, slides or glides, anywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scroll-in reveal for the landing page's sections, where the browser supports scroll timelines.
+   Anywhere else (and with reduced motion) the sections are simply there. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: fade-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
 }
 
 /* Receipts print from a hidden copy placed in <body> (pages/pos/Receipt.tsx): while
-   printing, everything else is hidden and only that copy shows, sized for an 80mm roll. */
+   printing, everything else is hidden and only that copy shows, sized for an 80mm roll, in black
+   on white whatever the screen theme. */
 .print-only {
   display: none;
 }
@@ -175,9 +290,16 @@
     display: block;
     width: 80mm;
     margin: 0;
+    --color-text: var(--zyro-ink);
+    --color-text-secondary: var(--zyro-ink);
+    --color-text-muted: var(--zyro-ink);
+    --color-border: var(--zyro-ink);
+    --color-surface: var(--zyro-paper);
+    --color-bg: var(--zyro-paper);
+    color: var(--zyro-ink);
   }
   body {
-    background: white;
+    background: var(--zyro-paper);
   }
 }
 

@@ -21,8 +21,8 @@ export function ProblemSection() {
     <section className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
-            Selling online should not be this expensive, or this confusing.
+          <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
+            Selling online should not be this <em className="italic text-accent">expensive</em>, or this confusing.
           </h2>
         </Reveal>
 
@@ -31,7 +31,7 @@ export function ProblemSection() {
             <li key={pain.title}>
               <Reveal delayMs={i * 90}>
                 <div className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-surface p-6">
-                  <span aria-hidden="true" className="font-display text-3xl font-extrabold text-accent-display">
+                  <span aria-hidden="true" className="font-display text-3xl font-extrabold text-accent">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <h3 className="font-display text-lg font-bold text-text">{pain.title}</h3>

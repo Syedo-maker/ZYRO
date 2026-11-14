@@ -1,7 +1,8 @@
+import { MessageCircle, SendHorizontal, Sparkles, X } from 'lucide-react'
+import { FIELD } from '../ui/Input'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
-import { Spinner } from '../ui/Spinner'
 import { formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { ApiError } from '../../lib/apiClient'
@@ -67,27 +68,32 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
-        <div role="dialog" aria-label="Shopping assistant" className="flex h-[480px] w-[340px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-sm font-bold">Ask us anything</h2>
-            <button type="button" aria-label="Close chat" onClick={() => setOpen(false)} className="text-text-muted hover:text-text">
-              ✕
+        <div role="dialog" aria-label="Shopping assistant" className="flex h-[520px] max-h-[calc(100vh-7rem)] w-[360px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-lg motion-safe:animate-fade-up">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-full bg-brand text-on-brand">
+                <Sparkles className="h-4 w-4" strokeWidth={2} />
+              </span>
+              <h2 className="text-sm font-bold">Ask us anything</h2>
+            </div>
+            <button type="button" aria-label="Close chat" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-full text-text-muted transition-colors hover:bg-subtle hover:text-text">
+              <X aria-hidden="true" className="h-4 w-4" />
             </button>
           </div>
 
           <div ref={listRef} className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3">
             {messages.map((m, i) => (
               <div key={i} className={`flex flex-col gap-2 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <p className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${m.role === 'user' ? 'bg-brand text-on-brand' : 'bg-bg text-text'}`}>{m.content}</p>
+                <p className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'rounded-2xl rounded-br-md bg-brand font-medium text-on-brand' : 'rounded-2xl rounded-bl-md border border-border bg-subtle text-text'}`}>{m.content}</p>
                 {m.suggestedProducts && m.suggestedProducts.length > 0 && (
                   <div className="flex w-full gap-2 overflow-x-auto pb-1">
                     {m.suggestedProducts.map((p) => (
                       <Link
                         key={p.id}
                         to={`/store/${storeId}/products/${p.id}`}
-                        className="flex w-32 shrink-0 flex-col gap-1 rounded-[10px] border border-border p-2 hover:border-brand"
+                        className="flex w-32 shrink-0 flex-col gap-1 rounded-xl border border-border bg-bg p-2 transition-colors duration-150 hover:border-brand"
                       >
-                        <div className="aspect-square w-full overflow-hidden rounded-lg bg-bg">
+                        <div className="aspect-square w-full overflow-hidden rounded-lg bg-subtle">
                           {p.images[0] && <img src={p.images[0]} alt="" className="h-full w-full object-cover" />}
                         </div>
                         <span className="line-clamp-2 text-xs font-semibold">{p.title}</span>
@@ -98,9 +104,18 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
                 )}
               </div>
             ))}
-            {sending && <Spinner label="Thinking…" />}
+            {sending && (
+              <span role="status" className="flex items-center gap-2 self-start rounded-2xl rounded-bl-md border border-border bg-subtle px-3.5 py-2.5 text-sm text-text-secondary">
+                <span aria-hidden="true" className="flex gap-1">
+                  {[0, 150, 300].map((delay) => (
+                    <span key={delay} className="h-1.5 w-1.5 rounded-full bg-brand motion-safe:animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                  ))}
+                </span>
+                Thinking…
+              </span>
+            )}
             {error && (
-              <p role="alert" className="rounded-[10px] bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
+              <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
                 {error}
               </p>
             )}
@@ -117,10 +132,11 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
               placeholder="Ask about a product..."
               maxLength={1000}
               disabled={sending}
-              className="h-10 flex-1 rounded-[10px] border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30 disabled:opacity-60"
+              className={`h-11 min-w-0 flex-1 border-border-input bg-bg ${FIELD} rounded-full px-4 disabled:opacity-60`}
             />
-            <Button type="submit" className="h-10 px-4" disabled={sending || !input.trim()}>
+            <Button type="submit" className="h-11 px-5" disabled={sending || !input.trim()}>
               Send
+              <SendHorizontal aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
             </Button>
           </form>
         </div>
@@ -131,14 +147,12 @@ export function AssistantWidget({ storeId, currency }: { storeId: string; curren
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? 'Close shopping assistant' : 'Open shopping assistant'}
         aria-expanded={open}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-on-brand shadow-lg hover:bg-brand-hover"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-on-brand shadow-glow transition-[background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-glow-lg"
       >
         {open ? (
-          <span aria-hidden="true" className="text-xl">✕</span>
+          <X aria-hidden="true" className="h-6 w-6" strokeWidth={2} />
         ) : (
-          <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-          </svg>
+          <MessageCircle aria-hidden="true" className="h-6 w-6" strokeWidth={1.9} />
         )}
       </button>
     </div>

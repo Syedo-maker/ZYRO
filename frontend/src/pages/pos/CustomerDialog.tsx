@@ -80,7 +80,7 @@ export function CustomerDialog({ onClose }: { onClose: () => void }) {
         <div className="flex flex-col gap-4">
           <Input id="cust-search" label="Search by name, email or phone" autoFocus value={q} onChange={(e) => setQ(e.target.value)} />
           {error && <Alert>{error}</Alert>}
-          <ul className="max-h-64 overflow-y-auto divide-y divide-border border border-border rounded-[10px]">
+          <ul className="max-h-64 overflow-y-auto divide-y divide-border border border-border rounded-control">
             {results.length === 0 && <li className="px-4 py-3 text-sm text-text-secondary">No customers found.</li>}
             {results.map((c) => (
               <li key={c.id}>

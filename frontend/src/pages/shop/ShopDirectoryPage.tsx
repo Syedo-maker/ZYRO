@@ -83,7 +83,7 @@ export function ShopDirectoryPage() {
                 id="directory-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="h-11 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-11 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
               >
                 <option value="">All categories</option>
                 {categories.map((c) => (
@@ -124,11 +124,11 @@ export function ShopDirectoryPage() {
               <li key={store.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
                 <div className="flex items-center gap-3">
                   {store.logoUrl ? (
-                    <img src={store.logoUrl} alt="" className="h-10 w-10 rounded-[10px] object-cover" />
+                    <img src={store.logoUrl} alt="" className="h-10 w-10 rounded-control object-cover" />
                   ) : (
                     <span
                       aria-hidden="true"
-                      className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand text-sm font-bold text-on-brand"
+                      className="flex h-10 w-10 items-center justify-center rounded-control bg-brand text-sm font-bold text-on-brand"
                       style={brandStyle(store.themeColor)}
                     >
                       {store.name.slice(0, 1).toUpperCase()}

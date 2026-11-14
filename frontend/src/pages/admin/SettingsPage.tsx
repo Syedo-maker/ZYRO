@@ -98,7 +98,7 @@ export function SettingsPage() {
                   setChoice(e.target.value)
                   setSaved(null)
                 }}
-                className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
               >
                 {setting.options.map((o) => (
                   <option key={o.code} value={o.code}>

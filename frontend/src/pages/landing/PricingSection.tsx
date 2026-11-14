@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { buttonStyles } from '../../components/ui/Button'
 import { Reveal } from './Reveal'
 import { plansApi } from '../../lib/billingApi'
 import type { PlanInfo } from '../../types/billing'
@@ -44,25 +45,25 @@ function PricingCard({ plan, featured }: { plan: PlanInfo; featured: boolean }) 
   return (
     <div
       className={`flex h-full flex-col gap-5 rounded-2xl border p-6 ${
-        featured ? 'border-text bg-inverse text-on-inverse shadow-xl shadow-black/10' : 'border-border bg-surface text-text'
+        featured ? 'border-accent/70 bg-surface-2 text-text shadow-glow' : 'border-border bg-surface text-text'
       }`}
     >
       <div>
         <div className="flex items-center gap-2">
           <h3 className="font-display text-xl font-extrabold">{plan.name}</h3>
-          {featured && <span className="rounded-full bg-accent-display px-2.5 py-0.5 text-xs font-bold text-text">Most popular</span>}
+          {featured && <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-on-accent">Most popular</span>}
         </div>
 
         <p className="mt-4 flex flex-wrap items-baseline gap-x-2">
           <span className="font-display text-4xl font-extrabold">{free ? 'Free' : `$${plan.priceCents / 100}`}</span>
-          {!free && <span className={featured ? 'text-sm text-on-inverse-muted' : 'text-sm text-text-muted'}>per month</span>}
+          {!free && <span className="text-sm text-text-muted">per month</span>}
         </p>
         {!free && (
-          <p className={`mt-1 text-sm ${featured ? 'text-on-inverse-muted' : 'text-text-muted'}`}>
+          <p className="mt-1 text-sm text-text-muted">
             {approxPkr(plan.priceCents)} a month, at Rs {PKR_PER_USD} to the dollar
           </p>
         )}
-        {free && <p className={`mt-1 text-sm ${featured ? 'text-on-inverse-muted' : 'text-text-muted'}`}>No card needed. No time limit.</p>}
+        {free && <p className="mt-1 text-sm text-text-muted">No card needed. No time limit.</p>}
       </div>
 
       <ul role="list" className="flex flex-1 flex-col gap-2.5">
@@ -71,24 +72,20 @@ function PricingCard({ plan, featured }: { plan: PlanInfo; featured: boolean }) 
             <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="mt-0.5 shrink-0">
               <path
                 d="M4 10.4l3.4 3.4L16 5.6"
-                className={featured ? 'stroke-accent-display' : 'stroke-brand'}
+                className="stroke-accent"
                 strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
-            <span className={featured ? 'text-on-inverse-secondary' : 'text-text-secondary'}>{point}</span>
+            <span className="text-text-secondary">{point}</span>
           </li>
         ))}
       </ul>
 
       <Link
         to="/register"
-        className={`inline-flex h-11 items-center justify-center rounded-[10px] font-display text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
-          featured
-            ? 'bg-bg text-text outline-on-inverse hover:bg-surface'
-            : 'bg-inverse text-on-inverse outline-ring hover:bg-brand-hover'
-        }`}
+        className={buttonStyles({ variant: featured ? 'accent' : 'secondary', className: 'w-full' })}
       >
         {free ? 'Start free' : `Choose ${plan.name}`}
       </Link>
@@ -110,8 +107,8 @@ export function PricingSection() {
     <section id="pricing" className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
-            Start free. Pay only when it is worth it.
+          <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
+            Start free. Pay only when it is <em className="italic text-accent">worth it</em>.
           </h2>
           <p className="mt-4 max-w-2xl text-base text-text-secondary">
             Every plan includes the AI, the counter sales and everything in the list above. Paid plans raise the limits. Plans are billed

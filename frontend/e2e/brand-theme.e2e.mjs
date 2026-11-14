@@ -1,12 +1,16 @@
 // Storefronts wear their merchant's colour; the platform around them stays ZYRO's.
 //
 // What this proves, in a real browser:
-//   1. A shop that picked a colour that already reads well is shown in exactly that colour.
-//   2. A shop that picked a pale colour (white text on it would measure 1.4:1) is shown in a
-//      deepened version of the same hue, and its buttons and brand-coloured text reach 4.5:1.
-//   3. The platform's own screens keep ZYRO's green, so a merchant's colour never leaks out of their
+//   1. A shop that picked a colour that already reads well on the dark page (a bright yellow) is
+//      shown in exactly that colour.
+//   2. A shop that picked a deep colour (an indigo that would nearly vanish on the black page) is
+//      shown in a lightened version of the same hue, and its buttons and brand-coloured text reach 4.5:1.
+//   3. The platform's own screens keep Zyro's lime, so a merchant's colour never leaks out of their
 //      shop (the dashboard, for one, is the same product for every merchant).
-//   4. A shop with no colour falls back to ZYRO's.
+//   4. A shop with no colour falls back to Zyro's lime.
+//
+// 2026-11: the platform became dark (Midnight Black and Acid Lime), so a shop's colour is now
+// lightened for the dark page rather than deepened for a light one.
 //
 // Setup: backend and Redis, `npm run dev` in the frontend, then: node e2e/brand-theme.e2e.mjs
 // Afterwards run backend/scripts/cleanup-test-data.ts (emails and slugs use the e2e- prefix).
@@ -14,7 +18,7 @@ import { chromium } from 'playwright'
 
 const WEB = 'http://localhost:5173'
 const API = 'http://localhost:5000/api/v1'
-const ZYRO_GREEN = 'rgb(11, 59, 51)' // --zyro-green-900
+const ZYRO_LIME = 'rgb(212, 255, 36)' // --zyro-lime-400
 const suffix = Date.now().toString(36)
 let failures = 0
 
@@ -85,22 +89,22 @@ try {
   const pale = await shop('pale', '#FFD400')
   const none = await shop('none', null)
 
-  await page.goto(`${WEB}/store/${deep.storeId}`)
-  await page.getByRole('heading', { level: 1 }).first().waitFor()
-  let m = await page.evaluate(MEASURE)
-  check('a colour that already reads well is used exactly', m.brand === 'rgb(79, 70, 229)', m.brand)
-
   await page.goto(`${WEB}/store/${pale.storeId}`)
   await page.getByRole('heading', { level: 1 }).first().waitFor()
+  let m = await page.evaluate(MEASURE)
+  check('a colour that already reads well is used exactly', m.brand === 'rgb(255, 212, 0)', m.brand)
+
+  await page.goto(`${WEB}/store/${deep.storeId}`)
+  await page.getByRole('heading', { level: 1 }).first().waitFor()
   m = await page.evaluate(MEASURE)
-  check('a pale colour is deepened, keeping its hue', m.brand === 'rgb(125, 104, 0)', m.brand)
-  check('text on the deepened brand reaches 4.5:1', m.onBrand >= 4.5, m.onBrand.toFixed(2))
+  check('a deep colour is lightened, keeping its hue', m.brand === 'rgb(119, 113, 235)', m.brand)
+  check('text on the lightened brand reaches 4.5:1', m.onBrand >= 4.5, m.onBrand.toFixed(2))
   check('brand-coloured text on the page reaches 4.5:1', m.brandOnPage >= 4.5, m.brandOnPage.toFixed(2))
 
   await page.goto(`${WEB}/store/${none.storeId}`)
   await page.getByRole('heading', { level: 1 }).first().waitFor()
   m = await page.evaluate(MEASURE)
-  check('a shop with no colour wears ZYRO green', m.brand === ZYRO_GREEN, m.brand)
+  check('a shop with no colour wears Zyro lime', m.brand === ZYRO_LIME, m.brand)
 
   // The platform: the pale shop's owner opens their dashboard, which must not wear their colour.
   await page.goto(`${WEB}/login`)
@@ -110,7 +114,7 @@ try {
   await page.waitForURL(/\/admin/)
   await page.locator('main').waitFor()
   m = await page.evaluate(MEASURE)
-  check("the merchant's dashboard keeps ZYRO green", m.brand === ZYRO_GREEN, m.brand)
+  check("the merchant's dashboard keeps Zyro lime", m.brand === ZYRO_LIME, m.brand)
 } catch (err) {
   failures += 1
   console.log('FAIL ', err.message)

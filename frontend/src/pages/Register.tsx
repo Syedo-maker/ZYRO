@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { saveExperience } from '../lib/experience'
 import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
+import { FIELD, Input } from '../components/ui/Input'
+import { AuthShell, AUTH_LINK, AUTH_TITLE } from '../components/ui/AuthShell'
 import { authErrorMessage } from '../lib/apiClient'
 import { DEFAULT_STORE_CURRENCY, STORE_CURRENCIES } from '../lib/currencies'
 
@@ -50,12 +51,10 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-8 flex flex-col gap-5">
+    <AuthShell>
         <div>
-          <div className="font-display text-2xl font-bold">ZYRO</div>
-          <h1 className="font-display text-lg font-semibold mt-4">Create your store</h1>
-          <p className="text-sm text-text-secondary mt-1">
+          <h1 className={AUTH_TITLE}>Create your store</h1>
+          <p className="text-sm text-text-secondary mt-2">
             Free to start; your store and account are created together.
           </p>
         </div>
@@ -109,7 +108,7 @@ export function RegisterPage() {
               id="currency"
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className={`h-11 border-border-input ${FIELD}`}
             >
               {STORE_CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -134,11 +133,10 @@ export function RegisterPage() {
 
         <p className="text-sm text-text-secondary text-center">
           Already have an account?{' '}
-          <Link to="/login" className="text-brand font-semibold">
+          <Link to="/login" className={AUTH_LINK}>
             Log in
           </Link>
         </p>
-      </div>
-    </div>
+    </AuthShell>
   )
 }

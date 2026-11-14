@@ -86,7 +86,7 @@ export function ReturnDialog({ sale, onClose, onReturned }: { sale: Sale; onClos
   return (
     <Dialog open title={`Return items from sale #${sale.orderNumber}`} onClose={() => !busy && onClose()} size="lg">
       <div className="flex flex-col gap-4">
-        <ul className="divide-y divide-border border border-border rounded-[10px]">
+        <ul className="divide-y divide-border border border-border rounded-control">
           {sale.items.map((item) => {
             const left = item.quantity - item.returnedQuantity
             const value = picks.get(item.id) ?? 0
@@ -106,7 +106,7 @@ export function ReturnDialog({ sale, onClose, onReturned }: { sale: Sale; onClos
                     <button
                       aria-label={`Return fewer ${item.productTitleSnapshot}`}
                       onClick={() => setQty(item.id, left, value - 1)}
-                      className="h-10 w-10 rounded-[10px] border border-border text-lg font-semibold hover:bg-bg"
+                      className="h-10 w-10 rounded-control border border-border text-lg font-semibold hover:bg-bg"
                     >
                       -
                     </button>
@@ -116,7 +116,7 @@ export function ReturnDialog({ sale, onClose, onReturned }: { sale: Sale; onClos
                     <button
                       aria-label={`Return more ${item.productTitleSnapshot}`}
                       onClick={() => setQty(item.id, left, value + 1)}
-                      className="h-10 w-10 rounded-[10px] border border-border text-lg font-semibold hover:bg-bg"
+                      className="h-10 w-10 rounded-control border border-border text-lg font-semibold hover:bg-bg"
                     >
                       +
                     </button>
@@ -136,7 +136,7 @@ export function ReturnDialog({ sale, onClose, onReturned }: { sale: Sale; onClos
                 type="button"
                 aria-pressed={method === m}
                 onClick={() => setMethod(m)}
-                className={`flex-1 h-11 rounded-[10px] border text-sm font-semibold capitalize ${
+                className={`flex-1 h-11 rounded-control border text-sm font-semibold capitalize ${
                   method === m ? 'border-brand bg-brand-soft text-brand' : 'border-border hover:bg-bg'
                 }`}
               >
@@ -155,7 +155,7 @@ export function ReturnDialog({ sale, onClose, onReturned }: { sale: Sale; onClos
             maxLength={500}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="h-11 rounded-[10px] border border-border-input px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-control border border-border-input px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           />
         </div>
 

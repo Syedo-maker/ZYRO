@@ -199,7 +199,7 @@ export function CategoriesPage() {
                           setRenaming({ id: c.id, name: e.target.value })
                           if (renameError) setRenameError(null)
                         }}
-                        className="h-9 min-w-0 flex-1 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                        className="h-9 min-w-0 flex-1 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
                       />
                       <Button type="submit" size="sm" disabled={busyId === c.id}>
                         {busyId === c.id ? 'Saving…' : 'Save'}

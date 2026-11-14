@@ -5,11 +5,12 @@ import type { CSSProperties } from 'react'
  *
  * The brand tokens (--color-brand and friends, src/index.css) are CSS variables that every utility
  * reads at run time, so setting them on a storefront's root element re-colours everything inside it.
- * What this file adds is the guarantee: a merchant can pick any colour in settings, including a pale
- * yellow that white text would vanish on, and the shop must still be readable. So the colour is
- * deepened, keeping its hue, only as far as it has to be for brand-coloured text to reach 4.5:1 on
- * the page, on a card and on its own soft tint, and for white text on a brand button to reach 4.5:1.
- * A colour that already passes is used exactly as the merchant chose it.
+ * What this file adds is the guarantee: a merchant can pick any colour in settings, including a deep
+ * navy that would vanish on the dark page, and the shop must still be readable. So the colour is
+ * lightened, keeping its hue, only as far as it has to be for brand-coloured text to reach 4.5:1 on
+ * the lightest dark surface it sits on and on its own soft tint; the text on a brand button is black
+ * or white, whichever reads better (always at least 4.5:1). A colour that already passes is used
+ * exactly as the merchant chose it.
  */
 
 export interface BrandColours {
@@ -20,8 +21,12 @@ export interface BrandColours {
 }
 
 const HEX = /^#[0-9a-f]{6}$/i
-const PAGE = '#f4f3ee' // --zyro-cream-50, the lightest-but-one surface brand text sits on
+// --zyro-night-700, the lightest surface brand-coloured text sits on (passing there covers the
+// page and the cards, which are darker), and --zyro-black, the page a soft tint is mixed towards.
+const SURFACE = '#15181e'
+const PAGE = '#030407'
 const WHITE = '#ffffff'
+const BLACK = '#030407'
 const MIN = 4.5
 
 type Rgb = [number, number, number]
@@ -45,28 +50,26 @@ export function contrast(a: string, b: string) {
 export function brandColours(themeColor: string | null | undefined): BrandColours | null {
   if (!themeColor || !HEX.test(themeColor)) return null
   const base = toRgb(themeColor.toLowerCase())
-  const black: Rgb = [0, 0, 0]
   const white: Rgb = [255, 255, 255]
 
-  // Mixing towards black lowers luminance at every step, so the first step that passes is the
+  // Mixing towards white raises luminance at every step, so the first step that passes is the
   // smallest change that does. 100 steps of 1% is fine-grained enough to be invisible.
   for (let step = 0; step <= 100; step++) {
-    const brand = toHex(mix(base, black, step / 100))
-    const brandSoft = toHex(mix(toRgb(brand), white, 0.88))
-    // The page is darker than a card, so passing on the page covers the card too.
-    if (contrast(brand, PAGE) >= MIN && contrast(brand, brandSoft) >= MIN) {
+    const brand = toHex(mix(base, white, step / 100))
+    const brandSoft = toHex(mix(toRgb(brand), toRgb(PAGE), 0.86))
+    if (contrast(brand, SURFACE) >= MIN && contrast(brand, brandSoft) >= MIN) {
       return {
         brand,
-        brandHover: toHex(mix(toRgb(brand), black, 0.18)),
+        brandHover: toHex(mix(toRgb(brand), white, 0.18)),
         brandSoft,
-        onBrand: WHITE,
+        onBrand: contrast(BLACK, brand) >= contrast(WHITE, brand) ? BLACK : WHITE,
       }
     }
   }
-  return null // unreachable: black passes every check
+  return null // unreachable: white passes every check
 }
 
-/** The style for a storefront's root element; undefined keeps ZYRO's own brand. */
+/** The style for a storefront's root element; undefined keeps Zyro's own lime. */
 export function brandStyle(themeColor: string | null | undefined): CSSProperties | undefined {
   const c = brandColours(themeColor)
   if (!c) return undefined

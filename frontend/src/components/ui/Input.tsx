@@ -5,6 +5,14 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string
 }
 
+/**
+ * The field every form uses. The shared look of fields (`fieldStyles`) is exported too, for the
+ * selects and text areas written inline in pages.
+ */
+export const FIELD =
+  'rounded-control border bg-surface px-3.5 text-sm text-text placeholder:text-text-muted outline-none ' +
+  'transition-[border-color,box-shadow] duration-150 ease-standard focus:border-brand focus:ring-4 focus:ring-brand/15'
+
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { label, error, id, className = '', ...props },
   ref
@@ -20,12 +28,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         ref={ref}
         id={id}
         // A read-only field (a value worked out for the user) sits on the page colour, so it does not look typeable.
-        className={`h-11 rounded-[10px] border px-3.5 text-sm ${props.readOnly ? 'bg-bg' : 'bg-surface'} outline-none focus:ring-2 focus:ring-brand/30 ${
-          error ? 'border-danger' : 'border-border-input focus:border-brand'
-        } ${className}`}
+        className={`h-11 ${FIELD} ${props.readOnly ? 'bg-bg' : ''} ${error ? 'border-danger' : 'border-border-input'} ${className}`}
         {...props}
       />
-      {error && <span className="text-xs text-danger">{error}</span>}
+      {error && <span className="text-xs font-medium text-danger">{error}</span>}
     </div>
   )
 })

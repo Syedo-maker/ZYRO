@@ -37,8 +37,9 @@ export function StorefrontHome() {
 
   return (
     <div className="flex flex-col gap-10">
-      <section aria-labelledby="home-heading" className="flex flex-col items-start gap-4 rounded-2xl border border-border bg-surface px-6 py-10 sm:px-10">
-        <h1 id="home-heading" className="font-display text-3xl font-bold sm:text-4xl">
+      <section aria-labelledby="home-heading" className="relative flex flex-col items-start gap-4 overflow-hidden rounded-3xl border border-border bg-surface px-6 py-12 sm:px-10">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand/15 blur-[90px]" />
+        <h1 id="home-heading" className="font-serif text-h1 font-normal italic tracking-tight">
           {store.name}
         </h1>
         <p className="max-w-xl text-sm text-text-secondary">Browse the latest arrivals or jump straight to a category. Checkout is secure and you do not need an account to buy.</p>

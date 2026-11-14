@@ -55,14 +55,15 @@ await step('logged-out visitors are sent to login', async () => {
   check('guard: /admin/products redirects a logged-out visitor to /login', true)
   await page.evaluate(() => document.fonts.ready)
   const fonts = await page.evaluate(async () => {
-    await Promise.all([document.fonts.load('700 20px "Plus Jakarta Sans"'), document.fonts.load('400 14px "IBM Plex Sans"')])
+    await Promise.all([document.fonts.load('700 20px "Plus Jakarta Sans"'), document.fonts.load('400 14px "Plus Jakarta Sans"'), document.fonts.load('italic 400 40px "Instrument Serif"')])
     return {
       display: document.fonts.check('700 20px "Plus Jakarta Sans"'),
-      body: document.fonts.check('400 14px "IBM Plex Sans"'),
+      body: document.fonts.check('400 14px "Plus Jakarta Sans"'),
+      serif: document.fonts.check('italic 400 40px "Instrument Serif"'),
       loaded: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')),
     }
   })
-  check('design: the Plus Jakarta Sans and IBM Plex Sans web fonts actually load', fonts.display && fonts.body && fonts.loaded.some((f) => /Plus Jakarta Sans/.test(f)) && fonts.loaded.some((f) => /IBM Plex Sans/.test(f)), JSON.stringify(fonts.loaded))
+  check('design: the Plus Jakarta Sans and Instrument Serif web fonts actually load', fonts.display && fonts.body && fonts.serif && fonts.loaded.some((f) => /Plus Jakarta Sans/.test(f)) && fonts.loaded.some((f) => /Instrument Serif/.test(f)), JSON.stringify(fonts.loaded))
   await page.getByRole('link', { name: 'Create one' }).click()
   // The URL changes before React swaps the pages; typing now would fill the old login form.
   await page.getByRole('heading', { name: 'Create your store' }).waitFor()

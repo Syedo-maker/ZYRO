@@ -25,7 +25,7 @@ export function PosEntry() {
       <ul className="flex flex-col gap-2">
         {stores.map((s) => (
           <li key={s.id}>
-            <Link to={`/pos/${s.id}`} className="block rounded-[10px] border border-border px-4 py-3 font-semibold hover:bg-bg">
+            <Link to={`/pos/${s.id}`} className="block rounded-control border border-border px-4 py-3 font-semibold hover:bg-bg">
               {s.name}
             </Link>
           </li>
@@ -111,7 +111,7 @@ function PosFrame() {
   const [closing, setClosing] = useState(false)
 
   const link = ({ isActive }: { isActive: boolean }) =>
-    `rounded-[10px] px-4 py-2 text-sm font-semibold transition-colors ${isActive ? 'bg-on-inverse/15 text-on-inverse' : 'text-on-inverse/75 hover:text-on-inverse'}`
+    `rounded-control px-4 py-2 text-sm font-semibold transition-colors ${isActive ? 'bg-on-inverse/15 text-on-inverse' : 'text-on-inverse/75 hover:text-on-inverse'}`
 
   async function signOut() {
     await logout()
@@ -142,7 +142,7 @@ function PosFrame() {
               <span className="text-on-inverse/75">Shift open since {formatDateTime(shift.openedAt)}</span>
               <button
                 onClick={() => setClosing(true)}
-                className="rounded-[10px] border border-on-inverse/40 px-3 py-1.5 font-semibold hover:bg-on-inverse/10"
+                className="rounded-control border border-on-inverse/40 px-3 py-1.5 font-semibold hover:bg-on-inverse/10"
               >
                 Close shift
               </button>

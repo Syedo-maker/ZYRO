@@ -135,7 +135,7 @@ export function CatalogPage() {
             id="sort"
             value={sorts.includes(sort) ? sort : sorts[0]}
             onChange={(e) => update({ sort: e.target.value })}
-            className="h-11 rounded-[10px] border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-control border border-border-input bg-surface px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           >
             {sorts.map((s) => (
               <option key={s} value={s}>
@@ -188,12 +188,12 @@ export function CatalogPage() {
                   <label className="sr-only" htmlFor="minPrice">
                     Minimum price
                   </label>
-                  <input id="minPrice" name="minPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Min" defaultValue={minPrice} className="h-10 w-full rounded-[10px] border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+                  <input id="minPrice" name="minPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Min" defaultValue={minPrice} className="h-10 w-full rounded-control border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
                   <span aria-hidden="true">-</span>
                   <label className="sr-only" htmlFor="maxPrice">
                     Maximum price
                   </label>
-                  <input id="maxPrice" name="maxPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Max" defaultValue={maxPrice} className="h-10 w-full rounded-[10px] border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
+                  <input id="maxPrice" name="maxPrice" type="number" min="0" step="0.01" inputMode="decimal" placeholder="Max" defaultValue={maxPrice} className="h-10 w-full rounded-control border border-border-input px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30" />
                 </div>
               </fieldset>
               <label className="flex items-center gap-2 text-sm">

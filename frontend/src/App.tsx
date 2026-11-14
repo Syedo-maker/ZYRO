@@ -48,6 +48,9 @@ const DailySummaryPage = lazy(() => import('./pages/pos/DailySummaryPage').then(
 const PosEntry = lazy(() => import('./pages/pos/PosLayout').then((m) => ({ default: m.PosEntry })))
 const PosLayout = lazy(() => import('./pages/pos/PosLayout').then((m) => ({ default: m.PosLayout })))
 const PosRegisterPage = lazy(() => import('./pages/pos/RegisterPage').then((m) => ({ default: m.RegisterPage })))
+// The living style guide, in development only: in a production build this is null and the page is
+// not bundled at all.
+const StyleGuidePage = import.meta.env.DEV ? lazy(() => import('./pages/dev/StyleGuidePage').then((m) => ({ default: m.StyleGuidePage }))) : null
 
 /** Shown while a route's chunk is fetched. Deliberately blank: a flash of a spinner on a fast
  *  connection is more distracting than a moment of nothing. */
@@ -107,6 +110,7 @@ export default function App() {
                 role choice Issue 2 introduced; a signed-in visitor is redirected past it. */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/shop" element={<ShopDirectoryPage />} />
+            {StyleGuidePage && <Route path="/dev/styleguide" element={<StyleGuidePage />} />}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

@@ -209,7 +209,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
           rows={3}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="rounded-[10px] border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+          className="rounded-control border border-border-input px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
         />
       </div>
 
@@ -248,10 +248,10 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
                 setDiscountValue(e.target.value)
                 setSwitchMemo(null)
               }}
-              className="h-11 min-w-0 flex-1 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-11 min-w-0 flex-1 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
             {/* Rs or %: switching converts the value (Rs 150 off a 1,000 MRP is 15%), and switching straight back restores it. */}
-            <div role="group" aria-label="Discount in" className="flex shrink-0 rounded-[10px] border border-border-input p-0.5">
+            <div role="group" aria-label="Discount in" className="flex shrink-0 rounded-control border border-border-input p-0.5">
               {(['amount', 'percent'] as const).map((t) => (
                 <button
                   key={t}
@@ -299,7 +299,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
         </label>
         {categories !== null && categories.filter((c) => c.active).length === 0 ? (
           // Nothing to choose from yet: say what to do instead of showing an empty dropdown.
-          <p className="rounded-[10px] border border-border bg-bg px-3.5 py-3 text-sm text-text-secondary">
+          <p className="rounded-control border border-border bg-bg px-3.5 py-3 text-sm text-text-secondary">
             You have no categories yet.{' '}
             <Link to="/admin/categories" className="font-semibold text-brand underline underline-offset-2">
               Create a category
@@ -315,7 +315,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
               setCategoryId(e.target.value)
               setCategoryHint(null)
             }}
-            className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
           >
             <option value="" disabled>
               {categories === null ? 'Loading categories…' : 'Choose a category'}
@@ -365,7 +365,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
                 type="button"
                 aria-label="Remove image"
                 onClick={() => setImages((prev) => prev.filter((u) => u !== url))}
-                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 text-white text-[10px] leading-4"
+                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-bg/80 text-text text-[10px] leading-4"
               >
                 ×
               </button>

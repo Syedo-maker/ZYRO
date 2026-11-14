@@ -12,7 +12,7 @@ export function LegalLayout({ title, intro, sections }: { title: string; intro: 
     <div className="min-h-screen bg-bg">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link to="/" className="rounded-[10px] text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          <Link to="/" className="rounded-control text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
             <Wordmark className="text-xl" />
           </Link>
           <nav aria-label="Legal" className="flex gap-4 text-sm font-semibold">

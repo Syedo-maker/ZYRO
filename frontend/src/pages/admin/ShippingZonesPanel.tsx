@@ -27,7 +27,7 @@ function ZoneForm({ initial, onSave, onCancel }: { initial?: ShippingZone; onSav
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="mb-4 grid grid-cols-1 gap-3 rounded-[10px] bg-bg p-4 sm:grid-cols-[1.5fr_1fr_1fr_auto] sm:items-end">
+    <form onSubmit={(e) => void submit(e)} className="mb-4 grid grid-cols-1 gap-3 rounded-control bg-bg p-4 sm:grid-cols-[1.5fr_1fr_1fr_auto] sm:items-end">
       <Input id="zone-name" label="Zone name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required />
       <Input id="zone-region" label="Region" value={region} onChange={(e) => setRegion(e.target.value)} maxLength={100} required />
       <Input id="zone-rate" label="Rate" type="number" min="0" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} required />
@@ -81,7 +81,7 @@ export function ShippingZonesPanel({ storeId, currency }: { storeId: string; cur
   }
 
   return (
-    <section aria-labelledby="zones-heading" className="rounded-[14px] border border-border bg-surface p-5">
+    <section aria-labelledby="zones-heading" className="rounded-lg border border-border bg-surface p-5">
       <div className="mb-3.5 flex items-center justify-between">
         <h2 id="zones-heading" className="text-sm font-bold">Shipping zones</h2>
         {editing.mode === 'closed' && (

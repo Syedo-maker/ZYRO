@@ -54,7 +54,7 @@ const STEPS = [
         </div>
         <div className="flex items-center justify-between rounded-lg bg-inverse px-2.5 py-2">
           <div className="h-2 w-16 rounded bg-on-inverse/50" />
-          <div className="h-2 w-8 rounded bg-accent-display" />
+          <div className="h-2 w-8 rounded bg-accent" />
         </div>
       </div>
     ),
@@ -67,8 +67,8 @@ export function HowItWorks() {
     <section id="how-it-works" className="bg-bg py-16 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="max-w-2xl font-display text-3xl font-extrabold leading-tight text-text sm:text-4xl">
-            Live in three steps.
+          <h2 className="max-w-2xl font-serif text-h1 font-normal tracking-tight text-text">
+            Live in <em className="italic text-accent">three steps</em>.
           </h2>
         </Reveal>
 

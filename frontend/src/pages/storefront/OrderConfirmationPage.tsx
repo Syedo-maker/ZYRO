@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
@@ -111,9 +112,7 @@ export function OrderConfirmationPage() {
     return (
       <Card>
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success-soft">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="text-success" aria-hidden="true">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          <Check aria-hidden="true" className="h-[30px] w-[30px] text-success" strokeWidth={2.4} />
         </div>
         <h1 className="font-display text-[22px] font-bold">Order confirmed</h1>
         <p className="text-[13px] leading-relaxed text-text-secondary">
