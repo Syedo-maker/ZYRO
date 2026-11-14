@@ -67,7 +67,7 @@ services:
 
   redis:
     restart: unless-stopped
-    image: redis:7.4.11-alpine
+    image: redis:8.10.2-alpine
     # As on Azure Managed Redis: never drop keys (BullMQ jobs) under memory pressure.
     command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
     volumes: [redis-data:/data]
