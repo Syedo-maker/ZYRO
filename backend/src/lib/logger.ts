@@ -16,7 +16,11 @@ const pretty = process.env.NODE_ENV !== "production" && !isTest && process.env.L
 
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? (isTest ? "silent" : "info"),
-  base: { service: process.env.OTEL_SERVICE_NAME ?? "zyro-api" },
+  // Every line says which process and which environment it came from (APP_ENV, config/envCheck.ts).
+  base: {
+    service: process.env.OTEL_SERVICE_NAME ?? "zyro-api",
+    environment: process.env.APP_ENV ?? (process.env.NODE_ENV === "production" ? "production" : isTest ? "test" : "development"),
+  },
   timestamp: pino.stdTimeFunctions.isoTime,
   formatters: { level: (label) => ({ level: label }) },
   redact: {
@@ -38,3 +42,9 @@ export const logger = pino({
 
 /** The message of anything thrown, for a log field. */
 export const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+/** The store id in an API path, or undefined (directory routes such as /stores/categories have none). */
+export function tenantIdFromPath(url: string): string | undefined {
+  const id = /^\/api\/v1\/stores\/([a-z0-9]{20,40})(?:[/?]|$)/.exec(url)?.[1];
+  return id && id.startsWith("c") ? id : undefined;
+}

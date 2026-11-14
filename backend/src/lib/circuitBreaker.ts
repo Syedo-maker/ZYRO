@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { externalCalls, onScrape } from "./metrics";
 
 /**
  * A circuit breaker for calls to outside services (production readiness, 2026-11).
@@ -51,6 +52,10 @@ const registry = new Map<string, Breaker>();
 /** Every breaker in this process, for the metrics endpoint. */
 export const breakerSnapshots = () => [...registry.values()].map((b) => b.snapshot());
 
+onScrape("zyro_circuit_open", "1 while an outside service's circuit breaker is open (calls fail at once).", ["service"], (set) => {
+  for (const b of breakerSnapshots()) set({ service: b.name }, b.state === "closed" ? 0 : 1);
+});
+
 export function createBreaker(name: string, options: BreakerOptions = {}): Breaker {
   const threshold = options.threshold ?? 5;
   const openMs = options.openMs ?? 30_000;
@@ -72,6 +77,7 @@ export function createBreaker(name: string, options: BreakerOptions = {}): Break
     async run<T>(call: () => Promise<T>): Promise<T> {
       const current = state();
       if (current === "open" || (current === "half-open" && trialInFlight)) {
+        externalCalls.inc({ service: name, outcome: "open" });
         const retryInMs = Math.max(0, openMs - (now() - (openedAt ?? now())));
         throw options.openError ? options.openError(name, retryInMs) : new CircuitOpenError(name, retryInMs);
       }
@@ -79,11 +85,13 @@ export function createBreaker(name: string, options: BreakerOptions = {}): Break
       if (isTrial) trialInFlight = true;
       try {
         const result = await call();
+        externalCalls.inc({ service: name, outcome: "ok" });
         if (openedAt !== null) logger.info({ breaker: name }, `${name} is answering again: circuit closed`);
         failures = 0;
         openedAt = null;
         return result;
       } catch (err) {
+        externalCalls.inc({ service: name, outcome: counts(err) ? "failed" : "caller_error" });
         if (counts(err)) {
           failures += 1;
           if (isTrial || failures >= threshold) {

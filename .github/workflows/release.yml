@@ -1,0 +1,80 @@
+# After CI passes on main: build every production image, tag it with the commit, start the
+# production-like stack from those images (compose.yaml) and run the smoke test against it. That is
+# "staging-ready": the exact images are built and proven to work together. It stops there; nothing
+# is pushed to a registry or deployed. The deploy job at the end is a commented template to fill in
+# once a hosting provider is chosen (no provider secrets are in this repository).
+name: Release (staging-ready)
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  staging-ready:
+    name: Build, tag and smoke-test the images
+    # Only a green CI run of a push to this repository's own main (a fork's pull request can name its
+    # branch "main" too; audit 2026-11).
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - id: tag
+        run: echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the images
+        run: docker compose build
+      - name: Tag them with the commit
+        run: |
+          for image in zyro-web zyro-api zyro-migrate zyro-reco; do
+            docker tag "$image:local" "$image:${{ steps.tag.outputs.tag }}"
+          done
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep -E "^zyro-.*:${{ steps.tag.outputs.tag }}"
+      - name: Start the production-like stack from scratch
+        run: |
+          docker compose up -d
+          for _ in $(seq 1 90); do curl -sf http://localhost:8080/healthz > /dev/null && curl -sf http://localhost:8080/api/v1/plans > /dev/null && exit 0; sleep 3; done
+          docker compose ps; docker compose logs --tail 80; exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Smoke test (headers, sign-up, uploads, payments, recommendations, restart)
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+          node e2e/smoke.e2e.mjs
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs --tail 200
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
+
+  # deploy:
+  #   name: Deploy to staging (template: fill in for the chosen hosting provider)
+  #   needs: staging-ready
+  #   runs-on: ubuntu-24.04
+  #   environment: staging            # add required reviewers on the GitHub environment for production
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     # 1. Sign in to the provider with short-lived OpenID Connect credentials (no long-lived keys
+  #     #    in GitHub): set them as variables on the GitHub environment.
+  #     # 2. Push the images built above to the provider's registry, tagged with the commit.
+  #     # 3. Run the migrations once (the zyro-migrate image), then release the API, worker, web and
+  #     #    recommendation images.
+  #     # 4. Run frontend/e2e/smoke.e2e.mjs with BASE=https://<staging address>; roll back on failure.

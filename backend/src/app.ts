@@ -39,15 +39,23 @@ import { storeScoutRouter } from "./modules/scout/scout.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 import { filesRouter } from "./modules/files/files.routes";
 import { categoryRouter } from "./modules/categories/category.routes";
-import { logger } from "./lib/logger";
+import { logger, tenantIdFromPath } from "./lib/logger";
+import { reportError } from "./lib/errorTracking";
+import { metricsAllowed, metricsText, recordHttpMetrics } from "./lib/metrics";
+import { registerQueueMetrics } from "./lib/queueMetrics";
 import { isDraining, readiness } from "./lib/lifecycle";
 import { requestTimeout } from "./middleware/timeout.middleware";
 import { httpsOnly } from "./middleware/httpsOnly.middleware";
 
 export const app = express();
 
+
 // Behind a reverse proxy, req.ip would be the proxy's; this makes rate limits see each visitor.
 if (env.trustProxy > 0) app.set("trust proxy", env.trustProxy);
+
+// Request counts and timings for /metrics (lib/metrics.ts), and the queue backlog read when scraped.
+app.use(recordHttpMetrics);
+registerQueueMetrics();
 
 // HTTPS only, when FORCE_HTTPS=true (off by default: the proxy in front usually redirects already).
 app.use(httpsOnly);
@@ -76,6 +84,9 @@ app.use(
       res: (res) => ({ status: res.statusCode }),
     },
     customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? "error" : "info"),
+    // Which store a request was about, so one store's traffic and errors can be found in the logs.
+    // Read from the address (/api/v1/stores/<id>/...), only when it has the shape of a store id.
+    customProps: (req) => ({ tenantId: tenantIdFromPath(String(req.url)) }),
     autoLogging: { ignore: (req) => req.url === "/health" || req.url === "/ready" },
   })
 );
@@ -105,6 +116,13 @@ app.use(
 
 // Liveness and readiness (lib/lifecycle.ts explains why they are two different questions).
 app.get("/health", (_req, res) => res.status(200).json({ status: isDraining() ? "draining" : "ok" }));
+// Prometheus-format metrics. Not under /api, so the web container never exposes it; in production
+// only a scraper with METRICS_TOKEN gets an answer (lib/metrics.ts).
+app.get("/metrics", async (req, res) => {
+  if (!metricsAllowed(req.headers.authorization, env.isProduction)) return res.status(404).type("text/plain").send("Not found");
+  const { contentType, body } = await metricsText();
+  res.type(contentType).send(body);
+});
 app.get("/ready", async (_req, res) => {
   const result = await readiness();
   res.status(result.ready ? 200 : 503).json({ status: result.ready ? "ready" : isDraining() ? "draining" : "not ready", checks: result.checks });
@@ -186,6 +204,7 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   }
 
   req.log.error({ err }, "unhandled error");
+  reportError(err, { where: "request", requestId: String(req.id), tenantId: tenantIdFromPath(req.originalUrl), method: req.method, path: req.originalUrl });
   res.status(500).type("application/problem+json").json({
     type: "https://zyro.dev/errors/internal",
     title: "Internal server error",

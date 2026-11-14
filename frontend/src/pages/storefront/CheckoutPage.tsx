@@ -231,10 +231,10 @@ export function CheckoutPage() {
                 className="flex items-end gap-2"
                 aria-label="Have a code?"
               >
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <Input id="discount-code" label="Discount code" maxLength={30} autoComplete="off" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} error={codeError ?? undefined} />
                 </div>
-                <Button type="submit" variant="secondary" disabled={applying || !codeInput.trim()} className="h-11">
+                <Button type="submit" variant="secondary" disabled={applying || !codeInput.trim()} className="h-11 shrink-0">
                   {applying ? '...' : 'Apply'}
                 </Button>
               </form>

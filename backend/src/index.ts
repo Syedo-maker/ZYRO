@@ -7,11 +7,13 @@ import { prepareStorage } from "./lib/storage";
 import { installCrashHandlers, installShutdown, registerConnectionClosers } from "./lib/lifecycle";
 import { errorMessage, logger } from "./lib/logger";
 import { logEnvReport } from "./config/envLog";
+import { initErrorTracking } from "./lib/errorTracking";
 import { closeQueuesOnShutdown, startWorkers } from "./workers";
 import { checkAiProviders, describeAiHealth } from "./lib/aiHealth";
 
 async function main() {
   logEnvReport("api");
+  initErrorTracking("api");
   installCrashHandlers();
   await connectMongo();
   await prepareStorage();
