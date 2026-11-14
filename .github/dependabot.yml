@@ -1,46 +1,59 @@
-# Weekly dependency update pull requests. Minor and patch updates are grouped into one pull request
-# per ecosystem so they are quick to review; major versions come one at a time (they can break
-# things and need their own test run). CI runs on every one of them.
+# Weekly dependency update pull requests, on hold for major versions.
+#
+# The owners' decision (14 November 2026): no major version updates are proposed until they say so
+# (after the viva), and no Dependabot pull request is merged before the viva, minor and patch included.
+# Each package type below proposes at most one pull request a week, grouping all of its minor and patch
+# updates (Dependabot cannot group across package types, so that is at most five a week). CI runs on
+# every one. To allow major versions again, delete the `ignore` blocks.
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /backend
+    directories: [/backend, /frontend]
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
     groups:
-      backend-minor-and-patch: { update-types: [minor, patch] }
-
-  - package-ecosystem: npm
-    directory: /frontend
-    schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
-    groups:
-      frontend-minor-and-patch: { update-types: [minor, patch] }
+      npm-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
 
   - package-ecosystem: pip
     directory: /recommendation-service
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
     groups:
-      python-minor-and-patch: { update-types: [minor, patch] }
+      python-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
 
-  # Base images are pinned to exact versions in the Dockerfiles and compose files; these propose the
-  # updates.
+  # Base images are pinned to exact versions in the Dockerfiles and compose files.
   - package-ecosystem: docker
-    directory: /backend
+    directories: [/backend, /frontend, /recommendation-service]
     schedule: { interval: weekly, day: monday }
-  - package-ecosystem: docker
-    directory: /frontend
-    schedule: { interval: weekly, day: monday }
-  - package-ecosystem: docker
-    directory: /recommendation-service
-    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 1
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    groups:
+      base-images-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
+
   - package-ecosystem: docker-compose
     directory: /
     schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 1
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    groups:
+      compose-images-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
 
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 1
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
     groups:
-      actions: { patterns: ["*"] }
+      actions-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
