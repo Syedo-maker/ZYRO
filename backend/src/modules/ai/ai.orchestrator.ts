@@ -3,7 +3,7 @@ import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
 import { getAiQueue, readyAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
 import type { Job, QueueEvents } from "bullmq";
-import type { AiGenerateResult } from "../../lib/aiProvider";
+import { aiConfigured, type AiGenerateResult } from "../../lib/aiProvider";
 import { allowsImage, modelFor, tierFor } from "../../lib/aiModels";
 import { FRIENDLY_AI_UNAVAILABLE } from "../../lib/aiErrors";
 import { getRedis } from "../../lib/redis";
@@ -102,6 +102,11 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
       logger.warn({ err: (err as Error).message }, "AI cache read failed"); // a cache problem only costs a real call
     }
   }
+
+  // No AI provider set up at all: say so at once. Queueing the job would only retry it three times
+  // with backoff (about 6 s) before giving the same answer, which kept a shopper submitting a receipt
+  // waiting for nothing. No quota is touched.
+  if (!aiConfigured()) throw Errors.serviceUnavailable(FRIENDLY_AI_UNAVAILABLE);
 
   const month = currentMonth();
   const source = platformPays ? null : await reserveQuota(input.tenantId, kind, month);

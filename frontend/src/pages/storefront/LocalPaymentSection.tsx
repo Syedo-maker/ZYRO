@@ -58,6 +58,7 @@ export function LocalPaymentSection({
   zoneId,
   code,
   onPlaced,
+  onAvailability,
 }: {
   storeId: string
   method: PayMethod
@@ -67,6 +68,8 @@ export function LocalPaymentSection({
   zoneId?: string
   code?: string
   onPlaced: (order: PlacedOrder) => void
+  /** Tells the page whether card payment is offered, and whether any way to pay is. */
+  onAvailability?: (available: { card: boolean; any: boolean }) => void
 }) {
   const [options, setOptions] = useState<PaymentOptions | null>(null)
   const [placing, setPlacing] = useState(false)
@@ -98,6 +101,26 @@ export function LocalPaymentSection({
 
   const codAvailable = options?.cod.available ?? false
   const bankAvailable = options?.bankTransfer.available ?? false
+  const cardAvailable = options?.card?.available ?? true
+
+  // Card payment is offered only where it is set up. Without it, the first method that works is chosen
+  // for the shopper, and the page is told so it does not show a card "Pay" button that cannot work.
+  useEffect(() => {
+    if (!options) return
+    onAvailability?.({ card: cardAvailable, any: cardAvailable || codAvailable || bankAvailable })
+    if (method === 'card' && !cardAvailable) {
+      if (codAvailable) onMethodChange('cod')
+      else if (bankAvailable) onMethodChange('bank_transfer')
+    }
+  }, [options, cardAvailable, codAvailable, bankAvailable, method, onMethodChange, onAvailability])
+
+  if (options && !cardAvailable && !codAvailable && !bankAvailable) {
+    return (
+      <p role="status" className="rounded-control border border-border bg-surface px-4 py-3.5 text-[13px] text-text-secondary">
+        This store is not taking orders online at the moment. Please contact the store or try again later.
+      </p>
+    )
+  }
   if (!options || (!codAvailable && !bankAvailable && method === 'card')) return null
 
   const choice = (value: PayMethod, title: string, note: string, disabled = false) => (
@@ -120,7 +143,7 @@ export function LocalPaymentSection({
       </h2>
       <fieldset className="flex flex-col gap-2.5">
         <legend className="sr-only">Payment method</legend>
-        {choice('card', 'Card', 'Pay now on a secure page. Your card details never reach this shop.')}
+        {cardAvailable && choice('card', 'Card', 'Pay now on a secure page. Your card details never reach this shop.')}
         {codAvailable
           ? choice('cod', 'Cash on delivery', options.cod.advanceAmount ? `Pay ${formatMoney(options.cod.advanceAmount, options.currency)} now and the rest to the courier.` : 'Pay the courier in cash when your parcel arrives.')
           : options.cod.note && choice('cod', 'Cash on delivery', options.cod.note, true)}

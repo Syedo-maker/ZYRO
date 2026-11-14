@@ -5095,10 +5095,16 @@ components:
 
     PaymentOptions:
       type: object
-      required: [currency, total, cod, bankTransfer]
+      required: [currency, total, card, cod, bankTransfer]
       properties:
         currency: { type: string }
         total: { type: number }
+        card:
+          type: object
+          description: "Whether card payment (Stripe) is set up on this platform. When it is not, the storefront offers only the methods below."
+          required: [available]
+          properties:
+            available: { type: boolean }
         cod:
           type: object
           properties:

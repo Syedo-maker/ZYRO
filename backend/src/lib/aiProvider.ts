@@ -159,6 +159,11 @@ export function setAiProvider(provider: AiProvider | undefined) {
   override = provider;
 }
 
+/** Whether any AI provider can be asked at all: a key is set, or a test or script installed a fake. */
+export function aiConfigured(): boolean {
+  return override !== undefined || configuredProviders().length > 0;
+}
+
 export function getAiProvider(): AiProvider {
   if (override) return override;
   real ??= createRealProvider();

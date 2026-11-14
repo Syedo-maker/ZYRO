@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import { useStore } from '../../context/StoreContext'
@@ -91,6 +91,10 @@ export function CheckoutPage() {
 
   // Part E: a local method places the order here rather than sending the shopper to Stripe.
   const [method, setMethod] = useState<PayMethod>('card')
+  // Whether this platform takes cards (Stripe set up); the payment section reports it.
+  const [cardOffered, setCardOffered] = useState(true)
+  const onAvailability = useCallback((a: { card: boolean }) => setCardOffered(a.card), [])
+  const showCard = method === 'card' && cardOffered
   const [delivery, setDelivery] = useState<DeliveryDetails>(emptyDelivery)
 
   async function handlePay() {
@@ -162,19 +166,20 @@ export function CheckoutPage() {
             <h2 id="payment-heading" className="mb-3 text-xs font-bold text-brand-ink">
               2. PAYMENT
             </h2>
-            {method === 'card' && (
+            {showCard && (
               <p className="rounded-control border border-border bg-surface px-4 py-3.5 text-[13px] leading-relaxed text-text-secondary">
                 You will enter your email, shipping address and card details on Stripe&apos;s secure payment page. ZYRO never sees or
                 stores your card number.
               </p>
             )}
-            <div className={method === 'card' ? 'mt-3' : ''}>
+            <div className={showCard ? 'mt-3' : ''}>
               <LocalPaymentSection
                 storeId={store.id}
                 method={method}
                 onMethodChange={setMethod}
                 delivery={delivery}
                 onDeliveryChange={setDelivery}
+                onAvailability={onAvailability}
                 zoneId={zoneId}
                 code={code}
                 onPlaced={(order) =>
@@ -250,7 +255,7 @@ export function CheckoutPage() {
             !error && <Spinner label="Calculating total" />
           )}
 
-          {method === 'card' && (
+          {showCard && (
             <Button onClick={() => void handlePay()} disabled={!quote || paying} className="mt-2 h-[50px]">
               {paying ? 'Redirecting to Stripe…' : quote ? `Pay ${formatMoney(quote.total, quote.currency)}` : 'Pay'}
             </Button>
