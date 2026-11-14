@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
 import { LegalLayout } from './LegalLayout'
 import { LEGAL } from '../../lib/legal'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /**
  * The Privacy Policy. Every statement here describes what the code does; documentation/Privacy_Notes.md
  * holds the detail behind each, and must be kept in step with this page when the code changes.
  */
 export function PrivacyPage() {
+  usePageMeta({ title: 'Privacy Policy | ZYRO', description: 'What ZYRO collects, why, who else handles it, and what you can ask us to do with it.' })
   return (
     <LegalLayout
       title="Privacy Policy"
@@ -46,7 +48,7 @@ export function PrivacyPage() {
               <ul>
                 <li>To run each shop: show products, take orders, record payments, stock and refunds.</li>
                 <li>To sign you in and keep your account secure, including limits on repeated wrong passwords.</li>
-                <li>To send the emails ZYRO sends for a shop, such as a reminder about items left in a cart.</li>
+                <li>To send the emails ZYRO sends for a shop, such as a reminder about items left in a cart. Every reminder has a link to stop them from that shop, and email apps show their own unsubscribe button.</li>
                 <li>For cash on delivery, to estimate whether an order is likely to be refused, so a shop can ask for advance payment. This uses a scrambled form of the phone number and counts of past deliveries and refusals; never the number itself, and never a name.</li>
                 <li>To show a merchant their own figures and a weekly tip worked out from their own totals only.</li>
               </ul>
@@ -177,6 +179,7 @@ export function PrivacyPage() {
                 <li>A random id that keeps a guest's cart, and one that keeps a conversation with a shop's assistant. Neither identifies you.</li>
                 <li>Which part of ZYRO you last used (shopping or running a shop), so it opens there.</li>
                 <li>On the register, the sale in progress, until it is finished or the tab is closed.</li>
+                <li>Your choice of dark or light colours, and in a shop, the product you looked at last and the shop's colours, so the page opens the way you left it.</li>
               </ul>
               <p>No advertising, analytics or tracking cookies, from us or anyone else.</p>
             </>

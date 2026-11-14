@@ -23,6 +23,8 @@ x-backend-env: &backend-env
   MONGODB_URI: mongodb://mongo:27017/zyro
   REDIS_URL: redis://redis:6379
   JWT_ACCESS_SECRET: ${ZYRO_JWT_ACCESS_SECRET:-k3J9vQ2mX8rT5wL1nB7cZ4yH6sD0fG9pA2uE5iO8tY1r}
+  # Required in production; this fallback is for this local stack only (set ZYRO_COD_PHONE_PEPPER to override).
+  COD_PHONE_PEPPER: ${ZYRO_COD_PHONE_PEPPER:-local-compose-only-pepper}
   PUBLIC_URL: http://localhost:8080
   CORS_ORIGIN: http://localhost:8080
   STOREFRONT_URL: http://localhost:8080

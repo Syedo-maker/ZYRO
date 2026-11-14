@@ -25,6 +25,8 @@ import { merchantReviewsRouter } from "./modules/reviews/review.routes";
 import { aiRouter } from "./modules/ai/ai.routes";
 import { assistantRouter } from "./modules/assistant/assistant.routes";
 import { cartRecoveryRouter } from "./modules/cart-recovery/cartRecovery.routes";
+import { unsubscribeRouter } from "./modules/cart-recovery/unsubscribe.routes";
+import { seoRouter } from "./modules/seo/seo.routes";
 import { insightsRouter } from "./modules/insights/insights.routes";
 import { billingRouter, plansRouter } from "./modules/billing/billing.routes";
 import { platformRouter } from "./modules/platform/platform.routes";
@@ -165,6 +167,8 @@ v1.use("/demo", demoRouter);
 v1.use("/plans", plansRouter);
 v1.use("/files", filesRouter);
 v1.use("/platform", platformRouter);
+v1.use("/unsubscribe", unsubscribeRouter);
+v1.use("/seo", seoRouter);
 app.use("/api/v1", v1);
 
 app.use((req, res) => {

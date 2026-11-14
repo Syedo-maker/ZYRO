@@ -921,6 +921,72 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /stores/{storeId}/policies:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [stores]
+      operationId: store_policies_list
+      summary: The shop's own policy pages
+      description: |
+        Public. The policies this shop has written (returns and refunds, shipping, privacy, terms), in that
+        order. A kind the shop has not written is left out. Plain text, to be shown as text.
+      security: []
+      responses:
+        "200":
+          description: The written policies
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [policies]
+                properties:
+                  policies:
+                    type: array
+                    items: { $ref: "#/components/schemas/StorePolicy" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /stores/{storeId}/policies/{kind}:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: kind
+        in: path
+        required: true
+        schema: { type: string, enum: [refund, shipping, privacy, terms] }
+    put:
+      tags: [stores]
+      operationId: store_policy_set
+      summary: Write or remove one policy
+      description: Owner-only. An empty body removes the policy, so the storefront no longer shows it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 20000 }
+      responses:
+        "200":
+          description: The saved policy (body and updatedAt are null when it was removed)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [kind, body, updatedAt]
+                properties:
+                  kind: { type: string, enum: [refund, shipping, privacy, terms] }
+                  body: { type: [string, "null"] }
+                  updatedAt: { type: [string, "null"], format: date-time }
+        "400":
+          description: The text is missing or too long
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /stores/{storeId}/staff:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -3262,6 +3328,128 @@ paths:
         "429": { $ref: "#/components/responses/TooManyRequests" }
 
   # ── CART RECOVERY ─────────────────────────────────────────────────────
+  /seo/robots.txt:
+    get:
+      tags: [platform]
+      operationId: seo_robots
+      summary: robots.txt for the whole site
+      description: Public; served at /robots.txt by the web server. Outside production it keeps the whole site out of search results.
+      security: []
+      responses:
+        "200":
+          description: The robots.txt text
+          content:
+            text/plain:
+              schema: { type: string }
+
+  /seo/sitemap.xml:
+    get:
+      tags: [platform]
+      operationId: seo_sitemap
+      summary: The sitemap
+      description: |
+        Public; served at /sitemap.xml by the web server. The platform's public pages, every shop listed in the
+        public directory, its policies page if it has one, and its products. Rebuilt at most once an hour.
+      security: []
+      responses:
+        "200":
+          description: A sitemaps.org urlset
+          content:
+            application/xml:
+              schema: { type: string }
+
+  /seo/preview:
+    get:
+      tags: [platform]
+      operationId: seo_preview
+      summary: The link-preview page for a shared shop or product address
+      description: |
+        Public. A small HTML page with the Open Graph tags (title, description, price, photo) of the shop or
+        product at `path`, for apps that do not run JavaScript. The web server sends only those apps here.
+        An unknown or malformed path gets the platform's own card.
+      security: []
+      parameters:
+        - name: path
+          in: query
+          required: false
+          schema: { type: string, example: /store/cmabc123def456/products/65f0c0ffee0000000000abcd }
+      responses:
+        "200":
+          description: The preview page
+          content:
+            text/html:
+              schema: { type: string }
+
+  /unsubscribe:
+    parameters:
+      - name: t
+        in: query
+        required: true
+        description: The signed token from the reminder email (shop id, account id and a signature; never the email address).
+        schema: { type: string }
+    get:
+      tags: [cart-recovery]
+      operationId: unsubscribe_status
+      summary: Which shop a reminder came from, and whether this person is unsubscribed from it
+      description: Public. Opening the link only shows this; unsubscribing needs the POST, so a mail scanner that opens links unsubscribes nobody.
+      security: []
+      responses:
+        "200":
+          description: The shop and the current state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnsubscribeState" }
+        "400":
+          description: The link is not valid (altered, incomplete or signed for someone else)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [cart-recovery]
+      operationId: unsubscribe_confirm
+      summary: Stop this shop's cart reminders
+      description: |
+        Public. The page's button, or the email app's own one-click button (RFC 8058), which posts the form
+        body `List-Unsubscribe=One-Click`. Doing it twice is the same as once.
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema: { type: object, additionalProperties: true }
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Unsubscribed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnsubscribeState" }
+        "400":
+          description: The link is not valid (altered, incomplete or signed for someone else)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [cart-recovery]
+      operationId: unsubscribe_undo
+      summary: Turn this shop's cart reminders back on
+      security: []
+      responses:
+        "200":
+          description: Subscribed again
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnsubscribeState" }
+        "400":
+          description: The link is not valid (altered, incomplete or signed for someone else)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /stores/{storeId}/cart-recovery/performance:
     parameters:
       - $ref: "#/components/parameters/StoreId"
@@ -4858,6 +5046,21 @@ components:
         date: { type: string, format: date, description: "The last date the fact covers." }
         url: { type: string, format: uri, description: "Where to look the figure up, when there is such a page." }
 
+    UnsubscribeState:
+      type: object
+      required: [storeName, unsubscribed]
+      properties:
+        storeName: { type: string }
+        unsubscribed: { type: boolean }
+
+    StorePolicy:
+      type: object
+      required: [kind, body, updatedAt]
+      properties:
+        kind: { type: string, enum: [refund, shipping, privacy, terms] }
+        body: { type: string }
+        updatedAt: { type: string, format: date-time }
+
     TrendSharing:
       type: object
       required: [shareSalesInTrends]
@@ -5372,6 +5575,7 @@ components:
         logoUrl: { type: [string, "null"], format: uri }
         themeColor: { type: [string, "null"], description: "The merchant's colour, #RRGGBB. Storefronts adjust it for contrast; see the frontend's lib/brandTheme.ts." }
         currency: { type: string, description: "The store's currency (ISO code), used to format prices." }
+        cardPayments: { type: boolean, description: "Whether shoppers can pay by card (the platform's Stripe is set up). Only on the public profile (GET /stores/{storeId})." }
         description:
           type: [string, "null"]
           description: "One public line about the shop, written by its owner. Shown on the storefront and in the directory."

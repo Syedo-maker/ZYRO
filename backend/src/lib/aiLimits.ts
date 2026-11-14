@@ -6,9 +6,11 @@ import { onScrape } from "./metrics";
  * AI cost protection beyond each store's monthly allowance (production readiness, 2026-11).
  *
  *   AI_DISABLED=true          every AI feature answers "switched off" at once (the kill switch)
- *   AI_DAILY_STORE_LIMIT=n    AI requests one store may make per UTC day (unset: no daily limit)
+ *   AI_DAILY_STORE_LIMIT=n    AI requests one store may make per UTC day (unset: 200 in production,
+ *                             no limit elsewhere; 0: no limit)
  *   AI_DAILY_GLOBAL_LIMIT=n   AI requests the whole platform may make per UTC day, store and
- *                             platform-paid together (unset: no limit). A warning is logged once
+ *                             platform-paid together (unset: 5,000 in production, no limit elsewhere;
+ *                             0: no limit). A warning is logged once
  *                             usage passes 80%, so there is time to act before the limit.
  *
  * Counters live in Redis, so every API and worker instance shares them. A request answered from
@@ -18,8 +20,16 @@ import { onScrape } from "./metrics";
 
 const day = () => new Date().toISOString().slice(0, 10);
 const TWO_DAYS = 2 * 24 * 60 * 60;
-const limit = (name: string) => {
-  const n = Number(process.env[name]);
+/**
+ * The owner's decision (2026-11-14): in production the limits are on by default, 200 requests per store
+ * and 5,000 for the platform each day. A setting overrides the default; 0 switches that limit off.
+ * Development and tests have no default limit, so a busy test run is never refused.
+ */
+export const PRODUCTION_DAILY_DEFAULTS = { AI_DAILY_STORE_LIMIT: 200, AI_DAILY_GLOBAL_LIMIT: 5000 } as const;
+export const limit = (name: keyof typeof PRODUCTION_DAILY_DEFAULTS) => {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === "") return process.env.NODE_ENV === "production" ? PRODUCTION_DAILY_DEFAULTS[name] : null;
+  const n = Number(raw);
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 

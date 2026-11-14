@@ -199,6 +199,9 @@ export function checkEnv(source: Source): EnvReport {
     for (const name of ["PUBLIC_URL", "CORS_ORIGIN", "REDIS_URL"] as const) {
       if (!set(source[name])) add(name, "missing (required when NODE_ENV=production)", URLS[name].neededFor);
     }
+    // Owner's decision (2026-11-14): required, not a warning. Without it the shared cash-on-delivery
+    // phone hashes use a public fallback value and could be reversed. Set it once, before the first order.
+    if (!set(source.COD_PHONE_PEPPER)) add("COD_PHONE_PEPPER", "missing (required when NODE_ENV=production); set it once, before the first order", "cash-on-delivery risk signals");
     const jwt = source.JWT_ACCESS_SECRET ?? "";
     if (set(jwt) && (jwt.length < 32 || /replace-with|dev-only|changeme/i.test(jwt))) {
       add("JWT_ACCESS_SECRET", "must be a random string of at least 32 characters in production", "sign-in (signing session tokens)");
@@ -256,9 +259,6 @@ export function checkEnv(source: Source): EnvReport {
   const disabled = OPTIONAL_FEATURES.map(({ feature, needs }) => ({ feature, missing: needs(source) })).filter((d) => d.missing.length > 0);
 
   const warnings: EnvReport["warnings"] = [];
-  if (isProduction && !set(source.COD_PHONE_PEPPER)) {
-    warnings.push({ name: "COD_PHONE_PEPPER", message: "not set: cash-on-delivery phone signals are hashed with a public fallback value, so they could be reversed" });
-  }
   if (isProduction && source.GATEWAY_MOCK_ENABLED === "true") {
     warnings.push({ name: "GATEWAY_MOCK_ENABLED", message: "the test payment gateway is switched on in production" });
   }

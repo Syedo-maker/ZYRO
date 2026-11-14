@@ -126,13 +126,41 @@ async function main() {
     const event1 = await prismaUnscoped.cartRecoveryEvent.findFirst({ where: { tenantId: A.storeId, cartId: c1Key } });
     check("scan: an abandoned cart is emailed, and the event is logged as SENT", event1?.status === "SENT" && event1?.customerEmail === c1.email);
     check("email: sent to the shopper's real account email, with a subject naming the store", emails.some((e) => e.to === c1.email && e.subject.includes("Verify a")));
-    check("email: the body is the AI's personalized text", emails.some((e) => e.to === c1.email && e.text === nextReply));
+    check("email: the body is the AI's personalized text", emails.some((e) => e.to === c1.email && e.text.startsWith(nextReply)));
+    const firstEmail = emails.find((e) => e.to === c1.email) as { text: string; headers?: Record<string, string> } | undefined;
+    check("email: it ends with a link to stop these reminders", /To stop these reminders: \S+\/unsubscribe\?t=[a-z0-9]+\.[a-z0-9]+\.[A-Za-z0-9_-]{32}$/.test(firstEmail?.text ?? ""));
+    check(
+      "email: it carries the one-click unsubscribe headers (RFC 8058), and never the shopper's email address in the link",
+      /^<\S+\/api\/v1\/unsubscribe\?t=\S+>$/.test(firstEmail?.headers?.["List-Unsubscribe"] ?? "") &&
+        firstEmail?.headers?.["List-Unsubscribe-Post"] === "List-Unsubscribe=One-Click" &&
+        !firstEmail.headers["List-Unsubscribe"].includes(encodeURIComponent(c1.email)) &&
+        !firstEmail.headers["List-Unsubscribe"].includes(c1.email),
+    );
     check("ai: the prompt lists the real cart contents (2x Ceramic Mug), not invented items", aiCalls.some((c) => /2x Ceramic Mug/.test(c.prompt)));
 
     // ---- The same still-abandoned cart is not emailed again immediately (cooldown) ----
     const sentBefore = emails.length;
     await cartRecoveryService.scan();
     check("scan: the same cart is not emailed twice within the cooldown window", emails.length === sentBefore && (await prismaUnscoped.cartRecoveryEvent.count({ where: { tenantId: A.storeId, cartId: c1Key } })) === 1);
+
+    // ---- A shopper who unsubscribed (the email app's one-click button) gets no reminder from that shop ----
+    const { unsubscribeToken } = await import("../../src/modules/cart-recovery/unsubscribe.service");
+    const cu = await customer("cu");
+    await api("POST", `/stores/${A.storeId}/cart/items`, { token: cu.token, body: { productId: mug, quantity: 1 } });
+    const oneClick = await fetch(`${base}/unsubscribe?t=${unsubscribeToken(A.storeId, cu.userId)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "List-Unsubscribe=One-Click",
+    });
+    check("unsubscribe: the one-click POST is accepted", oneClick.status === 200 && ((await oneClick.json()) as { unsubscribed?: boolean }).unsubscribed === true);
+    await age(userCartKey(A.storeId, cu.userId), env.cartRecovery.abandonedAfterHours + 1);
+    const beforeOptOut = emails.length;
+    await cartRecoveryService.scan();
+    check(
+      "scan: an unsubscribed shopper's abandoned cart gets no email, and nothing is logged or charged for it",
+      !emails.slice(beforeOptOut).some((e) => e.to === cu.email) &&
+        (await prismaUnscoped.cartRecoveryEvent.count({ where: { tenantId: A.storeId, cartId: userCartKey(A.storeId, cu.userId) } })) === 0,
+    );
 
     // ---- A guest cart is never recovered: there is no email address to send to ----
     const guestId = `verify-cr-guest-${suffix}aaaaaaaaaaaa`;

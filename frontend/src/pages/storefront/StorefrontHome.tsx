@@ -15,6 +15,7 @@ import { visibleSections, type SectionId } from '../../lib/storeTheme'
 import { useAddToCart } from '../../lib/useAddToCart'
 import type { Product } from '../../types/api'
 import type { CategoryCount, Review } from '../../types/shop'
+import { clampDescription, usePageMeta } from '../../lib/pageMeta'
 
 // A shop without a published theme keeps exactly the front page it always had.
 const DEFAULT_SECTIONS: SectionId[] = ['hero', 'featured', 'categories']
@@ -26,6 +27,7 @@ const DEFAULT_SECTIONS: SectionId[] = ['hero', 'featured', 'categories']
  */
 export function StorefrontHome() {
   const store = useStore()
+  usePageMeta({ title: store.name, description: clampDescription(store.description || `Shop ${store.name} online on ZYRO.`), image: store.logoUrl ?? undefined })
   const theme = store.theme?.theme ?? null
   const { categories } = useOutletContext<{ categories: CategoryCount[] }>()
   const { addingId, message, addToCart } = useAddToCart()

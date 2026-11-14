@@ -110,10 +110,12 @@ function useDocumentTheme(style: CSSProperties | undefined) {
 }
 
 /** The footer the owner chose: simple (the default), detailed (with links and their about text) or minimal. */
-function StoreFooter({ store, footer, themed }: { store: { id: string; name: string; description?: string | null }; footer: StoreTheme['footerStyle']; themed: boolean }) {
+function StoreFooter({ store, footer, themed }: { store: { id: string; name: string; description?: string | null; cardPayments?: boolean }; footer: StoreTheme['footerStyle']; themed: boolean }) {
   const legal = (
     <span className="flex flex-wrap gap-x-4">
-      <span>Secure checkout by Stripe</span>
+      {/* Only when card payment is really offered: a cash-on-delivery-only shop must not claim it. */}
+      {store.cardPayments && <span>Secure checkout by Stripe</span>}
+      <Link to={`/store/${store.id}/policies`} className="underline underline-offset-2 hover:text-text">Shop policies</Link>
       <Link to="/privacy" className="underline underline-offset-2 hover:text-text">Privacy</Link>
       <Link to="/terms" className="underline underline-offset-2 hover:text-text">Terms</Link>
     </span>

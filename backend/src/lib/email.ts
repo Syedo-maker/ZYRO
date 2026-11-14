@@ -8,6 +8,8 @@ export interface EmailMessage {
   to: string;
   subject: string;
   text: string;
+  /** Extra headers, such as List-Unsubscribe on a marketing email. */
+  headers?: Record<string, string>;
 }
 
 /** What the rest of the app needs to send an email. Kept to one method, same shape as

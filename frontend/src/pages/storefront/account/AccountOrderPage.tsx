@@ -10,6 +10,7 @@ import { ApiError } from '../../../lib/apiClient'
 import { formatDateTime, formatMoney } from '../../../lib/format'
 import { errorMessage, ordersApi } from '../../../lib/ordersApi'
 import type { Order } from '../../../types/commerce'
+import { usePageMeta } from '../../../lib/pageMeta'
 
 const SHIPMENT_LABEL = { pending: 'Preparing your parcel', shipped: 'On its way', delivered: 'Delivered', cancelled: 'Cancelled' } as const
 
@@ -25,6 +26,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 /** One of the shopper's orders: what they bought, what they paid, where it is going and where it is now. */
 export function AccountOrderPage() {
   const store = useStore()
+  usePageMeta({ title: `Your order | ${store.name}`, description: `Your order at ${store.name}.`, robots: 'noindex' })
   const { orderId = '' } = useParams()
   const { isAuthenticated, isLoading } = useAuth()
   const [order, setOrder] = useState<Order | null>(null)

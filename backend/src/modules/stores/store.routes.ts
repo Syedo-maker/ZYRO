@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../../middleware/requireAuth.middleware";
 import { requireOwner } from "../../middleware/requireOwner.middleware";
 import { storeController } from "./store.controller";
+import { policyController } from "./policy.controller";
 
 // Mounted at /stores/:storeId; see app.ts. Registered after the more specific
 // /stores/:storeId/{staff,products,uploads} routers, but Express only matches routes this
@@ -17,3 +18,6 @@ storeRouter.get("/currency", requireAuth, requireOwner, storeController.getCurre
 storeRouter.get("/trend-sharing", requireAuth, requireOwner, storeController.getTrendSharing);
 storeRouter.put("/trend-sharing", requireAuth, requireOwner, storeController.setTrendSharing);
 storeRouter.patch("/currency", requireAuth, requireOwner, storeController.updateCurrency);
+// The shop's own policy pages: anyone may read them; only the owner writes them.
+storeRouter.get("/policies", policyController.list);
+storeRouter.put("/policies/:kind", requireAuth, requireOwner, policyController.set);

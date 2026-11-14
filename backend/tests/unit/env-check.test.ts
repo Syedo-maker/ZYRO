@@ -80,11 +80,18 @@ describe("the startup environment check", () => {
   });
 
   it("warns, without refusing to start, about settings worth a second look in production", () => {
-    const p: Record<string, string | undefined> = { ...production(), GATEWAY_MOCK_ENABLED: "true" };
-    delete p.COD_PHONE_PEPPER;
-    const r = checkEnv(p);
+    const r = checkEnv({ ...production(), GATEWAY_MOCK_ENABLED: "true" });
     expect(r.errors).toEqual([]);
-    expect(r.warnings.map((w) => w.name).sort()).toEqual(["COD_PHONE_PEPPER", "GATEWAY_MOCK_ENABLED"]);
+    expect(r.warnings.map((w) => w.name).sort()).toEqual(["GATEWAY_MOCK_ENABLED"]);
+  });
+
+  it("refuses to start in production without COD_PHONE_PEPPER, naming it; development does not need it", () => {
+    const p: Record<string, string | undefined> = { ...production() };
+    delete p.COD_PHONE_PEPPER;
+    expect(checkEnv(p).errors.map((e) => e.name)).toEqual(["COD_PHONE_PEPPER"]);
+    const dev: Record<string, string | undefined> = { ...base() };
+    delete dev.COD_PHONE_PEPPER;
+    expect(checkEnv(dev).errors).toEqual([]);
   });
 });
 

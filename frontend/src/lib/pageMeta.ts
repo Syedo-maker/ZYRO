@@ -9,6 +9,8 @@ export interface PageMeta {
   type?: 'website' | 'product'
   /** An absolute or root-relative image URL for link previews. */
   image?: string
+  /** "noindex" keeps a page out of search results (a private or one-off page). Indexed when left out. */
+  robots?: 'noindex'
 }
 
 /** Search engines show about 160 characters of a description; a longer one is cut at a word. */
@@ -34,6 +36,7 @@ export function usePageMeta(meta: PageMeta | null) {
   const description = meta?.description
   const type = meta?.type ?? 'website'
   const image = meta?.image
+  const robots = meta?.robots
 
   useEffect(() => {
     if (title === undefined || description === undefined) return
@@ -64,10 +67,23 @@ export function usePageMeta(meta: PageMeta | null) {
     set('property', 'og:type', type)
     if (image) set('property', 'og:image', new URL(image, window.location.origin).href)
     set('name', 'twitter:card', image ? 'summary_large_image' : 'summary')
+    if (robots) set('name', 'robots', robots)
+    // The page's one address for search engines: this path, without the query string (filters,
+    // tracking tags), so the same page is never indexed twice under different URLs.
+    const canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]') ?? document.createElement('link')
+    const hadCanonical = canonical.isConnected
+    const canonicalBefore = canonical.href
+    canonical.rel = 'canonical'
+    canonical.href = `${window.location.origin}${window.location.pathname}`
+    if (!hadCanonical) document.head.appendChild(canonical)
+    restore.push(() => {
+      if (hadCanonical) canonical.href = canonicalBefore
+      else canonical.remove()
+    })
 
     return () => {
       document.title = previousTitle
       for (const undo of restore.reverse()) undo()
     }
-  }, [title, description, type, image])
+  }, [title, description, type, image, robots])
 }

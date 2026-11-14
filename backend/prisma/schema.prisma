@@ -149,6 +149,7 @@ model User {
   staffMemberOf    StaffMember[]
   refreshTokens    RefreshToken[]
   passwordResets   PasswordResetToken[]
+  emailOptOuts     EmailOptOut[]
   customerProfiles Customer[]
   cashierOrders    Order[]        @relation("OrderCashier")
 
@@ -205,7 +206,8 @@ model Tenant {
   posMaxDiscountPercent Decimal  @default(20) @db.Decimal(5, 2)
 
   /// Plan the store last paid for. It only ever changes from a verified Stripe webhook
-  /// (modules/billing/billing.webhook.ts), never from a client request or AI output. What the
+  /// (modules/billing/billing.webhook.ts) or a platform admin's script (scripts/set-plan.ts, while
+  /// there is no Stripe Billing), never from a client request or AI output. What the
   /// store may actually use right now is the *effective* plan (lib/plans.ts effectiveTier):
   /// a paid plan whose paid period, plus a short grace, has passed counts as FREE.
   plan                  PlanTier  @default(FREE)
@@ -266,6 +268,8 @@ model Tenant {
   aiBusinessInsight AiBusinessInsight?
   storeTheme        StoreTheme?
   storeThemeVersions StoreThemeVersion[]
+  policies          StorePolicy[]
+  emailOptOuts      EmailOptOut[]
 
   @@index([ownerId])
 }
@@ -1151,4 +1155,40 @@ model StoreThemeVersion {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
+}
+
+enum StorePolicyKind {
+  REFUND
+  SHIPPING
+  PRIVACY
+  TERMS
+}
+
+/// A shop's own policy pages (returns and refunds, shipping, privacy, terms), written by the owner and
+/// shown on the storefront at /store/:id/policies. Plain text only; the storefront renders it as text,
+/// never as HTML. A shop that has not written one simply has no such page.
+model StorePolicy {
+  tenantId  String
+  kind      StorePolicyKind
+  body      String
+  updatedAt DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, kind])
+}
+
+/// A shopper who asked a shop to stop sending them cart reminders, from the link in the email or the
+/// email app's own unsubscribe button. The cart-recovery job skips them for that shop. Deleted with
+/// the shop or the account; nothing else is kept about the request.
+model EmailOptOut {
+  tenantId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, userId])
+  @@index([userId])
 }

@@ -8,9 +8,11 @@ import { Spinner } from '../../components/ui/Spinner'
 import { formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { CartItemRow } from './CartItemRow'
+import { usePageMeta } from '../../lib/pageMeta'
 
 export function CartPage() {
   const store = useStore()
+  usePageMeta({ title: `Cart | ${store.name}`, description: `Your cart at ${store.name}.`, robots: 'noindex' })
   const { cart, isLoading, setQuantity, remove } = useCart()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
