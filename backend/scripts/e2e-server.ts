@@ -9,15 +9,22 @@
  *   POST /__e2e/backdate-orders, /__e2e/set-currency, /__e2e/make-admin, /__e2e/trends-run   Trend Scout set-up
  *   GET  /__e2e/last-email?to=   the newest email the fake gateway "sent" to that address (B1's reset link)
  *
- * These routes exist only in this script, never in the real app.
- * Usage: npx tsx scripts/e2e-server.ts   (listens on PORT, default 5000)
+ * These routes exist only in this script, never in the real app. They need no login (make-admin
+ * grants super admin by email), so the server listens on this machine's loopback only and refuses
+ * to start in production (audit 2026-11).
+ * Usage: npx tsx scripts/e2e-server.ts   (listens on localhost:PORT, default 5000)
  */
+if (process.env.NODE_ENV === "production") {
+  console.error("The e2e server is for browser tests on a developer machine; it refuses to run with NODE_ENV=production.");
+  process.exit(1);
+}
 // Off by default because the browser tests register many users quickly; start with
 // RATE_LIMIT_ENABLED=true (and a private RATE_LIMIT_PREFIX) to test the limits in the UI.
 process.env.RATE_LIMIT_ENABLED ??= "false";
 process.env.STRIPE_SECRET_KEY = "sk_test_e2e";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_e2e_secret";
 
+import { createServer } from "node:http";
 import express from "express";
 
 async function main() {
@@ -258,7 +265,9 @@ async function main() {
   });
   outer.use(app);
 
-  outer.listen(port, () => console.log(`E2E API listening on http://localhost:${port}`));
+  // Loopback only, on IPv4 and (where the machine has it) IPv6, since "localhost" may resolve to either.
+  outer.listen(port, "127.0.0.1", () => console.log(`E2E API listening on http://localhost:${port} (loopback only)`));
+  createServer(outer).on("error", () => undefined).listen(port, "::1");
 }
 
 main().catch((err) => {

@@ -137,3 +137,17 @@ export async function releaseQuota(tenantId: string, kind: AiUsageKind, source: 
     data: kind === "chat" ? { chatMessagesUsed: { decrement: 1 } } : { generationsUsed: { decrement: 1 } },
   });
 }
+
+/**
+ * Charges a turn for an answer that arrived after its request had already given up (a wait timeout):
+ * the request was refunded because the store received nothing, but the provider did the work, so the
+ * spend is counted once it is known (audit 2026-11). From the allowance or a top-up if either has
+ * room; otherwise counted on the plan anyway, since the cost has already happened.
+ */
+export async function chargeLateAnswer(tenantId: string, kind: AiUsageKind, month = currentMonth()): Promise<void> {
+  if (await reserveQuota(tenantId, kind, month)) return;
+  await prisma.aiUsageQuota.updateMany({
+    where: { tenantId, month },
+    data: kind === "chat" ? { chatMessagesUsed: { increment: 1 } } : { generationsUsed: { increment: 1 } },
+  });
+}

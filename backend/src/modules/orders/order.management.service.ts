@@ -69,6 +69,12 @@ async function refundOrder(
       data: { status: opts.finalStatus },
     });
     if (claim.count === 0) throw Errors.conflict("This order has already been refunded or cancelled");
+    // Checked again now that this transaction holds the order row: a partial return (which claims
+    // the same row) may have committed after the check above, and refunding every payment in full
+    // on top of it would pay back more than the sale took (audit 2026-11).
+    if (await tx.orderItem.count({ where: { orderId: order.id, returnedQuantity: { gt: 0 } } })) {
+      throw Errors.conflict("Part of this order was already returned; return the remaining items instead of refunding the whole order");
+    }
 
     // Cash handed back at the counter comes out of whichever drawer is open now.
     const openShift = order.channel === "POS" && order.locationId

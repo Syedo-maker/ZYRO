@@ -2,8 +2,19 @@
 # origin. That is what lets the httpOnly, SameSite=lax login cookie work, exactly as the Vite dev
 # server's proxy does locally. ${API_UPSTREAM} is filled in at start (nginx's template step), for
 # example http://ca-zyro-prod-api on Azure or http://api:5000 in docker compose.
+# Access log without query strings or the referer. A password-reset link carries its token in the
+# query string, and the reset page's own asset requests carry that same URL as their referer, so the
+# default log format wrote live reset tokens to the container log and on to Log Analytics (audit
+# 2026-11). The backend already drops query strings from its own logs for the same reason.
+map $request_uri $zyro_path {
+    "~^(?<zyro_p>[^?]*)" $zyro_p;
+    default "-";
+}
+log_format zyro_noquery '$remote_addr [$time_local] "$request_method $zyro_path $server_protocol" $status $body_bytes_sent "$http_user_agent"';
+
 server {
     listen 8080;
+    access_log /dev/stdout zyro_noquery;
     server_name _;
     root /usr/share/nginx/html;
     server_tokens off;

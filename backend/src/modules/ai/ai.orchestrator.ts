@@ -2,11 +2,12 @@ import { createHash } from "node:crypto";
 import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
 import { getAiQueue, readyAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
+import type { Job, QueueEvents } from "bullmq";
 import type { AiGenerateResult } from "../../lib/aiProvider";
 import { allowsImage, modelFor, tierFor } from "../../lib/aiModels";
 import { FRIENDLY_AI_UNAVAILABLE } from "../../lib/aiErrors";
 import { getRedis } from "../../lib/redis";
-import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, currentMonth, type AiUsageKind } from "./ai.quota.service";
+import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, chargeLateAnswer, currentMonth, type AiUsageKind } from "./ai.quota.service";
 import { logger } from "../../lib/logger";
 
 export interface GenerateInput {
@@ -133,7 +134,13 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
     const raw: AiGenerateResult = await job.waitUntilFinished(events, env.ai.jobTimeoutMs);
     result = { ...raw, text: tidyText(raw.text) };
   } catch (err) {
-    if (source) await releaseQuota(input.tenantId, kind, source, month); // give the reservation back, to where it came from; this attempt never happened
+    // The store received nothing, so it is not charged now: the reservation goes back to where it
+    // came from. A job still queued is taken off the queue so it never runs. One the worker is
+    // already running may still finish, and then the provider has done the work: that turn and its
+    // tokens are charged when it does, so a timeout can no longer hide real spend (audit 2026-11).
+    const fate = await abandonJob(job);
+    if (source) await releaseQuota(input.tenantId, kind, source, month);
+    if (fate === "running" && !platformPays) chargeIfItFinishes(job, events, input.tenantId, kind, month);
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
     // being unable to fulfil the request right now, not something the caller did wrong. The
     // provider's own words go to the log, where they can be acted on; the merchant or shopper gets
@@ -160,6 +167,37 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
     await releaseQuota(input.tenantId, kind, source, month);
   };
   return { result, release };
+}
+
+/**
+ * After a failed wait: what will happen to the job. "failed" and "removed" (it was still queued and
+ * is taken off) mean no provider call; "running" means the worker has it, or has just finished it.
+ */
+async function abandonJob(job: Job): Promise<"failed" | "removed" | "running"> {
+  try {
+    const state = await job.getState();
+    if (state === "failed") return "failed";
+    if (state === "waiting" || state === "delayed" || state === "prioritized" || state === "waiting-children") {
+      await job.remove();
+      return "removed";
+    }
+    return "running";
+  } catch {
+    // Removal refused because the worker picked it up in the meantime, or the queue is unreachable:
+    // treat it as running, so a finished answer is still charged.
+    return "running";
+  }
+}
+
+/** Charges a turn and records the tokens if an abandoned job finishes after all; a failure costs nothing. */
+function chargeIfItFinishes(job: Job, events: QueueEvents, tenantId: string, kind: AiUsageKind, month: string): void {
+  void job
+    .waitUntilFinished(events, env.ai.jobTimeoutMs * 10)
+    .then(async (raw: AiGenerateResult) => {
+      await chargeLateAnswer(tenantId, kind, month);
+      await recordTokens(tenantId, raw.inputTokens, raw.outputTokens, month);
+    })
+    .catch(() => undefined); // it failed, or never finished: nothing was produced, nothing is charged
 }
 
 /**
