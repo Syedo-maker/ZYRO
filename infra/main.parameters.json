@@ -8,6 +8,7 @@
     "customDomain": { "value": "${ZYRO_CUSTOM_DOMAIN=}" },
     "postgresAdminPassword": { "value": "${ZYRO_POSTGRES_ADMIN_PASSWORD}" },
     "jwtAccessSecret": { "value": "${ZYRO_JWT_ACCESS_SECRET}" },
+    "codPhonePepper": { "value": "${ZYRO_COD_PHONE_PEPPER}" },
     "mongodbUri": { "value": "${ZYRO_MONGODB_URI}" },
     "recommendationServiceToken": { "value": "${ZYRO_RECOMMENDATION_SERVICE_TOKEN}" },
     "stripeSecretKey": { "value": "${ZYRO_STRIPE_SECRET_KEY=}" },
