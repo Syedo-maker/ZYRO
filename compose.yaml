@@ -60,7 +60,7 @@ services:
 
   mongo:
     restart: unless-stopped
-    image: mongo:8.0.38
+    image: mongo:9.0.4
     volumes: [mongo-data:/data/db]
     healthcheck: { test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"], interval: 5s, retries: 30 }
     networks: [zyro]
