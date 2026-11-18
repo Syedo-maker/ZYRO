@@ -1,0 +1,48 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build && node scripts/copy-demo-assets.mjs",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://zyro-api.onrender.com/api/:path*" },
+    { "source": "/robots.txt", "destination": "https://zyro-api.onrender.com/api/v1/seo/robots.txt" },
+    { "source": "/sitemap.xml", "destination": "https://zyro-api.onrender.com/api/v1/seo/sitemap.xml" },
+    {
+      "source": "/store/:path*",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|facebookcatalog|meta-externalagent|WhatsApp|Twitterbot|Slackbot|TelegramBot|LinkedInBot|Discordbot|Pinterestbot|SkypeUriPreview|redditbot|Embedly|Viber).*"
+        }
+      ],
+      "destination": "https://zyro-api.onrender.com/api/v1/seo/preview?path=/store/:path*"
+    },
+    { "source": "/((?!assets/|demo-assets/).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [{ "key": "x-vercel-enable-rewrite-caching", "value": "0" }]
+    },
+    {
+      "source": "/assets/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/((?!api/).*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
+        { "key": "Permissions-Policy", "value": "camera=(), geolocation=(), payment=(), microphone=(self)" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
+        }
+      ]
+    }
+  ]
+}

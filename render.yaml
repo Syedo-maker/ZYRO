@@ -1,0 +1,94 @@
+# The API on Render's free plan: one web service that also runs the background jobs, with Render
+# PostgreSQL and Key Value (Redis). MongoDB is an external database (MongoDB Atlas). The web app is on
+# Vercel (frontend/vercel.json) and forwards /api here, so sign-in cookies stay on the web app's site.
+#
+# No secret is in this file. `sync: false` values are entered once in the Render dashboard;
+# `generateValue` values are created by Render and never leave it.
+#
+# Free-plan limits to expect: the service sleeps after 15 idle minutes and takes about a minute to wake;
+# its disk is temporary; free PostgreSQL expires after 30 days; free Key Value is memory only.
+databases:
+  - name: zyro-postgres
+    plan: free
+    postgresMajorVersion: "17"
+
+services:
+  - type: keyvalue
+    name: zyro-redis
+    plan: free
+    # BullMQ needs its job data kept, so nothing may be evicted.
+    maxmemoryPolicy: noeviction
+    # Reachable only from services in this Render account.
+    ipAllowList: []
+
+  - type: web
+    name: zyro-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    branch: main
+    autoDeployTrigger: commit
+    # Dev dependencies are needed to compile, and NODE_ENV is production during the build.
+    buildCommand: npm ci --include=dev --ignore-scripts && npx prisma generate && npm run build
+    # Pre-deploy commands are a paid feature, so migrations run here, before the server starts.
+    # `exec` lets the server itself receive Render's stop signal and shut down cleanly.
+    # The memory limit is set here, not in NODE_OPTIONS, because compiling needs more than the server does.
+    startCommand: npx prisma migrate deploy && exec node --max-old-space-size=384 --enable-source-maps dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      # The free plan has one small instance, so the background jobs run inside the API.
+      - key: RUN_WORKERS_IN_API
+        value: "true"
+      - key: AI_WORKER_CONCURRENCY
+        value: "4"
+      # Vercel, then Render's own proxy, stand between a visitor and the API.
+      - key: TRUST_PROXY
+        value: "2"
+      # The disk is temporary: uploads last until the next restart. See "Storage" in documentation/Deployment_Render_Vercel.md.
+      - key: STORAGE_DRIVER
+        value: local
+      - key: ALLOW_LOCAL_STORAGE_IN_PRODUCTION
+        value: "true"
+
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zyro-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: zyro-redis
+          property: connectionString
+
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: COD_PHONE_PEPPER
+        generateValue: true
+      - key: METRICS_TOKEN
+        generateValue: true
+
+      # Entered once in the dashboard:
+      - key: MONGODB_URI
+        sync: false
+      - key: PUBLIC_URL # this service's own https address
+        sync: false
+      - key: CORS_ORIGIN # the web app's https address on Vercel
+        sync: false
+      - key: STOREFRONT_URL # the same web app address
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: EMAIL_PROVIDER # brevo or sendgrid
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_FROM_EMAIL
+        sync: false
+      - key: STRIPE_SECRET_KEY # a test-mode key only
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
