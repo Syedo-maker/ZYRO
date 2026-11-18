@@ -251,6 +251,11 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: The cross-site sign-in cookie is on (COOKIE_SAME_SITE=none) and the request did not come from one of the web app's addresses
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /auth/logout:
     post:
@@ -266,6 +271,11 @@ paths:
       responses:
         "204":
           description: Logged out
+        "403":
+          description: The cross-site sign-in cookie is on (COOKIE_SAME_SITE=none) and the request did not come from one of the web app's addresses
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /auth/forgot-password:
     post:

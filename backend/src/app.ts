@@ -66,7 +66,7 @@ app.use(httpsOnly);
 // storefront from another origin in production, so allow cross-origin embedding.
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
-app.use(cors({ origin: env.corsOrigin, credentials: true }));
+app.use(cors({ origin: env.corsOrigins, credentials: true }));
 
 // One structured line per request, with an id that is also sent back as X-Request-Id: a merchant
 // who reports a problem can quote it, and it finds the exact line in Log Analytics. An id sent in by

@@ -3,18 +3,22 @@ import { authService } from "./auth.service";
 import { registerSchema, registerCustomerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "./auth.validation";
 import { passwordResetService, RESET_REQUESTED_MESSAGE } from "./passwordReset.service";
 import { Errors } from "../../errors/AppError";
+import { env } from "../../config/env";
 
 const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_PATH = "/api/v1/auth";
 
+// A cookie that may cross sites must be Secure, or browsers drop it. The same attributes are used to
+// clear it, because a browser only replaces a cookie set with matching ones.
+const refreshCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production" || env.cookieSameSite === "none",
+  sameSite: env.cookieSameSite,
+  path: REFRESH_COOKIE_PATH,
+});
+
 function setRefreshCookie(res: Parameters<RequestHandler>[1], token: string, expiresAt: Date) {
-  res.cookie(REFRESH_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: REFRESH_COOKIE_PATH,
-    expires: expiresAt,
-  });
+  res.cookie(REFRESH_COOKIE_NAME, token, { ...refreshCookieOptions(), expires: expiresAt });
 }
 
 export const authController = {
@@ -36,7 +40,7 @@ export const authController = {
     try {
       await passwordResetService.reset(parsed.data.token, parsed.data.password);
       // A reset also ends this browser's session, if it had one: sign in again with the new password.
-      res.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
+      res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
       res.status(200).json({ message: "Your password has been changed. Log in with the new one." });
     } catch (err) {
       next(err);
@@ -99,7 +103,7 @@ export const authController = {
     const raw = req.cookies?.[REFRESH_COOKIE_NAME];
     try {
       if (raw) await authService.logout(raw);
-      res.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
+      res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
       res.status(204).send();
     } catch (err) {
       next(err);
