@@ -12,6 +12,9 @@ import {
 } from "@azure/storage-blob";
 import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
 import { env } from "../config/env";
+import { AppError, Errors } from "../errors/AppError";
+import { createBreaker } from "./circuitBreaker";
+import { logger } from "./logger";
 
 /**
  * Where uploaded files live.
@@ -305,22 +308,60 @@ class AzureBlobDriver implements StorageDriver {
   }
 }
 
+/**
+ * Storage failing (Blob Storage unreachable, a full disk) must not surface as an error page. Every
+ * call that touches the store goes through a circuit breaker (lib/circuitBreaker.ts); a failure is
+ * logged once for the operator, with the operation and the key (a store id and a random name, no
+ * personal data), and the caller gets a plain 503 the app already shows as "try again". The readiness
+ * probe and public addresses stay outside it, so /ready always reports the store's real state.
+ */
+export function resilientStorage(inner: StorageDriver): StorageDriver {
+  const breaker = createBreaker(`storage:${inner.name}`, { openError: () => storageUnavailable() });
+  const run = async <T>(op: string, key: string, call: () => Promise<T>): Promise<T> => {
+    try {
+      return await breaker.run(call);
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      logger.error({ op, key, driver: inner.name, err: (err as Error).message }, "file storage call failed");
+      throw storageUnavailable();
+    }
+  };
+  return {
+    name: inner.name,
+    put: (key, bytes, contentType) => run("put", key, () => inner.put(key, bytes, contentType)),
+    get: (key) => run("get", key, () => inner.get(key)),
+    remove: (key) => run("remove", key, () => inner.remove(key)),
+    removeStore: (storeId) => run("removeStore", storeId, () => inner.removeStore(storeId)),
+    publicUrl: (key) => inner.publicUrl(key),
+    signedUrl: (key, seconds) => run("signedUrl", key, () => inner.signedUrl(key, seconds)),
+    ping: () => inner.ping(),
+  };
+}
+
+const storageUnavailable = () => Errors.serviceUnavailable("File storage is temporarily unavailable. Please try again in a moment.");
+
 let driver: StorageDriver | null = null;
+/** The driver inside the resilient wrapper, for the start-up steps only it knows (creating containers). */
+let rawDriver: StorageDriver | null = null;
 
 export function getStorage(): StorageDriver {
-  driver ??= env.storage.driver === "azure" ? new AzureBlobDriver() : new LocalDriver();
+  if (!driver) {
+    rawDriver = env.storage.driver === "azure" ? new AzureBlobDriver() : new LocalDriver();
+    driver = resilientStorage(rawDriver);
+  }
   return driver;
 }
 
 /** Tests only: replaces the driver. */
 export function setStorage(next: StorageDriver | null) {
   driver = next;
+  rawDriver = next;
 }
 
 /** At startup: makes sure the places files go exist (local folders, or the emulator's containers). */
 export async function prepareStorage() {
   const storage = getStorage();
-  if (storage instanceof AzureBlobDriver && env.storage.azure.connectionString) await storage.ensureContainers();
+  if (rawDriver instanceof AzureBlobDriver && env.storage.azure.connectionString) await rawDriver.ensureContainers();
   await storage.ping();
 }
 

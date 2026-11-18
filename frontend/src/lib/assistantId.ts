@@ -22,3 +22,17 @@ export function getConversationId(): string {
     return memoryFallback
   }
 }
+
+/**
+ * Starts a new conversation next time. Called when the person signed in changes (sign-in, sign-out):
+ * the backend trusts the id by possession, so a kept id let the next person on a shared browser
+ * continue the previous shopper's chat context (audit 2026-11).
+ */
+export function forgetConversation(): void {
+  memoryFallback = null
+  try {
+    localStorage.removeItem(KEY)
+  } catch {
+    // Storage refused: the in-memory id above is already gone.
+  }
+}

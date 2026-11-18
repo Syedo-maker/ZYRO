@@ -1,3 +1,5 @@
+import { CookieNotice } from './components/CookieNotice'
+import { StoreLoadingScreen } from './pages/storefront/StoreLoadingScreen'
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
@@ -5,6 +7,11 @@ import { LandingPage } from './pages/landing/LandingPage'
 import { ShopDirectoryPage } from './pages/shop/ShopDirectoryPage'
 import { LoginPage } from './pages/Login'
 import { RegisterPage } from './pages/Register'
+import { ForgotPasswordPage } from './pages/ForgotPassword'
+import { ResetPasswordPage } from './pages/ResetPassword'
+import { NotFoundPage, RouteErrorBoundary } from './pages/ErrorPages'
+import { ToastProvider } from './components/ui/Toast'
+import { ThemeProvider } from './context/ThemeProvider'
 
 /*
  * The landing page, the shop directory and the two sign-in screens load straight away: they are
@@ -29,14 +36,18 @@ const PlatformPage = lazy(() => import('./pages/admin/PlatformPage').then((m) =>
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const MarketingPage = lazy(() => import('./pages/admin/MarketingPage').then((m) => ({ default: m.MarketingPage })))
 const ReviewsAdminPage = lazy(() => import('./pages/admin/ReviewsAdminPage').then((m) => ({ default: m.ReviewsAdminPage })))
+const ThemeStudioPage = lazy(() => import('./pages/admin/theme/ThemeStudioPage').then((m) => ({ default: m.ThemeStudioPage })))
 const TermsPage = lazy(() => import('./pages/legal/TermsPage').then((m) => ({ default: m.TermsPage })))
 const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
+const ContactPage = lazy(() => import('./pages/legal/ContactPage').then((m) => ({ default: m.ContactPage })))
 const StorefrontLayout = lazy(() => import('./pages/storefront/StorefrontLayout').then((m) => ({ default: m.StorefrontLayout })))
 const StorefrontHome = lazy(() => import('./pages/storefront/StorefrontHome').then((m) => ({ default: m.StorefrontHome })))
 const CartPage = lazy(() => import('./pages/storefront/CartPage').then((m) => ({ default: m.CartPage })))
 const CheckoutPage = lazy(() => import('./pages/storefront/CheckoutPage').then((m) => ({ default: m.CheckoutPage })))
 const OrderConfirmationPage = lazy(() => import('./pages/storefront/OrderConfirmationPage').then((m) => ({ default: m.OrderConfirmationPage })))
 const OrderPlacedPage = lazy(() => import('./pages/storefront/OrderPlacedPage').then((m) => ({ default: m.OrderPlacedPage })))
+const UnsubscribePage = lazy(() => import('./pages/Unsubscribe').then((m) => ({ default: m.UnsubscribePage })))
+const PoliciesPage = lazy(() => import('./pages/storefront/PoliciesPage').then((m) => ({ default: m.PoliciesPage })))
 const CatalogPage = lazy(() => import('./pages/storefront/CatalogPage').then((m) => ({ default: m.CatalogPage })))
 const ProductPage = lazy(() => import('./pages/storefront/ProductPage').then((m) => ({ default: m.ProductPage })))
 const CustomerAuthPage = lazy(() => import('./pages/storefront/account/CustomerAuthPage').then((m) => ({ default: m.CustomerAuthPage })))
@@ -48,6 +59,9 @@ const DailySummaryPage = lazy(() => import('./pages/pos/DailySummaryPage').then(
 const PosEntry = lazy(() => import('./pages/pos/PosLayout').then((m) => ({ default: m.PosEntry })))
 const PosLayout = lazy(() => import('./pages/pos/PosLayout').then((m) => ({ default: m.PosLayout })))
 const PosRegisterPage = lazy(() => import('./pages/pos/RegisterPage').then((m) => ({ default: m.RegisterPage })))
+// The living style guide, in development only: in a production build this is null and the page is
+// not bundled at all.
+const StyleGuidePage = import.meta.env.DEV ? lazy(() => import('./pages/dev/StyleGuidePage').then((m) => ({ default: m.StyleGuidePage }))) : null
 
 /** Shown while a route's chunk is fetched. Deliberately blank: a flash of a spinner on a fast
  *  connection is more distracting than a moment of nothing. */
@@ -55,14 +69,21 @@ const Loading = <div className="min-h-screen bg-bg" />
 
 export default function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <AuthProvider>
+        <ToastProvider>
+        <RouteErrorBoundary>
         <Suspense fallback={Loading}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/unsubscribe" element={<UnsubscribePage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/contact" element={<ContactPage />} />
 
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="products" replace />} />
@@ -77,7 +98,9 @@ export default function App() {
               <Route path="payments" element={<PaymentsPage />} />
               <Route path="voice-notes" element={<VoiceNotesPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="theme" element={<ThemeStudioPage />} />
               <Route path="platform" element={<PlatformPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
 
             <Route path="/pos" element={<PosEntry />} />
@@ -86,9 +109,11 @@ export default function App() {
               <Route index element={<PosRegisterPage />} />
               <Route path="history" element={<HistoryPage />} />
               <Route path="summary" element={<DailySummaryPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
 
-            <Route path="/store/:storeId" element={<StorefrontLayout />}>
+            {/* The shop has its own loading boundary, in its own colours, so the app-wide one never replaces it. */}
+            <Route path="/store/:storeId" element={<Suspense fallback={<StoreLoadingScreen />}><StorefrontLayout /></Suspense>}>
               <Route index element={<StorefrontHome />} />
               <Route path="products" element={<CatalogPage />} />
               <Route path="products/:productId" element={<ProductPage />} />
@@ -100,6 +125,8 @@ export default function App() {
               <Route path="checkout" element={<CheckoutPage />} />
               <Route path="checkout/success" element={<OrderConfirmationPage />} />
               <Route path="checkout/placed" element={<OrderPlacedPage />} />
+              <Route path="policies" element={<PoliciesPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
 
           {/* "/" used to send everybody to the merchant dashboard, which is wrong for a shopper,
@@ -107,10 +134,16 @@ export default function App() {
                 role choice Issue 2 introduced; a signed-in visitor is redirected past it. */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/shop" element={<ShopDirectoryPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {StyleGuidePage && <Route path="/dev/styleguide" element={<StyleGuidePage />} />}
+            {/* B2: an unknown address is a real 404 page (it used to send everyone to the home page). */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          <CookieNotice />
         </Suspense>
+        </RouteErrorBoundary>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

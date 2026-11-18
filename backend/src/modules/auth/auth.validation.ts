@@ -34,6 +34,18 @@ export const registerCustomerSchema = z.object({
 });
 export type RegisterCustomerInput = z.infer<typeof registerCustomerSchema>;
 
+/** B1: asking for a reset link. `storeId` (optional) is the store whose sign-in page the shopper came from. */
+export const forgotPasswordSchema = z.object({
+  email: z.string().email().max(254),
+  storeId: z.string().max(40).optional(),
+});
+
+/** B1: choosing a new password with a link. The same password rules as signing up. */
+export const resetPasswordSchema = z.object({
+  token: z.string().min(20).max(200),
+  password: registerSchema.shape.password,
+});
+
 export const loginSchema = z.object({
   email: z.string().email().max(254),
   password: z.string().max(1000),

@@ -1,0 +1,62 @@
+# Dependency version updates: PAUSED until the owners say so (after the viva).
+#
+# The owners' decision (14 November 2026): no version-update pull requests at all before the viva, and
+# none merged. Every entry below has `open-pull-requests-limit: 0`, so Dependabot opens none.
+# This does NOT switch off security alerts or Dependabot security updates: those are repository
+# settings (Settings > Code security) and have their own separate limit, unaffected by this file.
+#
+# To turn version updates back on: set `open-pull-requests-limit` to 1 on the entries you want. Each
+# then opens at most one pull request a week grouping its minor and patch updates (Dependabot cannot
+# group across package types). Major versions stay off until the `ignore` blocks are deleted.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories: [/backend, /frontend]
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    groups:
+      npm-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
+
+  - package-ecosystem: pip
+    directory: /recommendation-service
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    groups:
+      python-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
+
+  # Base images are pinned to exact versions in the Dockerfiles and compose files.
+  - package-ecosystem: docker
+    directories: [/backend, /frontend, /recommendation-service]
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    groups:
+      base-images-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    groups:
+      compose-images-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+    groups:
+      actions-minor-and-patch: { patterns: ["*"], update-types: [minor, patch] }

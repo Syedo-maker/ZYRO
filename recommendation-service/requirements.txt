@@ -5,7 +5,10 @@ fastapi==0.141.1
 uvicorn==0.53.0
 motor==3.7.1
 numpy==2.4.6
-fastembed==0.8.1
+fastembed==0.9.1
+# Pulled in by fastembed. Pinned at 13.0.0 or later: 12.x has 39 known vulnerabilities (pip-audit,
+# audit 2026-11), and fastembed 0.8.1 held it below 13.
+pillow==13.0.0
 python-multipart==0.0.32
 
 # Part G: local speech to text for voice notes. The service starts without it and refuses voice

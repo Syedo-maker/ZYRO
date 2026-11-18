@@ -33,6 +33,10 @@ param postgresAdminPassword string
 param jwtAccessSecret string
 
 @secure()
+@description('Mixed into cash-on-delivery phone hashes. Required in production; set once, never change.')
+param codPhonePepper string
+
+@secure()
 @description('The MongoDB Atlas connection string (an Atlas cluster in the same Azure region).')
 param mongodbUri string
 
@@ -98,6 +102,7 @@ module keyVault 'modules/keyvault.bicep' = {
     purgeProtection: isProduction
     secrets: {
       'jwt-access-secret': jwtAccessSecret
+      'cod-phone-pepper': codPhonePepper
       'mongodb-uri': mongodbUri
       'recommendation-service-token': recommendationServiceToken
       'stripe-secret-key': stripeSecretKey

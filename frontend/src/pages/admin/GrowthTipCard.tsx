@@ -52,7 +52,7 @@ export function GrowthTipCard({ storeId, isOwner }: { storeId: string; isOwner: 
 
   const tip = state.tip
   return (
-    <section aria-label="Growth tips" className="rounded-2xl border border-brand/30 bg-brand-soft p-5">
+    <section aria-label="Growth tips" className="rounded-2xl border border-brand-ink/30 bg-brand-soft p-5">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-base font-bold">This week's tip</h2>
         <p className="text-xs text-text-secondary">From automated weekly checks on your store's totals</p>
@@ -61,7 +61,7 @@ export function GrowthTipCard({ storeId, isOwner }: { storeId: string; isOwner: 
         <>
           <p className="text-sm leading-relaxed text-text">{tip.message}</p>
           {tip.topics.some((t) => t.kind === 'upgrade') && isOwner && (
-            <Link to="/admin/billing" className="mt-2 inline-block text-sm font-semibold text-brand hover:text-brand-hover">
+            <Link to="/admin/billing" className="mt-2 inline-block text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
               See plans
             </Link>
           )}

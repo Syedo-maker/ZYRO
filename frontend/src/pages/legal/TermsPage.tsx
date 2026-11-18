@@ -1,18 +1,19 @@
 import { Link } from 'react-router-dom'
 import { LegalLayout } from './LegalLayout'
 import { LEGAL } from '../../lib/legal'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /** The Terms of Service: what ZYRO provides, what a merchant is responsible for, and the limits on both. */
 export function TermsPage() {
+  usePageMeta({ title: 'Terms of Service | ZYRO', description: 'The rules for using ZYRO, for merchants and shoppers.' })
   return (
     <LegalLayout
       title="Terms of Service"
       intro={
         <>
           <p>
-            These terms are the agreement between you and {LEGAL.operator} ("we"), who run ZYRO. By opening a shop or an account on ZYRO you
-            accept them. They are written to be read; if anything is unclear, ask us at{' '}
-            <a href={`mailto:${LEGAL.contactEmail}`} className="text-text underline underline-offset-4">{LEGAL.contactEmail}</a>.
+            These terms are the agreement between you and {LEGAL.operator} ("we"). By opening a shop or an account on ZYRO you accept them. They
+            are written to be read. {LEGAL.contactEmail}.
           </p>
           <p>
             How we handle personal data is in the <Link to="/privacy" className="text-text underline underline-offset-4">Privacy Policy</Link>,

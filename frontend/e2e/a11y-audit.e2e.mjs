@@ -15,6 +15,8 @@
 //
 // Setup and run: backend (npx tsx scripts/e2e-server.ts) and Redis, and `npm run dev` in the
 // frontend, then: node e2e/a11y-audit.e2e.mjs
+// THEME=light (or dark, the default) audits that theme (B5): every screen is opened with that choice
+// saved, exactly as a visitor who picked it would see it.
 // Afterwards run backend/scripts/cleanup-test-data.ts (emails and slugs use the e2e- prefix).
 import { chromium } from 'playwright'
 import fs from 'node:fs'
@@ -23,6 +25,7 @@ import path from 'node:path'
 const WEB = 'http://localhost:5173'
 const API = 'http://localhost:5000/api/v1'
 const SHOTS = path.join(import.meta.dirname, 'shots')
+const THEME = process.env.THEME === 'light' ? 'light' : 'dark'
 fs.mkdirSync(SHOTS, { recursive: true })
 
 const suffix = Date.now().toString(36)
@@ -353,6 +356,13 @@ for (const [width, height] of [[375, 812], [1440, 900]]) {
   // until it is scrolled to. Without this the audit skipped all of it as invisible, which is how
   // two contrast failures in the pricing and call-to-action sections went unreported.
   const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' })
+  await ctx.addInitScript((theme) => {
+    try {
+      localStorage.setItem('zyro-theme', theme)
+    } catch {
+      // A browser that refuses storage shows the default, dark.
+    }
+  }, THEME)
   const page = await ctx.newPage()
   const minTarget = 24 // WCAG 2.2 Target Size (Minimum) for web
 
@@ -420,7 +430,7 @@ await browser.close()
 const byKind = {}
 for (const f of findings) (byKind[f.kind] ||= []).push(f)
 
-console.log(`\n${'='.repeat(78)}\nFINDINGS: ${findings.length} across ${screensChecked} screen visits (${textElementsChecked} text elements measured for contrast)\n${'='.repeat(78)}`)
+console.log(`\n${'='.repeat(78)}\nFINDINGS (${THEME} theme): ${findings.length} across ${screensChecked} screen visits (${textElementsChecked} text elements measured for contrast)\n${'='.repeat(78)}`)
 for (const [kind, list] of Object.entries(byKind).sort((a, b) => b[1].length - a[1].length)) {
   console.log(`\n${kind} (${list.length})`)
   const unique = new Map()
@@ -437,6 +447,7 @@ for (const [kind, list] of Object.entries(byKind).sort((a, b) => b[1].length - a
   if (unique.size > 12) console.log(`  ... and ${unique.size - 12} more distinct`)
 }
 
-fs.writeFileSync(path.join(SHOTS, 'a11y-findings.json'), JSON.stringify(findings, null, 2))
-console.log(`\nFull list written to e2e/shots/a11y-findings.json`)
+const file = THEME === 'light' ? 'a11y-findings-light.json' : 'a11y-findings.json'
+fs.writeFileSync(path.join(SHOTS, file), JSON.stringify(findings, null, 2))
+console.log(`\nFull list written to e2e/shots/${file}`)
 process.exit(0)

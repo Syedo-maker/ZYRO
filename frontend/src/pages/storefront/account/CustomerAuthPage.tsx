@@ -5,6 +5,7 @@ import { useStore } from '../../../context/StoreContext'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { authErrorMessage } from '../../../lib/apiClient'
+import { usePageMeta } from '../../../lib/pageMeta'
 
 /** Only ever send the shopper back to a page of this store, never to an address taken from the link. */
 function safeNext(next: string | null, storeId: string): string | null {
@@ -14,6 +15,7 @@ function safeNext(next: string | null, storeId: string): string | null {
 /** Sign in or create an account at a store. The same page serves both, chosen by `mode`. */
 export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
   const store = useStore()
+  usePageMeta({ title: `${mode === 'login' ? 'Sign in' : 'Create an account'} | ${store.name}`, description: `Your account at ${store.name}.`, robots: 'noindex' })
   const { login, registerCustomer, isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -45,8 +47,8 @@ export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-surface p-8">
-      <h1 className="font-display text-2xl font-bold">{register ? 'Create your account' : 'Sign in'}</h1>
+    <div className="mx-auto w-full max-w-md rounded-3xl border border-border bg-surface p-8 shadow-lg sm:p-10">
+      <h1 className="font-serif text-h2 font-normal italic leading-tight">{register ? 'Create your account' : 'Sign in'}</h1>
       <p className="mt-1 text-sm text-text-secondary">
         {register
           ? `Track your orders and review what you buy at ${store.name}. You can also check out as a guest without an account.`
@@ -66,6 +68,13 @@ export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {!register && (
+          <div className="-mt-2 text-right">
+            <Link to={`/forgot-password?store=${store.id}`} className="text-sm font-semibold text-text-secondary underline-offset-4 hover:text-text hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+        )}
         {error && (
           <p role="alert" className="text-sm text-danger">
             {error}
@@ -77,7 +86,7 @@ export function CustomerAuthPage({ mode }: { mode: 'login' | 'register' }) {
       </form>
       <p className="mt-5 text-center text-sm text-text-secondary">
         {register ? 'Already have an account? ' : 'New here? '}
-        <Link to={`/store/${store.id}/account/${register ? 'login' : 'register'}${suffix}`} className="font-semibold text-brand">
+        <Link to={`/store/${store.id}/account/${register ? 'login' : 'register'}${suffix}`} className="font-semibold text-brand-ink">
           {register ? 'Sign in' : 'Create an account'}
         </Link>
       </p>

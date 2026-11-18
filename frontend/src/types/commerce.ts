@@ -1,8 +1,14 @@
 // Mirrors the cart, checkout, order and shipping schemas in backend/openapi.yaml.
 import type { Store } from './api'
+import type { PublishedTheme } from '../lib/storeTheme'
 
 export interface StoreProfile extends Store {
   currency: string
+  description?: string | null
+  /** Whether shoppers can pay by card here (the platform's Stripe is set up). */
+  cardPayments?: boolean
+  /** The store's published theme (Store Themes); null or absent means Zyro's default look. Never a draft. */
+  theme?: PublishedTheme | null
 }
 
 export interface CartItem {

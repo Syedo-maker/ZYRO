@@ -99,6 +99,10 @@ await step('choosing to shop', visitor, async () => {
   await visitor.getByRole('main').getByRole('link', { name: 'Shop now' }).first().click()
   await visitor.waitForURL('**/shop')
   check('choosing to shop opens the shop directory', visitor.url().endsWith('/shop'))
+  // The address changes before React swaps the pages, and the landing page has its own "Shops
+  // already selling" preview with the same kind of card: looking for the card straight away could
+  // find the landing page's copy, which then disappears. Wait for the directory's own heading first.
+  await visitor.getByRole('heading', { name: 'Shops on ZYRO', level: 1 }).waitFor({ timeout: 15000 })
   const card = visitor.getByRole('listitem').filter({ hasText: `E2E Roles ${suffix}` })
   await card.waitFor({ timeout: 15000 })
   check('a shop with a real catalogue is listed', await card.isVisible())

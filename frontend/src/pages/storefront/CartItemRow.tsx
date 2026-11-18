@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react'
 import { formatMoney } from '../../lib/format'
 import type { CartItem } from '../../types/commerce'
 
@@ -13,8 +14,8 @@ export function CartItemRow({ item, currency, busy, onSetQuantity, onRemove }: C
   const overStock = item.quantity > item.availableStock
 
   return (
-    <li className="flex gap-3 rounded-[14px] border border-border bg-surface p-3 sm:gap-4 sm:p-4">
-      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[10px] bg-bg sm:h-[84px] sm:w-[84px]">
+    <li className="flex gap-3 rounded-lg border border-border bg-surface p-3 sm:gap-4 sm:p-4">
+      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-control bg-bg sm:h-[84px] sm:w-[84px]">
         {item.imageUrl && <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />}
       </div>
 
@@ -63,11 +64,7 @@ export function CartItemRow({ item, currency, busy, onSetQuantity, onRemove }: C
               onClick={onRemove}
               className="text-text-muted hover:text-danger disabled:opacity-40"
             >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14H6L5 6" />
-                <path d="M10 11v6M14 11v6" />
-              </svg>
+              <Trash2 aria-hidden="true" className="h-[17px] w-[17px]" strokeWidth={1.75} />
             </button>
           </div>
         </div>

@@ -122,6 +122,26 @@ async function main() {
     check("chat: a missing conversationId or an empty message is 400", (await api("POST", `/stores/${A.storeId}/assistant/chat`, { guest: g1, body: { message: "hi" } })).status === 400 && (await api("POST", `/stores/${A.storeId}/assistant/chat`, { guest: g1, body: { conversationId: "x", message: "" } })).status === 400);
     check("chat: an unknown store is 404", (await api("POST", "/stores/does-not-exist/assistant/chat", { guest: g1, body: { conversationId: "x", message: "hi" } })).status === 404);
 
+    // ---- A3: a budget limits the answer and the cards to exactly the same products ----
+    nextReply = "Here is what fits your budget.";
+    let at = calls.length;
+    const cheap = await api("POST", `/stores/${A.storeId}/assistant/chat`, { guest: g1, body: { conversationId: `conv-${suffix}-budget-1`, message: "Any mugs under $15?" } });
+    const cheapTitles = cheap.json.suggestedProducts.map((p: { title: string }) => p.title);
+    check("budget: the cards keep only products within the budget (the 12.50 mug, not the 18.00 one)", cheap.status === 200 && cheapTitles.includes("Ceramic Mug") && !cheapTitles.includes("Travel Mug"));
+    check("budget: every card is priced at or under the budget", cheap.json.suggestedProducts.every((p: { salePrice: number }) => p.salePrice <= 15));
+    check("budget: the AI is told the budget and only about the same products as the cards", /budget is (US)?\$15\.00/.test(calls[at].system) && /Ceramic Mug/.test(calls[at].system) && !/Travel Mug/.test(calls[at].system));
+
+    at = calls.length;
+    const tooLow = await api("POST", `/stores/${A.storeId}/assistant/chat`, { guest: g1, body: { conversationId: `conv-${suffix}-budget-2`, message: "mugs below $5" } });
+    check("budget: a budget below every product gives no cards, and the AI is told nothing matched within it", tooLow.json.suggestedProducts.length === 0 && /No products within their budget of (US)?\$5\.00/.test(calls[at].system));
+
+    at = calls.length;
+    const otherCurrency = await api("POST", `/stores/${A.storeId}/assistant/chat`, { guest: g1, body: { conversationId: `conv-${suffix}-budget-3`, message: "any mugs under Rs 15?" } });
+    check("budget: a budget in another currency than the shop's is not applied (no guessed conversion)", otherCurrency.json.suggestedProducts.some((p: { title: string }) => p.title === "Travel Mug") && !/budget is/.test(calls[at].system));
+
+    const noBudget = await api("POST", `/stores/${A.storeId}/assistant/chat`, { guest: g1, body: { conversationId: `conv-${suffix}-budget-4`, message: "Do you have any mugs?" } });
+    check("budget: without a budget, every matching product is still suggested", noBudget.json.suggestedProducts.some((p: { title: string }) => p.title === "Travel Mug"));
+
     // ---- Tenant isolation: store B has its own quota, untouched by everything done to A ----
     check("isolation: store B has no products, so a matching question gets no suggestions, and B's quota is untouched by A's usage", (await api("GET", `/stores/${B.storeId}/ai-usage`, { token: B.token })).json.chatMessagesUsed === 0);
     nextReply = "B's own reply.";
@@ -169,6 +189,12 @@ declare([
   "chat: no token and no guest id is 400 (resolveCartOwner has nothing to identify the shopper with)",
   "chat: a missing conversationId or an empty message is 400",
   "chat: an unknown store is 404",
+  "budget: the cards keep only products within the budget (the 12.50 mug, not the 18.00 one)",
+  "budget: every card is priced at or under the budget",
+  "budget: the AI is told the budget and only about the same products as the cards",
+  "budget: a budget below every product gives no cards, and the AI is told nothing matched within it",
+  "budget: a budget in another currency than the shop's is not applied (no guessed conversion)",
+  "budget: without a budget, every matching product is still suggested",
   "isolation: store B has no products, so a matching question gets no suggestions, and B's quota is untouched by A's usage",
   "isolation: store B can chat on its own quota, and sees none of A's products",
   "isolation: the same conversationId in a different store is a different conversation (no cross-store context leak)",

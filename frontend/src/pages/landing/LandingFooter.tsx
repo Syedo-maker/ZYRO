@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom'
-import { LEGAL } from '../../lib/legal'
+import { CONTACT_LINES } from '../../lib/legal'
+import { ThemeToggle } from '../../components/ui/ThemeToggle'
 
 /**
- * The footer, including the note that this is a university project.
- *
- * That note is there on purpose: somebody deciding whether to put their livelihood on a platform is
- * entitled to know it is a final year project rather than an established company. Burying that
- * would be the dishonest choice.
+ * The footer. Zyro is in early access and says so; contact details are "coming soon" as plain text,
+ * with no links, until they exist.
  *
  * The social icons link nowhere yet, so they are not rendered at all. An icon that does nothing is
  * worse than an absent one, and inventing accounts we do not have would be the same kind of fiction
@@ -35,6 +33,7 @@ const COLUMNS: { heading: string; links: { label: string; to: string; external?:
     links: [
       { label: 'Terms of Service', to: '/terms' },
       { label: 'Privacy Policy', to: '/privacy' },
+      { label: 'Contact', to: '/contact' },
     ],
   },
 ]
@@ -51,11 +50,11 @@ export function LandingFooter() {
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-on-inverse-muted">
               A free place for small businesses in Pakistan to sell online, with the AI built in rather than sold separately.
             </p>
-            <p className="mt-4 text-sm text-on-inverse-muted">
-              <a href={`mailto:${LEGAL.contactEmail}`} className="underline decoration-on-inverse/30 underline-offset-4 hover:text-on-inverse">
-                {LEGAL.contactEmail}
-              </a>
-            </p>
+            <ul role="list" className="mt-4 flex flex-col gap-1 text-sm text-on-inverse-muted">
+              {CONTACT_LINES.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
           </div>
 
           {COLUMNS.map((column) => (
@@ -80,12 +79,12 @@ export function LandingFooter() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-on-inverse/15 pt-6 text-sm text-on-inverse-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} ZYRO</p>
-          <p className="max-w-xl sm:text-right">
-            A final year project by Muhammad Ibrahim and Syed Sikander Gillani, supervised by Mr. Saad Ilyas. Built as coursework, not as a
-            registered company.
-          </p>
+        <div className="mt-12 flex flex-col items-start gap-3 border-t border-on-inverse/15 pt-6 text-sm text-on-inverse-muted sm:flex-row sm:items-center sm:justify-between">
+          <ThemeToggle />
+          <div className="flex flex-col gap-1 sm:text-right">
+            <p>Early access: we're building Zyro with feedback from store owners.</p>
+            <p>&copy; 2026 Zyro. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </footer>

@@ -1,12 +1,21 @@
 /**
- * Who runs ZYRO and how to reach them: one place, used by the footer, the Terms of Service and the
- * Privacy Policy, so they can never disagree. These are the details the site already publishes. Before
- * ZYRO takes real merchants' money, the owners replace them with the legal name of the business that
- * operates it (Deployment_Runbook.md, "Before calling production live").
+ * Who runs Zyro and how to reach them: one place, used by the footer, the contact page, the Terms of
+ * Service and the Privacy Policy, so they can never disagree. Contact details are not published yet, so
+ * the site says "coming soon" as plain text: no links, no invented addresses. The details still to be
+ * added are listed in documentation/Public_Site_Details_To_Add.md.
  */
 export const LEGAL = {
-  operator: 'Muhammad Ibrahim and Syed Sikander Gillani',
-  contactEmail: 'finalyear860@gmail.com',
+  operator: 'Zyro',
+  /** Shown wherever a page would give an address to write to. */
+  contactEmail: 'Email: coming soon',
   /** When the Terms and the Privacy Policy last changed. */
-  updated: '23 October 2026',
+  updated: '18 November 2026',
+  /**
+   * False until a lawyer has reviewed the Terms and the Privacy Policy. While false, both pages say
+   * openly that they are a template not yet reviewed. Set it to true only after that review.
+   */
+  reviewedByLawyer: false,
 } as const
+
+/** The contact block of the footer and the contact page: plain text until the details exist. */
+export const CONTACT_LINES = ['Email: coming soon', 'Contact: coming soon', 'Help center: coming soon'] as const

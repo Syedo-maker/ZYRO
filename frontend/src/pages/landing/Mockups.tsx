@@ -9,7 +9,7 @@
  * Every string here is wording the product genuinely uses. Nothing invents a number.
  */
 
-const frame = 'rounded-xl border border-border bg-surface p-4 shadow-lg shadow-black/5'
+const frame = 'rounded-xl border border-border bg-surface p-4 shadow-md'
 
 /** The feature itself: suggestions with their keyword attribution, as the Add product form shows it. */
 export function TrendingMockup() {
@@ -33,7 +33,7 @@ export function TrendingMockup() {
         ].map((s) => (
           <div key={s.t} className="rounded-lg bg-bg p-2.5">
             <p className="text-[11px] font-bold text-text">{s.t}</p>
-            <p className="mt-1 text-[10px] text-accent">Uses popular searches: {s.k}</p>
+            <p className="mt-1 text-[10px] text-accent-ink">Uses popular searches: {s.k}</p>
           </div>
         ))}
       </div>
@@ -107,7 +107,7 @@ export function InsightsMockup() {
       <div className="mt-3 flex items-end gap-1.5">
         {[38, 52, 44, 61, 70, 58, 76].map((h, i) => (
           <div key={i} className="flex-1 rounded-t bg-subtle" style={{ height: `${h * 0.6}px` }}>
-            <div className="h-1 w-full rounded-t bg-accent-display" />
+            <div className="h-1 w-full rounded-t bg-accent" />
           </div>
         ))}
       </div>

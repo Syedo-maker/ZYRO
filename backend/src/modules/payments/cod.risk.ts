@@ -71,8 +71,6 @@ export const BANDS = { medium: 35, high: 65 } as const;
 
 /** How many times the store average an order must be before its size counts against it. */
 const BIG_ORDER_MULTIPLE = 3;
-/** A store with fewer paid orders than this has no meaningful average yet. */
-const MIN_ORDERS_FOR_AVERAGE = 5;
 
 export function bandFor(score: number): RiskBand {
   if (score >= BANDS.high) return "high";

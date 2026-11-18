@@ -14,6 +14,7 @@ export function mongoHost(uri: string): string {
 export async function connectMongo(): Promise<void> {
   // A server that cannot be reached fails the start within 10 s, with a clear message, instead of
   // leaving the process waiting on the driver's 30 s default.
-  await mongoose.connect(env.mongoUri, { serverSelectionTimeoutMS: 10_000 });
+  // The pool size is per process (MONGO_MAX_POOL_SIZE); unset keeps the driver's default of 100.
+  await mongoose.connect(env.mongoUri, { serverSelectionTimeoutMS: 10_000, ...(env.mongoMaxPoolSize ? { maxPoolSize: env.mongoMaxPoolSize } : {}) });
   logger.info({ host: mongoHost(env.mongoUri) }, "connected to MongoDB");
 }

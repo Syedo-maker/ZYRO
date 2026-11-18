@@ -58,6 +58,7 @@ export function LocalPaymentSection({
   zoneId,
   code,
   onPlaced,
+  onAvailability,
 }: {
   storeId: string
   method: PayMethod
@@ -67,6 +68,8 @@ export function LocalPaymentSection({
   zoneId?: string
   code?: string
   onPlaced: (order: PlacedOrder) => void
+  /** Tells the page whether card payment is offered, and whether any way to pay is. */
+  onAvailability?: (available: { card: boolean; any: boolean }) => void
 }) {
   const [options, setOptions] = useState<PaymentOptions | null>(null)
   const [placing, setPlacing] = useState(false)
@@ -98,14 +101,34 @@ export function LocalPaymentSection({
 
   const codAvailable = options?.cod.available ?? false
   const bankAvailable = options?.bankTransfer.available ?? false
+  const cardAvailable = options?.card?.available ?? true
+
+  // Card payment is offered only where it is set up. Without it, the first method that works is chosen
+  // for the shopper, and the page is told so it does not show a card "Pay" button that cannot work.
+  useEffect(() => {
+    if (!options) return
+    onAvailability?.({ card: cardAvailable, any: cardAvailable || codAvailable || bankAvailable })
+    if (method === 'card' && !cardAvailable) {
+      if (codAvailable) onMethodChange('cod')
+      else if (bankAvailable) onMethodChange('bank_transfer')
+    }
+  }, [options, cardAvailable, codAvailable, bankAvailable, method, onMethodChange, onAvailability])
+
+  if (options && !cardAvailable && !codAvailable && !bankAvailable) {
+    return (
+      <p role="status" className="rounded-control border border-border bg-surface px-4 py-3.5 text-[13px] text-text-secondary">
+        This store is not taking orders online at the moment. Please contact the store or try again later.
+      </p>
+    )
+  }
   if (!options || (!codAvailable && !bankAvailable && method === 'card')) return null
 
   const choice = (value: PayMethod, title: string, note: string, disabled = false) => (
     <label
       key={value}
-      className={`flex cursor-pointer items-start gap-3 rounded-[10px] bg-surface px-4 py-3.5 ${method === value ? 'border-2 border-brand' : 'border border-border'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+      className={`flex cursor-pointer items-start gap-3 rounded-control bg-surface px-4 py-3.5 ${method === value ? 'border-2 border-brand-ink' : 'border border-border'} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
     >
-      <input type="radio" name="pay-method" value={value} checked={method === value} disabled={disabled} onChange={() => onMethodChange(value)} className="mt-0.5 h-4 w-4 accent-brand" />
+      <input type="radio" name="pay-method" value={value} checked={method === value} disabled={disabled} onChange={() => onMethodChange(value)} className="mt-0.5 h-4 w-4 accent-brand-ink" />
       <span>
         <span className="block text-[13px] font-semibold">{title}</span>
         <span className="block text-xs text-text-muted">{note}</span>
@@ -115,12 +138,12 @@ export function LocalPaymentSection({
 
   return (
     <section aria-labelledby="pay-method-heading" className="flex flex-col gap-4">
-      <h2 id="pay-method-heading" className="text-xs font-bold text-brand">
+      <h2 id="pay-method-heading" className="text-xs font-bold text-brand-ink">
         HOW YOU WOULD LIKE TO PAY
       </h2>
       <fieldset className="flex flex-col gap-2.5">
         <legend className="sr-only">Payment method</legend>
-        {choice('card', 'Card', 'Pay now on a secure page. Your card details never reach this shop.')}
+        {cardAvailable && choice('card', 'Card', 'Pay now on a secure page. Your card details never reach this shop.')}
         {codAvailable
           ? choice('cod', 'Cash on delivery', options.cod.advanceAmount ? `Pay ${formatMoney(options.cod.advanceAmount, options.currency)} now and the rest to the courier.` : 'Pay the courier in cash when your parcel arrives.')
           : options.cod.note && choice('cod', 'Cash on delivery', options.cod.note, true)}
@@ -128,7 +151,7 @@ export function LocalPaymentSection({
       </fieldset>
 
       {method !== 'card' && (
-        <div className="flex flex-col gap-3 rounded-[10px] border border-border bg-surface p-4">
+        <div className="flex flex-col gap-3 rounded-control border border-border bg-surface p-4">
           <h3 className="text-[13px] font-semibold">Where should we deliver?</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <Input id="d-name" label="Full name" required maxLength={120} autoComplete="name" value={delivery.name} onChange={(e) => set('name', e.target.value)} />
@@ -143,7 +166,7 @@ export function LocalPaymentSection({
           <p className="text-xs text-text-muted">We ask for a phone number so the courier can call before delivering.</p>
 
           {method === 'bank_transfer' && options.bankTransfer.available && (
-            <div className="rounded-[10px] bg-bg p-3 text-sm">
+            <div className="rounded-control bg-bg p-3 text-sm">
               <p className="font-semibold">Send the money to:</p>
               <p className="text-text-secondary">
                 {options.bankTransfer.accountName} · {options.bankTransfer.accountNumber} · {options.bankTransfer.bankName}

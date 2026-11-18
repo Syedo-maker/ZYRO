@@ -184,6 +184,10 @@ async function add() {
         ownerId: owner.id,
         currency: "PKR",
         listedInDirectory: true,
+        // Its sales stay out of Product Scout's demo figures: those are built from scripts/demo-product-scout.ts's
+        // six stores, and this store's own sales (some made by hand while filming) made one shop dominate a
+        // product, so the privacy rules hid it. It is still shown the demo trends like any demo store.
+        shareSalesInTrends: false,
         description: "Hand-made clay cups, kitchenware and lawn suits from Lahore. A demo store for the walkthrough videos.",
       },
     });

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import Stripe from "stripe";
 import { env } from "../config/env";
 import { Errors } from "../errors/AppError";
+import { createBreaker, guard } from "./circuitBreaker";
 
 export interface CheckoutSessionParams {
   checkoutSessionId: string;
@@ -287,8 +288,22 @@ export function setStripeGateway(gateway: StripeGateway | undefined) {
   override = gateway;
 }
 
+/**
+ * A Stripe outage, rate limit or network failure (not a card decline or a bad request, which are the
+ * caller's business) opens the breaker (lib/circuitBreaker.ts): shoppers then get a clear "try again"
+ * at once instead of a long wait. The webhook signature check is local and stays outside it.
+ */
+const stripeBreaker = createBreaker("stripe", {
+  countsAsFailure: (err) => {
+    const e = err as { type?: string; statusCode?: number };
+    if (typeof e?.statusCode === "number") return e.statusCode >= 500 || e.statusCode === 429;
+    return e?.type === undefined || e.type === "StripeConnectionError" || e.type === "StripeAPIError" || e.type === "StripeRateLimitError";
+  },
+  openError: () => Errors.serviceUnavailable("Card payments are temporarily unavailable. Please try again in a moment, or choose another way to pay."),
+});
+
 export function getStripeGateway(): StripeGateway {
   if (override) return override;
-  real ??= createRealGateway();
+  real ??= guard(stripeBreaker, createRealGateway(), { skip: ["constructEvent"] });
   return real;
 }

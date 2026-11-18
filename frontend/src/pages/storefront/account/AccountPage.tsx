@@ -10,12 +10,14 @@ import { formatDate, formatMoney } from '../../../lib/format'
 import { errorMessage } from '../../../lib/ordersApi'
 import { accountApi } from '../../../lib/shopApi'
 import type { Order } from '../../../types/commerce'
+import { usePageMeta } from '../../../lib/pageMeta'
 
 const PAGE = 10
 
 /** The signed-in shopper's page: who they are, and every order they have placed at this store. */
 export function AccountPage() {
   const store = useStore()
+  usePageMeta({ title: `Your account | ${store.name}`, description: `Your account at ${store.name}.`, robots: 'noindex' })
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[] | null>(null)
@@ -78,7 +80,7 @@ export function AccountPage() {
         {orders?.length === 0 && (
           <div className="rounded-2xl border border-border bg-surface px-6 py-12 text-center">
             <p className="text-sm text-text-secondary">You have no orders at {store.name} yet.</p>
-            <Link to={`/store/${store.id}/products`} className="mt-3 inline-block text-sm font-semibold text-brand">
+            <Link to={`/store/${store.id}/products`} className="mt-3 inline-block text-sm font-semibold text-brand-ink">
               Start shopping
             </Link>
           </div>
@@ -86,7 +88,7 @@ export function AccountPage() {
         <ul className="flex flex-col gap-3">
           {orders?.map((o) => (
             <li key={o.id}>
-              <Link to={`/store/${store.id}/account/orders/${o.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4 hover:border-brand">
+              <Link to={`/store/${store.id}/account/orders/${o.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4 hover:border-brand-ink">
                 <div>
                   <p className="text-sm font-bold">
                     Order #{o.orderNumber} <span className="ml-2 font-normal text-text-secondary">{formatDate(o.createdAt)}</span>

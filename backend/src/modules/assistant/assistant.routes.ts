@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { withTenantContext } from "../../middleware/tenantContext.middleware";
 import { resolveCartOwner } from "../../middleware/cartOwner.middleware";
-import { chatMessageLimiter } from "../../middleware/rateLimit.middleware";
+import { chatIpLimiter, chatMessageLimiter } from "../../middleware/rateLimit.middleware";
 import { assistantController } from "./assistant.controller";
 
 // Mounted at /stores/:storeId/assistant; see app.ts. Public to any shopper (signed in or a
@@ -9,4 +9,4 @@ import { assistantController } from "./assistant.controller";
 // asking the assistant a question.
 export const assistantRouter = Router({ mergeParams: true });
 
-assistantRouter.post("/chat", withTenantContext, resolveCartOwner, chatMessageLimiter, assistantController.chat);
+assistantRouter.post("/chat", withTenantContext, resolveCartOwner, chatIpLimiter, chatMessageLimiter, assistantController.chat);

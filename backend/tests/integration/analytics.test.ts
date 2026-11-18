@@ -254,8 +254,21 @@ async function main() {
     check(`speed: a 364-day report over ${bulk} orders answers in under 1.5 seconds`, big.status === 200 && ms < 1500, `${Math.round(ms)} ms`);
     check("scale: every order is counted, split 1/3 in-store and 2/3 online, and the money adds up", big.json.totals.orders === bulk && ch2(big.json, "pos").orders === 1000 && ch2(big.json, "online").orders === 2000 && big.json.totals.grossSales === 30000 && big.json.totals.unitsSold === 6000 && big.json.daily.length === 364 && big.json.topProducts.length === 10 && big.json.totals.productMargin === 18000 && big.json.totals.costCoveragePercent === 100);
     function ch2(x: any, name: string) { return x.byChannel.find((c: { channel: string }) => c.channel === name); }
-    const plan = await prismaUnscoped.$queryRawUnsafe<{ "QUERY PLAN": string }[]>(`EXPLAIN SELECT 1 FROM "Order" WHERE "tenantId" = '${B.storeId}' AND "createdAt" >= '2026-01-01' AND "createdAt" < '2026-12-31'`);
-    check("speed: the order query can use an index on tenant and date", plan.some((p) => /Index/.test(p["QUERY PLAN"])), plan[0]["QUERY PLAN"].slice(0, 90));
+    // Asks whether an index for this query exists, not which plan Postgres prefers today: in CI's nearly
+    // empty database, once its statistics are refreshed (at a moment of its own choosing), reading the
+    // whole small table is genuinely cheaper, so the plan used to flip and fail now and then (main,
+    // 2026-11-14). With sequential scans off for this one statement, the plan uses an index if one fits.
+    const [, plan] = await prismaUnscoped.$transaction([
+      prismaUnscoped.$executeRawUnsafe("SET LOCAL enable_seqscan = off"),
+      prismaUnscoped.$queryRawUnsafe<{ "QUERY PLAN": string }[]>(`EXPLAIN SELECT 1 FROM "Order" WHERE "tenantId" = '${B.storeId}' AND "createdAt" >= '2026-01-01' AND "createdAt" < '2026-12-31'`),
+    ]);
+    // Which index the planner picks still depends on its statistics, so two things are checked directly:
+    // an index on Order leads with the store and covers the date, and the query filters on the store
+    // inside an index (an unrelated full-index scan does not count).
+    const indexes = await prismaUnscoped.$queryRawUnsafe<{ indexdef: string }[]>(`SELECT indexdef FROM pg_indexes WHERE tablename = 'Order'`);
+    const tenantDateIndex = indexes.some((i) => /\("tenantId",[^)]*"createdAt"/.test(i.indexdef));
+    const planText = plan.map((p) => p["QUERY PLAN"]).join("\n");
+    check("speed: the order query can use an index on tenant and date", tenantDateIndex && /Index Cond: \(+"tenantId" = /.test(planText), planText.slice(0, 160));
   } finally {
     await Product.deleteMany({ storeId: { $in: created.tenantIds } });
     for (const t of created.tenantIds) {

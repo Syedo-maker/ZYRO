@@ -63,11 +63,9 @@ export const codService = {
         if (input.amount !== undefined && Math.round(input.amount * 100) !== Math.round(total * 100)) {
           throw Errors.validation(`The cash collected must be the order total, ${order.currency} ${total.toFixed(2)}.`);
         }
-        await tx.payment.updateMany({ where: { orderId: order.id, tenantId, method: "COD", status: "PENDING" }, data: { status: "SUCCEEDED" } });
-        await tx.order.updateMany({ where: { id: order.id, tenantId }, data: { status: "COMPLETED" } });
+        await settle(tx, tenantId, order.id, "SUCCEEDED", "COMPLETED");
       } else {
-        await tx.payment.updateMany({ where: { orderId: order.id, tenantId, method: "COD", status: "PENDING" }, data: { status: "FAILED" } });
-        await tx.order.updateMany({ where: { id: order.id, tenantId }, data: { status: "CANCELLED" } });
+        await settle(tx, tenantId, order.id, "FAILED", "CANCELLED");
         // The parcel came back, so the goods are the store's again.
         await restock(tx, tenantId, order.id, order.items);
       }
@@ -180,6 +178,19 @@ function presentRun(run: RunRow, referenceColumn?: string, amountColumn?: string
     })),
     createdAt: run.createdAt,
   };
+}
+
+/**
+ * Settles the delivery as one claim: the PENDING cash payment and the still-PENDING order must both
+ * change, or nothing does. Two outcomes recorded at the same moment used to both pass the earlier
+ * read, so the stock went back twice and the shared phone count rose twice; and an order the
+ * merchant had already cancelled could be marked completed (audit 2026-11). Throwing here rolls the
+ * whole transaction back, the restock and the phone count included.
+ */
+async function settle(tx: PrismaTx, tenantId: string, orderId: string, payment: "SUCCEEDED" | "FAILED", order: "COMPLETED" | "CANCELLED") {
+  const paid = await tx.payment.updateMany({ where: { orderId, tenantId, method: "COD", status: "PENDING" }, data: { status: payment } });
+  const moved = await tx.order.updateMany({ where: { id: orderId, tenantId, status: "PENDING" }, data: { status: order } });
+  if (paid.count === 0 || moved.count === 0) throw Errors.conflict("This cash delivery has already been settled, or the order was cancelled.");
 }
 
 /** Puts a refused parcel's goods back on the shelf, through the same path a return uses. */

@@ -1,20 +1,22 @@
 import { Link } from 'react-router-dom'
 import { LegalLayout } from './LegalLayout'
 import { LEGAL } from '../../lib/legal'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /**
  * The Privacy Policy. Every statement here describes what the code does; documentation/Privacy_Notes.md
  * holds the detail behind each, and must be kept in step with this page when the code changes.
  */
 export function PrivacyPage() {
+  usePageMeta({ title: 'Privacy Policy | ZYRO', description: 'What ZYRO collects, why, who else handles it, and what you can ask us to do with it.' })
   return (
     <LegalLayout
       title="Privacy Policy"
       intro={
         <>
           <p>
-            ZYRO is an online shop, a point-of-sale register and a set of AI tools for small businesses, run by {LEGAL.operator} ("we"). This page
-            says what we collect, why, who else handles it, and what you can ask us to do with it.
+            {LEGAL.operator} ("we") is an online shop, a point-of-sale register and a set of AI tools for small businesses. This page says what
+            we collect, why, who else handles it, and what you can ask us to do with it.
           </p>
           <p>
             It speaks to two kinds of people: <strong>merchants</strong>, who run a shop on ZYRO, and <strong>shoppers</strong>, who buy from one.
@@ -46,7 +48,7 @@ export function PrivacyPage() {
               <ul>
                 <li>To run each shop: show products, take orders, record payments, stock and refunds.</li>
                 <li>To sign you in and keep your account secure, including limits on repeated wrong passwords.</li>
-                <li>To send the emails ZYRO sends for a shop, such as a reminder about items left in a cart.</li>
+                <li>To send the emails ZYRO sends for a shop, such as a reminder about items left in a cart. Every reminder has a link to stop them from that shop, and email apps show their own unsubscribe button.</li>
                 <li>For cash on delivery, to estimate whether an order is likely to be refused, so a shop can ask for advance payment. This uses a scrambled form of the phone number and counts of past deliveries and refusals; never the number itself, and never a name.</li>
                 <li>To show a merchant their own figures and a weekly tip worked out from their own totals only.</li>
               </ul>
@@ -158,11 +160,10 @@ export function PrivacyPage() {
           body: (
             <>
               <p>
-                You can ask for a copy of the personal data we hold about you, for it to be corrected, or for it to be deleted, by writing to{' '}
-                <a href={`mailto:${LEGAL.contactEmail}`} className="text-text underline underline-offset-4">{LEGAL.contactEmail}</a>. If you
-                bought from a shop, you can also ask the shop, since it is the seller; we will help it answer.
+                You can ask for a copy of the personal data we hold about you, for it to be corrected, or for it to be deleted. {LEGAL.contactEmail}.
+                If you bought from a shop, you can also ask the shop, since it is the seller; we will help it answer.
               </p>
-              <p>We answer within 30 days, and do not charge for it.</p>
+              <p>Once the address is available, we answer within 30 days, and do not charge for it.</p>
             </>
           ),
         },
@@ -177,6 +178,7 @@ export function PrivacyPage() {
                 <li>A random id that keeps a guest's cart, and one that keeps a conversation with a shop's assistant. Neither identifies you.</li>
                 <li>Which part of ZYRO you last used (shopping or running a shop), so it opens there.</li>
                 <li>On the register, the sale in progress, until it is finished or the tab is closed.</li>
+                <li>Your choice of dark or light colours, and in a shop, the product you looked at last and the shop's colours, so the page opens the way you left it.</li>
               </ul>
               <p>No advertising, analytics or tracking cookies, from us or anyone else.</p>
             </>

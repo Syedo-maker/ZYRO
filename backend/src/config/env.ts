@@ -1,5 +1,6 @@
 import path from "node:path";
 import { config as loadDotenv } from "dotenv";
+import { checkEnv, EnvError, loadSecretFiles } from "./envCheck";
 
 // Settings come from backend/.env, by path, whichever folder the process was started from (the repo
 // root, backend/, or a script's own folder). Variables already set in the environment win, which is
@@ -7,37 +8,35 @@ import { config as loadDotenv } from "dotenv";
 // and email keys) are read here only, and never logged.
 loadDotenv({ path: path.resolve(__dirname, "../../.env") });
 
+// Every setting is checked before anything starts (config/envCheck.ts): all problems are reported
+// together, by variable name and purpose, never by value. Secrets may also come from `<NAME>_FILE`.
+// In production this also refuses a weak JWT secret (anyone could forge a login token) and local
+// file storage (a container's disk is thrown away on restart, so uploads would vanish).
+const secretFileProblems = loadSecretFiles(process.env);
+export const envReport = checkEnv(process.env);
+if (secretFileProblems.length > 0 || envReport.errors.length > 0) {
+  const error = new EnvError([...secretFileProblems, ...envReport.errors]);
+  // A real start prints the list and stops, without a stack trace in the way; under a test runner
+  // the error is thrown so the test can see it.
+  if (process.env.JEST_WORKER_ID) throw error;
+  console.error(error.message);
+  process.exit(1);
+}
+
 function required(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment variable: ${name}`);
-  return value;
+  return process.env[name]!; // presence checked above
 }
 
-const num = (name: string, fallback: number) => {
-  const value = Number(process.env[name] ?? fallback);
-  if (!Number.isFinite(value) || value < 1) throw new Error(`${name} must be a positive number`);
-  return value;
-};
+const num = (name: string, fallback: number) => Number(process.env[name] ?? fallback);
 
-const isProduction = process.env.NODE_ENV === "production";
-
+const isProduction = envReport.isProduction;
 const jwtAccessSecret = required("JWT_ACCESS_SECRET");
-// A weak or copied-from-the-example secret lets anyone forge a login token, so refuse to
-// start in production rather than run insecurely.
-if (isProduction && (jwtAccessSecret.length < 32 || /replace-with|dev-only|changeme/i.test(jwtAccessSecret))) {
-  throw new Error("JWT_ACCESS_SECRET must be a random string of at least 32 characters in production");
-}
-
 const storageDriver = process.env.STORAGE_DRIVER === "azure" ? "azure" : "local";
-// A container's disk is thrown away whenever it restarts or moves, so in production every upload
-// would vanish within days. Refuse to start rather than lose merchants' files quietly; a deployment
-// that really does have a persistent disk (a single VM) can say so explicitly.
-if (isProduction && storageDriver === "local" && process.env.ALLOW_LOCAL_STORAGE_IN_PRODUCTION !== "true") {
-  throw new Error("STORAGE_DRIVER must be 'azure' in production (or set ALLOW_LOCAL_STORAGE_IN_PRODUCTION=true on a host with a persistent disk)");
-}
 
 export const env = {
   isProduction,
+  /** development, test, staging or production: a label for logs and error tracking (config/envCheck.ts). */
+  appEnv: envReport.appEnv,
   port: Number(process.env.PORT ?? 5000),
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
   databaseUrl: required("DATABASE_URL"),
@@ -95,6 +94,12 @@ export const env = {
   // How many reverse proxies sit in front of the API (0 = none). Needed so rate limits see
   // each visitor's real IP instead of the proxy's; leave at 0 when clients connect directly.
   trustProxy: Number(process.env.TRUST_PROXY ?? 0),
+  /** Redirect plain HTTP to https on PUBLIC_URL's host (middleware/httpsOnly.middleware.ts). Off by default. */
+  forceHttps: process.env.FORCE_HTTPS === "true",
+  /** Largest JSON (and Stripe webhook) body accepted. Express's own default, made explicit. */
+  requestBodyLimit: process.env.REQUEST_BODY_LIMIT?.trim() || "100kb",
+  /** MongoDB connection pool per process; unset keeps the driver's default (100). */
+  mongoMaxPoolSize: process.env.MONGO_MAX_POOL_SIZE ? Number(process.env.MONGO_MAX_POOL_SIZE) : undefined,
   // Abuse protection, backed by Redis so limits survive restarts and are shared between servers.
   rateLimit: {
     enabled: process.env.RATE_LIMIT_ENABLED !== "false",
@@ -112,8 +117,21 @@ export const env = {
     discountMax: num("RATE_LIMIT_DISCOUNT_MAX", 20),
     /** Reviews written, edited or deleted per person per hour. */
     reviewMax: num("RATE_LIMIT_REVIEW_MAX", 10),
+    /** "Forgot password" requests per IP per window, and per email per hour (B1). */
+    forgotIpMax: num("RATE_LIMIT_FORGOT_IP_MAX", 5),
+    forgotEmailMax: num("RATE_LIMIT_FORGOT_EMAIL_MAX", 3),
+    /** Password resets tried (with a link) per IP per window. */
+    resetMax: num("RATE_LIMIT_RESET_MAX", 10),
     /** Chat messages sent to the AI shopping assistant per person per minute. */
     chatMax: num("RATE_LIMIT_CHAT_MAX", 10),
+    /** Chat messages per IP per minute across every shopper on that address (above chatMax). */
+    chatIpMax: num("RATE_LIMIT_CHAT_IP_MAX", 60),
+    /** Payment-failure help requests per IP per hour (an unknown failure is explained by the platform-paid AI). */
+    helpMax: num("RATE_LIMIT_HELP_MAX", 20),
+    /** Theme Studio design-assistant requests per person per minute (Store Themes). */
+    themeAiMax: num("RATE_LIMIT_THEME_AI_MAX", 6),
+    /** Theme Studio design-assistant requests per store per hour, whoever sends them. */
+    themeAiStoreMax: num("RATE_LIMIT_THEME_AI_STORE_MAX", 40),
     /** All API requests per IP per minute. */
     apiMax: num("RATE_LIMIT_API_MAX", 600),
   },
@@ -140,6 +158,17 @@ export const env = {
   // rest of the API runs without a key, and AI endpoints answer 503 until it is set.
   ai: {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    // The fallback provider (optional): tried only when the primary one fails. Its models per tier.
+    openAiApiKey: process.env.OPENAI_API_KEY,
+    openAiModels: {
+      fast: process.env.OPENAI_MODEL_FAST ?? "gpt-4.1-mini",
+      standard: process.env.OPENAI_MODEL_STANDARD ?? "gpt-4.1",
+    },
+    /** Which providers to try, in order, among those with a key. */
+    providerOrder: (process.env.AI_PROVIDER_ORDER ?? "anthropic,openai")
+      .split(",")
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean),
     // Cost control (Part A): each kind of request uses the cheapest model that does it well
     // (lib/aiModels.ts decides which). "fast" is for short structured outputs and chat replies,
     // "standard" for writing a merchant will publish. Neither needs the largest model; setting
@@ -159,6 +188,8 @@ export const env = {
     monthlyChatMessagesLimit: num("AI_MONTHLY_CHAT_MESSAGES_LIMIT", 40),
     /** How long a caller of generate() waits for the BullMQ job before giving up. */
     jobTimeoutMs: num("AI_JOB_TIMEOUT_MS", 60_000),
+    /** AI answers one worker process waits on at once (lib/aiQueue.ts). */
+    workerConcurrency: num("AI_WORKER_CONCURRENCY", 4),
   },
   // Plans and billing (Part A, revenue model). Stripe Billing uses the same Stripe keys as
   // checkout above; the plan catalog itself is in lib/plans.ts.

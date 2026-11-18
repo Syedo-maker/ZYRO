@@ -8,6 +8,7 @@ import { ChatTranscript, type ChatRole } from "../../models/ChatTranscript.model
 import type { CartOwner } from "../cart/cart.service";
 import { logger } from "../../lib/logger";
 import { formatPrice } from "../../lib/currencies";
+import { parseBudget, withinBudget, type Budget } from "../../lib/budget";
 
 /**
  * Module 3: AI Shopping Assistant (Implementation_Plan.md Phase 5). Built entirely on
@@ -82,14 +83,20 @@ const MAX_SUGGESTED = 5;
  * needs the embeddings for. Keyword hits keep their place at the front because an exact word
  * match is the more trustworthy signal; semantic hits fill the remaining slots. If the service
  * is not configured or is down, this is the plain keyword search it always was.
+ *
+ * A budget in the message ("under Rs 3,000") limits both searches to products the shopper can
+ * afford, through the same filter (lib/budget.ts) for every match, so the products the AI is told
+ * about and the cards the shopper sees are exactly the same set.
  */
-async function findRelevantProducts(storeId: string, message: string) {
-  const keyword = await productService.list(storeId, { q: message, limit: MAX_SUGGESTED, offset: 0, inStock: false, exact: false });
+async function findRelevantProducts(storeId: string, message: string, budget: Budget | null) {
+  const keywordHits = await productService.list(storeId, { q: message, limit: MAX_SUGGESTED, offset: 0, inStock: false, exact: false, maxPrice: budget?.max });
+  const keyword = { ...keywordHits, data: withinBudget(keywordHits.data, budget) };
   if (keyword.data.length >= MAX_SUGGESTED) return keyword;
 
   let scored: ScoredProduct[] = [];
   try {
-    scored = await getRecommendationClient().search(storeId, message, MAX_SUGGESTED);
+    // With a budget, ask for more meaning-based matches: some will be over it and filtered out.
+    scored = await getRecommendationClient().search(storeId, message, budget ? MAX_SUGGESTED * 4 : MAX_SUGGESTED);
   } catch (err) {
     if (!(err instanceof RecommendationUnavailableError) || !/not configured/.test(err.message)) {
       logger.warn(`[assistant] semantic search unavailable, using keyword matches only: ${(err as Error).message}`);
@@ -99,7 +106,7 @@ async function findRelevantProducts(storeId: string, message: string) {
   const extraIds = scored.map((s) => s.productId).filter((id) => !have.has(id));
   if (extraIds.length === 0) return keyword;
 
-  const extras = await productService.getMany(storeId, extraIds);
+  const extras = withinBudget(await productService.getMany(storeId, extraIds), budget);
   const data = [...keyword.data, ...extras].slice(0, MAX_SUGGESTED);
   return { ...keyword, data };
 }
@@ -115,9 +122,10 @@ export const assistantService = {
     const tenant = await prisma.tenant.findUnique({ where: { id: storeId }, select: { name: true, currency: true } });
     if (!tenant) throw Errors.notFound("Store");
 
+    const budget = parseBudget(message, tenant.currency);
     const [history, matches] = await Promise.all([
       getRecentContext(storeId, conversationId),
-      findRelevantProducts(storeId, message),
+      findRelevantProducts(storeId, message, budget),
     ]);
 
     // Prices in the store's own currency, and what a discount is, so the assistant can answer "is it on sale?".
@@ -131,7 +139,12 @@ export const assistantService = {
       "question in 2 to 4 short sentences, plain prose, no markdown. Base your answer only on the product list " +
       "below; never invent a product, price or stock level that is not listed. If nothing in the list actually " +
       "answers the question, say so honestly and suggest they browse the catalog instead of guessing.\n\n" +
-      (productLines.length > 0 ? `Products that matched their message:\n${productLines.join("\n")}` : "No products matched their message.");
+      (budget ? `The shopper's budget is ${money(budget.max)}; only products within it are listed. ` : "") +
+      (productLines.length > 0
+        ? `Products that matched their message:\n${productLines.join("\n")}`
+        : budget
+          ? `No products within their budget of ${money(budget.max)} matched their message; say so plainly.`
+          : "No products matched their message.");
 
     const result = await aiGenerate({
       tenantId: storeId,

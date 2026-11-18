@@ -11,8 +11,9 @@ import { prismaUnscoped as p } from "../src/lib/prisma";
 import { getRedis, closeRedis } from "../src/lib/redis";
 import { getStorage } from "../src/lib/storage";
 
-const SLUG_PREFIXES = ["e2e-", "p1-", "vo-", "verify-", "smoke-", "aurora-"];
-const EMAIL_PREFIXES = ["e2e-", "p1e2e-", "p1sec-", "p1-", "sec-", "vo-", "verify-", "smoke-", "shopper-", "stripe-"];
+// "demo-scout-verify-": the Product Scout suite's own demo stores, left behind if that suite is interrupted.
+const SLUG_PREFIXES = ["e2e-", "p1-", "vo-", "verify-", "smoke-", "aurora-", "demo-scout-verify-"];
+const EMAIL_PREFIXES = ["e2e-", "p1e2e-", "p1sec-", "p1-", "sec-", "vo-", "verify-", "smoke-", "shopper-", "stripe-", "demo-scout-verify-"];
 
 async function main() {
   await connectMongo();

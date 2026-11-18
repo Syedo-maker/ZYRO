@@ -69,7 +69,7 @@ export function ProductPage() {
       <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
         <h1 className="font-display text-xl font-bold">Product not found</h1>
         <p className="mt-2 text-sm text-text-secondary">It may have been removed.</p>
-        <Link to={`/store/${store.id}/products`} className="mt-4 inline-block text-sm font-semibold text-brand">
+        <Link to={`/store/${store.id}/products`} className="mt-4 inline-block text-sm font-semibold text-brand-ink">
           Browse all products
         </Link>
       </div>
@@ -114,7 +114,7 @@ export function ProductPage() {
                     onClick={() => setImage(i)}
                     aria-label={`Show picture ${i + 1} of ${product.images.length}`}
                     aria-current={i === image}
-                    className={`h-16 w-16 overflow-hidden rounded-lg border-2 ${i === image ? 'border-brand' : 'border-border'}`}
+                    className={`h-16 w-16 overflow-hidden rounded-lg border-2 ${i === image ? 'border-brand-ink' : 'border-border'}`}
                   >
                     <img src={src} alt="" className="h-full w-full object-cover" />
                   </button>

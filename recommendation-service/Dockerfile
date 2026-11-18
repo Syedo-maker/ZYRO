@@ -7,7 +7,7 @@
 # PIP_DEFAULT_TIMEOUT and PIP_RETRIES are there because a build that downloads hundreds of megabytes
 # should survive a flaky connection rather than fail on the first dropped read.
 
-FROM python:3.11-slim-bookworm AS base
+FROM python:3.11.14-slim-bookworm AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \

@@ -609,10 +609,14 @@ describe("card details never reach us", () => {
     });
     expect(res.status).toBe(201);
     const order = await prismaUnscoped.order.findUnique({ where: { id: res.json.orderId }, include: { payments: true } });
-    expect(JSON.stringify(order)).not.toMatch(/4242|cardNumber|cvv/i);
+    // The number itself and the field names, not any "4242" or "cvv": random ids (cuids) can contain those
+    // letters, which made this test fail now and then (CI, 2026-11-14: a customer id ending "...cvva").
+    const stored = JSON.stringify(order);
+    expect(stored).not.toContain("4242424242424242");
+    expect(stored).not.toMatch(/"(cardNumber|cvv)"/i);
   });
 
   it("no AI prompt in this part has ever carried a card number", () => {
-    for (const call of aiCalls) expect(`${call.system} ${call.prompt}`).not.toMatch(/4242|cvv|card number/i);
+    for (const call of aiCalls) expect(`${call.system} ${call.prompt}`).not.toMatch(/4242424242424242|\bcvv\b|card number/i);
   });
 });

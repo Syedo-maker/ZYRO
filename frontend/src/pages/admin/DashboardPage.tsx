@@ -115,7 +115,7 @@ function DashboardContent() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div role="group" aria-label="Period" className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
+          <div role="group" aria-label="Period" className="flex overflow-hidden rounded-control border border-border bg-surface">
             {PERIODS.map((d) => (
               <button
                 key={d}
@@ -188,7 +188,7 @@ function DashboardContent() {
       <section aria-label="Recent orders" className="rounded-2xl border border-border bg-surface p-5">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="font-display text-base font-bold">Recent orders</h2>
-          <Link to="/admin/orders" className="text-sm font-semibold text-brand hover:text-brand-hover">
+          <Link to="/admin/orders" className="text-sm font-semibold text-brand-ink hover:text-brand-ink-hover">
             View all
           </Link>
         </div>

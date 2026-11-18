@@ -43,6 +43,7 @@ azd env new zyro-staging
 azd env set AZURE_LOCATION uaenorth
 azd env set ZYRO_POSTGRES_ADMIN_PASSWORD "$(openssl rand -hex 24)"
 azd env set ZYRO_JWT_ACCESS_SECRET "$(openssl rand -base64 48)"
+azd env set ZYRO_COD_PHONE_PEPPER "$(openssl rand -base64 48)"   # set once; never change after the first order
 azd env set ZYRO_RECOMMENDATION_SERVICE_TOKEN "$(openssl rand -hex 32)"
 azd env set ZYRO_MONGODB_URI "mongodb+srv://..."
 # Optional integrations; each is wired in only when set:

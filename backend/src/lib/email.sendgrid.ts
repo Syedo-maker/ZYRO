@@ -6,7 +6,7 @@ import type { EmailGateway } from "./email";
  */
 export function sendgridGateway(apiKey: string, fromEmail: string): EmailGateway {
   return {
-    async send({ to, subject, text }) {
+    async send({ to, subject, text, headers }) {
       const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
         // A recovery email is not worth holding a worker for: give up after 10 s and let the next
@@ -18,6 +18,7 @@ export function sendgridGateway(apiKey: string, fromEmail: string): EmailGateway
           from: { email: fromEmail },
           subject,
           content: [{ type: "text/plain", value: text }],
+          ...(headers ? { headers } : {}),
         }),
       });
       if (!res.ok) {

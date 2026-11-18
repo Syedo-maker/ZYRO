@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import { useStore } from '../../context/StoreContext'
@@ -11,6 +11,7 @@ import { errorMessage } from '../../lib/ordersApi'
 import { checkoutApi, storefrontApi } from '../../lib/storefrontApi'
 import type { Quote, ShippingZone } from '../../types/commerce'
 import { LocalPaymentSection, emptyDelivery, type DeliveryDetails, type PayMethod } from './LocalPaymentSection'
+import { usePageMeta } from '../../lib/pageMeta'
 
 function TotalsRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
@@ -23,6 +24,7 @@ function TotalsRow({ label, value, strong }: { label: string; value: string; str
 
 export function CheckoutPage() {
   const store = useStore()
+  usePageMeta({ title: `Checkout | ${store.name}`, description: `Checkout at ${store.name}.`, robots: 'noindex' })
   const { cart, isLoading: cartLoading } = useCart()
   const [zones, setZones] = useState<ShippingZone[] | null>(null)
   const [zoneId, setZoneId] = useState<string | undefined>()
@@ -91,6 +93,10 @@ export function CheckoutPage() {
 
   // Part E: a local method places the order here rather than sending the shopper to Stripe.
   const [method, setMethod] = useState<PayMethod>('card')
+  // Whether this platform takes cards (Stripe set up); the payment section reports it.
+  const [cardOffered, setCardOffered] = useState(true)
+  const onAvailability = useCallback((a: { card: boolean }) => setCardOffered(a.card), [])
+  const showCard = method === 'card' && cardOffered
   const [delivery, setDelivery] = useState<DeliveryDetails>(emptyDelivery)
 
   async function handlePay() {
@@ -120,11 +126,11 @@ export function CheckoutPage() {
       <div className="flex flex-col items-start gap-8 lg:flex-row lg:gap-12">
         <div className="flex w-full flex-1 flex-col gap-8">
           <section aria-labelledby="shipping-heading">
-            <h2 id="shipping-heading" className="mb-3 text-xs font-bold text-brand">
+            <h2 id="shipping-heading" className="mb-3 text-xs font-bold text-brand-ink">
               1. SHIPPING METHOD
             </h2>
             {zones.length === 0 ? (
-              <p className="rounded-[10px] border border-border bg-surface px-4 py-3.5 text-sm text-text-secondary">
+              <p className="rounded-control border border-border bg-surface px-4 py-3.5 text-sm text-text-secondary">
                 This store has no shipping charge configured, so shipping is free.
               </p>
             ) : (
@@ -133,8 +139,8 @@ export function CheckoutPage() {
                 {zones.map((z) => (
                   <label
                     key={z.id}
-                    className={`flex cursor-pointer items-center justify-between rounded-[10px] bg-surface px-4 py-3.5 ${
-                      zoneId === z.id ? 'border-2 border-brand' : 'border border-border'
+                    className={`flex cursor-pointer items-center justify-between rounded-control bg-surface px-4 py-3.5 ${
+                      zoneId === z.id ? 'border-2 border-brand-ink' : 'border border-border'
                     }`}
                   >
                     <span className="flex items-center gap-3">
@@ -144,7 +150,7 @@ export function CheckoutPage() {
                         value={z.id}
                         checked={zoneId === z.id}
                         onChange={() => setZoneId(z.id)}
-                        className="h-4 w-4 accent-brand"
+                        className="h-4 w-4 accent-brand-ink"
                       />
                       <span>
                         <span className="block text-[13px] font-semibold">{z.name}</span>
@@ -159,22 +165,23 @@ export function CheckoutPage() {
           </section>
 
           <section aria-labelledby="payment-heading">
-            <h2 id="payment-heading" className="mb-3 text-xs font-bold text-brand">
+            <h2 id="payment-heading" className="mb-3 text-xs font-bold text-brand-ink">
               2. PAYMENT
             </h2>
-            {method === 'card' && (
-              <p className="rounded-[10px] border border-border bg-surface px-4 py-3.5 text-[13px] leading-relaxed text-text-secondary">
+            {showCard && (
+              <p className="rounded-control border border-border bg-surface px-4 py-3.5 text-[13px] leading-relaxed text-text-secondary">
                 You will enter your email, shipping address and card details on Stripe&apos;s secure payment page. ZYRO never sees or
                 stores your card number.
               </p>
             )}
-            <div className={method === 'card' ? 'mt-3' : ''}>
+            <div className={showCard ? 'mt-3' : ''}>
               <LocalPaymentSection
                 storeId={store.id}
                 method={method}
                 onMethodChange={setMethod}
                 delivery={delivery}
                 onDeliveryChange={setDelivery}
+                onAvailability={onAvailability}
                 zoneId={zoneId}
                 code={code}
                 onPlaced={(order) =>
@@ -185,7 +192,7 @@ export function CheckoutPage() {
           </section>
         </div>
 
-        <aside className="flex w-full flex-col gap-4 rounded-[14px] border border-border bg-surface p-6 lg:w-[340px]" aria-label="Order summary">
+        <aside className="flex w-full flex-col gap-4 rounded-lg border border-border bg-surface p-6 lg:w-[340px]" aria-label="Order summary">
           <h2 className="text-[15px] font-bold">Order summary</h2>
           <ul className="flex flex-col gap-3">
             {cart.items.map((item) => (
@@ -204,7 +211,7 @@ export function CheckoutPage() {
 
           <div className="flex flex-col gap-2">
             {code ? (
-              <p className="flex items-center justify-between rounded-[10px] bg-success-soft px-3 py-2 text-[13px] font-semibold text-success">
+              <p className="flex items-center justify-between rounded-control bg-success-soft px-3 py-2 text-[13px] font-semibold text-success">
                 <span>Code {quote?.discount?.code ?? code.toUpperCase()} applied</span>
                 <button
                   onClick={() => {
@@ -226,10 +233,10 @@ export function CheckoutPage() {
                 className="flex items-end gap-2"
                 aria-label="Have a code?"
               >
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <Input id="discount-code" label="Discount code" maxLength={30} autoComplete="off" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} error={codeError ?? undefined} />
                 </div>
-                <Button type="submit" variant="secondary" disabled={applying || !codeInput.trim()} className="h-11">
+                <Button type="submit" variant="secondary" disabled={applying || !codeInput.trim()} className="h-11 shrink-0">
                   {applying ? '...' : 'Apply'}
                 </Button>
               </form>
@@ -250,7 +257,7 @@ export function CheckoutPage() {
             !error && <Spinner label="Calculating total" />
           )}
 
-          {method === 'card' && (
+          {showCard && (
             <Button onClick={() => void handlePay()} disabled={!quote || paying} className="mt-2 h-[50px]">
               {paying ? 'Redirecting to Stripe…' : quote ? `Pay ${formatMoney(quote.total, quote.currency)}` : 'Pay'}
             </Button>

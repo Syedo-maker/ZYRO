@@ -144,7 +144,7 @@ function VoiceNotesContent() {
                 {n.audioUrl && <audio controls src={n.audioUrl} className="h-8 w-full max-w-sm" aria-label="Play the recording" />}
                 {n.summary ? (
                   <>
-                    <p className="rounded-[10px] bg-bg px-3 py-2 text-sm font-semibold">{n.summary}</p>
+                    <p className="rounded-control bg-bg px-3 py-2 text-sm font-semibold">{n.summary}</p>
                     {n.draft?.warnings.map((w) => (
                       <p key={w} className="text-xs text-warning">
                         {w}

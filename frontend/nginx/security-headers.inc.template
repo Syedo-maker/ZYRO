@@ -5,7 +5,9 @@
 # Blob Storage is HTTPS and already covered. Named .inc so nginx's default `conf.d/*.conf` include
 # never loads it at the wrong level.
 add_header X-Content-Type-Options "nosniff" always;
-add_header X-Frame-Options "DENY" always;
+# Framing: same origin only. The owner's Theme Studio shows the real storefront in a frame on the same
+# site (Store Themes); no other site may frame any page (clickjacking).
+add_header X-Frame-Options "SAMEORIGIN" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 # The microphone is for merchants' voice notes; nothing else on the page may use a device.
@@ -15,4 +17,4 @@ add_header Permissions-Policy "camera=(), geolocation=(), payment=(), microphone
 # recordings may come from Blob Storage over HTTPS (and a merchant's logo may be any HTTPS address);
 # a recording in progress is a blob: URL. Fonts may be data: URLs, because the build inlines the
 # smallest font files into the stylesheet (the smoke test found this blocked).
-add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: ${FILES_ORIGIN}; media-src 'self' blob: https: ${FILES_ORIGIN}; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: ${FILES_ORIGIN}; media-src 'self' blob: https: ${FILES_ORIGIN}; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'" always;

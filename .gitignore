@@ -1,10 +1,12 @@
 # Dependencies
 node_modules/
 
-# Env / secrets
+# Env / secrets: any .env file and any *.env file, except the committed examples
 .env
-.env.local
-.env.*.local
+.env.*
+*.env
+!.env.example
+!*.env.example
 
 # Build output
 dist/

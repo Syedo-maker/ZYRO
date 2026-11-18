@@ -1,0 +1,31 @@
+# Secret scanning (gitleaks), run in CI on every pull request and push.
+#
+# gitleaks' own rules, plus a narrow allowlist for values that are public on purpose. Each was
+# checked when this file was written (2026-11, all 157 commits scanned):
+#   - throwaway test values, which carry a marker word (test, verify, e2e, ci-only, fake, ...)
+#   - the Azurite storage emulator's development key, published by Microsoft and usable only
+#     against a local emulator (compose.yaml, the storage test)
+#   - two fixed test JWT secrets: the compose.yaml fallback (audit decision D3) and the strong
+#     secret the startup tests use
+# Anything else that looks like a key fails the scan. Never allowlist a real key here: rotate it.
+
+title = "Zyro secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Throwaway values for tests, local compose and the Azurite emulator"
+stopwords = ["test", "verify", "e2e", "ci-only", "fake", "example", "local-only", "dev-only", "not-a-real", "replace-with"]
+
+[[allowlists]]
+description = "Public-by-design lines: the Azurite emulator account and the two fixed test JWT secrets"
+regexTarget = "line"
+regexes = [
+  '''AccountName=devstoreaccount1''',
+  # The Azurite emulator's published development key itself (an older test held it on its own line).
+  '''Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50u''',
+  '''ZYRO_JWT_ACCESS_SECRET:-''',
+  '''k9Tq2vL8xR4mZ7nB1cW6yH3sD5fG0jPa8uE2iO4tY6r''',
+  '''k3J9vQ2mX8rT5wL1nB7cZ4yH6sD0fG9pA2uE5iO8tY1r''',
+]

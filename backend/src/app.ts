@@ -10,6 +10,7 @@ import { AppError } from "./errors/AppError";
 import { authRouter } from "./modules/auth/auth.routes";
 import { staffRouter } from "./modules/stores/staff.routes";
 import { storeRouter } from "./modules/stores/store.routes";
+import { themeRouter } from "./modules/themes/theme.routes";
 import { productRouter } from "./modules/products/product.routes";
 import { uploadsRouter } from "./modules/uploads/uploads.routes";
 import { meRouter } from "./modules/users/me.routes";
@@ -24,6 +25,8 @@ import { merchantReviewsRouter } from "./modules/reviews/review.routes";
 import { aiRouter } from "./modules/ai/ai.routes";
 import { assistantRouter } from "./modules/assistant/assistant.routes";
 import { cartRecoveryRouter } from "./modules/cart-recovery/cartRecovery.routes";
+import { unsubscribeRouter } from "./modules/cart-recovery/unsubscribe.routes";
+import { seoRouter } from "./modules/seo/seo.routes";
 import { insightsRouter } from "./modules/insights/insights.routes";
 import { billingRouter, plansRouter } from "./modules/billing/billing.routes";
 import { platformRouter } from "./modules/platform/platform.routes";
@@ -38,14 +41,26 @@ import { storeScoutRouter } from "./modules/scout/scout.routes";
 import { stripeWebhookController } from "./modules/webhooks/webhook.controller";
 import { filesRouter } from "./modules/files/files.routes";
 import { categoryRouter } from "./modules/categories/category.routes";
-import { logger } from "./lib/logger";
+import { logger, tenantIdFromPath } from "./lib/logger";
+import { reportError } from "./lib/errorTracking";
+import { metricsAllowed, metricsText, recordHttpMetrics } from "./lib/metrics";
+import { registerQueueMetrics } from "./lib/queueMetrics";
 import { isDraining, readiness } from "./lib/lifecycle";
 import { requestTimeout } from "./middleware/timeout.middleware";
+import { httpsOnly } from "./middleware/httpsOnly.middleware";
 
 export const app = express();
 
+
 // Behind a reverse proxy, req.ip would be the proxy's; this makes rate limits see each visitor.
 if (env.trustProxy > 0) app.set("trust proxy", env.trustProxy);
+
+// Request counts and timings for /metrics (lib/metrics.ts), and the queue backlog read when scraped.
+app.use(recordHttpMetrics);
+registerQueueMetrics();
+
+// HTTPS only, when FORCE_HTTPS=true (off by default: the proxy in front usually redirects already).
+app.use(httpsOnly);
 
 // Standard security headers (also removes X-Powered-By). Uploaded images are loaded by the
 // storefront from another origin in production, so allow cross-origin embedding.
@@ -71,6 +86,9 @@ app.use(
       res: (res) => ({ status: res.statusCode }),
     },
     customLogLevel: (_req, res, err) => (err || res.statusCode >= 500 ? "error" : "info"),
+    // Which store a request was about, so one store's traffic and errors can be found in the logs.
+    // Read from the address (/api/v1/stores/<id>/...), only when it has the shape of a store id.
+    customProps: (req) => ({ tenantId: tenantIdFromPath(String(req.url)) }),
     autoLogging: { ignore: (req) => req.url === "/health" || req.url === "/ready" },
   })
 );
@@ -78,9 +96,11 @@ app.use(requestTimeout);
 
 // Registered before express.json(): Stripe signs the exact bytes it sends, so this route
 // needs the raw body. Server-to-server, so CORS does not apply to it.
-app.post("/api/v1/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookController);
+app.post("/api/v1/webhooks/stripe", express.raw({ type: "application/json", limit: env.requestBodyLimit }), stripeWebhookController);
 
-app.use(express.json());
+// Request bodies are capped (REQUEST_BODY_LIMIT, 100 KB by default): a larger one gets a 413.
+// File uploads have their own limit (5 MB, middleware/upload.middleware.ts).
+app.use(express.json({ limit: env.requestBodyLimit }));
 app.use(cookieParser());
 
 // Public files (product images) on the local driver. Only the public area is ever served here:
@@ -98,6 +118,13 @@ app.use(
 
 // Liveness and readiness (lib/lifecycle.ts explains why they are two different questions).
 app.get("/health", (_req, res) => res.status(200).json({ status: isDraining() ? "draining" : "ok" }));
+// Prometheus-format metrics. Not under /api, so the web container never exposes it; in production
+// only a scraper with METRICS_TOKEN gets an answer (lib/metrics.ts).
+app.get("/metrics", async (req, res) => {
+  if (!metricsAllowed(req.headers.authorization, env.isProduction)) return res.status(404).type("text/plain").send("Not found");
+  const { contentType, body } = await metricsText();
+  res.type(contentType).send(body);
+});
 app.get("/ready", async (_req, res) => {
   const result = await readiness();
   res.status(result.ready ? 200 : 503).json({ status: result.ready ? "ready" : isDraining() ? "draining" : "not ready", checks: result.checks });
@@ -130,6 +157,7 @@ v1.use("/stores/:storeId/product-scout", storeScoutRouter);
 v1.use("/stores/:storeId/payments", paymentsRouter);
 v1.use("/stores/:storeId/voice-notes", voiceRouter);
 v1.use("/stores/:storeId/product-ideas", ideasRouter);
+v1.use("/stores/:storeId/theme", themeRouter);
 // Public shop directory (Issue 2). Before the /stores/:storeId router, so "/" and "/categories"
 // are not read as a store id.
 v1.use("/stores", directoryRouter);
@@ -139,6 +167,8 @@ v1.use("/demo", demoRouter);
 v1.use("/plans", plansRouter);
 v1.use("/files", filesRouter);
 v1.use("/platform", platformRouter);
+v1.use("/unsubscribe", unsubscribeRouter);
+v1.use("/seo", seoRouter);
 app.use("/api/v1", v1);
 
 app.use((req, res) => {
@@ -178,6 +208,7 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   }
 
   req.log.error({ err }, "unhandled error");
+  reportError(err, { where: "request", requestId: String(req.id), tenantId: tenantIdFromPath(req.originalUrl), method: req.method, path: req.originalUrl });
   res.status(500).type("application/problem+json").json({
     type: "https://zyro.dev/errors/internal",
     title: "Internal server error",

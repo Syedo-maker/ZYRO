@@ -2,6 +2,7 @@ import type { Server } from "node:http";
 import mongoose from "mongoose";
 import { env } from "../config/env";
 import { flushTelemetry } from "../instrumentation";
+import { flushErrorTracking, reportError } from "./errorTracking";
 import { errorMessage, logger } from "./logger";
 import { prismaUnscoped } from "./prisma";
 import { getRedis } from "./redis";
@@ -117,6 +118,7 @@ export function installShutdown(server?: Server) {
       }
     }
     await flushTelemetry().catch(() => undefined);
+    await flushErrorTracking();
     clearTimeout(deadline);
     logger.info("shutdown complete");
     process.exit(0);
@@ -133,11 +135,13 @@ export function installShutdown(server?: Server) {
 export function installCrashHandlers() {
   process.on("unhandledRejection", (reason) => {
     logger.fatal({ err: reason instanceof Error ? { message: reason.message, stack: reason.stack } : String(reason) }, "unhandled promise rejection");
-    void flushTelemetry().finally(() => process.exit(1));
+    reportError(reason, { where: "unhandled rejection" });
+    void Promise.allSettled([flushTelemetry(), flushErrorTracking()]).finally(() => process.exit(1));
   });
   process.on("uncaughtException", (err) => {
     logger.fatal({ err: { message: err.message, stack: err.stack } }, "uncaught exception");
-    void flushTelemetry().finally(() => process.exit(1));
+    reportError(err, { where: "uncaught exception" });
+    void Promise.allSettled([flushTelemetry(), flushErrorTracking()]).finally(() => process.exit(1));
   });
 }
 

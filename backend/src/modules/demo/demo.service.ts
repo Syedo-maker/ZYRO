@@ -106,11 +106,19 @@ async function claimLiveGeneration(visitor: string): Promise<Claim> {
     if (visitorCount === 1) await redis.expire(vKey, 60 * 60);
     if (visitorCount > PER_VISITOR_PER_HOUR) return "visitor_spent";
 
+    return await claimGlobalGeneration(gKey);
+  } catch {
+    return "unavailable";
+  }
+}
+
+/** One more generation against the platform-wide daily ceiling, counting it if allowed. */
+async function claimGlobalGeneration(gKey = globalKey(today())): Promise<Claim> {
+  try {
+    const redis = getRedis();
     const globalCount = await redis.incr(gKey);
     if (globalCount === 1) await redis.expire(gKey, 2 * 24 * 60 * 60);
-    if (globalCount > GLOBAL_PER_DAY) return "global_spent";
-
-    return "ok";
+    return globalCount > GLOBAL_PER_DAY ? "global_spent" : "ok";
   } catch {
     return "unavailable";
   }
@@ -131,8 +139,9 @@ async function exampleResult(example: DemoExample, note: string | null): Promise
   if (cached) return { ...cached, origin: "example", note };
 
   // Not seeded yet (a fresh deployment, or Redis was cleared). Generate it once, cache it, and from
-  // then on this example costs nothing. Still paid for by the platform, never by a store.
-  const generated = await generateLive(phrase, category);
+  // then on this example costs nothing. Still paid for by the platform, never by a store, and still
+  // inside the daily ceiling: this path used to call the AI on every miss, uncounted (audit 2026-11).
+  const generated = (await claimGlobalGeneration()) === "ok" ? await generateLive(phrase, category) : null;
   if (generated) {
     await writeCache(phrase, category, generated);
     return { ...generated, origin: "example", note };

@@ -18,7 +18,7 @@ export function ReviewCard({ review, storeName }: { review: Review; storeName: s
       {review.title && <h3 className="text-sm font-bold">{review.title}</h3>}
       {review.comment && <p className="whitespace-pre-line text-sm leading-relaxed text-text-secondary">{review.comment}</p>}
       {review.merchantReply && (
-        <div className="mt-1 rounded-[10px] bg-bg px-4 py-3">
+        <div className="mt-1 rounded-control bg-bg px-4 py-3">
           <p className="text-xs font-bold">Reply from {storeName}</p>
           <p className="mt-1 whitespace-pre-line text-sm text-text-secondary">{review.merchantReply}</p>
         </div>

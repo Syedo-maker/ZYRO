@@ -84,6 +84,7 @@ var appSecrets = concat(
     kvSecret(keyVaultUri, 'redis-url', appIdentityId)
     kvSecret(keyVaultUri, 'redis-password', appIdentityId)
     kvSecret(keyVaultUri, 'jwt-access-secret', appIdentityId)
+    kvSecret(keyVaultUri, 'cod-phone-pepper', appIdentityId)
     kvSecret(keyVaultUri, 'recommendation-service-token', appIdentityId)
     { name: 'appinsights-connection-string', value: appInsights.properties.ConnectionString }
   ],
@@ -102,6 +103,7 @@ var appEnv = concat(
     { name: 'MONGODB_URI', secretRef: 'mongodb-uri' }
     { name: 'REDIS_URL', secretRef: 'redis-url' }
     { name: 'JWT_ACCESS_SECRET', secretRef: 'jwt-access-secret' }
+    { name: 'COD_PHONE_PEPPER', secretRef: 'cod-phone-pepper' }
     { name: 'PUBLIC_URL', value: siteUrl }
     { name: 'CORS_ORIGIN', value: siteUrl }
     { name: 'STOREFRONT_URL', value: siteUrl }

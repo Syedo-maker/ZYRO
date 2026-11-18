@@ -9,6 +9,7 @@ import { storeSettingsApi, type CurrencySetting } from '../../lib/storeSettingsA
 import { PaymentMethodsPanel } from './PaymentMethodsPanel'
 import { DirectoryPanel } from './DirectoryPanel'
 import { TrendSharingPanel } from './TrendSharingPanel'
+import { PoliciesPanel } from './PoliciesPanel'
 
 /**
  * The owner's store settings. For now: the currency the store sells in. It can be changed until the
@@ -98,7 +99,7 @@ export function SettingsPage() {
                   setChoice(e.target.value)
                   setSaved(null)
                 }}
-                className="h-11 rounded-[10px] border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
+                className="h-11 rounded-control border border-border-input bg-surface px-3.5 text-sm outline-none focus:border-brand-ink focus:ring-2 focus:ring-brand-ink/30"
               >
                 {setting.options.map((o) => (
                   <option key={o.code} value={o.code}>
@@ -125,6 +126,8 @@ export function SettingsPage() {
       <TrendSharingPanel storeId={activeStore.id} />
 
       <PaymentMethodsPanel storeId={activeStore.id} currency={setting.currency} />
+
+      <PoliciesPanel storeId={activeStore.id} storeName={activeStore.name} />
     </div>
   )
 }

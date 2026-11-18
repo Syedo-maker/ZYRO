@@ -36,7 +36,7 @@ export function PriceTag({
         <span className="sr-only">was </span>
         {formatMoney(product.actualPrice, currency)}
       </s>
-      <span className={`self-center rounded-full bg-success-soft font-bold text-success ${s.badge}`}>{badge}</span>
+      <span className={`self-center rounded-full bg-accent font-bold text-on-accent ${s.badge}`}>{badge}</span>
     </p>
   )
 }

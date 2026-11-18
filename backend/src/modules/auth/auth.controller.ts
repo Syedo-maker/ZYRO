@@ -1,6 +1,7 @@
 import { RequestHandler } from "express";
 import { authService } from "./auth.service";
-import { registerSchema, registerCustomerSchema, loginSchema } from "./auth.validation";
+import { registerSchema, registerCustomerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "./auth.validation";
+import { passwordResetService, RESET_REQUESTED_MESSAGE } from "./passwordReset.service";
 import { Errors } from "../../errors/AppError";
 
 const REFRESH_COOKIE_NAME = "refreshToken";
@@ -17,6 +18,31 @@ function setRefreshCookie(res: Parameters<RequestHandler>[1], token: string, exp
 }
 
 export const authController = {
+  /** B1: always 202 with the same message, registered email or not. */
+  forgotPassword: (async (req, res, next) => {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      await passwordResetService.request(parsed.data.email, parsed.data.storeId);
+      res.status(202).json({ message: RESET_REQUESTED_MESSAGE });
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
+  resetPassword: (async (req, res, next) => {
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) return next(Errors.validation(parsed.error.message));
+    try {
+      await passwordResetService.reset(parsed.data.token, parsed.data.password);
+      // A reset also ends this browser's session, if it had one: sign in again with the new password.
+      res.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
+      res.status(200).json({ message: "Your password has been changed. Log in with the new one." });
+    } catch (err) {
+      next(err);
+    }
+  }) satisfies RequestHandler,
+
   register: (async (req, res, next) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return next(Errors.validation(parsed.error.message));

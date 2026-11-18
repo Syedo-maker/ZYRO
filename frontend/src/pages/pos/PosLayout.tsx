@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Wordmark } from '../../components/ui/Wordmark'
+import { ThemeToggle } from '../../components/ui/ThemeToggle'
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { PosProvider, usePos } from '../../context/PosContext'
@@ -11,6 +12,7 @@ import { posApi } from '../../lib/posApi'
 import { formatDateTime } from '../../lib/format'
 import type { PosSession, PosShift } from '../../types/pos'
 import { CloseShiftDialog } from './ShiftPanels'
+import { usePageMeta } from '../../lib/pageMeta'
 
 /** /pos: signed out goes to the till login; otherwise straight to the store's register. */
 export function PosEntry() {
@@ -25,7 +27,7 @@ export function PosEntry() {
       <ul className="flex flex-col gap-2">
         {stores.map((s) => (
           <li key={s.id}>
-            <Link to={`/pos/${s.id}`} className="block rounded-[10px] border border-border px-4 py-3 font-semibold hover:bg-bg">
+            <Link to={`/pos/${s.id}`} className="block rounded-control border border-border px-4 py-3 font-semibold hover:bg-bg">
               {s.name}
             </Link>
           </li>
@@ -45,6 +47,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 
 /** Signs the till in to one store: loads who is at the register and the open shift, then shows the pages. */
 export function PosLayout() {
+  usePageMeta({ title: 'Register | ZYRO', description: 'The ZYRO point of sale.', robots: 'noindex' })
   const { storeId = '' } = useParams()
   const { isLoading, isAuthenticated, logout } = useAuth()
   const [data, setData] = useState<{ session: PosSession; shift: PosShift | null } | null>(null)
@@ -82,7 +85,7 @@ export function PosLayout() {
           <Button variant="secondary" onClick={() => void logout()}>
             Sign out
           </Button>
-          <Link to="/pos" className="inline-flex items-center text-sm font-semibold text-brand">
+          <Link to="/pos" className="inline-flex items-center text-sm font-semibold text-brand-ink">
             Choose another store
           </Link>
         </div>
@@ -111,7 +114,7 @@ function PosFrame() {
   const [closing, setClosing] = useState(false)
 
   const link = ({ isActive }: { isActive: boolean }) =>
-    `rounded-[10px] px-4 py-2 text-sm font-semibold transition-colors ${isActive ? 'bg-on-inverse/15 text-on-inverse' : 'text-on-inverse/75 hover:text-on-inverse'}`
+    `rounded-control px-4 py-2 text-sm font-semibold transition-colors ${isActive ? 'bg-on-inverse/15 text-on-inverse' : 'text-on-inverse/75 hover:text-on-inverse'}`
 
   async function signOut() {
     await logout()
@@ -137,12 +140,13 @@ function PosFrame() {
           )}
         </nav>
         <div className="ml-auto flex flex-wrap items-center gap-4 text-sm">
+          <ThemeToggle touch />
           {shift ? (
             <>
               <span className="text-on-inverse/75">Shift open since {formatDateTime(shift.openedAt)}</span>
               <button
                 onClick={() => setClosing(true)}
-                className="rounded-[10px] border border-on-inverse/40 px-3 py-1.5 font-semibold hover:bg-on-inverse/10"
+                className="rounded-control border border-on-inverse/40 px-3 py-1.5 font-semibold hover:bg-on-inverse/10"
               >
                 Close shift
               </button>

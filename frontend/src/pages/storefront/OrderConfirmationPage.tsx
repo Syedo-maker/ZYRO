@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
@@ -7,6 +8,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { formatMoney } from '../../lib/format'
 import { checkoutApi } from '../../lib/storefrontApi'
 import type { CheckoutSessionStatus } from '../../types/commerce'
+import { usePageMeta } from '../../lib/pageMeta'
 
 const POLL_MS = 2000
 const MAX_POLLS = 30
@@ -31,6 +33,7 @@ function Card({ children }: { children: React.ReactNode }) {
  */
 export function OrderConfirmationPage() {
   const store = useStore()
+  usePageMeta({ title: `Order confirmed | ${store.name}`, description: `Your order at ${store.name}.`, robots: 'noindex' })
   const { reload: reloadCart } = useCart()
   const [params] = useSearchParams()
   const sessionId = params.get('session_id')
@@ -68,7 +71,7 @@ export function OrderConfirmationPage() {
   }, [store.id, sessionId])
 
   const shopLink = (
-    <Link to={`/store/${store.id}`} className="text-[13px] font-semibold text-brand hover:text-brand-hover">
+    <Link to={`/store/${store.id}`} className="text-[13px] font-semibold text-brand-ink hover:text-brand-ink-hover">
       Continue shopping
     </Link>
   )
@@ -111,9 +114,7 @@ export function OrderConfirmationPage() {
     return (
       <Card>
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success-soft">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="text-success" aria-hidden="true">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          <Check aria-hidden="true" className="h-[30px] w-[30px] text-success" strokeWidth={2.4} />
         </div>
         <h1 className="font-display text-[22px] font-bold">Order confirmed</h1>
         <p className="text-[13px] leading-relaxed text-text-secondary">
@@ -152,7 +153,7 @@ export function OrderConfirmationPage() {
           refunded in full; it can take 5 to 10 days to show on your statement. Your cart is still saved, with the
           sold-out item marked so you can adjust it.
         </p>
-        <Link to={`/store/${store.id}/cart`} className="text-[13px] font-semibold text-brand hover:text-brand-hover">
+        <Link to={`/store/${store.id}/cart`} className="text-[13px] font-semibold text-brand-ink hover:text-brand-ink-hover">
           Review your cart
         </Link>
         {shopLink}
@@ -170,7 +171,7 @@ export function OrderConfirmationPage() {
           ? 'You have not been charged, and your cart is still saved.'
           : 'Your cart is still saved. If you see a charge on your statement, contact the store and mention this page.'}
       </p>
-      <Link to={`/store/${store.id}/cart`} className="text-[13px] font-semibold text-brand hover:text-brand-hover">
+      <Link to={`/store/${store.id}/cart`} className="text-[13px] font-semibold text-brand-ink hover:text-brand-ink-hover">
         Back to cart
       </Link>
     </Card>

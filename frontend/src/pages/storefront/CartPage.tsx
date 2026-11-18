@@ -8,9 +8,11 @@ import { Spinner } from '../../components/ui/Spinner'
 import { formatMoney } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { CartItemRow } from './CartItemRow'
+import { usePageMeta } from '../../lib/pageMeta'
 
 export function CartPage() {
   const store = useStore()
+  usePageMeta({ title: `Cart | ${store.name}`, description: `Your cart at ${store.name}.`, robots: 'noindex' })
   const { cart, isLoading, setQuantity, remove } = useCart()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,7 +67,7 @@ export function CartPage() {
           ))}
         </ul>
 
-        <aside className="flex w-full flex-col gap-4 rounded-[14px] border border-border bg-surface p-6 lg:w-80" aria-label="Order summary">
+        <aside className="flex w-full flex-col gap-4 rounded-lg border border-border bg-surface p-6 lg:w-80" aria-label="Order summary">
           <h2 className="text-[15px] font-bold">Order summary</h2>
 
           <div className="h-px bg-border" />
@@ -85,7 +87,7 @@ export function CartPage() {
               Proceed to checkout
             </Link>
           )}
-          <Link to={`/store/${store.id}`} className="text-center text-[13px] font-semibold text-brand hover:text-brand-hover">
+          <Link to={`/store/${store.id}`} className="text-center text-[13px] font-semibold text-brand-ink hover:text-brand-ink-hover">
             Continue shopping
           </Link>
         </aside>

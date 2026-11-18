@@ -2,11 +2,15 @@ import { createHash } from "node:crypto";
 import { env } from "../../config/env";
 import { Errors } from "../../errors/AppError";
 import { getAiQueue, readyAiQueueEvents, type AiJobData } from "../../lib/aiQueue";
-import type { AiGenerateResult } from "../../lib/aiProvider";
-import { allowsImage, modelFor } from "../../lib/aiModels";
+import type { Job, QueueEvents } from "bullmq";
+import { aiConfigured, type AiGenerateResult } from "../../lib/aiProvider";
+import { allowsImage, modelFor, tierFor } from "../../lib/aiModels";
+import { FRIENDLY_AI_UNAVAILABLE } from "../../lib/aiErrors";
 import { getRedis } from "../../lib/redis";
-import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, currentMonth, type AiUsageKind } from "./ai.quota.service";
+import { reserveQuota, releaseQuota, quotaExhaustedError, recordTokens, recordCachedAnswer, chargeLateAnswer, currentMonth, type AiUsageKind } from "./ai.quota.service";
 import { logger } from "../../lib/logger";
+import { aiRequests } from "../../lib/metrics";
+import { aiDisabled, takeDailyAllowance } from "../../lib/aiLimits";
 
 export interface GenerateInput {
   tenantId: string;
@@ -79,6 +83,12 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
     throw new Error(`promptType "${input.promptType}" is not allowed to send an image (see VISION_PROMPTS in lib/aiModels.ts)`);
   }
 
+  // The kill switch (AI_DISABLED=true, lib/aiLimits.ts): every AI feature off at once, nothing spent.
+  if (aiDisabled()) {
+    aiRequests.inc({ outcome: "disabled", prompt_type: input.promptType });
+    throw Errors.serviceUnavailable("AI features are switched off for now. Everything else works as usual, and nothing was used from your AI allowance.");
+  }
+
   // The cap covers the system text plus the caller's text; the caller's text is what gets cut
   // (the end of it: reviews are fed newest first, so the oldest go).
   const room = Math.max(1000, env.ai.maxPromptChars - input.system.length);
@@ -101,9 +111,32 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
     }
   }
 
+  // No AI provider set up at all: say so at once. Queueing the job would only retry it three times
+  // with backoff (about 6 s) before giving the same answer, which kept a shopper submitting a receipt
+  // waiting for nothing. No quota is touched.
+  if (!aiConfigured()) {
+    aiRequests.inc({ outcome: "unavailable", prompt_type: input.promptType });
+    throw Errors.serviceUnavailable(FRIENDLY_AI_UNAVAILABLE);
+  }
+
+  // Today's limits, per store and for the whole platform (AI_DAILY_STORE_LIMIT, AI_DAILY_GLOBAL_LIMIT).
+  const daily = await takeDailyAllowance(input.tenantId, platformPays);
+  if ("refused" in daily) {
+    aiRequests.inc({ outcome: "daily_limit", prompt_type: input.promptType });
+    throw Errors.serviceUnavailable(
+      daily.refused === "store"
+        ? "This store has reached today's AI limit. AI is available again tomorrow, and nothing was used from your monthly allowance."
+        : FRIENDLY_AI_UNAVAILABLE
+    );
+  }
+
   const month = currentMonth();
   const source = platformPays ? null : await reserveQuota(input.tenantId, kind, month);
-  if (!platformPays && !source) throw await quotaExhaustedError(input.tenantId, kind);
+  if (!platformPays && !source) {
+    await daily.giveBack();
+    aiRequests.inc({ outcome: "quota_exhausted", prompt_type: input.promptType });
+    throw await quotaExhaustedError(input.tenantId, kind);
+  }
 
   // Listening first: a job that finished before the listener was reading would look like a timeout.
   const events = await readyAiQueueEvents();
@@ -113,6 +146,7 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
       tenantId: input.tenantId,
       promptType: input.promptType,
       model,
+      tier: tierFor(input.promptType),
       system: input.system,
       prompt,
       maxTokens,
@@ -131,7 +165,14 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
     const raw: AiGenerateResult = await job.waitUntilFinished(events, env.ai.jobTimeoutMs);
     result = { ...raw, text: tidyText(raw.text) };
   } catch (err) {
-    if (source) await releaseQuota(input.tenantId, kind, source, month); // give the reservation back, to where it came from; this attempt never happened
+    // The store received nothing, so it is not charged now: the reservation goes back to where it
+    // came from. A job still queued is taken off the queue so it never runs. One the worker is
+    // already running may still finish, and then the provider has done the work: that turn and its
+    // tokens are charged when it does, so a timeout can no longer hide real spend (audit 2026-11).
+    const fate = await abandonJob(job);
+    if (source) await releaseQuota(input.tenantId, kind, source, month);
+    await daily.giveBack();
+    if (fate === "running" && !platformPays) chargeIfItFinishes(job, events, input.tenantId, kind, month);
     // Whatever went wrong (missing key, the provider down, a timeout), this is the API
     // being unable to fulfil the request right now, not something the caller did wrong. The
     // provider's own words go to the log, where they can be acted on; the merchant or shopper gets
@@ -140,9 +181,11 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
       { err: err instanceof Error ? err.message : String(err), tenantId: input.tenantId, promptType: input.promptType, model },
       "AI generation failed"
     );
-    throw Errors.serviceUnavailable("The AI service is unavailable right now. Nothing was used from your AI allowance; please try again in a minute.");
+    aiRequests.inc({ outcome: "unavailable", prompt_type: input.promptType });
+    throw Errors.serviceUnavailable(FRIENDLY_AI_UNAVAILABLE);
   }
 
+  aiRequests.inc({ outcome: "answered", prompt_type: input.promptType });
   // Only a successful call reaches this point: its tokens are what the store's AI actually cost (Part B).
   if (!platformPays) await recordTokens(input.tenantId, result.inputTokens, result.outputTokens).catch((err: Error) => logger.error({ err: err.message, tenantId: input.tenantId }, "AI usage count failed"));
 
@@ -158,6 +201,37 @@ export async function generateRevocable(input: GenerateInput): Promise<{ result:
     await releaseQuota(input.tenantId, kind, source, month);
   };
   return { result, release };
+}
+
+/**
+ * After a failed wait: what will happen to the job. "failed" and "removed" (it was still queued and
+ * is taken off) mean no provider call; "running" means the worker has it, or has just finished it.
+ */
+async function abandonJob(job: Job): Promise<"failed" | "removed" | "running"> {
+  try {
+    const state = await job.getState();
+    if (state === "failed") return "failed";
+    if (state === "waiting" || state === "delayed" || state === "prioritized" || state === "waiting-children") {
+      await job.remove();
+      return "removed";
+    }
+    return "running";
+  } catch {
+    // Removal refused because the worker picked it up in the meantime, or the queue is unreachable:
+    // treat it as running, so a finished answer is still charged.
+    return "running";
+  }
+}
+
+/** Charges a turn and records the tokens if an abandoned job finishes after all; a failure costs nothing. */
+function chargeIfItFinishes(job: Job, events: QueueEvents, tenantId: string, kind: AiUsageKind, month: string): void {
+  void job
+    .waitUntilFinished(events, env.ai.jobTimeoutMs * 10)
+    .then(async (raw: AiGenerateResult) => {
+      await chargeLateAnswer(tenantId, kind, month);
+      await recordTokens(tenantId, raw.inputTokens, raw.outputTokens, month);
+    })
+    .catch(() => undefined); // it failed, or never finished: nothing was produced, nothing is charged
 }
 
 /**

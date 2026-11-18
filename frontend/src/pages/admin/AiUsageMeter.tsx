@@ -58,7 +58,7 @@ export function AiUsageMeter({ storeId, isOwner = false, canView = true }: { sto
             </span>
           )}
           {isOwner && (
-            <Link to="/admin/billing" className="font-semibold text-brand hover:text-brand-hover">
+            <Link to="/admin/billing" className="font-semibold text-brand-ink hover:text-brand-ink-hover">
               Plans and AI packs
             </Link>
           )}

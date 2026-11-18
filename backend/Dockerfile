@@ -4,7 +4,8 @@
 #   migrate:  build with --target migrate; runs `prisma migrate deploy` once per release, before the
 #             new API revision takes traffic (an Azure Container Apps job in production).
 
-FROM node:24-bookworm-slim AS base
+# Pinned to an exact version: a rebuild never moves to a new Node release by itself (Dependabot proposes updates).
+FROM node:24.19.0-bookworm-slim AS base
 # Prisma's query engine links against OpenSSL.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssl ca-certificates \

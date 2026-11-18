@@ -55,14 +55,15 @@ await step('logged-out visitors are sent to login', async () => {
   check('guard: /admin/products redirects a logged-out visitor to /login', true)
   await page.evaluate(() => document.fonts.ready)
   const fonts = await page.evaluate(async () => {
-    await Promise.all([document.fonts.load('700 20px "Plus Jakarta Sans"'), document.fonts.load('400 14px "IBM Plex Sans"')])
+    await Promise.all([document.fonts.load('700 20px "Plus Jakarta Sans"'), document.fonts.load('400 14px "Plus Jakarta Sans"'), document.fonts.load('italic 400 40px "Instrument Serif"')])
     return {
       display: document.fonts.check('700 20px "Plus Jakarta Sans"'),
-      body: document.fonts.check('400 14px "IBM Plex Sans"'),
+      body: document.fonts.check('400 14px "Plus Jakarta Sans"'),
+      serif: document.fonts.check('italic 400 40px "Instrument Serif"'),
       loaded: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')),
     }
   })
-  check('design: the Plus Jakarta Sans and IBM Plex Sans web fonts actually load', fonts.display && fonts.body && fonts.loaded.some((f) => /Plus Jakarta Sans/.test(f)) && fonts.loaded.some((f) => /IBM Plex Sans/.test(f)), JSON.stringify(fonts.loaded))
+  check('design: the Plus Jakarta Sans and Instrument Serif web fonts actually load', fonts.display && fonts.body && fonts.serif && fonts.loaded.some((f) => /Plus Jakarta Sans/.test(f)) && fonts.loaded.some((f) => /Instrument Serif/.test(f)), JSON.stringify(fonts.loaded))
   await page.getByRole('link', { name: 'Create one' }).click()
   // The URL changes before React swaps the pages; typing now would fill the old login form.
   await page.getByRole('heading', { name: 'Create your store' }).waitFor()
@@ -123,8 +124,14 @@ await step('create a product with an image', async () => {
   check('form: the add-image button has an accessible name', (await page.getByRole('button', { name: 'Add image' }).count()) === 1)
   await page.screenshot({ path: path.join(SHOTS, 'p1-form.png') })
   await page.getByRole('button', { name: 'Save' }).click()
-  await page.getByText('Trail Mug').first().waitFor()
-  check('products: the new product appears with its price and stock', (await page.getByText('$24.50').isVisible()) && (await page.getByRole('row').count() >= 0))
+  // The row in the list, not just the name: the "Added "Trail Mug"..." toast shows the name at once,
+  // before the list has reloaded, and checking the price then raced the reload.
+  const mugRow = page.getByRole('row').filter({ hasText: 'Trail Mug' })
+  await mugRow.waitFor()
+  const mugText = await mugRow.innerText()
+  // The stock is an editable number in the row (its value is not part of the row's text).
+  const mugStock = await mugRow.getByRole('spinbutton', { name: 'Stock for Trail Mug' }).inputValue()
+  check('products: the new product appears with its price and stock', mugText.includes('$24.50') && mugStock === '6', `${mugText.replace(/\s+/g, ' ').slice(0, 80)} | stock ${mugStock}`)
   const img = page.locator('img').first()
   await img.waitFor()
   const loaded = await img.evaluate((el) => new Promise((res) => (el.complete ? res(el.naturalWidth > 0) : (el.onload = () => res(true), el.onerror = () => res(false)))))

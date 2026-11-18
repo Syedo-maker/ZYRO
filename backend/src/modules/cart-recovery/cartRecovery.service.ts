@@ -8,6 +8,7 @@ import { emailStatus, getEmailGateway } from "../../lib/email";
 import { AppError } from "../../errors/AppError";
 import { logger } from "../../lib/logger";
 import { formatPrice } from "../../lib/currencies";
+import { unsubscribeLinks, unsubscribeService } from "./unsubscribe.service";
 
 /**
  * Module 7 (remaining): Abandoned-Cart Recovery (Implementation_Plan.md Phase 5). A BullMQ
@@ -89,6 +90,8 @@ async function recoverOneInContext(storeId: string, userId: string, key: string)
 
   const user = await prismaUnscoped.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
   if (!user) return "skipped"; // account deleted since the cart was created
+  // They asked this shop to stop (the link in an earlier reminder, or their email app's button).
+  if (await unsubscribeService.isOptedOut(storeId, userId)) return "skipped";
 
   // Defensive: the checkout webhook clears the Redis cart on a completed order (stripe.webhook.ts),
   // so this should already be moot, but that clear is fire-and-forget - never skip this check.
@@ -130,7 +133,14 @@ async function recoverOneInContext(storeId: string, userId: string, key: string)
   }
 
   try {
-    await email.send({ to: user.email, subject: `You left something in your cart at ${tenant.name}`, text: generated.result.text });
+    const links = unsubscribeLinks(storeId, userId);
+    await email.send({
+      to: user.email,
+      subject: `You left something in your cart at ${tenant.name}`,
+      text: `${generated.result.text}\n\n--\nYou are getting this because you have an account at ${tenant.name}. To stop these reminders: ${links.page}`,
+      // The email app's own unsubscribe button (RFC 8058): one POST, no page to open.
+      headers: { "List-Unsubscribe": `<${links.oneClick}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+    });
   } catch (err) {
     // The provider refused it, or did not answer: nothing reached the shopper, so the store gets its
     // AI turn back (it is charged only for a message that was sent) and nothing is recorded, so a

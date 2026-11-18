@@ -1,7 +1,12 @@
 node_modules/
 dist/
 e2e/
+tests/
 coverage/
+.git/
 .env
 .env.*
+*.env
+!.env.example
 *.log
+dump.rdb

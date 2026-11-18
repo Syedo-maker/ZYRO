@@ -7,16 +7,25 @@
  *   POST /__e2e/set-tax    { storeId, rate }  sets a store's tax rate
  *   POST /__e2e/billing    { storeId, kind, plan? | pack? }  completes a fake plan or AI pack payment
  *   POST /__e2e/backdate-orders, /__e2e/set-currency, /__e2e/make-admin, /__e2e/trends-run   Trend Scout set-up
+ *   GET  /__e2e/last-email?to=   the newest email the fake gateway "sent" to that address (B1's reset link)
  *
- * These routes exist only in this script, never in the real app.
- * Usage: npx tsx scripts/e2e-server.ts   (listens on PORT, default 5000)
+ * These routes exist only in this script, never in the real app. They need no login (make-admin
+ * grants super admin by email), so the server listens on this machine's loopback only and refuses
+ * to start in production (audit 2026-11).
+ * Usage: npx tsx scripts/e2e-server.ts   (listens on localhost:PORT, default 5000)
  */
+if (process.env.NODE_ENV === "production") {
+  console.error("The e2e server is for browser tests on a developer machine; it refuses to run with NODE_ENV=production.");
+  process.exit(1);
+}
 // Off by default because the browser tests register many users quickly; start with
 // RATE_LIMIT_ENABLED=true (and a private RATE_LIMIT_PREFIX) to test the limits in the UI.
 process.env.RATE_LIMIT_ENABLED ??= "false";
-process.env.STRIPE_SECRET_KEY = "sk_test_e2e";
-process.env.STRIPE_WEBHOOK_SECRET = "whsec_e2e_secret";
+// E2E_NO_STRIPE=1 runs the platform as a store without Stripe would (frontend/e2e/payments-no-stripe.e2e.mjs).
+process.env.STRIPE_SECRET_KEY = process.env.E2E_NO_STRIPE === "1" ? "" : "sk_test_e2e";
+process.env.STRIPE_WEBHOOK_SECRET = process.env.E2E_NO_STRIPE === "1" ? "" : "whsec_e2e_secret";
 
+import { createServer } from "node:http";
 import express from "express";
 
 async function main() {
@@ -31,11 +40,11 @@ async function main() {
   const port = Number(process.env.PORT ?? 5000);
   const { handleStripeEvent } = await import("../src/modules/webhooks/stripe.webhook");
   const { PLANS, findTopUpPack, BILLING_CURRENCY } = await import("../src/lib/plans");
-  const real = getStripeGateway();
   let counter = 0;
   const fakeSubscriptions = new Map<string, import("../src/lib/stripe").BillingSubscription>();
-  setStripeGateway({
-    ...real,
+  // Without Stripe (E2E_NO_STRIPE=1) there is no gateway to fake: card payment is simply not offered.
+  if (process.env.E2E_NO_STRIPE !== "1") setStripeGateway({
+    ...getStripeGateway(),
     async createCheckoutSession() {
       const id = `cs_test_e2e_${Date.now()}_${++counter}`;
       return { id, url: `http://localhost:${port}/__fake-stripe/${id}` };
@@ -113,6 +122,41 @@ async function main() {
           outputTokens: 120,
         };
       }
+      // Store Themes (Part 2): the design assistant's strict JSON. A request that says "unclear" gets a
+      // question back; one that says "broken" gets an unusable reply, so the browser test sees the
+      // server ask again and then give up without charging. Bolder and simpler answer differently.
+      if (/design assistant in Zyro's Theme Studio/.test(system)) {
+        const request = /<owner_request>\n([\s\S]*?)\n<\/owner_request>/.exec(prompt)?.[1] ?? "";
+        if (/broken/i.test(request)) return { text: "Sorry, I cannot help with that.", model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+        const bolder = /bolder look/.test(prompt);
+        const simpler = /Make it simpler/.test(prompt);
+        const options = bolder
+          ? [
+              { name: "Electric night", reason: "Black with a loud red, for a confident shop.", changes: { colors: { primary: "#ff5a51", accent: "#ffd60a", background: "#0a0a0a", text: "#ffffff" }, font: "poppins-bold", radius: "none", buttonStyle: "square", surfaceStyle: "contrast" } },
+              { name: "Lime punch", reason: "Zyro's lime on deep black.", changes: { colors: { primary: "#d4ff24", accent: "#d4ff24", background: "#030407", text: "#f4f5f0" }, font: "poppins-bold" } },
+            ]
+          : simpler
+            ? [
+                { name: "Quiet white", reason: "Plain and calm so products stand out.", changes: { colors: { primary: "#111827", accent: "#1f4fd1", background: "#ffffff", text: "#111827" }, font: "inter-clean", cardStyle: "bordered", buttonStyle: "rounded" } },
+                { name: "Soft grey", reason: "Gentle grey with one blue.", changes: { colors: { primary: "#1f4fd1", accent: "#1f4fd1", background: "#f4f5f7", text: "#1f2937" }, font: "inter-clean" } },
+              ]
+            : [
+                { name: "Terracotta", reason: "Warm clay tones suit handmade goods.", changes: { colors: { primary: "#9a3412", accent: "#845006", background: "#f6efe6", text: "#2b1d14" }, font: "inter-lora", radius: "medium", buttonStyle: "rounded", cardStyle: "flat", heroHeadline: /headline/i.test(request) ? "Handmade with love" : undefined } },
+                { name: "Rose garden", reason: "Soft pinks for a friendly gift shop.", changes: { colors: { primary: "#a9306b", accent: "#7247bc", background: "#fff5f9", text: "#3b2440" }, font: "nunito-friendly", radius: "large", buttonStyle: "pill", cardStyle: "shadow" } },
+                { name: "Clean blue", reason: "Crisp white with a trustworthy blue.", changes: { colors: { primary: "#1f4fd1", accent: "#0e6f67", background: "#ffffff", text: "#111827" }, font: "inter-clean", radius: "small" } },
+              ];
+        const urdu = /\b(mujhe|chahiye|acha|kar do|banao)\b/i.test(request);
+        return {
+          text: JSON.stringify({
+            reply: urdu ? "Maine aap ki shop ke liye ek garam, haath se bana look lagaya hai." : "I applied a look that suits your shop, with two more to try.",
+            question: /unclear/i.test(request) ? "Do you prefer a light or a dark page?" : null,
+            options,
+          }),
+          model: "fake-model-e2e",
+          inputTokens: 300,
+          outputTokens: 220,
+        };
+      }
       // Voice notes (Part G): the strict JSON shape the real model is held to.
       if (/spoken instruction/.test(system)) {
         return {
@@ -150,6 +194,23 @@ async function main() {
   });
   startAiWorker();
 
+  // Email: a fake gateway that keeps what it would have sent, so a browser test can open a reset link.
+  const outbox: { to: string; subject: string; text: string; at: number }[] = [];
+  (await import("../src/lib/email")).setEmailGateway({
+    async send(message) {
+      outbox.push({ ...message, at: Date.now() });
+      if (outbox.length > 200) outbox.shift();
+    },
+  });
+
+  // Product Scout's demo snapshot, rebuilt now with the fake AI above: the demo stores' sales are moved
+  // up to yesterday first (lib/demoDates.ts), so the browser test sees the demo whenever it was seeded.
+  if ((await prismaUnscoped.tenant.count({ where: { slug: { startsWith: "demo-scout-" } } })) > 0) {
+    const { scoutService } = await import("../src/modules/scout/scout.service");
+    const scout = await scoutService.refresh({ scopes: ["demo"] });
+    console.log(`Product Scout demo snapshot up to ${scout.windowEnd}: ${scout.snapshots.join(", ") || "none"}`);
+  }
+
   // Stands in for the Python recommendation service (Phase 6): no second process to start for a
   // browser test. "Similar" here just means same category first, then the rest, which is enough
   // to test what the UI does with the answer; the real similarity is verify-recommendations.ts's job.
@@ -172,6 +233,12 @@ async function main() {
   const outer = express();
   outer.get("/__fake-stripe/:id", (req, res) => {
     res.type("html").send(`<title>Fake Stripe</title><h1>Fake Stripe checkout</h1><p>${req.params.id}</p>`);
+  });
+  outer.get("/__e2e/last-email", (req, res) => {
+    const to = String(req.query.to ?? "");
+    const mail = [...outbox].reverse().find((m) => m.to === to);
+    if (!mail) return res.status(404).json({ error: "no email to that address" });
+    res.json(mail);
   });
   outer.post("/__e2e/set-tax", express.json(), async (req, res) => {
     await prismaUnscoped.tenant.update({ where: { id: req.body.storeId }, data: { taxRate: String(req.body.rate) } });
@@ -234,7 +301,9 @@ async function main() {
   });
   outer.use(app);
 
-  outer.listen(port, () => console.log(`E2E API listening on http://localhost:${port}`));
+  // Loopback only, on IPv4 and (where the machine has it) IPv6, since "localhost" may resolve to either.
+  outer.listen(port, "127.0.0.1", () => console.log(`E2E API listening on http://localhost:${port} (loopback only)`));
+  createServer(outer).on("error", () => undefined).listen(port, "::1");
 }
 
 main().catch((err) => {

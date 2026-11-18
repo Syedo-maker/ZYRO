@@ -15,7 +15,7 @@ export function pageWindow(current: number, total: number): (number | null)[] {
 /** Numbered pages as real links, so each page has its own address and works with the back button. */
 export function Pagination({ page, pageCount, hrefFor }: { page: number; pageCount: number; hrefFor: (page: number) => string }) {
   if (pageCount <= 1) return null
-  const item = 'inline-flex h-10 min-w-10 items-center justify-center rounded-[10px] border px-3 text-sm font-semibold'
+  const item = 'inline-flex h-10 min-w-10 items-center justify-center rounded-control border px-3 text-sm font-semibold'
   return (
     <nav aria-label="Pagination" className="flex flex-wrap items-center justify-center gap-2">
       {page > 1 && (
@@ -34,7 +34,7 @@ export function Pagination({ page, pageCount, hrefFor }: { page: number; pageCou
             to={hrefFor(p)}
             aria-label={`Page ${p}`}
             aria-current={p === page ? 'page' : undefined}
-            className={`${item} ${p === page ? 'border-brand bg-brand text-on-brand' : 'border-border bg-surface hover:bg-bg'}`}
+            className={`${item} ${p === page ? 'border-brand-ink bg-brand text-on-brand' : 'border-border bg-surface hover:bg-bg'}`}
           >
             {p}
           </Link>

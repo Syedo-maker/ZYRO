@@ -214,7 +214,10 @@ await step('sell one at the counter', op, async () => {
   await op.getByText(`Golden Lawn Suit ${suffix}`).first().click()
   const charge = op.getByRole('button', { name: /^Charge/ })
   await charge.waitFor({ timeout: 15000 })
-  check('the counter prices the sale itself', /Rs\s?2,?500/.test(await charge.innerText()), await charge.innerText())
+  // The button appears before the cart's total does: wait for the price rather than read it once
+  // (a single read raced the render and failed about one run in three, audit health check 2026-11).
+  const priced = await charge.filter({ hasText: /Rs\s?2,?500/ }).waitFor({ timeout: 10000 }).then(() => true, () => false)
+  check('the counter prices the sale itself', priced, await charge.innerText())
 
   await charge.click()
   await op.getByRole('heading', { name: 'Payment' }).waitFor({ timeout: 15000 })

@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { env } from "../../config/env";
 import { prisma } from "../../lib/prisma";
 import { getRedis } from "../../lib/redis";
 import { Errors } from "../../errors/AppError";
@@ -66,7 +67,7 @@ async function priceCart(storeId: string, owner: CartOwner, discountCode?: strin
 }
 
 async function priceWithShipping(storeId: string, owner: CartOwner, input: { discountCode?: string; shippingZoneId?: string }) {
-  const { key, tenant, lines, subtotalCents, discount } = await priceCart(storeId, owner, input.discountCode);
+  const { key, tenant, lines, discount } = await priceCart(storeId, owner, input.discountCode);
 
   let shipping: { name: string; amount: number } | undefined;
   if (input.shippingZoneId) {
@@ -112,6 +113,10 @@ export const localCheckoutService = {
     return {
       currency: tenant.currency,
       total,
+      // Card payment needs the platform's Stripe keys. Without them the storefront does not offer it at
+      // all (it used to offer it, and the shopper got an error on paying), and a store runs on cash on
+      // delivery and bank transfer alone.
+      card: { available: Boolean(env.stripe.secretKey && env.stripe.webhookSecret) },
       cod: cod.available
         ? { available: true, advanceAmount: cod.advanceAmount, note: "reason" in cod ? cod.reason : null }
         : { available: false, note: cod.reason },

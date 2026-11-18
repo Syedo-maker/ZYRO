@@ -1,0 +1,9 @@
+# For the load test only (backend/scripts/load-test.ts): the production-like stack with rate limits
+# off, so the test measures capacity rather than one address hitting its limits. Never use it for
+# anything else; production logs a warning when rate limits are off.
+#
+#   docker compose -f compose.yaml -f compose.loadtest.yaml up -d --scale api=2
+services:
+  api:
+    environment:
+      RATE_LIMIT_ENABLED: "false"
