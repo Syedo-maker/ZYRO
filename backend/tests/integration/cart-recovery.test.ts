@@ -245,6 +245,7 @@ async function main() {
       }
     }
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
+    await prismaUnscoped.user.deleteMany({ where: { email: `verify-cr-staff-${suffix}@example.com` } }); // the staff member this suite added
   }
   await closeCartRecoveryQueue();
   await closeAiQueue();

@@ -246,6 +246,7 @@ async function main() {
     await ProductReview.deleteMany({ storeId: { $in: created.tenantIds }, productId: { $in: productIds.map((p) => p._id) } });
     for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
+    await prismaUnscoped.user.deleteMany({ where: { email: `verify-aic-staff-${suffix}@example.com` } }); // the staff member this suite added
   }
   await closeAiQueue();
   await closeRedis();

@@ -141,6 +141,7 @@ async function main() {
       await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
     }
     for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
+    await prismaUnscoped.user.deleteMany({ where: { email: `verify-ins-staff-${suffix}@example.com` } }); // the staff member this suite added
   }
   await closeAiQueue();
   await closeRedis();
