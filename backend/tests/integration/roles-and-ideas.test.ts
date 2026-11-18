@@ -287,6 +287,7 @@ afterAll(async () => {
   await Product.deleteMany({ storeId: { $in: created.tenantIds } });
   for (const t of created.tenantIds) await prismaUnscoped.tenant.deleteMany({ where: { id: t } });
   for (const u of created.userIds) await prismaUnscoped.user.deleteMany({ where: { id: u } });
+  await prismaUnscoped.user.deleteMany({ where: { email: `verify-ri-staff-${suffix}@example.com` } }); // the staff member this suite added
   await (await import("../../src/lib/redis")).closeRedis();
   await (await import("mongoose")).default.disconnect();
   await prismaUnscoped.$disconnect();
