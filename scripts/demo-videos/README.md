@@ -1,6 +1,6 @@
 # Walkthrough videos
 
-Code-made walkthrough videos of ShopMind AI (ZYRO), one per role: Owner, Manager, Cashier and
+Code-made walkthrough videos of Zyro, one per role: Owner, Manager, Cashier and
 Customer. Every scene is filmed with Playwright from the running app, in a demo store with demo
 accounts. Captions, title cards and the end card are added with ffmpeg. No AI video generation is
 used, and the videos are silent, ready for a voiceover.
@@ -40,7 +40,7 @@ From the repository root:
 ```bash
 node scripts/demo-videos/make-assets.mjs        # product pictures, receipt, voice note, title and end cards
 node scripts/demo-videos/record.mjs owner       # films the chapters not filmed yet
-node scripts/demo-videos/assemble.mjs owner     # output/shopmind-ai-owner-walkthrough.mp4 + chapter list
+node scripts/demo-videos/assemble.mjs owner     # output/zyro-owner-walkthrough.mp4 + chapter list
 node scripts/demo-videos/check.mjs owner        # frames and contact sheets to look at
 ```
 
@@ -61,6 +61,8 @@ node scripts/demo-videos/assemble.mjs owner
 - **Changing a caption doesn't need refilming.** Captions are kept as text in
   `output/clips/<chapter>.json` and burned in by `assemble.mjs`: edit them there and in the role's
   script, then assemble again.
+- **Changing only the title or end card** (`CREDITS` in `lib.mjs`): run `make-assets.mjs`, then
+  `assemble.mjs <role> --cards-only`. Each chapter's encoded clip is kept, so it takes seconds.
 
 ## Showing what is clicked
 

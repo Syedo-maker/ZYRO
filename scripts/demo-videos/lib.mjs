@@ -45,7 +45,7 @@ export const DEMO = {
 
 /** The title card text, the same on all four videos but for the role. */
 export const CREDITS = {
-  project: 'ShopMind AI',
+  project: 'Zyro',
   university: 'Shifa Tameer-e-Millat University',
   programme: 'Bachelor of Science in Artificial Intelligence',
   year: 'Final Year Project 2026',
