@@ -5,7 +5,8 @@ import { onScrape } from "./metrics";
 /**
  * AI cost protection beyond each store's monthly allowance (production readiness, 2026-11).
  *
- *   AI_DISABLED=true          every AI feature answers "switched off" at once (the kill switch)
+ *   AI_DISABLED=true          every AI feature answers "switched off" at once (the kill switch);
+ *                             AI_ENABLED=false does the same
  *   AI_DAILY_STORE_LIMIT=n    AI requests one store may make per UTC day (unset: 200 in production,
  *                             no limit elsewhere; 0: no limit)
  *   AI_DAILY_GLOBAL_LIMIT=n   AI requests the whole platform may make per UTC day, store and
@@ -33,7 +34,7 @@ export const limit = (name: keyof typeof PRODUCTION_DAILY_DEFAULTS) => {
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 
-export const aiDisabled = () => process.env.AI_DISABLED === "true";
+export const aiDisabled = () => process.env.AI_DISABLED === "true" || process.env.AI_ENABLED === "false";
 
 export type DailyRefusal = "store" | "global";
 
