@@ -3745,6 +3745,25 @@ paths:
             image/*: { schema: { type: string, format: binary } }
             audio/*: { schema: { type: string, format: binary } }
         "404": { description: "No such file, or the link is not genuine or has expired" }
+  /site:
+    get:
+      tags: [billing]
+      operationId: site_info
+      summary: What the web app needs to know about this deployment
+      description: |
+        `uploadsDemoOnly` is true when uploaded files are kept on a temporary disk and may disappear.
+      security: []
+      responses:
+        "200":
+          description: Deployment facts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploadsDemoOnly]
+                properties:
+                  uploadsDemoOnly: { type: boolean }
+
   /plans:
     get:
       tags: [billing]

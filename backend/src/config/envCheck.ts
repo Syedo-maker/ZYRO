@@ -142,6 +142,7 @@ const CHOICES: Record<string, { values: string[]; neededFor: string }> = {
   RATE_LIMIT_ENABLED: { values: ["true", "false"], neededFor: "rate limits" },
   RUN_WORKERS_IN_API: { values: ["true", "false"], neededFor: "background jobs" },
   ALLOW_LOCAL_STORAGE_IN_PRODUCTION: { values: ["true", "false"], neededFor: "file uploads" },
+  UPLOADS_DEMO_ONLY: { values: ["true", "false"], neededFor: "file uploads" },
   FORCE_HTTPS: { values: ["true", "false"], neededFor: "the HTTPS-only redirect" },
   AI_DISABLED: { values: ["true", "false"], neededFor: "the AI kill switch" },
   AI_ENABLED: { values: ["true", "false"], neededFor: "the AI kill switch" },

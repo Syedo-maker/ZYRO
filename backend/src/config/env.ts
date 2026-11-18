@@ -53,6 +53,8 @@ export const env = {
   // voice notes are private and only ever handed out as short-lived signed links.
   storage: {
     driver: storageDriver as "local" | "azure",
+    /** Local files on a host whose disk is temporary: the app tells people uploads may disappear. */
+    demoOnly: storageDriver === "local" && process.env.UPLOADS_DEMO_ONLY === "true",
     /** The local driver's private area. Never served as static files. */
     privateDir: process.env.PRIVATE_UPLOADS_DIR ?? "uploads-private",
     /** How long a signed link to a private file works. Long enough for a merchant to review a

@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ImagePlus, Trash2 } from 'lucide-react'
 import { useId, useRef, useState, type ReactNode } from 'react'
+import { UploadsDemoNotice } from '../../../components/ui/UploadsDemoNotice'
 import { ApiError } from '../../../lib/apiClient'
 import { logoColours } from '../../../lib/logoColors'
 import { uploadsApi } from '../../../lib/productsApi'
@@ -209,6 +210,7 @@ export function ThemeControls({
           )
         })}
         <p className="text-xs text-text-muted">JPEG, PNG or WebP, up to 5 MB.</p>
+        <UploadsDemoNotice />
       </Group>
 
       <Group title="Homepage sections">

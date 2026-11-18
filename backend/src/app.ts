@@ -165,6 +165,8 @@ v1.use("/stores/:storeId", storeRouter);
 // The landing page's trending suggestions demo (public; budget enforced in demo.service.ts).
 v1.use("/demo", demoRouter);
 v1.use("/plans", plansRouter);
+// What the web app needs to know about this deployment. Public, and holds nothing sensitive.
+v1.get("/site", (_req, res) => res.json({ uploadsDemoOnly: env.storage.demoOnly }));
 v1.use("/files", filesRouter);
 v1.use("/platform", platformRouter);
 v1.use("/unsubscribe", unsubscribeRouter);
