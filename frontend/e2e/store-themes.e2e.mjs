@@ -185,8 +185,13 @@ try {
   // 5. No flash: on a return visit the loading screen already wears the shop's colours.
   await publish(preset('clean-light'))
   await openHome() // caches the new theme
-  await page.route(`${API}/stores/${storeId}`, async (route) => {
-    await new Promise((r) => setTimeout(r, 1500))
+  // The shop's details are held back until the loading screen has been measured, however slow the machine.
+  let releaseStore
+  const storeHeld = new Promise((r) => (releaseStore = r))
+  // The browser reaches the API through the web server, so match the path, not the API's own address.
+  const storeRequest = `**/api/v1/stores/${storeId}`
+  await page.route(storeRequest, async (route) => {
+    await storeHeld
     await route.continue()
   })
   await page.goto(`${WEB}/store/${storeId}`)
@@ -200,11 +205,12 @@ try {
     hidden: [...document.querySelectorAll('#root > *')].filter((el) => el.style.display === 'none').length,
   }), storeId)
   check('the loading screen of a returning visit wears the shop background, not Zyro\'s', loading.bg === 'rgb(255, 255, 255)', JSON.stringify(loading))
+  releaseStore()
+  await page.unrouteAll({ behavior: 'wait' })
   // Before any app code runs: the before-paint script has already put the shop's colour on <html>.
   await page.goto(`${WEB}/store/${storeId}`, { waitUntil: 'domcontentloaded' })
   const early = await page.evaluate(() => document.documentElement.style.getPropertyValue('--color-bg'))
   check('the shop colour is on the page before the app has even started', early === '#ffffff', early || '(none)')
-  await page.unroute(`${API}/stores/${storeId}`)
 
   // Leaving the shop inside the app (no page load) takes its colours off the platform pages.
   await page.getByText('Ceramic Chai Cup').first().waitFor()
