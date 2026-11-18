@@ -6,6 +6,10 @@
  *   npm run seed:demo
  *   npm run seed:demo -- --allow-existing-stores     (only if you really mean to add it next to real stores)
  *
+ * On a database that is not on this machine, DEMO_PASSWORD is required: set it in your terminal, at
+ * least 12 characters, and never in a file in the repository. Every demo account then uses it, it is
+ * never printed, and the public development passwords do not work there.
+ *
  * It refuses to run on a database that already has stores which are not demo stores, unless that flag
  * is passed. It needs DATABASE_URL, MONGODB_URI and REDIS_URL, and the migrations already applied.
  * It starts its own short-lived API on this machine, so nothing has to be open to the internet, and
@@ -14,7 +18,7 @@
  * With DEMO_IMAGE_BASE_URL set, products point at images hosted there (the web app serves them at
  * /demo-assets) instead of uploading to file storage, so they survive on hosts with a temporary disk.
  *
- * The demo sign-ins are printed here and listed in documentation/Demo_Data.md; never on a public page.
+ * The demo email addresses are printed here and listed in documentation/Demo_Data.md; never on a public page.
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -26,9 +30,33 @@ loadDotenv({ path: path.resolve(__dirname, "../.env"), quiet: true });
 const PORT = Number(process.env.SEED_API_PORT ?? 5077);
 const API = `http://127.0.0.1:${PORT}/api/v1`;
 const STORE_SLUG = "demo-scout-video-showcase";
-const PASSWORD = "Demo-Video-2026";
+const PUBLIC_PASSWORDS = ["Demo-Video-2026", "demo-pass-123"];
+const privatePassword = process.env.DEMO_PASSWORD?.trim();
+const PASSWORD = privatePassword || PUBLIC_PASSWORDS[0];
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "postgres", "mongo", "mongodb"]);
 const DEMO_DOMAIN = "demo.zyro.local";
 const allowExisting = process.argv.includes("--allow-existing-stores");
+
+const hostOf = (url: string | undefined) => {
+  try {
+    return new URL(url ?? "").hostname;
+  } catch {
+    return "";
+  }
+};
+
+/** A hosted copy gets its own password, because the development ones are public. */
+function checkPassword() {
+  const hosted = [process.env.DATABASE_URL, process.env.MONGODB_URI ?? process.env.MONGO_URI].some((url) => !LOCAL_HOSTS.has(hostOf(url)));
+  let problem = "";
+  if (hosted && !privatePassword) problem = "this database is not on this machine, so DEMO_PASSWORD must be set in your terminal.";
+  else if (privatePassword && privatePassword.length < 12) problem = "DEMO_PASSWORD must be at least 12 characters.";
+  else if (privatePassword && PUBLIC_PASSWORDS.includes(privatePassword)) problem = "DEMO_PASSWORD must not be one of the public development passwords.";
+  if (problem) {
+    console.error(`Refusing to seed: ${problem} Nothing was changed.`);
+    process.exit(1);
+  }
+}
 
 const childEnv = (): NodeJS.ProcessEnv => ({
   ...process.env,
@@ -81,6 +109,7 @@ async function publishTheme() {
 }
 
 async function main() {
+  checkPassword();
   const { prismaUnscoped: prisma } = await import("../src/lib/prisma");
   // A real store is any store that is neither a demo store nor owned by a demo account.
   const realStores = await prisma.tenant.count({
@@ -101,9 +130,9 @@ async function main() {
       if (code !== 0) throw new Error(`${file} stopped with exit code ${code}.`);
     }
     const storeId = await publishTheme();
-    console.log("\nDemo data is ready. Demo sign-ins (demo data only; do not reuse this password anywhere):");
+    console.log("\nDemo data is ready. Demo sign-ins (demo data only):");
     for (const role of ["owner", "manager", "cashier", "shopper-ayesha"]) console.log(`  ${role.padEnd(15)} video-${role}@${DEMO_DOMAIN}`);
-    console.log(`  password        ${PASSWORD}`);
+    console.log(`  password        ${privatePassword ? "the one you set in DEMO_PASSWORD (not shown)" : `${PASSWORD} (public, for this machine only)`}`);
     console.log(`  demo store      /store/${storeId}`);
   } finally {
     api.kill();

@@ -1,5 +1,6 @@
 /**
- * scripts/seed-demo.ts refuses a database that already has real stores, and changes nothing there.
+ * scripts/seed-demo.ts refuses a database that already has real stores, and a hosted database without
+ * a private password, and changes nothing there.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -23,9 +24,31 @@ afterAll(async () => {
   await prismaUnscoped.$disconnect();
 });
 
+const seed = (env: NodeJS.ProcessEnv) => spawnSync(process.execPath, ["--import", "tsx", "scripts/seed-demo.ts"], { cwd: backend, env, encoding: "utf8", timeout: 60_000 });
+// Means this machine, but is not on the scripts' list of local names, as a cloud database would not be.
+const hosted = () => ({ ...process.env, DATABASE_URL: process.env.DATABASE_URL!.replace("127.0.0.1", "LOCALHOST"), DEMO_PASSWORD: "" });
+
+it.each([
+  ["no password", "", /DEMO_PASSWORD must be set/],
+  ["a short password", "short-one", /at least 12 characters/],
+  ["the public password", "Demo-Video-2026", /public development passwords/],
+])("refuses a hosted database with %s", (_name, password, message) => {
+  const run = seed({ ...hosted(), DEMO_PASSWORD: password });
+  expect(run.status).toBe(1);
+  expect(run.stderr).toMatch(message);
+  expect(run.stderr).toMatch(/Nothing was changed/);
+}, 90_000);
+
+it("never prints a private password", () => {
+  const secret = "a-private-demo-password";
+  const run = seed({ ...hosted(), DEMO_PASSWORD: secret });
+  expect(run.status).toBe(1); // this database has a real store (made above)
+  expect(run.stdout + run.stderr).not.toContain(secret);
+}, 90_000);
+
 it("stops before touching a database that has a store which is not a demo store", async () => {
   const demoBefore = await prismaUnscoped.tenant.count({ where: { slug: "demo-scout-video-showcase" } });
-  const run = spawnSync(process.execPath, ["--import", "tsx", "scripts/seed-demo.ts"], { cwd: backend, env: process.env, encoding: "utf8", timeout: 60_000 });
+  const run = seed({ ...process.env, DEMO_PASSWORD: "" });
   expect(run.status).toBe(1);
   expect(run.stderr).toMatch(/Refusing to seed/);
   expect(run.stderr).toMatch(/Nothing was changed/);

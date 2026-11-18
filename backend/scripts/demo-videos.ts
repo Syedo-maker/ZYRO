@@ -36,7 +36,8 @@ const API = process.env.DEMO_API ?? "http://localhost:5000/api/v1";
 const ASSETS = path.resolve(__dirname, "../../scripts/demo-videos/assets");
 const DEMO_EMAIL_DOMAIN = "demo.zyro.local";
 const VIDEO_PREFIX = "video-";
-const PASSWORD = "Demo-Video-2026";
+// The public default is for a development machine. A hosted copy uses its own (scripts/seed-demo.ts).
+const PASSWORD = process.env.DEMO_PASSWORD?.trim() || "Demo-Video-2026";
 const STORE = { slug: "demo-scout-video-showcase", name: "Demo: Chai & Clay Co." };
 const DAY_MS = 24 * 60 * 60 * 1000;
 const command = process.argv[2];
@@ -82,7 +83,7 @@ const hostOf = (url: string | undefined) => {
 function refuseOutsideDevelopment() {
   const problems: string[] = [];
   // scripts/seed-demo.ts has already checked that the database holds no real stores.
-  const seeding = process.env.ZYRO_DEMO_SEED === "1" && command === "add";
+  const seeding = process.env.ZYRO_DEMO_SEED === "1" && command === "add" && Boolean(process.env.DEMO_PASSWORD?.trim());
   if (!seeding && process.env.NODE_ENV === "production") problems.push("NODE_ENV is production");
   if (!seeding && !LOCAL_HOSTS.has(hostOf(process.env.DATABASE_URL))) problems.push("the Postgres database is not on this machine");
   if (!seeding && !LOCAL_HOSTS.has(hostOf(process.env.MONGODB_URI ?? process.env.MONGO_URI))) problems.push("the MongoDB database is not on this machine");
@@ -316,7 +317,7 @@ async function add() {
     process.exit(1);
   }
   console.log(`Done. Real data after: ${after.stores} stores, ${after.users} users (unchanged).`);
-  console.log(`Sign in at http://localhost:5173/login as ${email("owner")}, ${email("manager")} or ${email("cashier")} (demo password in scripts/demo-videos/lib.mjs).`);
+  console.log(`Sign in at http://localhost:5173/login as ${email("owner")}, ${email("manager")} or ${email("cashier")} (${process.env.DEMO_PASSWORD?.trim() ? "the password you set in DEMO_PASSWORD" : "demo password in scripts/demo-videos/lib.mjs"}).`);
 }
 
 /** Removes the stores (and everything in them) owned by video accounts matching `prefix`, then those accounts. */
