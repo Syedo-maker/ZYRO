@@ -1,6 +1,6 @@
 import path from "node:path";
 import { config as loadDotenv } from "dotenv";
-import { checkEnv, EnvError, loadSecretFiles } from "./envCheck";
+import { checkEnv, EnvError, loadSecretFiles, parseOrigins } from "./envCheck";
 
 // Settings come from backend/.env, by path, whichever folder the process was started from (the repo
 // root, backend/, or a script's own folder). Variables already set in the environment win, which is
@@ -38,7 +38,13 @@ export const env = {
   /** development, test, staging or production: a label for logs and error tracking (config/envCheck.ts). */
   appEnv: envReport.appEnv,
   port: Number(process.env.PORT ?? 5000),
-  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+  /** The web app's addresses (CORS_ORIGIN, comma-separated): the only sites allowed to call the API with credentials. */
+  corsOrigins: parseOrigins(process.env.CORS_ORIGIN ?? "http://localhost:5173"),
+  /**
+   * The sign-in cookie's SameSite. "lax" (the default) when the web app reaches the API on its own site
+   * (the dev proxy, nginx, or a Vercel rewrite); "none" only when the browser calls the API on another site.
+   */
+  cookieSameSite: (process.env.COOKIE_SAME_SITE === "none" ? "none" : "lax") as "lax" | "none",
   databaseUrl: required("DATABASE_URL"),
   mongoUri: required("MONGODB_URI"),
   uploadsDir: process.env.UPLOADS_DIR ?? "uploads",
@@ -47,6 +53,8 @@ export const env = {
   // voice notes are private and only ever handed out as short-lived signed links.
   storage: {
     driver: storageDriver as "local" | "azure",
+    /** Local files on a host whose disk is temporary: the app tells people uploads may disappear. */
+    demoOnly: storageDriver === "local" && process.env.UPLOADS_DEMO_ONLY === "true",
     /** The local driver's private area. Never served as static files. */
     privateDir: process.env.PRIVATE_UPLOADS_DIR ?? "uploads-private",
     /** How long a signed link to a private file works. Long enough for a merchant to review a
@@ -142,7 +150,7 @@ export const env = {
     .map((c) => c.trim().toUpperCase())
     .filter(Boolean),
   // Where shoppers land after Stripe Checkout. Defaults to the storefront's own origin.
-  storefrontUrl: process.env.STOREFRONT_URL ?? process.env.CORS_ORIGIN ?? "http://localhost:5173",
+  storefrontUrl: process.env.STOREFRONT_URL ?? parseOrigins(process.env.CORS_ORIGIN ?? "")[0] ?? "http://localhost:5173",
   // Stripe is optional at startup so the rest of the API runs without keys; the checkout
   // and webhook endpoints answer 503 until these are set.
   stripe: {

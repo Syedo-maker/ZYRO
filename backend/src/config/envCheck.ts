@@ -142,8 +142,11 @@ const CHOICES: Record<string, { values: string[]; neededFor: string }> = {
   RATE_LIMIT_ENABLED: { values: ["true", "false"], neededFor: "rate limits" },
   RUN_WORKERS_IN_API: { values: ["true", "false"], neededFor: "background jobs" },
   ALLOW_LOCAL_STORAGE_IN_PRODUCTION: { values: ["true", "false"], neededFor: "file uploads" },
+  UPLOADS_DEMO_ONLY: { values: ["true", "false"], neededFor: "file uploads" },
   FORCE_HTTPS: { values: ["true", "false"], neededFor: "the HTTPS-only redirect" },
   AI_DISABLED: { values: ["true", "false"], neededFor: "the AI kill switch" },
+  AI_ENABLED: { values: ["true", "false"], neededFor: "the AI kill switch" },
+  COOKIE_SAME_SITE: { values: ["lax", "none"], neededFor: "staying signed in when the web app and the API are on different sites" },
 };
 
 const URLS: Record<string, { schemes: string[]; neededFor: string }> = {
@@ -170,6 +173,14 @@ const OPTIONAL_FEATURES: { feature: string; needs: (s: Source) => string[] }[] =
   { feature: "telemetry (Application Insights)", needs: (s) => (set(s.APPLICATIONINSIGHTS_CONNECTION_STRING) ? [] : ["APPLICATIONINSIGHTS_CONNECTION_STRING"]) },
   { feature: "error tracking (Sentry-compatible)", needs: (s) => (set(s.SENTRY_DSN) ? [] : ["SENTRY_DSN"]) },
 ];
+
+/** CORS_ORIGIN as a list: one or more web addresses, separated by commas, without a trailing slash. */
+export function parseOrigins(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((o) => o.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+}
 
 export function resolveAppEnv(source: Source): AppEnv {
   const explicit = source.APP_ENV?.trim().toLowerCase();
@@ -218,13 +229,22 @@ export function checkEnv(source: Source): EnvReport {
   for (const [name, { schemes, neededFor }] of Object.entries(URLS)) {
     const value = source[name];
     if (!set(value)) continue;
-    let ok = false;
-    try {
-      ok = schemes.includes(new URL(value!.trim()).protocol);
-    } catch {
-      ok = false;
-    }
+    // CORS_ORIGIN may list several web addresses; every one must be valid.
+    const values = name === "CORS_ORIGIN" ? parseOrigins(value!) : [value!.trim()];
+    const ok =
+      values.length > 0 &&
+      values.every((v) => {
+        try {
+          return schemes.includes(new URL(v).protocol);
+        } catch {
+          return false;
+        }
+      });
     if (!ok) add(name, `must be a ${schemes.map((s) => s.replace(":", "")).join(" or ")} URL`, neededFor);
+  }
+  // A cookie that crosses sites is only accepted over HTTPS, so production needs HTTPS web addresses.
+  if (isProduction && source.COOKIE_SAME_SITE === "none" && parseOrigins(source.CORS_ORIGIN ?? "").some((o) => !o.startsWith("https://"))) {
+    add("CORS_ORIGIN", "must use https:// when COOKIE_SAME_SITE=none", "staying signed in when the web app and the API are on different sites");
   }
 
   for (const [name, neededFor] of Object.entries(POSITIVE_NUMBERS)) {
@@ -262,7 +282,7 @@ export function checkEnv(source: Source): EnvReport {
   if (isProduction && source.GATEWAY_MOCK_ENABLED === "true") {
     warnings.push({ name: "GATEWAY_MOCK_ENABLED", message: "the test payment gateway is switched on in production" });
   }
-  if (source.AI_DISABLED === "true") {
+  if (source.AI_DISABLED === "true" || source.AI_ENABLED === "false") {
     warnings.push({ name: "AI_DISABLED", message: "the AI kill switch is on: every AI feature answers \"switched off\"" });
   }
   if (isProduction && source.RATE_LIMIT_ENABLED === "false") {

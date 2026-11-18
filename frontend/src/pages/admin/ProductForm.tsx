@@ -14,6 +14,7 @@ import { StockStepper } from './StockStepper'
 import type { Category, Product, ProductInput } from '../../types/api'
 import type { ScoutPrefill } from '../../lib/productScoutApi'
 import { Alert } from '../../components/ui/Alert'
+import { UploadsDemoNotice } from '../../components/ui/UploadsDemoNotice'
 
 /** The same comparison the server makes: case and spacing do not make two category names different. */
 const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, ' ').toLowerCase() === b.trim().replace(/\s+/g, ' ').toLowerCase()
@@ -389,6 +390,7 @@ export function ProductForm({ storeId, currency, initial, prefill, onSubmit, onC
             onChange={(e) => void handleFileSelected(e)}
           />
         </div>
+        <UploadsDemoNotice />
       </div>
 
       <Input

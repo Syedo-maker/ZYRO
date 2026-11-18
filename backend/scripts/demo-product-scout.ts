@@ -58,7 +58,8 @@ async function loadApp() {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEMO_PASSWORD = "demo-pass-123";
+// The public default is for a development machine. A hosted copy uses its own (scripts/seed-demo.ts).
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD?.trim() || "demo-pass-123";
 const command = process.argv[2];
 
 // ---------------------------------------------------------------------------------------------
@@ -74,6 +75,8 @@ function hostOf(url: string | undefined): string {
   }
 }
 function refuseOutsideDevelopment() {
+  // scripts/seed-demo.ts has already checked that the database holds no real stores.
+  if (process.env.ZYRO_DEMO_SEED === "1" && process.argv[2] === "add" && process.env.DEMO_PASSWORD?.trim()) return;
   const problems: string[] = [];
   if (process.env.NODE_ENV === "production") problems.push("NODE_ENV is production");
   const pg = hostOf(process.env.DATABASE_URL);
@@ -242,7 +245,7 @@ async function add() {
   console.log(`  ${result.snapshots.join(", ") || "no snapshot (too little data)"}`);
   await checkSnapshots();
   console.log(`\nSign in at http://localhost:5173/login as any demo owner, for example`);
-  console.log(`  ${DEMO_SLUG_PREFIX}${STORES[0].key}@${DEMO_EMAIL_DOMAIN}   password: ${DEMO_PASSWORD}`);
+  console.log(`  ${DEMO_SLUG_PREFIX}${STORES[0].key}@${DEMO_EMAIL_DOMAIN}   password: ${process.env.DEMO_PASSWORD?.trim() ? "the one you set in DEMO_PASSWORD" : DEMO_PASSWORD}`);
 }
 
 /** Moves the demo sales up to yesterday (lib/demoDates.ts) and rebuilds the demo snapshot. */

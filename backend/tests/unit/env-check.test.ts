@@ -111,4 +111,15 @@ describe("secrets from files", () => {
     expect(source.DATABASE_URL).toBe("postgresql://set");
     expect(problems.map((p) => p.name)).toEqual(["MONGODB_URI_FILE"]);
   });
+
+  it("accepts several CORS_ORIGIN addresses and refuses a bad one", () => {
+    expect(checkEnv({ ...production(), CORS_ORIGIN: "https://a.example.com, https://b.example.com/" }).errors).toEqual([]);
+    expect(checkEnv({ ...production(), CORS_ORIGIN: "https://a.example.com, not-a-url" }).errors.map((e) => e.name)).toEqual(["CORS_ORIGIN"]);
+  });
+
+  it("the cross-site cookie needs https web addresses in production, and only takes lax or none", () => {
+    expect(checkEnv({ ...production(), COOKIE_SAME_SITE: "none" }).errors).toEqual([]);
+    expect(checkEnv({ ...production(), COOKIE_SAME_SITE: "none", CORS_ORIGIN: "http://a.example.com" }).errors.map((e) => e.name)).toEqual(["CORS_ORIGIN"]);
+    expect(checkEnv({ ...production(), COOKIE_SAME_SITE: "strict" }).errors.map((e) => e.name)).toEqual(["COOKIE_SAME_SITE"]);
+  });
 });

@@ -4,6 +4,7 @@ import { Alert } from '../../components/ui/Alert'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { UploadsDemoNotice } from '../../components/ui/UploadsDemoNotice'
 import { formatDateTime } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
 import { voiceApi, type VoiceNote } from '../../lib/voiceApi'
@@ -124,6 +125,9 @@ function VoiceNotesContent() {
           </Button>
         )}
         {recording && <span className="text-sm font-semibold text-danger">Recording... speak now</span>}
+        <div className="w-full empty:hidden">
+          <UploadsDemoNotice />
+        </div>
         <p className="w-full text-xs text-text-secondary">
           For example: "chai cup ka price 450 kar do", or "steel kettle ka stock pachas kar do".
         </p>

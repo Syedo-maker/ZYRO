@@ -5,6 +5,7 @@ import { useStore } from '../../context/StoreContext'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
+import { UploadsDemoNotice } from '../../components/ui/UploadsDemoNotice'
 import { errorMessage } from '../../lib/ordersApi'
 import { paymentsApi } from '../../lib/paymentsApi'
 import { formatMoney } from '../../lib/format'
@@ -103,6 +104,7 @@ export function OrderPlacedPage() {
               Screenshot
             </label>
             <input id="proof-file" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full min-w-0 max-w-full text-sm text-text-secondary file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border file:border-text/25 file:bg-transparent file:px-4 file:text-sm file:font-semibold file:text-text hover:file:border-text/60" />
+            <UploadsDemoNotice />
           </div>
           <Input id="proof-amount" label="Amount you sent" type="number" min={0} step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} />
           <Input id="proof-reference" label="Transfer reference (helps the shop find it)" maxLength={64} value={reference} onChange={(e) => setReference(e.target.value)} />

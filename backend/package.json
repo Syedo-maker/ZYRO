@@ -4,6 +4,9 @@
     "private": true,
     "description": "ZYRO backend API",
     "main": "dist/index.js",
+    "engines": {
+        "node": "24.x"
+    },
     "scripts": {
         "dev": "tsx watch src/index.ts",
         "dev:worker": "tsx watch src/worker.ts",
@@ -13,6 +16,7 @@
         "store-data": "tsx scripts/store-data.ts",
         "customer-data": "tsx scripts/customer-data.ts",
         "retention": "tsx scripts/retention.ts",
+        "seed:demo": "tsx scripts/seed-demo.ts",
         "new-secret": "tsx scripts/new-secret.ts",
         "super-admin": "tsx scripts/make-super-admin.ts",
         "set-plan": "tsx scripts/set-plan.ts",

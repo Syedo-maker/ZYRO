@@ -3,9 +3,9 @@
  * platform, the owner's decision of 2026-11-14), off elsewhere; a setting overrides them and 0 turns a
  * limit off.
  */
-import { limit } from "../../src/lib/aiLimits";
+import { aiDisabled, limit } from "../../src/lib/aiLimits";
 
-const saved = { NODE_ENV: process.env.NODE_ENV, AI_DAILY_STORE_LIMIT: process.env.AI_DAILY_STORE_LIMIT, AI_DAILY_GLOBAL_LIMIT: process.env.AI_DAILY_GLOBAL_LIMIT };
+const saved = { NODE_ENV: process.env.NODE_ENV, AI_DAILY_STORE_LIMIT: process.env.AI_DAILY_STORE_LIMIT, AI_DAILY_GLOBAL_LIMIT: process.env.AI_DAILY_GLOBAL_LIMIT, AI_DISABLED: process.env.AI_DISABLED, AI_ENABLED: process.env.AI_ENABLED };
 afterEach(() => {
   for (const [k, v] of Object.entries(saved)) {
     if (v === undefined) delete process.env[k];
@@ -35,4 +35,17 @@ it("development and tests have no default limit", () => {
   delete process.env.AI_DAILY_GLOBAL_LIMIT;
   expect(limit("AI_DAILY_STORE_LIMIT")).toBeNull();
   expect(limit("AI_DAILY_GLOBAL_LIMIT")).toBeNull();
+});
+
+it("the kill switch answers to AI_DISABLED=true and to AI_ENABLED=false", () => {
+  delete process.env.AI_DISABLED;
+  delete process.env.AI_ENABLED;
+  expect(aiDisabled()).toBe(false);
+  process.env.AI_ENABLED = "true";
+  expect(aiDisabled()).toBe(false);
+  process.env.AI_ENABLED = "false";
+  expect(aiDisabled()).toBe(true);
+  delete process.env.AI_ENABLED;
+  process.env.AI_DISABLED = "true";
+  expect(aiDisabled()).toBe(true);
 });
