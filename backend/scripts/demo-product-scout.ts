@@ -74,6 +74,8 @@ function hostOf(url: string | undefined): string {
   }
 }
 function refuseOutsideDevelopment() {
+  // scripts/seed-demo.ts has already checked that the database holds no real stores.
+  if (process.env.ZYRO_DEMO_SEED === "1" && process.argv[2] === "add") return;
   const problems: string[] = [];
   if (process.env.NODE_ENV === "production") problems.push("NODE_ENV is production");
   const pg = hostOf(process.env.DATABASE_URL);

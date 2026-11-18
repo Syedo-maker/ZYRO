@@ -81,9 +81,11 @@ const hostOf = (url: string | undefined) => {
 };
 function refuseOutsideDevelopment() {
   const problems: string[] = [];
-  if (process.env.NODE_ENV === "production") problems.push("NODE_ENV is production");
-  if (!LOCAL_HOSTS.has(hostOf(process.env.DATABASE_URL))) problems.push("the Postgres database is not on this machine");
-  if (!LOCAL_HOSTS.has(hostOf(process.env.MONGODB_URI ?? process.env.MONGO_URI))) problems.push("the MongoDB database is not on this machine");
+  // scripts/seed-demo.ts has already checked that the database holds no real stores.
+  const seeding = process.env.ZYRO_DEMO_SEED === "1" && command === "add";
+  if (!seeding && process.env.NODE_ENV === "production") problems.push("NODE_ENV is production");
+  if (!seeding && !LOCAL_HOSTS.has(hostOf(process.env.DATABASE_URL))) problems.push("the Postgres database is not on this machine");
+  if (!seeding && !LOCAL_HOSTS.has(hostOf(process.env.MONGODB_URI ?? process.env.MONGO_URI))) problems.push("the MongoDB database is not on this machine");
   if (!LOCAL_HOSTS.has(hostOf(API))) problems.push("the API is not on this machine");
   if (problems.length) {
     console.error(`Refusing to touch demo data: ${problems.join("; ")}. This script is for a development machine only.`);
@@ -204,7 +206,9 @@ async function add() {
   const products = new Map<string, { id: string; title: string; mrp: number; sale: number }>();
   for (const p of PRODUCTS) {
     const file = `products/${p.key}.png`;
-    const images = existsSync(path.join(ASSETS, file)) ? [(await call<{ url: string }>("POST", s("/uploads/images"), { token, form: image(file) })).url] : [];
+    // On a host with a temporary disk the pictures come from the web app instead (DEMO_IMAGE_BASE_URL).
+    const hosted = process.env.DEMO_IMAGE_BASE_URL?.replace(/\/+$/, "");
+    const images = !existsSync(path.join(ASSETS, file)) ? [] : hosted ? [`${hosted}/${file}`] : [(await call<{ url: string }>("POST", s("/uploads/images"), { token, form: image(file) })).url];
     const created = await call("POST", s("/products"), {
       token,
       body: { title: p.title, description: p.description, actualPrice: p.mrp, ...(p.discount ? { discountType: p.discount.type, discountValue: p.discount.value } : {}), stock: p.stock, categoryId: categoryIds.get(p.category), images, tags: [] },
