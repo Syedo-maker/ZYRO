@@ -56,7 +56,7 @@ export function LegalLayout({ title, intro, sections, template = true }: { title
         ))}
 
         <p className="mt-12 border-t border-border pt-6 text-sm text-text-muted">
-          Questions about this page: <a href={`mailto:${LEGAL.contactEmail}`} className="text-text underline underline-offset-4">{LEGAL.contactEmail}</a>
+          Questions about this page? {LEGAL.contactEmail}.
         </p>
       </main>
     </div>

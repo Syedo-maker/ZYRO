@@ -27,13 +27,13 @@ describe("Brevo", () => {
 
   it("sends one POST to the transactional email API, with the key in the api-key header", async () => {
     answerWith(201, JSON.stringify({ messageId: "<1@relay>" }));
-    await brevoGateway(KEY, "finalyear860@gmail.com", "ZYRO").send(message);
+    await brevoGateway(KEY, "sender@example.com", "ZYRO").send(message);
     expect(requests).toHaveLength(1);
     expect(requests[0].url).toBe("https://api.brevo.com/v3/smtp/email");
     expect(requests[0].init.method).toBe("POST");
     expect((requests[0].init.headers as Record<string, string>)["api-key"]).toBe(KEY);
     expect(JSON.parse(String(requests[0].init.body))).toEqual({
-      sender: { email: "finalyear860@gmail.com", name: "ZYRO" },
+      sender: { email: "sender@example.com", name: "ZYRO" },
       to: [{ email: "ayesha@example.com" }],
       subject: "You left something in your cart at Bazuka",
       textContent: "Your kettle is waiting.",
@@ -42,7 +42,7 @@ describe("Brevo", () => {
 
   it("a refusal is an error naming the status and Brevo's reason, never the key", async () => {
     answerWith(400, JSON.stringify({ code: "unauthorized", message: "Key not found" }));
-    const err = await brevoGateway(KEY, "finalyear860@gmail.com", "ZYRO").send(message).catch((e: Error) => e);
+    const err = await brevoGateway(KEY, "sender@example.com", "ZYRO").send(message).catch((e: Error) => e);
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toMatch(/^Brevo responded 400: .*Key not found/);
     expect((err as Error).message).not.toContain(KEY);
@@ -66,7 +66,7 @@ describe("choosing a provider", () => {
     const saved = { ...env.email };
     Object.assign(env.email, { provider: "brevo", brevoApiKey: undefined, brevoFromEmail: undefined });
     expect(emailStatus()).toEqual({ configured: false, provider: "brevo", missing: ["BREVO_API_KEY", "BREVO_FROM_EMAIL"] });
-    Object.assign(env.email, { brevoApiKey: KEY, brevoFromEmail: "finalyear860@gmail.com" });
+    Object.assign(env.email, { brevoApiKey: KEY, brevoFromEmail: "sender@example.com" });
     expect(emailStatus()).toEqual({ configured: true, provider: "brevo", missing: [] });
     expect(JSON.stringify(emailStatus())).not.toContain(KEY);
     Object.assign(env.email, saved);

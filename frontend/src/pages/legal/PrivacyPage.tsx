@@ -15,8 +15,8 @@ export function PrivacyPage() {
       intro={
         <>
           <p>
-            ZYRO is an online shop, a point-of-sale register and a set of AI tools for small businesses, run by {LEGAL.operator} ("we"). This page
-            says what we collect, why, who else handles it, and what you can ask us to do with it.
+            {LEGAL.operator} ("we") is an online shop, a point-of-sale register and a set of AI tools for small businesses. This page says what
+            we collect, why, who else handles it, and what you can ask us to do with it.
           </p>
           <p>
             It speaks to two kinds of people: <strong>merchants</strong>, who run a shop on ZYRO, and <strong>shoppers</strong>, who buy from one.
@@ -160,11 +160,10 @@ export function PrivacyPage() {
           body: (
             <>
               <p>
-                You can ask for a copy of the personal data we hold about you, for it to be corrected, or for it to be deleted, by writing to{' '}
-                <a href={`mailto:${LEGAL.contactEmail}`} className="text-text underline underline-offset-4">{LEGAL.contactEmail}</a>. If you
-                bought from a shop, you can also ask the shop, since it is the seller; we will help it answer.
+                You can ask for a copy of the personal data we hold about you, for it to be corrected, or for it to be deleted. {LEGAL.contactEmail}.
+                If you bought from a shop, you can also ask the shop, since it is the seller; we will help it answer.
               </p>
-              <p>We answer within 30 days, and do not charge for it.</p>
+              <p>Once the address is available, we answer within 30 days, and do not charge for it.</p>
             </>
           ),
         },
