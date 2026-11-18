@@ -25,8 +25,8 @@ afterAll(async () => {
 });
 
 const seed = (env: NodeJS.ProcessEnv) => spawnSync(process.execPath, ["--import", "tsx", "scripts/seed-demo.ts"], { cwd: backend, env, encoding: "utf8", timeout: 60_000 });
-// Means this machine, but is not on the scripts' list of local names, as a cloud database would not be.
-const hosted = () => ({ ...process.env, DATABASE_URL: process.env.DATABASE_URL!.replace("127.0.0.1", "LOCALHOST"), DEMO_PASSWORD: "" });
+// The password is checked before anything connects, so this address is never contacted.
+const hosted = () => ({ ...process.env, DATABASE_URL: "postgresql://demo@db.example.invalid:5432/app", DEMO_PASSWORD: "" });
 
 it.each([
   ["no password", "", /DEMO_PASSWORD must be set/],
@@ -41,8 +41,9 @@ it.each([
 
 it("never prints a private password", () => {
   const secret = "a-private-demo-password";
-  const run = seed({ ...hosted(), DEMO_PASSWORD: secret });
+  const run = seed({ ...process.env, DEMO_PASSWORD: secret });
   expect(run.status).toBe(1); // this database has a real store (made above)
+  expect(run.stderr).toMatch(/Refusing to seed/);
   expect(run.stdout + run.stderr).not.toContain(secret);
 }, 90_000);
 
