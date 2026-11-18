@@ -7,7 +7,7 @@ import path from "node:path";
 import { checkEnv, SECRET_NAMES } from "../../src/config/envCheck";
 
 const root = path.resolve(__dirname, "../../..");
-const read = (file: string) => readFileSync(path.join(root, file), "utf8");
+const read = (file: string) => readFileSync(path.join(root, file), "utf8").replace(/\r\n/g, "\n");
 const render = read("render.yaml");
 const vercel = JSON.parse(read("frontend/vercel.json")) as {
   rewrites: { source: string; destination: string }[];
@@ -26,6 +26,7 @@ const placeholder = (name: string) =>
   : name === "REDIS_URL" ? "redis://cache.example.com:6379"
   : /_URL$|CORS_ORIGIN/.test(name) ? "https://app.example.com"
   : name === "EMAIL_PROVIDER" ? "brevo"
+  : name === "STORAGE_DRIVER" ? "local"
   : "generated-or-entered-in-the-render-dashboard";
 
 describe("render.yaml", () => {
@@ -37,6 +38,11 @@ describe("render.yaml", () => {
   it("starts in production with only what it names", () => {
     const source = Object.fromEntries(entries.map((e) => [e.name, e.value ?? placeholder(e.name)]));
     expect(checkEnv(source).errors).toEqual([]);
+  });
+
+  it("also starts with Azure Blob Storage", () => {
+    const source = Object.fromEntries(entries.map((e) => [e.name, e.value ?? placeholder(e.name)]));
+    expect(checkEnv({ ...source, STORAGE_DRIVER: "azure" }).errors).toEqual([]);
   });
 
   it("gives no secret a value", () => {

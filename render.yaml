@@ -48,10 +48,16 @@ services:
       # Vercel, then Render's own proxy, stand between a visitor and the API.
       - key: TRUST_PROXY
         value: "2"
-      # The disk is temporary: uploads last until the next restart. See "Storage" in documentation/Deployment_Render_Vercel.md.
+      # Uploads: enter azure (with AZURE_STORAGE_CONNECTION_STRING) or local in the dashboard. With local
+      # the disk is temporary, so the app marks uploads as demo-only. The two fixed values below apply
+      # only to local. See "Storage" in documentation/Deployment_Render_Vercel.md.
       - key: STORAGE_DRIVER
-        value: local
+        sync: false
+      - key: AZURE_STORAGE_CONNECTION_STRING
+        sync: false
       - key: ALLOW_LOCAL_STORAGE_IN_PRODUCTION
+        value: "true"
+      - key: UPLOADS_DEMO_ONLY
         value: "true"
 
       - key: DATABASE_URL
