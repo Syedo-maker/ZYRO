@@ -118,6 +118,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: The built site has no personal names, academic wording or email addresses
+        run: node e2e/check-built-site.mjs
       - run: npm audit --omit=dev --audit-level=high
 
   reco:
@@ -207,6 +209,7 @@ jobs:
           node e2e/golden-path.e2e.mjs
           node e2e/phase2-checkout.e2e.mjs
           node e2e/partE-payments.e2e.mjs
+          node e2e/public-content.e2e.mjs
       - name: Server logs on failure
         if: failure()
         run: tail -n 100 e2e-server.log vite.log
