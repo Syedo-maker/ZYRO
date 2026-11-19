@@ -104,6 +104,7 @@ const POSITIVE_NUMBERS: Record<string, string> = {
   RATE_LIMIT_HELP_MAX: "rate limits",
   RATE_LIMIT_THEME_AI_MAX: "rate limits",
   RATE_LIMIT_THEME_AI_STORE_MAX: "rate limits",
+  RATE_LIMIT_PLAN_PAYMENT_MAX: "rate limits",
   RATE_LIMIT_API_MAX: "rate limits",
   AI_MAX_PROMPT_CHARS: "AI cost limits",
   AI_MONTHLY_GENERATIONS_LIMIT: "the Free plan's AI allowance",
