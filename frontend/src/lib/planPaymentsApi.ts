@@ -74,19 +74,18 @@ export interface DecisionResult {
   periodEnd?: string
 }
 
-const base = (storeId: string) => `/stores/${storeId}/plan-payments`
-
+// Paths written out in full, so the contract test (backend/tests/unit/ui-contract.test.ts) can read them.
 export const planPaymentsApi = {
-  overview: (storeId: string) => apiFetch<PlanPaymentOverview>(base(storeId)),
-  chooseCurrency: (storeId: string, currency: string) => apiFetch<{ currency: string }>(`${base(storeId)}/currency`, { method: 'PUT', body: { currency } }),
-  start: (storeId: string) => apiFetch<OwnerPlanRequest>(`${base(storeId)}/requests`, { method: 'POST' }),
+  overview: (storeId: string) => apiFetch<PlanPaymentOverview>(`/stores/${storeId}/plan-payments`),
+  chooseCurrency: (storeId: string, currency: string) => apiFetch<{ currency: string }>(`/stores/${storeId}/plan-payments/currency`, { method: 'PUT', body: { currency } }),
+  start: (storeId: string) => apiFetch<OwnerPlanRequest>(`/stores/${storeId}/plan-payments/requests`, { method: 'POST' }),
   uploadProof: (storeId: string, requestId: string, file: File) => {
     const form = new FormData()
     form.append('file', file)
-    return apiFetch<{ key: string; url: string }>(`${base(storeId)}/requests/${requestId}/proof-image`, { method: 'POST', body: form })
+    return apiFetch<{ key: string; url: string }>(`/stores/${storeId}/plan-payments/requests/${requestId}/proof-image`, { method: 'POST', body: form })
   },
   submit: (storeId: string, requestId: string, imageKey: string, transactionId: string) =>
-    apiFetch<OwnerPlanRequest>(`${base(storeId)}/requests/${requestId}/submit`, { method: 'POST', body: { imageKey, transactionId } }),
+    apiFetch<OwnerPlanRequest>(`/stores/${storeId}/plan-payments/requests/${requestId}/submit`, { method: 'POST', body: { imageKey, transactionId } }),
 }
 
 export const planRequestsApi = {
