@@ -98,3 +98,14 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      # Pro plan payments by transfer (documentation/Pro_Plan_Payments.md). Provisional Pro stays off.
+      - key: PLAN_PRICES
+        sync: false
+      - key: PLAN_PAYMENT_METHODS
+        sync: false
+      - key: PLAN_APPROVER_EMAILS
+        sync: false
+      - key: PLAN_REFUND_INSTRUCTIONS
+        sync: false
+      - key: PLAN_PROVISIONAL_ENABLED
+        value: "false"

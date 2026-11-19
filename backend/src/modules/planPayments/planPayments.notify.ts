@@ -41,6 +41,7 @@ export interface RequestForEmail {
   aiStatus: string | null;
   findings: unknown;
   storeName: string;
+  provisionalUntil?: Date | null;
 }
 
 const AI_LINE: Record<string, string> = {
@@ -68,6 +69,7 @@ export async function emailApprovers(request: RequestForEmail, reminder?: "24 ho
       `Reference: ${request.referenceCode}`,
       `Transaction ID: ${request.transactionId ?? "none"}`,
       `Automatic check: ${AI_LINE[request.aiStatus ?? "unavailable"] ?? AI_LINE.unavailable}`,
+      ...(request.provisionalUntil ? [`Provisional Pro is running until ${request.provisionalUntil.toISOString().replace("T", " ").slice(0, 16)} UTC. Approve to make it the full period, or reject to end it now.`] : []),
       ...(flags.length ? ["", "Needs a look:", ...flags] : []),
       "",
       `Review request: ${reviewUrl(token)}`,
@@ -97,12 +99,14 @@ export async function emailOwnerApproved(to: string, r: { referenceCode: string;
   );
 }
 
-export async function emailOwnerRejected(to: string, r: { referenceCode: string; reason: string; requestId: string }) {
+export async function emailOwnerRejected(to: string, r: { referenceCode: string; reason: string; requestId: string; provisionalEnded?: boolean }) {
   await send(
     to,
     `Zyro: your plan payment could not be confirmed (${r.referenceCode})`,
     [
-      "We could not confirm your payment, so your plan was not changed.",
+      r.provisionalEnded
+        ? "We could not confirm your payment, so your provisional Pro has ended and your store is back on the Free plan. Nothing in your store was deleted."
+        : "We could not confirm your payment, so your plan was not changed.",
       "",
       `Reference: ${r.referenceCode}`,
       `Reason: ${clean(r.reason, 300)}`,

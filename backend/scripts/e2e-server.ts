@@ -8,6 +8,7 @@
  *   POST /__e2e/billing    { storeId, kind, plan? | pack? }  completes a fake plan or AI pack payment
  *   POST /__e2e/backdate-orders, /__e2e/set-currency, /__e2e/make-admin, /__e2e/trends-run   Trend Scout set-up
  *   GET  /__e2e/last-email?to=   the newest email the fake gateway "sent" to that address (B1's reset link)
+ *   POST /__e2e/plan-provisional  { enabled }  switches provisional Pro on or off for the next requests
  *   POST /__e2e/plan-proof-reply  { reply }  what the stand-in AI reads from the next plan payment
  *                                 screenshots: a reading object, or "fail" for an unavailable AI
  *
@@ -311,6 +312,12 @@ async function main() {
   outer.post("/__e2e/make-admin", express.json(), async (req, res) => {
     await prismaUnscoped.user.update({ where: { email: String(req.body.email) }, data: { platformRole: "SUPER_ADMIN" } });
     res.json({ ok: true });
+  });
+  // Provisional Pro on or off for the next requests (off by default, as in production).
+  outer.post("/__e2e/plan-provisional", express.json(), async (req, res) => {
+    const { env } = await import("../src/config/env");
+    env.planPayments.provisional.enabled = req.body?.enabled === true;
+    res.json({ enabled: env.planPayments.provisional.enabled });
   });
   outer.post("/__e2e/plan-proof-reply", express.json(), (req, res) => {
     planProofReply = req.body?.reply ?? "fail";

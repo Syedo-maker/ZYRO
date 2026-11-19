@@ -27,7 +27,6 @@ export function PlanRequestsPage() {
   useEffect(() => {
     if (!user?.platformAdmin) return
     let cancelled = false
-    setRows(null)
     planRequestsApi
       .list(status)
       .then((r) => !cancelled && setRows(r.data))
@@ -47,7 +46,13 @@ export function PlanRequestsPage() {
         </div>
         <label className="flex items-center gap-2 text-sm text-text-secondary">
           Show
-          <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-control border border-border bg-bg px-2 text-sm text-text">
+          <select
+            aria-label="Status"
+            value={status}
+            onChange={(e) => {
+              setRows(null)
+              setStatus(e.target.value)
+            }} className="h-9 rounded-control border border-border bg-bg px-2 text-sm text-text">
             <option value="pending">Waiting for review</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>

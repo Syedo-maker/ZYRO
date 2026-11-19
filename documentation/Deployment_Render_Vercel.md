@@ -43,6 +43,7 @@ Render creates `JWT_ACCESS_SECRET`, `COD_PHONE_PEPPER` and `METRICS_TOKEN` itsel
 | `ANTHROPIC_API_KEY` | Anthropic console | For AI features |
 | `EMAIL_PROVIDER`, `BREVO_API_KEY`, `BREVO_FROM_EMAIL` | Brevo | For email |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe, test mode only | For card payments |
+| `PLAN_PRICES`, `PLAN_PAYMENT_METHODS`, `PLAN_APPROVER_EMAILS`, `PLAN_REFUND_INSTRUCTIONS` | You, see `Pro_Plan_Payments.md` | For Pro plan payments by transfer |
 
 Leaving an optional group empty switches that feature off with a clear message. The API refuses to
 start only when a required setting is missing.
