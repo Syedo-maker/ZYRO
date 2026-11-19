@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { readPlanPaymentSettings } from "./planPayments";
 
 /**
  * Startup check of the environment (production readiness, 2026-11).
@@ -169,6 +170,10 @@ const OPTIONAL_FEATURES: { feature: string; needs: (s: Source) => string[] }[] =
     feature: "sending email (cart recovery, password reset)",
     needs: (s) => ((s.EMAIL_PROVIDER ?? "sendgrid").toLowerCase() === "brevo" ? ["BREVO_API_KEY", "BREVO_FROM_EMAIL"] : ["SENDGRID_API_KEY", "SENDGRID_FROM_EMAIL"]).filter((n) => !set(s[n])),
   },
+  {
+    feature: "plan payments by transfer (upgrade page and approvals)",
+    needs: (s) => ["PLAN_PRICES", "PLAN_PAYMENT_METHODS", "PLAN_APPROVER_EMAILS"].filter((n) => !set(s[n])),
+  },
   { feature: "recommendations and semantic search", needs: (s) => ["RECOMMENDATION_SERVICE_URL", "RECOMMENDATION_SERVICE_TOKEN"].filter((n) => !set(s[n])) },
   { feature: "telemetry (Application Insights)", needs: (s) => (set(s.APPLICATIONINSIGHTS_CONNECTION_STRING) ? [] : ["APPLICATIONINSIGHTS_CONNECTION_STRING"]) },
   { feature: "error tracking (Sentry-compatible)", needs: (s) => (set(s.SENTRY_DSN) ? [] : ["SENTRY_DSN"]) },
@@ -276,6 +281,8 @@ export function checkEnv(source: Source): EnvReport {
     if (!(r > 0 && r <= 1)) add("APPLICATIONINSIGHTS_SAMPLING_RATIO", "must be a number above 0 and at most 1", "telemetry");
   }
 
+  for (const p of readPlanPaymentSettings(source).problems) add(p.name, p.problem, "plan payments by transfer");
+
   const disabled = OPTIONAL_FEATURES.map(({ feature, needs }) => ({ feature, missing: needs(source) })).filter((d) => d.missing.length > 0);
 
   const warnings: EnvReport["warnings"] = [];
@@ -284,6 +291,9 @@ export function checkEnv(source: Source): EnvReport {
   }
   if (source.AI_DISABLED === "true" || source.AI_ENABLED === "false") {
     warnings.push({ name: "AI_DISABLED", message: "the AI kill switch is on: every AI feature answers \"switched off\"" });
+  }
+  if (source.PLAN_PROVISIONAL_ENABLED?.trim().toLowerCase() === "true") {
+    warnings.push({ name: "PLAN_PROVISIONAL_ENABLED", message: "provisional Pro is on: a screenshot that passes every check gets Pro for a short time before a person confirms the payment" });
   }
   if (isProduction && source.RATE_LIMIT_ENABLED === "false") {
     warnings.push({ name: "RATE_LIMIT_ENABLED", message: "rate limits are switched off in production" });
