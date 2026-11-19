@@ -35,16 +35,21 @@ export function UpgradeProPage() {
 
   const load = useCallback(async () => {
     if (!storeId) return
-    try {
-      setData(await planPaymentsApi.overview(storeId))
-      setError(null)
-    } catch (err) {
-      setError(errorMessage(err))
+    setData(await planPaymentsApi.overview(storeId))
+    setError(null)
+  }, [storeId])
+  // The first load: state is only set when the answer arrives, and not after leaving the page.
+  useEffect(() => {
+    if (!storeId) return
+    let cancelled = false
+    planPaymentsApi.overview(storeId).then(
+      (d) => !cancelled && setData(d),
+      (err) => !cancelled && setError(errorMessage(err)),
+    )
+    return () => {
+      cancelled = true
     }
   }, [storeId])
-  useEffect(() => {
-    void load()
-  }, [load])
 
   async function act(name: string, fn: () => Promise<unknown>) {
     setBusy(name)
