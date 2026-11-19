@@ -27,6 +27,9 @@ const placeholder = (name: string) =>
   : /_URL$|CORS_ORIGIN/.test(name) ? "https://app.example.com"
   : name === "EMAIL_PROVIDER" ? "brevo"
   : name === "STORAGE_DRIVER" ? "local"
+  : name === "PLAN_PRICES" ? '{"PRO":{"PKR":3000,"USD":12}}'
+  : name === "PLAN_PAYMENT_METHODS" ? '{"PKR":[{"label":"Bank","accountTitle":"Owner","accountNumber":"1"}],"USD":[{"label":"Wise","accountTitle":"Owner","accountNumber":"2"}]}'
+  : name === "PLAN_APPROVER_EMAILS" ? "approver@example.com"
   : "generated-or-entered-in-the-render-dashboard";
 
 describe("render.yaml", () => {
