@@ -13,6 +13,7 @@ import { activatePlan, endPlan, nextPeriodEnd, recordPlanAudit } from "../billin
 import { billingCurrencyFor, chooseBillingCurrency, lockBillingCurrency, adminChangeBillingCurrency } from "../billing/billingCurrency";
 import { checkPlanProof, normaliseTransactionId, parsePlanProof, summariseProof, PLAN_PROOF_PROMPT, PLAN_PROOF_SYSTEM_PROMPT, type PlanProofReading } from "./planProof";
 import { emailApprovers, emailOwnerApproved, emailOwnerRejected, emailOwnerRevoked, hashToken } from "./planPayments.notify";
+import { maybeGrantProvisional } from "./planPayments.jobs";
 
 /**
  * Paying the platform for a plan by transfer, with a person approving (Pro plan payments, 2026-11).
@@ -209,8 +210,11 @@ export const planPaymentsService = {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw Errors.conflict("This transaction ID has already been used.");
       throw err;
     }
-    await emailApprovers({ ...updated, storeName: store.name });
-    return ownerRequestView(updated);
+    // Provisional Pro, only when switched on and every check passed with high confidence.
+    const provisionalUntil = await maybeGrantProvisional(updated, reading?.confidence ?? null);
+    const final = provisionalUntil ? { ...updated, provisionalUntil } : updated;
+    await emailApprovers({ ...final, storeName: store.name });
+    return ownerRequestView(final);
   },
 
   // ---- Platform admins ----------------------------------------------------------------------------
@@ -309,6 +313,7 @@ export const planPaymentsService = {
     if (request.status !== "pending") return alreadyDecided(request);
     if (input.token) await checkToken(input.token, id, adminEmail);
 
+    let provisionalEnded = false;
     const decided = await prismaUnscoped.$transaction(async (tx) => {
       const now = new Date();
       const changed = await tx.planPaymentRequest.updateMany({ where: { id, status: "pending" }, data: { status: "rejected", decidedById: adminId, decidedAt: now, decisionReason: reason.slice(0, 300) } });
@@ -318,13 +323,14 @@ export const planPaymentsService = {
       const store = await tx.tenant.findUniqueOrThrow({ where: { id: request.tenantId }, select: { planProvisional: true } });
       if (request.provisionalUntil && store.planProvisional) {
         await endPlan(tx, { tenantId: request.tenantId, requestId: id, actor: { kind: "approver", userId: adminId }, action: "provisional_ended_rejected" });
+        provisionalEnded = true;
       }
       await tx.planPaymentRequest.update({ where: { id }, data: { provisionalUntil: null } });
       await tx.planReviewToken.updateMany({ where: { requestId: id, usedAt: null }, data: { usedAt: now } });
       return true;
     });
     if (!decided) return alreadyDecided(await prismaUnscoped.planPaymentRequest.findUniqueOrThrow({ where: { id } }));
-    await emailOwnerRejected(request.owner.email, { referenceCode: request.referenceCode, reason, requestId: id });
+    await emailOwnerRejected(request.owner.email, { referenceCode: request.referenceCode, reason, requestId: id, provisionalEnded });
     return { status: "rejected", alreadyDecided: false };
   },
 
