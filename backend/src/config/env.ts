@@ -141,6 +141,8 @@ export const env = {
     themeAiMax: num("RATE_LIMIT_THEME_AI_MAX", 6),
     /** Theme Studio design-assistant requests per store per hour, whoever sends them. */
     themeAiStoreMax: num("RATE_LIMIT_THEME_AI_STORE_MAX", 40),
+    /** Plan payment uploads and submissions, per store and per person per hour (Pro plan payments). */
+    planPaymentMax: num("RATE_LIMIT_PLAN_PAYMENT_MAX", 10),
     /** All API requests per IP per minute. */
     apiMax: num("RATE_LIMIT_API_MAX", 600),
   },

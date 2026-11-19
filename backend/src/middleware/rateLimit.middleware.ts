@@ -113,6 +113,15 @@ export const themeAiUserLimiter = limiter("theme-ai", 60 * 1000, env.rateLimit.t
   keyGenerator: (req) => (req.userId ? `u:${req.userId}` : clientIp(req)),
 });
 
+/** Plan payments (Pro plan payments): proof uploads and submissions, per store per hour... */
+export const planPaymentStoreLimiter = limiter("plan-payment-store", 60 * 60 * 1000, env.rateLimit.planPaymentMax, {
+  keyGenerator: (req) => `s:${req.params.storeId}`,
+});
+/** ...and per person per hour, so one owner with many stores cannot multiply it. */
+export const planPaymentUserLimiter = limiter("plan-payment-user", 60 * 60 * 1000, env.rateLimit.planPaymentMax, {
+  keyGenerator: (req) => (req.userId ? `u:${req.userId}` : clientIp(req)),
+});
+
 /** And per store per hour, across everyone who can reach it: each request also costs AI quota. */
 export const themeAiStoreLimiter = limiter("theme-ai-store", 60 * 60 * 1000, env.rateLimit.themeAiStoreMax, {
   keyGenerator: (req) => `s:${req.params.storeId}`,

@@ -4682,6 +4682,332 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   # ── PLATFORM (Part A) ─────────────────────────────────────────────────
+  # -- Plan payments by transfer (Pro plan payments, 2026-11) --
+  /stores/{storeId}/plan-payments:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    get:
+      tags: [billing]
+      operationId: plan_payments_overview
+      summary: The upgrade page for paying the platform by transfer
+      description: |
+        The store owner only. The Pro price in the account's billing currency (from the price table, never
+        converted), the payment details for that currency, any open request with its reference code, and
+        past requests. The automatic findings are never shown to the owner.
+      responses:
+        "200":
+          description: The upgrade page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanPaymentOverview" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /stores/{storeId}/plan-payments/currency:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    put:
+      tags: [billing]
+      operationId: plan_payments_currency
+      summary: Choose the currency the account pays plans in
+      description: The store owner only, until a payment is approved; then it is locked (409).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currency]
+              properties:
+                currency: { type: string, pattern: "^[A-Za-z]{3}$" }
+      responses:
+        "200":
+          description: Chosen
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [currency]
+                properties:
+                  currency: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /stores/{storeId}/plan-payments/requests:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+    post:
+      tags: [billing]
+      operationId: plan_payments_request_start
+      summary: Open a payment request and get its reference code
+      description: The store owner only. Reuses the open request if there is one for the same price.
+      responses:
+        "201":
+          description: The request to pay against
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanPaymentOwnerRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /stores/{storeId}/plan-payments/requests/{requestId}/proof-image:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [billing]
+      operationId: plan_payments_proof_image
+      summary: Upload the payment screenshot (private)
+      description: |
+        The store owner only, for an open request of this store. Stored in the private area, never public;
+        answered with its key and a short-lived signed link. Rate limited per store and per person.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: "JPEG, PNG, or WebP, up to 5 MB." }
+      responses:
+        "201":
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [key, url]
+                properties:
+                  key: { type: string }
+                  url: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  /stores/{storeId}/plan-payments/requests/{requestId}/submit:
+    parameters:
+      - $ref: "#/components/parameters/StoreId"
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [billing]
+      operationId: plan_payments_submit
+      summary: Send the screenshot and transaction ID for review
+      description: |
+        The store owner only. A transaction ID already used by any request is refused (409) before anything
+        is read. The screenshot is read automatically, checked by the server, and the approvers are emailed.
+        Nothing is activated here: a person approves.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [imageKey, transactionId]
+              properties:
+                imageKey: { type: string }
+                transactionId: { type: string, maxLength: 100 }
+      responses:
+        "200":
+          description: Waiting for a person
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanPaymentOwnerRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  /platform/plan-requests:
+    get:
+      tags: [platform]
+      operationId: plan_requests_list
+      summary: The approval queue
+      description: Super administrators only. Pending requests by default, oldest first, with the automatic findings.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, rejected, revoked, awaiting_proof, cancelled, all] }
+      responses:
+        "200":
+          description: Requests
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/PlanPaymentAdminRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /platform/plan-requests/review/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [platform]
+      operationId: plan_requests_review_link
+      summary: Where an emailed review link leads
+      description: |
+        A configured approver only, signed in. Says whether the link is valid, used, expired, decided or for
+        another approver. It never uses the link up and never decides anything.
+      responses:
+        "200":
+          description: The link state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [state]
+                properties:
+                  state: { type: string, enum: [valid, used, expired, decided, unknown, other_approver] }
+                  requestId: { type: string }
+                  status: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /platform/plan-requests/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [platform]
+      operationId: plan_requests_get
+      summary: One request, with a short-lived link to its proof and its audit trail
+      responses:
+        "200":
+          description: The request
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PlanPaymentAdminRequest"
+                  - type: object
+                    required: [audit]
+                    properties:
+                      proofUrl: { type: [string, "null"] }
+                      audit: { type: array, items: { type: object } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /platform/plan-requests/{id}/approve:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [platform]
+      operationId: plan_requests_approve
+      summary: Confirm the money arrived and activate the plan
+      description: |
+        A configured approver only. The amount received must equal the price in the same currency. The first
+        decision wins; a second one answers alreadyDecided true and changes nothing. token is the emailed
+        link token, if the approver came from one: it must be theirs, unused and unexpired.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+                receivedAmount: { type: number }
+                receivedCurrency: { type: string }
+                receivedPkr: { type: number, description: "Optional, for the approver's own bookkeeping." }
+      responses:
+        "200":
+          description: Decided (now or earlier)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanDecisionResult" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /platform/plan-requests/{id}/reject:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [platform]
+      operationId: plan_requests_reject
+      summary: Reject a payment, with a reason the owner sees
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 300 }
+                token: { type: string }
+      responses:
+        "200":
+          description: Decided (now or earlier)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanDecisionResult" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /platform/plan-requests/{id}/revoke:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [platform]
+      operationId: plan_requests_revoke
+      summary: End an approved plan now (a refund or reversal)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 300 }
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanDecisionResult" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /platform/plan-requests/owners/{userId}/billing-currency:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      tags: [platform]
+      operationId: plan_requests_owner_currency
+      summary: Change an owner's locked billing currency, with a reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currency, reason]
+              properties:
+                currency: { type: string }
+                reason: { type: string, minLength: 3, maxLength: 300 }
+      responses:
+        "200":
+          description: Changed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [currency]
+                properties:
+                  currency: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /platform/summary:
     get:
       tags: [platform]
@@ -4950,6 +5276,95 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    PlanPaymentOwnerRequest:
+      type: object
+      required: [id, referenceCode, status, amountMinor, currency]
+      properties:
+        id: { type: string }
+        referenceCode: { type: string }
+        status: { type: string, enum: [awaiting_proof, pending, approved, rejected, revoked, cancelled] }
+        amountMinor: { type: integer, description: "Hundredths of the currency (paisa, cents)." }
+        currency: { type: string }
+        submittedAt: { type: [string, "null"], format: date-time }
+        decidedAt: { type: [string, "null"], format: date-time }
+        provisionalUntil: { type: [string, "null"], format: date-time }
+        periodEnd: { type: [string, "null"], format: date-time }
+        reason: { type: [string, "null"] }
+    PlanPaymentOverview:
+      type: object
+      required: [configured, notice, currentPlan, plan, currency, methods, history]
+      properties:
+        configured: { type: boolean }
+        notice: { type: string }
+        currentPlan:
+          type: object
+          required: [tier, provisional]
+          properties:
+            tier: { type: string, enum: [FREE, PRO, BUSINESS] }
+            until: { type: [string, "null"], format: date-time }
+            provisional: { type: boolean }
+        plan: { type: string }
+        currency:
+          type: object
+          required: [locked, choices]
+          properties:
+            currency: { type: [string, "null"] }
+            locked: { type: boolean }
+            choices: { type: array, items: { type: string } }
+        price:
+          type: [object, "null"]
+          properties:
+            amountMinor: { type: integer }
+            currency: { type: string }
+        methods:
+          type: array
+          items:
+            type: object
+            required: [label, accountTitle, accountNumber]
+            properties:
+              label: { type: string }
+              accountTitle: { type: string }
+              accountNumber: { type: string }
+              bank: { type: string }
+              notes: { type: string }
+        openRequest:
+          oneOf:
+            - $ref: "#/components/schemas/PlanPaymentOwnerRequest"
+            - type: "null"
+        history: { type: array, items: { $ref: "#/components/schemas/PlanPaymentOwnerRequest" } }
+    PlanPaymentAdminRequest:
+      type: object
+      required: [id, storeId, storeName, ownerEmail, plan, amountMinor, currency, referenceCode, status]
+      properties:
+        id: { type: string }
+        storeId: { type: string }
+        storeName: { type: string }
+        ownerEmail: { type: string }
+        plan: { type: string }
+        amountMinor: { type: integer }
+        currency: { type: string }
+        referenceCode: { type: string }
+        transactionId: { type: [string, "null"] }
+        status: { type: string }
+        aiStatus: { type: [string, "null"], enum: [passed, flags, unavailable, null] }
+        findings: {}
+        submittedAt: { type: [string, "null"], format: date-time }
+        provisionalUntil: { type: [string, "null"], format: date-time }
+        decidedAt: { type: [string, "null"], format: date-time }
+        decidedById: { type: [string, "null"] }
+        decisionReason: { type: [string, "null"] }
+        receivedAmountMinor: { type: [integer, "null"] }
+        receivedCurrency: { type: [string, "null"] }
+        receivedPkrMinor: { type: [integer, "null"] }
+        periodEnd: { type: [string, "null"], format: date-time }
+    PlanDecisionResult:
+      type: object
+      required: [status, alreadyDecided]
+      properties:
+        status: { type: string }
+        alreadyDecided: { type: boolean }
+        periodEnd: { type: string, format: date-time }
+        decidedAt: { type: [string, "null"], format: date-time }
     UpgradeHint:
       type: object
       required: [feature, currentPlan, requiredPlan]

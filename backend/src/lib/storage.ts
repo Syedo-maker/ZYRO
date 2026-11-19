@@ -40,9 +40,10 @@ import { logger } from "./logger";
  * file can be guessed from another's.
  */
 
-export type FileArea = "products" | "receipts" | "voice";
-const PRIVATE_AREAS = new Set<FileArea>(["receipts", "voice"]);
-const KEY_PATTERN = /^(products|receipts|voice)\/[A-Za-z0-9_-]{1,64}\/[0-9a-f-]{36}\.[a-z0-9]{2,4}$/;
+// "plans": an owner's proof of paying the platform for a plan (Pro plan payments, 2026-11). Private.
+export type FileArea = "products" | "receipts" | "voice" | "plans";
+const PRIVATE_AREAS = new Set<FileArea>(["receipts", "voice", "plans"]);
+const KEY_PATTERN = /^(products|receipts|voice|plans)\/[A-Za-z0-9_-]{1,64}\/[0-9a-f-]{36}\.[a-z0-9]{2,4}$/;
 
 export const isPrivateArea = (area: FileArea) => PRIVATE_AREAS.has(area);
 
@@ -178,7 +179,7 @@ class LocalDriver implements StorageDriver {
 
   async removeStore(storeId: string) {
     if (!/^[A-Za-z0-9_-]{1,64}$/.test(storeId)) throw new Error("Not a store id");
-    for (const area of ["products", "receipts", "voice"] as FileArea[]) {
+    for (const area of ["products", "receipts", "voice", "plans"] as FileArea[]) {
       await rm(path.resolve(isPrivateArea(area) ? this.privateRoot : this.publicRoot, area, storeId), { recursive: true, force: true });
     }
   }
@@ -263,7 +264,7 @@ class AzureBlobDriver implements StorageDriver {
   async removeStore(storeId: string) {
     if (!/^[A-Za-z0-9_-]{1,64}$/.test(storeId)) throw new Error("Not a store id");
     const { publicContainer, privateContainer } = env.storage.azure;
-    for (const [container, area] of [[publicContainer, "products"], [privateContainer, "receipts"], [privateContainer, "voice"]] as const) {
+    for (const [container, area] of [[publicContainer, "products"], [privateContainer, "receipts"], [privateContainer, "voice"], [privateContainer, "plans"]] as const) {
       const client = this.service.getContainerClient(container);
       for await (const item of client.listBlobsFlat({ prefix: `${area}/${storeId}/` })) await client.deleteBlob(item.name, { deleteSnapshots: "include" });
     }

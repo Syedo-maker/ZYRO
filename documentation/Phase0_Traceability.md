@@ -63,6 +63,8 @@ These were added in later phases; the screen itself was designed in code.
 | Shop policies: written in Settings, read on the storefront | Production readiness | store_policies_list, store_policy_set |
 | Unsubscribe from a shop's cart reminders (the link in the email, and the email app's one-click button) | Production readiness | unsubscribe_status, unsubscribe_confirm, unsubscribe_undo |
 | Demo-only notice beside upload controls, on a host with a temporary disk | Deployment | site_info |
+| Upgrade to Pro by transfer: price, payment details, reference code, proof upload | Pro plan payments | plan_payments_overview, plan_payments_currency, plan_payments_request_start, plan_payments_proof_image, plan_payments_submit |
+| Approval queue, emailed review link, approve, reject, revoke, owner currency change | Pro plan payments | plan_requests_list, plan_requests_review_link, plan_requests_get, plan_requests_approve, plan_requests_reject, plan_requests_revoke, plan_requests_owner_currency |
 
 ## Not called by any screen
 
