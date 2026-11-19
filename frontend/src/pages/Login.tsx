@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -12,6 +12,10 @@ export function LoginPage() {
   usePageMeta({ title: 'Log in | ZYRO', description: 'Log in to your ZYRO shop.' })
   const { login } = useAuth()
   const navigate = useNavigate()
+  // Where to go after signing in, when a dashboard page sent the visitor here. Only a path inside the
+  // dashboard is followed, never another site.
+  const from = (useLocation().state as { from?: unknown } | null)?.from
+  const returnTo = typeof from === 'string' && from.startsWith('/admin/') && !from.startsWith('//') ? from : null
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +28,7 @@ export function LoginPage() {
     try {
       const session = await login({ email, password })
       // Issue 2: a shopper logging in has no shop, so the dashboard is the wrong place to land.
-      navigate(landingPathFor({ hasStore: session.stores.length > 0, preference: session.user.preferredExperience ?? rememberedExperience() }))
+      navigate(returnTo ?? landingPathFor({ hasStore: session.stores.length > 0, preference: session.user.preferredExperience ?? rememberedExperience() }))
     } catch (err) {
       setError(authErrorMessage(err))
     } finally {
