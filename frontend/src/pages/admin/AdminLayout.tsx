@@ -76,12 +76,14 @@ export function AdminLayout() {
   }, [menuOpen])
 
   if (isLoading) return null
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  // Back to the same page after signing in: an approver opening an emailed review link lands on it.
+  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
   // Issue 2: being signed in is not the same as having a shop. A shopper has no shop to manage, and
   // every panel here would show them an error, so they are sent to the shopper side instead. This
   // is only about not showing somebody a useless screen: the server refuses them either way, which
   // is what actually keeps a shop's data safe (requireOwner / requirePermission, per request).
-  if (stores.length === 0) return <Navigate to="/shop" replace />
+  // A platform admin without a shop of their own (a second approver) may still use the platform pages.
+  if (stores.length === 0 && !(user?.platformAdmin && location.pathname.startsWith('/admin/platform'))) return <Navigate to="/shop" replace />
 
   const items = [
     ...NAV_ITEMS.filter((i) => i.enabled && (!i.needs || can(activeStore, i.needs))),

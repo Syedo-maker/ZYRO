@@ -8,6 +8,8 @@
  *   POST /__e2e/billing    { storeId, kind, plan? | pack? }  completes a fake plan or AI pack payment
  *   POST /__e2e/backdate-orders, /__e2e/set-currency, /__e2e/make-admin, /__e2e/trends-run   Trend Scout set-up
  *   GET  /__e2e/last-email?to=   the newest email the fake gateway "sent" to that address (B1's reset link)
+ *   POST /__e2e/plan-proof-reply  { reply }  what the stand-in AI reads from the next plan payment
+ *                                 screenshots: a reading object, or "fail" for an unavailable AI
  *
  * These routes exist only in this script, never in the real app. They need no login (make-admin
  * grants super admin by email), so the server listens on this machine's loopback only and refuses
@@ -24,6 +26,14 @@ process.env.RATE_LIMIT_ENABLED ??= "false";
 // E2E_NO_STRIPE=1 runs the platform as a store without Stripe would (frontend/e2e/payments-no-stripe.e2e.mjs).
 process.env.STRIPE_SECRET_KEY = process.env.E2E_NO_STRIPE === "1" ? "" : "sk_test_e2e";
 process.env.STRIPE_WEBHOOK_SECRET = process.env.E2E_NO_STRIPE === "1" ? "" : "whsec_e2e_secret";
+// Plan payments by transfer (Pro plan payments): example settings only, and e2e- approvers the
+// browser test creates (cleanup-test-data.ts removes them).
+process.env.PLAN_PRICES ??= '{"PRO":{"PKR":3000,"USD":12}}';
+process.env.PLAN_PAYMENT_METHODS ??= JSON.stringify({
+  PKR: [{ label: "Bank transfer", accountTitle: "Zyro Demo", accountNumber: "PK00TEST0001", bank: "Test Bank" }],
+  USD: [{ label: "Wise", accountTitle: "Zyro Demo", accountNumber: "WISE-0001" }],
+});
+process.env.PLAN_APPROVER_EMAILS ??= "e2e-approver-1@example.com, e2e-approver-2@example.com";
 
 import { createServer } from "node:http";
 import express from "express";
@@ -76,6 +86,8 @@ async function main() {
   // cost, but a reply shaped for whichever AI Content Tool asked (Phase 4 Module 6), so the
   // admin UI's parsing of a structured reply is exercised for real, not skipped.
   let aiCallCount = 0;
+  // What the stand-in AI "reads" from a plan payment screenshot (set by POST /__e2e/plan-proof-reply).
+  let planProofReply: unknown = "fail";
   setAiProvider({
     async generate({ system, prompt }) {
       aiCallCount++;
@@ -85,6 +97,11 @@ async function main() {
         ? prompt.split("\n").filter((l) => l.startsWith("- ")).map((l) => l.replace(/^- \[\w+\] /, "")).join(" ")
         : null;
       if (tipFacts !== null) return { text: `This week: ${tipFacts}`, model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+      // Plan payment screenshots (Pro plan payments): whatever the test asked for, or an unavailable AI.
+      if (/money transfer sent to a software company/.test(system)) {
+        if (planProofReply === "fail") throw new Error("the stand-in AI is unavailable for this test");
+        return { text: JSON.stringify(planProofReply), model: "fake-model-e2e", inputTokens: 10, outputTokens: 8 };
+      }
       // Payment screenshots (Part E): the shape the real model is held to. It is given no order total,
       // so it answers with a fixed readable receipt; the server's own checks decide what that means.
       if (/payment receipt/.test(system)) {
@@ -293,6 +310,10 @@ async function main() {
   });
   outer.post("/__e2e/make-admin", express.json(), async (req, res) => {
     await prismaUnscoped.user.update({ where: { email: String(req.body.email) }, data: { platformRole: "SUPER_ADMIN" } });
+    res.json({ ok: true });
+  });
+  outer.post("/__e2e/plan-proof-reply", express.json(), (req, res) => {
+    planProofReply = req.body?.reply ?? "fail";
     res.json({ ok: true });
   });
   outer.post("/__e2e/trends-run", express.json(), async (req, res) => {

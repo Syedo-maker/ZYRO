@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Alert } from '../../components/ui/Alert'
 import { Badge } from '../../components/ui/Badge'
@@ -69,6 +70,9 @@ export function PlatformPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Platform</h1>
         <p className="mt-1 text-sm text-text-secondary">Per-store totals only. No customer data is shown here.</p>
+        <Link to="/admin/platform/plan-requests" className="mt-2 inline-block text-sm font-semibold underline underline-offset-4">
+          Plan payments waiting for approval
+        </Link>
       </div>
       {error && <Alert>{error}</Alert>}
       {!summary && !error && <Spinner label="Loading the platform summary" />}
