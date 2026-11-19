@@ -73,6 +73,59 @@ service restarts or wakes from sleep, including new product pictures and payment
 says so next to every upload control. The seeded demo products are not affected, because their pictures
 are served by the web app from `/demo-assets`.
 
+### The Azure storage in use
+
+Created on 2026-11-19 in the Azure for Students subscription. Your subscription only allows Austria East,
+Poland Central, Sweden Central, East Asia and India South Central; Austria East (Vienna) is about 10 ms
+from Render's Frankfurt servers.
+
+| Item | Value |
+|---|---|
+| Resource group | `zyro-demo-rg`, Austria East |
+| Storage account | `zyrodemouploads`: StorageV2, Standard LRS, Hot tier |
+| Security | HTTPS only, minimum TLS 1.2, no copying to other tenants |
+| `public` container | Anonymous read of single files only (no listing): product pictures, logos, banners |
+| `private` container | No anonymous access: receipts and voice notes, opened only by signed links that expire |
+| CORS | `GET` and `HEAD` only, from `http://localhost:5173` and the Vercel address |
+
+Settings for Render:
+
+| Name | Value |
+|---|---|
+| `STORAGE_DRIVER` | `azure` |
+| `AZURE_STORAGE_CONNECTION_STRING` | Azure portal: Storage accounts, `zyrodemouploads`, Security + networking, Access keys, key1, Connection string, Show, then copy |
+
+Paste the connection string straight into Render. Never put it in a file, a chat or a screenshot. If it
+is ever exposed, select Rotate key on the same page and enter the new connection string in Render.
+
+Once the Vercel address is known, allow it to read logo colours in Theme Studio (one rule, read only):
+
+```
+az storage cors add --services b --methods GET HEAD --origins https://<vercel address> --allowed-headers "*" --exposed-headers "*" --max-age 3600 --account-name zyrodemouploads
+```
+
+Uploaded files live in the storage account, not on Render, so a restart, a redeploy or deleting the
+Render service does not lose them.
+
+Cost at Azure's prices on 2026-11-19 for Austria East: $0.0196 per GB per month stored, $0.054 per
+10,000 uploads, $0.0043 per 10,000 reads, and the first 100 GB per month sent to visitors free. A
+demo (1 GB, 2,000 uploads, 100,000 views) comes to about $0.08 a month.
+
+Budget alert: the budget is set in the Azure portal under Cost Management, Budgets, on the Azure for
+Students subscription. It sends an email when spending reaches its thresholds. A budget only warns; it
+does not stop anything. When the student credit runs out, Azure disables the subscription.
+
+To stop all charges, delete the resource group. This permanently deletes the storage account and every
+uploaded file in it:
+
+```
+az group delete --name zyro-demo-rg --yes
+az group exists --name zyro-demo-rg
+```
+
+The second command prints `false` once everything is gone. In the portal: Resource groups,
+`zyro-demo-rg`, Delete resource group, then type its name to confirm.
+
 ## Demo data
 
 The free plan has no shell, so run the seed once from your own computer, in `backend/`, with
