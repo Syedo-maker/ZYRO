@@ -33,6 +33,10 @@ const SettingsPage = lazy(() => import('./pages/admin/SettingsPage').then((m) =>
 const PaymentsPage = lazy(() => import('./pages/admin/PaymentsPage').then((m) => ({ default: m.PaymentsPage })))
 const VoiceNotesPage = lazy(() => import('./pages/admin/VoiceNotesPage').then((m) => ({ default: m.VoiceNotesPage })))
 const PlatformPage = lazy(() => import('./pages/admin/PlatformPage').then((m) => ({ default: m.PlatformPage })))
+const UpgradeProPage = lazy(() => import('./pages/admin/UpgradeProPage').then((m) => ({ default: m.UpgradeProPage })))
+const PlanRequestsPage = lazy(() => import('./pages/admin/PlanRequestsPage').then((m) => ({ default: m.PlanRequestsPage })))
+const PlanReviewLinkPage = lazy(() => import('./pages/admin/PlanRequestsPage').then((m) => ({ default: m.PlanReviewLinkPage })))
+const PlanRequestDetailPage = lazy(() => import('./pages/admin/PlanRequestsPage').then((m) => ({ default: m.PlanRequestDetailPage })))
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const MarketingPage = lazy(() => import('./pages/admin/MarketingPage').then((m) => ({ default: m.MarketingPage })))
 const ReviewsAdminPage = lazy(() => import('./pages/admin/ReviewsAdminPage').then((m) => ({ default: m.ReviewsAdminPage })))
@@ -99,7 +103,11 @@ export default function App() {
               <Route path="voice-notes" element={<VoiceNotesPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="theme" element={<ThemeStudioPage />} />
+              <Route path="upgrade" element={<UpgradeProPage />} />
               <Route path="platform" element={<PlatformPage />} />
+              <Route path="platform/plan-requests" element={<PlanRequestsPage />} />
+              <Route path="platform/plan-requests/review" element={<PlanReviewLinkPage />} />
+              <Route path="platform/plan-requests/:id" element={<PlanRequestDetailPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
 
