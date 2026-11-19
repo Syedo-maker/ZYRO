@@ -130,11 +130,11 @@ enum CartRecoveryStatus {
 /// A single login-capable account. Covers both merchant owners/staff and customers:
 /// a customer is simply a User with no Tenant ownership and no StaffMember rows.
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  passwordHash String
-  name         String?
-  platformRole PlatformRole @default(USER)
+  id                  String       @id @default(cuid())
+  email               String       @unique
+  passwordHash        String
+  name                String?
+  platformRole        PlatformRole @default(USER)
   /**
    * Which experience to open after signing in: "shopper" or "merchant". **Routing only, never
    * authorization.** What someone may actually do is still worked out per request, per store, from
@@ -142,16 +142,25 @@ model User {
    * merchant can own several shops. Null means: decide from whether they have any stores.
    */
   preferredExperience String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
-  ownedTenants     Tenant[]       @relation("TenantOwner")
+  ownedTenants     Tenant[]             @relation("TenantOwner")
   staffMemberOf    StaffMember[]
   refreshTokens    RefreshToken[]
   passwordResets   PasswordResetToken[]
   emailOptOuts     EmailOptOut[]
   customerProfiles Customer[]
-  cashierOrders    Order[]        @relation("OrderCashier")
+  cashierOrders    Order[]              @relation("OrderCashier")
+  planRequests     PlanPaymentRequest[] @relation("PlanRequestOwner")
+
+  /// The currency this owner pays Zyro in (Pro plan payments, 2026-11). Null until first set: it is
+  /// then taken from their first store's currency (PKR stays PKR, anything else is USD). Locked once a
+  /// payment is approved; after that only a platform admin may change it, with an audit entry.
+  billingCurrency         String?
+  billingCurrencyLockedAt DateTime?
+  /// When this owner was given provisional Pro. Once per owner account, never per store.
+  provisionalProUsedAt    DateTime?
 
   @@index([email])
 }
@@ -190,86 +199,90 @@ model PasswordResetToken {
 
 /// A merchant's store. The tenant-isolation boundary for every scoped table below.
 model Tenant {
-  id                    String   @id @default(cuid())
+  id                    String  @id @default(cuid())
   name                  String
-  slug                  String   @unique
+  slug                  String  @unique
   logoUrl               String?
   themeColor            String?
   ownerId               String
-  currency              String   @default("USD")
+  currency              String  @default("USD")
   /// Percentage, e.g. 8.25 for 8.25%. Prices are treated as tax-exclusive.
-  taxRate               Decimal  @default(0) @db.Decimal(5, 2)
+  taxRate               Decimal @default(0) @db.Decimal(5, 2)
   /// Last order number issued for this tenant; incremented atomically inside createOrder.
-  orderCounter          Int      @default(0)
+  orderCounter          Int     @default(0)
   /// Largest manual discount, as a percentage of the subtotal, a cashier may give at the
   /// register without the owner's or a discount manager's approval.
-  posMaxDiscountPercent Decimal  @default(20) @db.Decimal(5, 2)
+  posMaxDiscountPercent Decimal @default(20) @db.Decimal(5, 2)
 
   /// Plan the store last paid for. It only ever changes from a verified Stripe webhook
   /// (modules/billing/billing.webhook.ts) or a platform admin's script (scripts/set-plan.ts, while
   /// there is no Stripe Billing), never from a client request or AI output. What the
   /// store may actually use right now is the *effective* plan (lib/plans.ts effectiveTier):
   /// a paid plan whose paid period, plus a short grace, has passed counts as FREE.
-  plan                  PlanTier  @default(FREE)
+  plan                 PlanTier  @default(FREE)
   /// End of the paid period, from Stripe. Null on FREE.
-  planExpiresAt         DateTime?
-  stripeCustomerId      String?   @unique
-  stripeSubscriptionId  String?   @unique
+  planExpiresAt        DateTime?
+  /// True while the paid plan is provisional (granted before a person confirmed the payment): it has
+  /// lower AI limits and no grace period, and ends by itself at planExpiresAt.
+  planProvisional      Boolean   @default(false)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
   /// One-off AI top-up packs: credits spent only after the month's plan allowance runs out.
-  aiTopUpGenerations    Int       @default(0)
-  aiTopUpChatMessages   Int       @default(0)
+  aiTopUpGenerations   Int       @default(0)
+  aiTopUpChatMessages  Int       @default(0)
   /// A domain the store is served on (Business plan feature). Stored and unique; routing by
   /// domain is not built yet.
-  customDomain          String?   @unique
+  customDomain         String?   @unique
   /// Weekly growth tips on the dashboard (Part C). The owner can switch them off.
-  growthTipsEnabled     Boolean   @default(true)
+  growthTipsEnabled    Boolean   @default(true)
   /// Whether this shop appears in the public directory at /shop. On by default; the owner may opt out.
   /// A shop with too few products is left out regardless, so empty and test shops never show.
-  listedInDirectory     Boolean   @default(true)
+  listedInDirectory    Boolean   @default(true)
   /// Whether this shop's paid orders count toward the platform's shared trends (Product Scout and
   /// Trend Scout). On by default; only the owner can switch it off, from Settings. Off: the shop's
   /// orders are left out from the next daily run, and the shop can still see the trends.
-  shareSalesInTrends    Boolean   @default(true)
+  shareSalesInTrends   Boolean   @default(true)
   /// One line about the shop, shown beside its name in the public directory. Public by definition,
   /// so the owner writes it knowing anyone can read it.
-  description           String?
+  description          String?
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  aiTopUpPurchases AiTopUpPurchase[]
-  monthlyUsage     TenantMonthlyUsage[]
-  growthTips       GrowthTip[]
-  paymentSettings  PaymentSettings?
-  codAssessments   CodAssessment[]
-  paymentProofs    PaymentProof[]
-  remittanceRuns   CodRemittanceRun[]
-  remittanceItems  CodRemittanceItem[]
-  voiceNotes       VoiceNote[]
-  searchTerms      SearchTermDaily[]
-  posShifts        PosShift[]
-  orderReturns     OrderReturn[]
-  heldSales        HeldSale[]
-  owner            User                @relation("TenantOwner", fields: [ownerId], references: [id])
-  staffMembers     StaffMember[]
-  locations        Location[]
-  inventoryLevels  InventoryLevel[]
-  stockMovements   StockMovement[]
-  customers        Customer[]
-  checkoutSessions CheckoutSession[]
-  refunds          Refund[]
-  orders           Order[]
-  payments         Payment[]
-  shipments        Shipment[]
-  shippingZones    ShippingZone[]
-  discountCodes    DiscountCode[]
-  aiUsageQuotas    AiUsageQuota[]
-  cartRecoveryLogs CartRecoveryEvent[]
-  aiBusinessInsight AiBusinessInsight?
-  storeTheme        StoreTheme?
+  aiTopUpPurchases   AiTopUpPurchase[]
+  monthlyUsage       TenantMonthlyUsage[]
+  growthTips         GrowthTip[]
+  paymentSettings    PaymentSettings?
+  codAssessments     CodAssessment[]
+  paymentProofs      PaymentProof[]
+  remittanceRuns     CodRemittanceRun[]
+  remittanceItems    CodRemittanceItem[]
+  voiceNotes         VoiceNote[]
+  searchTerms        SearchTermDaily[]
+  posShifts          PosShift[]
+  orderReturns       OrderReturn[]
+  heldSales          HeldSale[]
+  owner              User                 @relation("TenantOwner", fields: [ownerId], references: [id])
+  staffMembers       StaffMember[]
+  locations          Location[]
+  inventoryLevels    InventoryLevel[]
+  stockMovements     StockMovement[]
+  customers          Customer[]
+  checkoutSessions   CheckoutSession[]
+  refunds            Refund[]
+  orders             Order[]
+  payments           Payment[]
+  shipments          Shipment[]
+  shippingZones      ShippingZone[]
+  discountCodes      DiscountCode[]
+  aiUsageQuotas      AiUsageQuota[]
+  cartRecoveryLogs   CartRecoveryEvent[]
+  aiBusinessInsight  AiBusinessInsight?
+  storeTheme         StoreTheme?
   storeThemeVersions StoreThemeVersion[]
-  policies          StorePolicy[]
-  emailOptOuts      EmailOptOut[]
+  policies           StorePolicy[]
+  emailOptOuts       EmailOptOut[]
+  planRequests       PlanPaymentRequest[]
 
   @@index([ownerId])
 }
@@ -455,17 +468,17 @@ model Order {
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  location     Location?     @relation(fields: [locationId], references: [id])
-  cashier      User?         @relation("OrderCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
-  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  discountCode DiscountCode? @relation(fields: [discountCodeId], references: [id])
-  items        OrderItem[]
-  payments     Payment[]
-  refunds      Refund[]
-  returns      OrderReturn[]
-  shift        PosShift?     @relation(fields: [shiftId], references: [id], onDelete: SetNull)
-  shipment     Shipment?
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location        Location?           @relation(fields: [locationId], references: [id])
+  cashier         User?               @relation("OrderCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
+  customer        Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  discountCode    DiscountCode?       @relation(fields: [discountCodeId], references: [id])
+  items           OrderItem[]
+  payments        Payment[]
+  refunds         Refund[]
+  returns         OrderReturn[]
+  shift           PosShift?           @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  shipment        Shipment?
   codAssessment   CodAssessment?
   paymentProofs   PaymentProof[]
   remittanceItems CodRemittanceItem[]
@@ -922,15 +935,15 @@ model PaymentSettings {
   tenantId String @unique
 
   /// Cash on delivery. Off until the merchant turns it on.
-  codEnabled     Boolean  @default(false)
+  codEnabled        Boolean  @default(false)
   /// Smallest and largest order that may be paid cash on delivery, in the store currency. Null means no limit.
-  codMinAmount   Decimal? @db.Decimal(10, 2)
-  codMaxAmount   Decimal? @db.Decimal(10, 2)
+  codMinAmount      Decimal? @db.Decimal(10, 2)
+  codMaxAmount      Decimal? @db.Decimal(10, 2)
   /// Above this risk band COD is not offered at checkout: "none" offers it to everyone,
   /// "high" hides it only from high-risk orders, "medium" from medium and high.
-  codBlockBand   String   @default("high")
+  codBlockBand      String   @default("high")
   /// A deposit asked for before a risky COD order is accepted, as a percentage of the total (0 = none).
-  codAdvancePercent Int   @default(0)
+  codAdvancePercent Int      @default(0)
 
   /// Manual bank or wallet transfer, with a screenshot the merchant checks.
   bankTransferEnabled Boolean @default(false)
@@ -955,19 +968,19 @@ model PaymentSettings {
 /// (Part E). The score is produced by plain rules (modules/payments/cod.risk.ts), never by the AI:
 /// `reasons` holds every rule that fired with its points, so the band can be explained line by line.
 model CodAssessment {
-  id       String  @id @default(cuid())
-  tenantId String
+  id        String   @id @default(cuid())
+  tenantId  String
   /// The order this is about, once it exists. An assessment is also made at checkout, before an order.
-  orderId  String? @unique
+  orderId   String?  @unique
   /// 0 (no concerns) to 100. Bands: under 35 low, 35 to 64 medium, 65 and over high.
-  score    Int
-  band     String
+  score     Int
+  band      String
   /// [{ code, points, detail }] - one entry per rule that fired, in the order they were applied.
-  reasons  Json
+  reasons   Json
   /// The inputs the rules were allowed to see, kept so an assessment can be recomputed and checked.
-  inputs   Json
+  inputs    Json
   /// What the store did with it: "allowed", "blocked" (COD not offered) or "advance_required".
-  outcome  String
+  outcome   String
   createdAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -980,40 +993,40 @@ model CodAssessment {
 /// shopper's phone number and nothing else that identifies anyone: no store, no order, no name, no
 /// readable phone number. Stores learn only "this number has refused deliveries before", never where.
 model CodPhoneSignal {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   /// SHA-256 of the normalised phone number with a server-side pepper. Not reversible to a number.
-  phoneHash String   @unique
-  delivered Int      @default(0)
-  refused   Int      @default(0)
+  phoneHash  String   @unique
+  delivered  Int      @default(0)
+  refused    Int      @default(0)
   lastSeenAt DateTime @default(now())
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 }
 
 /// A shopper's proof that they transferred the money themselves (Part E). The AI reads the image
 /// and reports what it saw; the server compares that with the order and runs its own checks; the
 /// merchant accepts or rejects. The AI never accepts a payment.
 model PaymentProof {
-  id       String @id @default(cuid())
-  tenantId String
-  orderId  String
+  id                String    @id @default(cuid())
+  tenantId          String
+  orderId           String
   /// The uploaded screenshot.
-  imageUrl String
+  imageUrl          String
   /// What the shopper typed in themselves.
-  declaredAmount    Decimal @db.Decimal(10, 2)
+  declaredAmount    Decimal   @db.Decimal(10, 2)
   declaredReference String?
   /// What the AI read from the image: { amount, currency, date, reference, bank, sender, readable }.
   /// Null when the AI could not be reached; the merchant then checks the image unaided.
-  extracted Json?
+  extracted         Json?
   /// [{ code, severity, detail }] - the server's own checks (amount matches, reference reused, ...).
-  findings  Json
+  findings          Json
   /// "pending" until a human decides, then "accepted" or "rejected". Only a merchant moves it.
-  status    String  @default("pending")
+  status            String    @default("pending")
   /// Set when a merchant decides, never by the AI.
-  reviewedByUserId String?
-  reviewedAt       DateTime?
-  rejectionReason  String?
-  model            String?
-  createdAt        DateTime @default(now())
+  reviewedByUserId  String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  model             String?
+  createdAt         DateTime  @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -1026,22 +1039,22 @@ model PaymentProof {
 
 /// One import of a courier's cash-collected file, reconciled against the store's COD orders (Part E).
 model CodRemittanceRun {
-  id       String @id @default(cuid())
-  tenantId String
+  id               String   @id @default(cuid())
+  tenantId         String
   /// Which courier's file this is, as the merchant named it ("TCS", "Leopards").
-  courier  String
-  fileName String?
+  courier          String
+  fileName         String?
   /// Totals, so a run can be summarised without reading every row.
-  rowCount     Int @default(0)
-  matchedCount Int @default(0)
-  problemCount Int @default(0)
+  rowCount         Int      @default(0)
+  matchedCount     Int      @default(0)
+  problemCount     Int      @default(0)
   /// The money the file says was collected, and the money the matched orders expected.
-  fileTotal    Decimal @default(0) @db.Decimal(12, 2)
-  matchedTotal Decimal @default(0) @db.Decimal(12, 2)
+  fileTotal        Decimal  @default(0) @db.Decimal(12, 2)
+  matchedTotal     Decimal  @default(0) @db.Decimal(12, 2)
   importedByUserId String
-  createdAt DateTime @default(now())
+  createdAt        DateTime @default(now())
 
-  tenant Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   items  CodRemittanceItem[]
 
   @@index([tenantId, createdAt])
@@ -1049,9 +1062,9 @@ model CodRemittanceRun {
 
 /// One line of a courier file, and what reconciling it found (Part E).
 model CodRemittanceItem {
-  id       String @id @default(cuid())
-  runId    String
-  tenantId String
+  id        String  @id @default(cuid())
+  runId     String
+  tenantId  String
   /// The order number as the courier's file gives it, and the amount it says was collected.
   reference String
   amount    Decimal @db.Decimal(10, 2)
@@ -1076,11 +1089,11 @@ model CodRemittanceItem {
 /// confirm applies it. The audio is transcribed by the Python service, never by Anthropic, which
 /// does not accept audio at all.
 model VoiceNote {
-  id       String @id @default(cuid())
-  tenantId String
+  id         String    @id @default(cuid())
+  tenantId   String
   /// The merchant or staff member who recorded it.
-  userId   String
-  audioUrl String
+  userId     String
+  audioUrl   String
   /// What the transcriber heard, and the language it detected ("ur", "en", ...).
   transcript String
   language   String?
@@ -1090,10 +1103,10 @@ model VoiceNote {
   /// Why no draft could be made, in words for the merchant.
   problem    String?
   /// "pending" until the merchant decides, then "applied" or "discarded".
-  status     String  @default("pending")
+  status     String    @default("pending")
   appliedAt  DateTime?
   model      String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -1107,16 +1120,16 @@ model VoiceNote {
 /// an email address, is dropped rather than counted. Terms are only ever reported across stores and
 /// only once enough different stores have used them, the same rule Part D applies to sales.
 model SearchTermDaily {
-  id       String @id @default(cuid())
-  tenantId String
+  id        String   @id @default(cuid())
+  tenantId  String
   /// The normalised term, as search.query.ts writes it.
-  term     String
+  term      String
   /// The category filter in force when it was searched, so keywords can be offered per category.
   /// "all" when the shopper was searching the whole shop.
-  category String @default("all")
+  category  String   @default("all")
   /// The day, "YYYY-MM-DD", so a term is one row per shop per day however often it is searched.
-  day      String
-  count    Int    @default(1)
+  day       String
+  count     Int      @default(1)
   createdAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1191,4 +1204,90 @@ model EmailOptOut {
 
   @@id([tenantId, userId])
   @@index([userId])
+}
+
+/// A store owner paying the platform by hand for a plan (Pro plan payments, 2026-11). Created when the
+/// owner opens the upgrade page (it holds the reference code they quote), then carries the proof, the
+/// AI's reading of it, the server's findings and a platform admin's decision. Only a platform admin, or
+/// a verified gateway in future, ever turns a request into an active plan (billing/planActivation.ts).
+model PlanPaymentRequest {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  ownerId             String
+  plan                PlanTier
+  /// What the owner was asked to pay, from the price table at the time: never recomputed later.
+  currency            String
+  amountMinor         Int
+  /// Shown to the owner to quote with the transfer: the store and a random part.
+  referenceCode       String    @unique
+  /// awaiting_proof, pending, approved, rejected, revoked or cancelled.
+  status              String    @default("awaiting_proof")
+  /// Normalised (upper case, no spaces). Unique across every request: one transfer can never pay twice.
+  transactionId       String?   @unique
+  /// The proof's storage key in the private area, never a link.
+  proofKey            String?
+  submittedAt         DateTime?
+  /// What the AI read from the screenshot (validated against a strict schema), or null.
+  aiExtracted         Json?
+  /// passed, flags or unavailable: the server's summary of its own checks.
+  aiStatus            String?
+  /// [{ code, severity, detail }], the server's checks.
+  findings            Json?
+  aiModel             String?
+  /// Set while a provisional plan is running for this request.
+  provisionalUntil    DateTime?
+  decidedById         String?
+  decidedAt           DateTime?
+  decisionReason      String?
+  /// What the approver confirmed arrived, and optionally what it came to in rupees, for their books.
+  receivedAmountMinor Int?
+  receivedCurrency    String?
+  receivedPkrMinor    Int?
+  /// The end of the paid period this request bought, once approved.
+  periodEnd           DateTime?
+  /// How many reminder emails have gone to approvers about it (after 24 and 48 hours).
+  remindersSent       Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User              @relation("PlanRequestOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  tokens PlanReviewToken[]
+
+  @@index([status, submittedAt])
+  @@index([tenantId, createdAt])
+  @@index([ownerId])
+}
+
+/// A link in an approver's email (Pro plan payments). Only its hash is stored. It opens the review page
+/// and nothing else; it is used up when that approver decides, and lasts about a day.
+model PlanReviewToken {
+  id        String    @id @default(cuid())
+  requestId String
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  request PlanPaymentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+/// Every plan change and payment decision, kept even if the store is deleted (no foreign keys).
+/// Holds ids, amounts and reasons only: no proof images, no personal details.
+model PlanAuditEvent {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  requestId   String?
+  actorUserId String?
+  /// approver, owner, system, script or gateway.
+  actorKind   String
+  action      String
+  details     Json
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([requestId])
 }
