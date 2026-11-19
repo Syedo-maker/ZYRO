@@ -8,6 +8,8 @@
 //   5. A transaction ID used before is refused.
 //   6. With the AI unavailable the request still reaches the queue, marked "Needs manual review".
 //   7. On a phone the upgrade page fits the screen.
+//   8. With provisional Pro switched on, a payment that passes every check gets Pro at once, marked
+//      provisional, and approving it makes it the full period.
 //
 // Setup: the e2e server (backend/scripts/e2e-server.ts) and `npm run dev` in the frontend, then:
 //   node e2e/plan-payments.e2e.mjs        (WEB and API_ROOT point it at other ports)
@@ -177,6 +179,27 @@ try {
   check('it reaches the queue marked "Needs manual review"', await visible(ap2.getByRole('listitem').filter({ hasText: 'E2E Plan down' }).getByText('Needs manual review')))
   await downPage.context().close()
 
+  // ---- 8: provisional Pro (switched on only for this step) ----
+  await e2e('/__e2e/plan-provisional', { enabled: true })
+  const prov = await owner('prov', 'PKR')
+  const { p: provPage } = await payInBrowser(prov, `PROV-TRX-${suffix}`, reading({ transactionId: `PROV-TRX-${suffix}` }))
+  // Switched off again only once the server has answered the submission.
+  await visible(provPage.getByText('Your payment is being reviewed.'))
+  await e2e('/__e2e/plan-provisional', { enabled: false })
+  await provPage.reload()
+  const yourPlan = provPage.getByRole('region', { name: 'Your plan' })
+  check('a payment passing every check gets provisional Pro at once', await visible(yourPlan.getByText('Provisional')))
+  check('the owner is told it is provisional, with lower AI limits', await visible(yourPlan.getByText(/while a person confirms your payment.*AI limits are lower/)))
+  await ap2.goto(`${WEB}/admin/platform/plan-requests`)
+  const provRow = ap2.getByRole('listitem').filter({ hasText: 'E2E Plan prov' })
+  check('the queue shows provisional Pro running', await visible(provRow.getByText('Provisional Pro running')))
+  await provRow.getByRole('link', { name: 'Open' }).click()
+  await ap2.getByRole('button', { name: /^Approve:/ }).click()
+  await visible(ap2.getByText('Done: approved.'))
+  await provPage.reload()
+  check('after approval it is full Pro, no longer provisional', await visible(provPage.getByRole('region', { name: 'Your plan' }).getByText('Active')))
+  await provPage.context().close()
+
   // ---- 7: phone ----
   const phone = await page({ width: 390, height: 844 })
   await phone.goto(`${WEB}/login`)
@@ -192,6 +215,7 @@ try {
   console.log('FAIL  the journey stopped:', String(err.message).split('\n')[0])
 } finally {
   await e2e('/__e2e/plan-proof-reply', { reply: 'fail' })
+  await e2e('/__e2e/plan-provisional', { enabled: false })
   await browser.close()
 }
 check('no script errors in the browser', problems.length === 0, problems[0])
