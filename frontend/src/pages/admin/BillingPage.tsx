@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Alert } from '../../components/ui/Alert'
 import { Badge } from '../../components/ui/Badge'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonStyles } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { UsageBar } from '../../components/billing/UsageBar'
 import { billingApi, formatPlanPrice } from '../../lib/billingApi'
 import { formatDate } from '../../lib/format'
 import { errorMessage } from '../../lib/ordersApi'
+import { planPaymentsApi } from '../../lib/planPaymentsApi'
 import type { BillingOverview, PlanInfo } from '../../types/billing'
 
 const POLL_MS = 2000
@@ -42,6 +43,19 @@ export function BillingPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ tone: 'info' | 'success' | 'error'; text: string } | null>(null)
   const startTopUp = useRef<number | null>(null)
+  // Paying for Pro by bank or wallet transfer, approved by a person (Pro plan payments), when it is set up.
+  const [transfer, setTransfer] = useState(false)
+  useEffect(() => {
+    if (!storeId || !isOwner) return
+    let cancelled = false
+    planPaymentsApi.overview(storeId).then(
+      (o) => !cancelled && setTransfer(o.configured),
+      () => undefined,
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [storeId, isOwner])
 
   const load = useCallback(async () => {
     if (!storeId || !isOwner) return null
@@ -127,7 +141,12 @@ export function BillingPage() {
 
       {error && <Alert>{error}</Alert>}
       {notice && <Alert tone={notice.tone === 'error' ? 'error' : notice.tone}>{notice.text}</Alert>}
-      {!billingConfigured && <Alert tone="info">Payments are not set up on this server yet, so plans and packs cannot be bought. You can still see what each includes.</Alert>}
+      {!billingConfigured && transfer && (
+        <Alert tone="info">
+          Card payments are not set up on this server, but you can pay for Pro by bank or wallet transfer. <Link to="/admin/upgrade" className="underline underline-offset-4">Upgrade to Pro</Link>
+        </Alert>
+      )}
+      {!billingConfigured && !transfer && <Alert tone="info">Payments are not set up on this server yet, so plans and packs cannot be bought. You can still see what each includes.</Alert>}
 
       <section aria-label="Your plan" className="rounded-2xl border border-border bg-surface p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -147,6 +166,13 @@ export function BillingPage() {
           <p className="mb-4 text-sm text-text-secondary">
             {plan.status === 'grace' ? 'Your last payment period ended ' : 'Paid until '}
             {formatDate(plan.paidUntil)}. It renews automatically unless you cancel in Manage subscription.
+          </p>
+        )}
+        {transfer && !billingConfigured && plan.tier === 'PRO' && (
+          <p className="mb-4 text-sm">
+            <Link to="/admin/upgrade" className="font-semibold underline underline-offset-4">
+              Renew Pro by transfer
+            </Link>
           </p>
         )}
         {plan.lapsedFrom && (
@@ -186,7 +212,11 @@ export function BillingPage() {
                     <Button variant="secondary" disabled>
                       Your plan
                     </Button>
-                  ) : p.tier === 'FREE' ? null : onFree ? (
+                  ) : p.tier === 'FREE' ? null : p.tier === 'PRO' && transfer && !billingConfigured ? (
+                    <Link to="/admin/upgrade" className={buttonStyles()}>
+                      Upgrade to Pro
+                    </Link>
+                  ) : onFree ? (
                     <Button disabled={!billingConfigured || busy !== null} onClick={() => void go(p.tier, () => billingApi.subscribe(activeStore.id, p.tier as 'PRO' | 'BUSINESS'))}>
                       {busy === p.tier ? 'Opening...' : `Choose ${p.name}`}
                     </Button>
