@@ -30,6 +30,7 @@ import { seoRouter } from "./modules/seo/seo.routes";
 import { insightsRouter } from "./modules/insights/insights.routes";
 import { billingRouter, plansRouter } from "./modules/billing/billing.routes";
 import { platformRouter } from "./modules/platform/platform.routes";
+import { planPaymentsAdminRouter, planPaymentsRouter } from "./modules/planPayments/planPayments.routes";
 import { advisorRouter } from "./modules/advisor/advisor.routes";
 import { paymentsRouter } from "./modules/payments/payments.routes";
 import { demoRouter } from "./modules/demo/demo.routes";
@@ -158,6 +159,7 @@ v1.use("/stores/:storeId/payments", paymentsRouter);
 v1.use("/stores/:storeId/voice-notes", voiceRouter);
 v1.use("/stores/:storeId/product-ideas", ideasRouter);
 v1.use("/stores/:storeId/theme", themeRouter);
+v1.use("/stores/:storeId/plan-payments", planPaymentsRouter);
 // Public shop directory (Issue 2). Before the /stores/:storeId router, so "/" and "/categories"
 // are not read as a store id.
 v1.use("/stores", directoryRouter);
@@ -168,6 +170,8 @@ v1.use("/plans", plansRouter);
 // What the web app needs to know about this deployment. Public, and holds nothing sensitive.
 v1.get("/site", (_req, res) => res.json({ uploadsDemoOnly: env.storage.demoOnly }));
 v1.use("/files", filesRouter);
+// Plan payments: the approvers' queue and decisions (Pro plan payments, 2026-11).
+v1.use("/platform/plan-requests", planPaymentsAdminRouter);
 v1.use("/platform", platformRouter);
 v1.use("/unsubscribe", unsubscribeRouter);
 v1.use("/seo", seoRouter);
