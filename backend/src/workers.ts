@@ -3,6 +3,7 @@ import { scheduleCartRecoveryScan, startCartRecoveryWorker, closeCartRecoveryQue
 import { scheduleAdvisor, startAdvisorWorker, closeAdvisorQueue } from "./lib/advisorQueue";
 import { scheduleTrends, startTrendsWorker, closeTrendsQueue } from "./lib/trendsQueue";
 import { scheduleProductScout, startProductScoutWorker, closeProductScoutQueue } from "./lib/productScoutQueue";
+import { schedulePlanPayments, startPlanPaymentsWorker, closePlanPaymentsQueue } from "./lib/planPaymentsQueue";
 import { onShutdown } from "./lib/lifecycle";
 import { logger } from "./lib/logger";
 
@@ -24,6 +25,8 @@ export async function startWorkers() {
   await scheduleTrends();
   startProductScoutWorker();
   await scheduleProductScout();
+  startPlanPaymentsWorker();
+  await schedulePlanPayments();
   logger.info("background workers started");
 }
 
@@ -33,6 +36,6 @@ export async function startWorkers() {
  */
 export function closeQueuesOnShutdown() {
   onShutdown("queues", async () => {
-    await Promise.all([closeAiQueue(), closeCartRecoveryQueue(), closeAdvisorQueue(), closeTrendsQueue(), closeProductScoutQueue()]);
+    await Promise.all([closeAiQueue(), closeCartRecoveryQueue(), closeAdvisorQueue(), closeTrendsQueue(), closeProductScoutQueue(), closePlanPaymentsQueue()]);
   });
 }
