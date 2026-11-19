@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { Product } from "../../models/Product.model";
 import { Errors } from "../../errors/AppError";
 import { PLANS, PLAN_ORDER, effectiveTier, type PlanDefinition } from "../../lib/plans";
+import { env } from "../../config/env";
 
 /**
  * Reads a store's plan and enforces what it includes (Part A). Every limit is checked on the
@@ -30,6 +31,18 @@ export interface TenantPlan {
   status: "free" | "active" | "grace";
   hasStripeCustomer: boolean;
   hasSubscription: boolean;
+  /** Granted before a person confirmed the payment: lower AI limits, and it ends by itself. */
+  provisional: boolean;
+}
+
+/** A provisional plan keeps everything its tier includes except the AI allowance, which is lower. */
+function provisionalDefinition(definition: PlanDefinition): PlanDefinition {
+  const { aiGenerations, aiChatMessages } = env.planPayments.provisional;
+  return {
+    ...definition,
+    aiGenerationsPerMonth: Math.min(definition.aiGenerationsPerMonth, aiGenerations),
+    aiChatMessagesPerMonth: Math.min(definition.aiChatMessagesPerMonth, aiChatMessages),
+  };
 }
 
 export async function getTenantPlan(tenantId: string, now = new Date()): Promise<TenantPlan> {
@@ -37,14 +50,16 @@ export async function getTenantPlan(tenantId: string, now = new Date()): Promise
   if (!tenant) throw Errors.notFound("Store");
   const tier = effectiveTier(tenant, now);
   const status = tier === "FREE" ? "free" : tenant.planExpiresAt && tenant.planExpiresAt > now ? "active" : "grace";
+  const provisional = tier !== "FREE" && tenant.planProvisional;
   return {
     tier,
-    definition: PLANS[tier],
+    definition: provisional ? provisionalDefinition(PLANS[tier]) : PLANS[tier],
     paidTier: tenant.plan,
     expiresAt: tenant.planExpiresAt,
     status,
     hasStripeCustomer: !!tenant.stripeCustomerId,
     hasSubscription: !!tenant.stripeSubscriptionId,
+    provisional,
   };
 }
 

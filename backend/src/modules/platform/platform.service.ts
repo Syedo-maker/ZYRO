@@ -28,7 +28,7 @@ export const platformService = {
   async summary() {
     const month = currentMonth();
     // Real stores only: the demo stores (lib/demo.ts) never move a platform figure.
-    const tenants = await prismaUnscoped.tenant.findMany({ where: notDemoTenant, select: { plan: true, planExpiresAt: true } });
+    const tenants = await prismaUnscoped.tenant.findMany({ where: notDemoTenant, select: { plan: true, planExpiresAt: true, planProvisional: true } });
     const byPlan = Object.fromEntries(PLAN_ORDER.map((t) => [t, 0])) as Record<string, number>;
     let monthlyRecurringCents = 0;
     for (const t of tenants) {

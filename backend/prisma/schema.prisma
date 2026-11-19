@@ -152,6 +152,15 @@ model User {
   emailOptOuts     EmailOptOut[]
   customerProfiles Customer[]
   cashierOrders    Order[]        @relation("OrderCashier")
+  planRequests     PlanPaymentRequest[] @relation("PlanRequestOwner")
+
+  /// The currency this owner pays Zyro in (Pro plan payments, 2026-11). Null until first set: it is
+  /// then taken from their first store's currency (PKR stays PKR, anything else is USD). Locked once a
+  /// payment is approved; after that only a platform admin may change it, with an audit entry.
+  billingCurrency         String?
+  billingCurrencyLockedAt DateTime?
+  /// When this owner was given provisional Pro. Once per owner account, never per store.
+  provisionalProUsedAt    DateTime?
 
   @@index([email])
 }
@@ -213,6 +222,9 @@ model Tenant {
   plan                  PlanTier  @default(FREE)
   /// End of the paid period, from Stripe. Null on FREE.
   planExpiresAt         DateTime?
+  /// True while the paid plan is provisional (granted before a person confirmed the payment): it has
+  /// lower AI limits and no grace period, and ends by itself at planExpiresAt.
+  planProvisional       Boolean   @default(false)
   stripeCustomerId      String?   @unique
   stripeSubscriptionId  String?   @unique
   /// One-off AI top-up packs: credits spent only after the month's plan allowance runs out.
@@ -270,6 +282,7 @@ model Tenant {
   storeThemeVersions StoreThemeVersion[]
   policies          StorePolicy[]
   emailOptOuts      EmailOptOut[]
+  planRequests      PlanPaymentRequest[]
 
   @@index([ownerId])
 }
@@ -1191,4 +1204,90 @@ model EmailOptOut {
 
   @@id([tenantId, userId])
   @@index([userId])
+}
+
+/// A store owner paying the platform by hand for a plan (Pro plan payments, 2026-11). Created when the
+/// owner opens the upgrade page (it holds the reference code they quote), then carries the proof, the
+/// AI's reading of it, the server's findings and a platform admin's decision. Only a platform admin, or
+/// a verified gateway in future, ever turns a request into an active plan (billing/planActivation.ts).
+model PlanPaymentRequest {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  ownerId             String
+  plan                PlanTier
+  /// What the owner was asked to pay, from the price table at the time: never recomputed later.
+  currency            String
+  amountMinor         Int
+  /// Shown to the owner to quote with the transfer: the store and a random part.
+  referenceCode       String    @unique
+  /// awaiting_proof, pending, approved, rejected, revoked or cancelled.
+  status              String    @default("awaiting_proof")
+  /// Normalised (upper case, no spaces). Unique across every request: one transfer can never pay twice.
+  transactionId       String?   @unique
+  /// The proof's storage key in the private area, never a link.
+  proofKey            String?
+  submittedAt         DateTime?
+  /// What the AI read from the screenshot (validated against a strict schema), or null.
+  aiExtracted         Json?
+  /// passed, flags or unavailable: the server's summary of its own checks.
+  aiStatus            String?
+  /// [{ code, severity, detail }], the server's checks.
+  findings            Json?
+  aiModel             String?
+  /// Set while a provisional plan is running for this request.
+  provisionalUntil    DateTime?
+  decidedById         String?
+  decidedAt           DateTime?
+  decisionReason      String?
+  /// What the approver confirmed arrived, and optionally what it came to in rupees, for their books.
+  receivedAmountMinor Int?
+  receivedCurrency    String?
+  receivedPkrMinor    Int?
+  /// The end of the paid period this request bought, once approved.
+  periodEnd           DateTime?
+  /// How many reminder emails have gone to approvers about it (after 24 and 48 hours).
+  remindersSent       Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User              @relation("PlanRequestOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  tokens PlanReviewToken[]
+
+  @@index([status, submittedAt])
+  @@index([tenantId, createdAt])
+  @@index([ownerId])
+}
+
+/// A link in an approver's email (Pro plan payments). Only its hash is stored. It opens the review page
+/// and nothing else; it is used up when that approver decides, and lasts about a day.
+model PlanReviewToken {
+  id        String    @id @default(cuid())
+  requestId String
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  request PlanPaymentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+/// Every plan change and payment decision, kept even if the store is deleted (no foreign keys).
+/// Holds ids, amounts and reasons only: no proof images, no personal details.
+model PlanAuditEvent {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  requestId   String?
+  actorUserId String?
+  /// approver, owner, system, script or gateway.
+  actorKind   String
+  action      String
+  details     Json
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([requestId])
 }

@@ -93,9 +93,10 @@ export const findTopUpPack = (id: string) => TOP_UP_PACKS.find((p) => p.id === i
  * passed; otherwise the store is on Free. This is what makes "if renewal fails, fall back to
  * Free" true even if no webhook ever arrives to say so.
  */
-export function effectiveTier(tenant: { plan: PlanTier; planExpiresAt: Date | null }, now = new Date()): PlanTier {
+export function effectiveTier(tenant: { plan: PlanTier; planExpiresAt: Date | null; planProvisional?: boolean }, now = new Date()): PlanTier {
   if (tenant.plan === "FREE" || !tenant.planExpiresAt) return "FREE";
-  const graceMs = env.billing.graceHours * 60 * 60 * 1000;
+  // A provisional plan (granted before a person confirmed the payment) ends exactly on time: no grace.
+  const graceMs = tenant.planProvisional ? 0 : env.billing.graceHours * 60 * 60 * 1000;
   return tenant.planExpiresAt.getTime() + graceMs > now.getTime() ? tenant.plan : "FREE";
 }
 

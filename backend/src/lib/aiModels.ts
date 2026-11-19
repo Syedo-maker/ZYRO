@@ -43,6 +43,9 @@ const TIER_BY_PROMPT: Record<string, ModelTier> = {
   // Store Themes: two or three complete looks as strict JSON, from a request in English, Roman Urdu or
   // Urdu. The JSON must hold and the taste matters, so the better model.
   theme_design: "standard",
+  // Pro plan payments (2026-11): reading an owner's payment screenshot into a few fields that the server
+  // then checks itself. Short and strictly shaped, so the cheap model (PLAN_PROOF_MODEL may change it).
+  plan_payment_proof: "fast",
 };
 
 /**
@@ -50,14 +53,15 @@ const TIER_BY_PROMPT: Record<string, ModelTier> = {
  * rather than allowed everywhere, so a prompt type cannot start sending pictures to the AI without
  * that being a deliberate, reviewable change.
  */
-const VISION_PROMPTS = new Set(["payment_proof"]);
+const VISION_PROMPTS = new Set(["payment_proof", "plan_payment_proof"]);
 
 export const allowsImage = (promptType: string): boolean => VISION_PROMPTS.has(promptType);
 
 /** An unknown prompt type gets the standard model: quality first, so a new feature is never quietly given a weak one. */
 export const tierFor = (promptType: string): ModelTier => TIER_BY_PROMPT[promptType] ?? "standard";
 
-export const modelFor = (promptType: string): string => env.ai.models[tierFor(promptType)];
+export const modelFor = (promptType: string): string =>
+  promptType === "plan_payment_proof" && env.planPayments.proofModel ? env.planPayments.proofModel : env.ai.models[tierFor(promptType)];
 
 /**
  * How to ask a model for a short, direct answer without paying for reasoning it does not need.

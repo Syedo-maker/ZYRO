@@ -39,6 +39,8 @@ export const TENANT_SCOPED_MODELS = new Set([
   "StoreThemeVersion",
   "StorePolicy",
   "EmailOptOut",
+  "PlanPaymentRequest",
+  "PlanAuditEvent",
 ]);
 
 // Operations where merging `{ tenantId }` into `where`/`data` is safe and sufficient.

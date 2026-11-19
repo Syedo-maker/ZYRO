@@ -1,6 +1,7 @@
 import path from "node:path";
 import { config as loadDotenv } from "dotenv";
 import { checkEnv, EnvError, loadSecretFiles, parseOrigins } from "./envCheck";
+import { readPlanPaymentSettings } from "./planPayments";
 
 // Settings come from backend/.env, by path, whichever folder the process was started from (the repo
 // root, backend/, or a script's own folder). Variables already set in the environment win, which is
@@ -206,6 +207,8 @@ export const env = {
      *  arrives a little late does not flicker the store down to Free. After it, the store is Free. */
     graceHours: num("PLAN_GRACE_HOURS", 24),
   },
+  /** Paying the platform by hand for a plan, with a person approving (config/planPayments.ts). */
+  planPayments: readPlanPaymentSettings(process.env).settings,
   // Abandoned-cart recovery (Implementation_Plan.md Phase 5, Module 7 remainder).
   /** Product Scout (2026-10-22): the privacy rules for the platform-wide product trends. */
   scout: {
